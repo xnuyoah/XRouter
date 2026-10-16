@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executionregistry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executionregistry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 type repeatedHomeAuthDispatcher struct {
@@ -84,7 +84,7 @@ func TestManagerExecuteHomeStopsWhenDispatchRepeatsTriedAuth(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	_, err := manager.Execute(ctx, []string{"home-loop-test"}, cliproxyexecutor.Request{Model: "gemini-3.5-flash-low"}, cliproxyexecutor.Options{})
+	_, err := manager.Execute(ctx, []string{"home-loop-test"}, cliproxyexecutor.Request{Model: "gpt-3.5-flash-low"}, cliproxyexecutor.Options{})
 	if err == nil {
 		t.Fatal("Execute error = nil, want missing access token")
 	}

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 func TestHashKeyPart(t *testing.T) {

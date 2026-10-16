@@ -14,8 +14,8 @@ import (
 	"testing"
 
 	"github.com/klauspost/compress/zstd"
-	proxyconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	sdkaccess "github.com/router-for-me/CLIProxyAPI/v8/sdk/access"
+	proxyconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	sdkaccess "github.com/xnuyoah/XRouter/v8/sdk/access"
 )
 
 type countingBodyReader struct {
@@ -133,8 +133,6 @@ observability:
 		"/v1/chat/completions",
 		"/v1/responses",
 		"/v1/messages",
-		"/v1beta/models/gemini-2.5-pro:generateContent",
-		"/v1beta/interactions",
 	} {
 		t.Run("authenticated chunked body exceeding limit returns 413 on "+endpoint, func(t *testing.T) {
 			cfgNoLog := parseTestServerConfigYAML(t, `config-version: 8
@@ -390,7 +388,7 @@ access:
 			method string
 			path   string
 		}{
-			{http.MethodPost, "/v8/management/plugins/store/demo/install"},
+			{http.MethodPost, "/v8/management/plugins/demo/quota"},
 			{http.MethodPut, "/v8/management/config"},
 		} {
 			reqMgmt := httptest.NewRequest(endpoint.method, endpoint.path, io.NopCloser(strings.NewReader(`{"version":"`+strings.Repeat("v", 128)+`"}`)))

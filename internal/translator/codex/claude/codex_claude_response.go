@@ -12,10 +12,10 @@ import (
 	"math"
 	"strings"
 
-	translatorcommon "github.com/router-for-me/CLIProxyAPI/v8/internal/translator/common"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	translatorcommon "github.com/xnuyoah/XRouter/v8/internal/translator/common"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
 var (

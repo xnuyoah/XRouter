@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/pluginhost"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/logging"
+	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
+	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 type serverOptionConfig struct {
@@ -45,8 +45,6 @@ func effectiveSDKConfig(cfg *config.Config) *config.SDKConfig {
 		return nil
 	}
 	sdkCfg := cfg.SDKConfig
-	sdkCfg.CodexOrphanDelegationCompatibility = cfg.Codex.OrphanDelegationCompatibility
-	sdkCfg.CodexResponseSteering = cfg.Codex.ResponseSteering
 	if cfg.CommercialMode {
 		sdkCfg.RequestLog = false
 	}

@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	chat "github.com/router-for-me/CLIProxyAPI/v8/internal/translator/claude/openai/chat-completions"
-	responses "github.com/router-for-me/CLIProxyAPI/v8/internal/translator/claude/openai/responses"
 	"github.com/tidwall/gjson"
+	chat "github.com/xnuyoah/XRouter/v8/internal/translator/claude/openai/chat-completions"
+	responses "github.com/xnuyoah/XRouter/v8/internal/translator/claude/openai/responses"
 )
 
 func TestClaudeNativeResponseNonStreamModelAndContent(t *testing.T) {

@@ -9,9 +9,9 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginabi"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginabi"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 	"gopkg.in/yaml.v3"
 )
 
@@ -292,7 +292,7 @@ func validTestPlugin(name string) pluginapi.Plugin {
 			Name:             name,
 			Version:          "1.0.0",
 			Author:           "test",
-			GitHubRepository: "https://github.com/router-for-me/CLIProxyAPI",
+			GitHubRepository: "https://github.com/xnuyoah/XRouter",
 		},
 		Capabilities: pluginapi.Capabilities{
 			UsagePlugin: testUsageCapability{},

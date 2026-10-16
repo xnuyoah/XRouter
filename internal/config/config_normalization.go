@@ -4,8 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	sdkpluginstore "github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginstore"
-	log "github.com/sirupsen/logrus"
+	sdkpluginstore "github.com/xnuyoah/XRouter/v8/sdk/pluginstore"
 )
 
 // NormalizePluginsConfig applies default plugin configuration values.
@@ -34,64 +33,37 @@ func (cfg *Config) NormalizePluginsConfig() {
 	}
 }
 
-// SanitizeCodexHeaderDefaults trims surrounding whitespace from the
-// configured Codex header fallback values.
-func (cfg *Config) SanitizeCodexHeaderDefaults() {
+// SanitizeNativeAPIKeys normalizes the native OpenAI-wire API-key providers
+// (openai-api-key, deepseek-api-key, nvidia-api-key, agnes-api-key): it trims whitespace,
+// normalizes prefixes/headers/excluded models, and keeps only entries that
+// declare an API key or a base URL override, preserving order.
+func (cfg *Config) SanitizeNativeAPIKeys() {
 	if cfg == nil {
 		return
 	}
-	cfg.CodexHeaderDefaults.UserAgent = strings.TrimSpace(cfg.CodexHeaderDefaults.UserAgent)
-	cfg.CodexHeaderDefaults.BetaFeatures = strings.TrimSpace(cfg.CodexHeaderDefaults.BetaFeatures)
-	cfg.Codex.SignInWithChatGPTIdentifier = strings.TrimSpace(cfg.Codex.SignInWithChatGPTIdentifier)
+	cfg.OpenAIKey = sanitizeNativeAPIKeyEntries(cfg.OpenAIKey)
+	cfg.DeepseekKey = sanitizeNativeAPIKeyEntries(cfg.DeepseekKey)
+	cfg.NvidiaKey = sanitizeNativeAPIKeyEntries(cfg.NvidiaKey)
+	cfg.AgnesKey = sanitizeNativeAPIKeyEntries(cfg.AgnesKey)
 }
 
-// SanitizeClaudeHeaderDefaults trims surrounding whitespace from the
-// configured Claude fingerprint baseline values, normalizes the beta override
-// lists, and resets an unknown client-request-id mode to the default.
-func (cfg *Config) SanitizeClaudeHeaderDefaults() {
-	if cfg == nil {
-		return
+func sanitizeNativeAPIKeyEntries(entries []NativeAPIKey) []NativeAPIKey {
+	if len(entries) == 0 {
+		return entries
 	}
-	cfg.ClaudeHeaderDefaults.AnthropicBetaStrip = normalizeClaudeBetaNames(cfg.ClaudeHeaderDefaults.AnthropicBetaStrip)
-	cfg.ClaudeHeaderDefaults.AnthropicBetaAppend = normalizeClaudeBetaNames(cfg.ClaudeHeaderDefaults.AnthropicBetaAppend)
-	mode := strings.ToLower(strings.TrimSpace(cfg.ClaudeHeaderDefaults.ClientRequestID))
-	switch mode {
-	case "", ClaudeClientRequestIDOn, ClaudeClientRequestIDOff, ClaudeClientRequestIDPassthrough:
-	default:
-		log.Warnf("unrecognized claude header-defaults client-request-id %q (supported: on, off, passthrough); falling back to on", cfg.ClaudeHeaderDefaults.ClientRequestID)
-		mode = ""
-	}
-	cfg.ClaudeHeaderDefaults.ClientRequestID = mode
-	cfg.ClaudeHeaderDefaults.UserAgent = strings.TrimSpace(cfg.ClaudeHeaderDefaults.UserAgent)
-	cfg.ClaudeHeaderDefaults.PackageVersion = strings.TrimSpace(cfg.ClaudeHeaderDefaults.PackageVersion)
-	cfg.ClaudeHeaderDefaults.RuntimeVersion = strings.TrimSpace(cfg.ClaudeHeaderDefaults.RuntimeVersion)
-	cfg.ClaudeHeaderDefaults.OS = strings.TrimSpace(cfg.ClaudeHeaderDefaults.OS)
-	cfg.ClaudeHeaderDefaults.Arch = strings.TrimSpace(cfg.ClaudeHeaderDefaults.Arch)
-	cfg.ClaudeHeaderDefaults.Timeout = strings.TrimSpace(cfg.ClaudeHeaderDefaults.Timeout)
-	cfg.ClaudeHeaderDefaults.Timezone = strings.TrimSpace(cfg.ClaudeHeaderDefaults.Timezone)
-}
-
-// normalizeClaudeBetaNames trims beta names and drops empty and duplicate
-// entries while keeping the configured order.
-func normalizeClaudeBetaNames(names []string) []string {
-	if len(names) == 0 {
-		return nil
-	}
-	out := make([]string, 0, len(names))
-	seen := make(map[string]struct{}, len(names))
-	for _, name := range names {
-		name = strings.TrimSpace(name)
-		if name == "" {
+	out := make([]NativeAPIKey, 0, len(entries))
+	for i := range entries {
+		e := entries[i]
+		e.APIKey = strings.TrimSpace(e.APIKey)
+		e.BaseURL = strings.TrimSpace(e.BaseURL)
+		if e.APIKey == "" && e.BaseURL == "" {
 			continue
 		}
-		if _, ok := seen[name]; ok {
-			continue
-		}
-		seen[name] = struct{}{}
-		out = append(out, name)
-	}
-	if len(out) == 0 {
-		return nil
+		e.Prefix = normalizeModelPrefix(e.Prefix)
+		e.ProxyURL = strings.TrimSpace(e.ProxyURL)
+		e.Headers = NormalizeHeaders(e.Headers)
+		e.ExcludedModels = NormalizeExcludedModels(e.ExcludedModels)
+		out = append(out, e)
 	}
 	return out
 }
@@ -255,163 +227,6 @@ func (cfg *Config) SanitizeOpenAICompatibility() {
 	cfg.OpenAICompatibility = out
 }
 
-// SanitizeCodexKeys removes Codex API key entries missing a BaseURL.
-// It trims whitespace and preserves order for remaining entries.
-func (cfg *Config) SanitizeCodexKeys() {
-	if cfg == nil {
-		return
-	}
-	cfg.CodexKey = sanitizeCodexKeyEntries(cfg.CodexKey)
-}
-
-// SanitizeXAIKeys removes xAI API key entries missing a BaseURL.
-// It applies the same normalization rules as codex-api-key.
-func (cfg *Config) SanitizeXAIKeys() {
-	if cfg == nil {
-		return
-	}
-	cfg.XAIKey = sanitizeCodexKeyEntries(cfg.XAIKey)
-	for i := range cfg.XAIKey {
-		cfg.XAIKey[i].AlphaSearch = false
-	}
-}
-
-// SanitizeMetaKeys normalizes Meta API key entries, defaulting BaseURL to https://api.meta.ai/v1 if empty.
-func (cfg *Config) SanitizeMetaKeys() {
-	if cfg == nil {
-		return
-	}
-	cfg.MetaKey = sanitizeMetaKeyEntries(cfg.MetaKey)
-}
-
-func sanitizeMetaKeyEntries(entries []MetaKey) []MetaKey {
-	if len(entries) == 0 {
-		return entries
-	}
-	out := make([]MetaKey, 0, len(entries))
-	for i := range entries {
-		e := entries[i]
-		e.APIKey = strings.TrimSpace(e.APIKey)
-		// meta-api-key requires a valid API key. DCA tokens require OAuth storage (auths/*.json).
-		if e.APIKey == "" || strings.HasPrefix(e.APIKey, "dca:") {
-			continue
-		}
-		e.Prefix = normalizeModelPrefix(e.Prefix)
-		e.BaseURL = strings.TrimSpace(e.BaseURL)
-		if e.BaseURL == "" {
-			e.BaseURL = "https://api.meta.ai/v1"
-		}
-		e.Headers = NormalizeHeaders(e.Headers)
-		e.ExcludedModels = NormalizeExcludedModels(e.ExcludedModels)
-		e.AlphaSearch = false
-		out = append(out, e)
-	}
-	return out
-}
-
-func sanitizeCodexKeyEntries(entries []CodexKey) []CodexKey {
-	if len(entries) == 0 {
-		return entries
-	}
-	out := make([]CodexKey, 0, len(entries))
-	for i := range entries {
-		e := entries[i]
-		e.Prefix = normalizeModelPrefix(e.Prefix)
-		e.BaseURL = strings.TrimSpace(e.BaseURL)
-		e.Headers = NormalizeHeaders(e.Headers)
-		e.ExcludedModels = NormalizeExcludedModels(e.ExcludedModels)
-		if e.BaseURL == "" {
-			continue
-		}
-		out = append(out, e)
-	}
-	return out
-}
-
-// NormalizeCloakConfig trims strings and removes blank sensitive words.
-func NormalizeCloakConfig(cloak *CloakConfig) *CloakConfig {
-	if cloak == nil {
-		return nil
-	}
-	cloak.Mode = strings.TrimSpace(cloak.Mode)
-	if len(cloak.SensitiveWords) > 0 {
-		normalizedWords := make([]string, 0, len(cloak.SensitiveWords))
-		for _, w := range cloak.SensitiveWords {
-			if trimmed := strings.TrimSpace(w); trimmed != "" {
-				normalizedWords = append(normalizedWords, trimmed)
-			}
-		}
-		if len(normalizedWords) > 0 {
-			cloak.SensitiveWords = normalizedWords
-		} else {
-			cloak.SensitiveWords = nil
-		}
-	} else {
-		cloak.SensitiveWords = nil
-	}
-	return cloak
-}
-
-// SanitizeClaudeKeys normalizes headers for Claude credentials.
-func (cfg *Config) SanitizeClaudeKeys() {
-	if cfg == nil || len(cfg.ClaudeKey) == 0 {
-		return
-	}
-	for i := range cfg.ClaudeKey {
-		entry := &cfg.ClaudeKey[i]
-		entry.Prefix = normalizeModelPrefix(entry.Prefix)
-		entry.Headers = NormalizeHeaders(entry.Headers)
-		entry.ExcludedModels = NormalizeExcludedModels(entry.ExcludedModels)
-		entry.Cloak = NormalizeCloakConfig(entry.Cloak)
-		// Only a recognized value is rewritten. An unrecognized one is preserved as
-		// written so sanitizing a config file never destroys operator input; the
-		// request path falls back to the default profile and reports it once.
-		if normalized, ok := NormalizeClaudeFingerprintProfile(entry.FingerprintProfile); ok {
-			entry.FingerprintProfile = normalized
-		} else {
-			entry.FingerprintProfile = strings.TrimSpace(entry.FingerprintProfile)
-		}
-	}
-}
-
-func sanitizeGeminiKeyEntries(entries []GeminiKey) []GeminiKey {
-	seen := make(map[string]struct{}, len(entries))
-	out := entries[:0]
-	for i := range entries {
-		entry := entries[i]
-		entry.APIKey = strings.TrimSpace(entry.APIKey)
-		entry.BaseURL = strings.TrimSpace(entry.BaseURL)
-		if entry.APIKey == "" && entry.BaseURL == "" {
-			continue
-		}
-		entry.Prefix = normalizeModelPrefix(entry.Prefix)
-		entry.ProxyURL = strings.TrimSpace(entry.ProxyURL)
-		entry.Headers = NormalizeHeaders(entry.Headers)
-		entry.ExcludedModels = NormalizeExcludedModels(entry.ExcludedModels)
-		uniqueKey := formatGeminiKeyDedupID(entry)
-		if _, exists := seen[uniqueKey]; exists {
-			continue
-		}
-		seen[uniqueKey] = struct{}{}
-		out = append(out, entry)
-	}
-	return out
-}
-
-func formatGeminiKeyDedupID(entry GeminiKey) string {
-	var b strings.Builder
-	b.WriteString(entry.APIKey)
-	b.WriteByte(0)
-	b.WriteString(entry.BaseURL)
-	b.WriteByte(0)
-	b.WriteString(entry.ProxyURL)
-	b.WriteByte(0)
-	b.WriteString(entry.Prefix)
-	b.WriteByte(0)
-	b.WriteString(FormatSortedHeaders(entry.Headers))
-	return b.String()
-}
-
 // FormatSortedHeaders serializes headers deterministically with null byte separators.
 func FormatSortedHeaders(headers map[string]string) string {
 	if len(headers) == 0 {
@@ -430,24 +245,6 @@ func FormatSortedHeaders(headers map[string]string) string {
 		b.WriteByte(0)
 	}
 	return b.String()
-}
-
-// SanitizeGeminiKeys deduplicates and normalizes Gemini credentials.
-// It uses API key, base URL, proxy URL, prefix, and custom headers as the uniqueness key.
-func (cfg *Config) SanitizeGeminiKeys() {
-	if cfg == nil {
-		return
-	}
-	cfg.GeminiKey = sanitizeGeminiKeyEntries(cfg.GeminiKey)
-}
-
-// SanitizeInteractionsKeys deduplicates and normalizes native Interactions credentials.
-// It uses API key, base URL, proxy URL, prefix, and custom headers as the uniqueness key.
-func (cfg *Config) SanitizeInteractionsKeys() {
-	if cfg == nil {
-		return
-	}
-	cfg.InteractionsKey = sanitizeGeminiKeyEntries(cfg.InteractionsKey)
 }
 
 func normalizeModelPrefix(prefix string) string {

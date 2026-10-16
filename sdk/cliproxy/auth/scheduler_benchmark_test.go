@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 type schedulerBenchmarkExecutor struct {
@@ -39,10 +39,10 @@ func (e schedulerBenchmarkExecutor) HttpRequest(ctx context.Context, auth *Auth,
 func benchmarkManagerSetup(b *testing.B, total int, mixed bool, withPriority bool) (*Manager, []string, string) {
 	b.Helper()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	providers := []string{"gemini"}
-	manager.executors["gemini"] = schedulerBenchmarkExecutor{id: "gemini"}
+	providers := []string{"openai"}
+	manager.executors["openai"] = schedulerBenchmarkExecutor{id: "openai"}
 	if mixed {
-		providers = []string{"gemini", "claude"}
+		providers = []string{"openai", "claude"}
 		manager.executors["claude"] = schedulerBenchmarkExecutor{id: "claude"}
 	}
 
@@ -86,14 +86,14 @@ func BenchmarkManagerPickNext500(b *testing.B) {
 	ctx := context.Background()
 	opts := cliproxyexecutor.Options{}
 	tried := map[string]struct{}{}
-	if _, _, errWarm := manager.pickNext(ctx, "gemini", model, opts, tried); errWarm != nil {
+	if _, _, errWarm := manager.pickNext(ctx, "openai", model, opts, tried); errWarm != nil {
 		b.Fatalf("warmup pickNext error = %v", errWarm)
 	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		auth, exec, errPick := manager.pickNext(ctx, "gemini", model, opts, tried)
+		auth, exec, errPick := manager.pickNext(ctx, "openai", model, opts, tried)
 		if errPick != nil || auth == nil || exec == nil {
 			b.Fatalf("pickNext failed: auth=%v exec=%v err=%v", auth, exec, errPick)
 		}
@@ -105,14 +105,14 @@ func BenchmarkManagerPickNext1000(b *testing.B) {
 	ctx := context.Background()
 	opts := cliproxyexecutor.Options{}
 	tried := map[string]struct{}{}
-	if _, _, errWarm := manager.pickNext(ctx, "gemini", model, opts, tried); errWarm != nil {
+	if _, _, errWarm := manager.pickNext(ctx, "openai", model, opts, tried); errWarm != nil {
 		b.Fatalf("warmup pickNext error = %v", errWarm)
 	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		auth, exec, errPick := manager.pickNext(ctx, "gemini", model, opts, tried)
+		auth, exec, errPick := manager.pickNext(ctx, "openai", model, opts, tried)
 		if errPick != nil || auth == nil || exec == nil {
 			b.Fatalf("pickNext failed: auth=%v exec=%v err=%v", auth, exec, errPick)
 		}
@@ -124,14 +124,14 @@ func BenchmarkManagerPickNextPriority500(b *testing.B) {
 	ctx := context.Background()
 	opts := cliproxyexecutor.Options{}
 	tried := map[string]struct{}{}
-	if _, _, errWarm := manager.pickNext(ctx, "gemini", model, opts, tried); errWarm != nil {
+	if _, _, errWarm := manager.pickNext(ctx, "openai", model, opts, tried); errWarm != nil {
 		b.Fatalf("warmup pickNext error = %v", errWarm)
 	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		auth, exec, errPick := manager.pickNext(ctx, "gemini", model, opts, tried)
+		auth, exec, errPick := manager.pickNext(ctx, "openai", model, opts, tried)
 		if errPick != nil || auth == nil || exec == nil {
 			b.Fatalf("pickNext failed: auth=%v exec=%v err=%v", auth, exec, errPick)
 		}
@@ -143,14 +143,14 @@ func BenchmarkManagerPickNextPriority1000(b *testing.B) {
 	ctx := context.Background()
 	opts := cliproxyexecutor.Options{}
 	tried := map[string]struct{}{}
-	if _, _, errWarm := manager.pickNext(ctx, "gemini", model, opts, tried); errWarm != nil {
+	if _, _, errWarm := manager.pickNext(ctx, "openai", model, opts, tried); errWarm != nil {
 		b.Fatalf("warmup pickNext error = %v", errWarm)
 	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		auth, exec, errPick := manager.pickNext(ctx, "gemini", model, opts, tried)
+		auth, exec, errPick := manager.pickNext(ctx, "openai", model, opts, tried)
 		if errPick != nil || auth == nil || exec == nil {
 			b.Fatalf("pickNext failed: auth=%v exec=%v err=%v", auth, exec, errPick)
 		}
@@ -200,17 +200,17 @@ func BenchmarkManagerPickNextAndMarkResult1000(b *testing.B) {
 	ctx := context.Background()
 	opts := cliproxyexecutor.Options{}
 	tried := map[string]struct{}{}
-	if _, _, errWarm := manager.pickNext(ctx, "gemini", model, opts, tried); errWarm != nil {
+	if _, _, errWarm := manager.pickNext(ctx, "openai", model, opts, tried); errWarm != nil {
 		b.Fatalf("warmup pickNext error = %v", errWarm)
 	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		auth, _, errPick := manager.pickNext(ctx, "gemini", model, opts, tried)
+		auth, _, errPick := manager.pickNext(ctx, "openai", model, opts, tried)
 		if errPick != nil || auth == nil {
 			b.Fatalf("pickNext failed: auth=%v err=%v", auth, errPick)
 		}
-		manager.MarkResult(ctx, Result{AuthID: auth.ID, Provider: "gemini", Model: model, Success: true})
+		manager.MarkResult(ctx, Result{AuthID: auth.ID, Provider: "openai", Model: model, Success: true})
 	}
 }

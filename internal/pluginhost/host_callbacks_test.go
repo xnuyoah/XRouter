@@ -13,14 +13,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/clienterror"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/interfaces"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginabi"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/clienterror"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/interfaces"
+	"github.com/xnuyoah/XRouter/v8/internal/logging"
+	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginabi"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 type fakeHostModelExecutor struct {

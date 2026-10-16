@@ -1,20 +1,20 @@
 # AGENTS.md
 
-Go 1.26+ proxy server providing OpenAI/Gemini/Claude/Codex compatible APIs with OAuth and round-robin load balancing.
+XRouter: Go 1.26+ proxy server providing OpenAI/Claude-compatible APIs (chat completions, completions, Responses, Messages) backed by API-key provider families with round-robin load balancing.
 
 ## Repository
-- GitHub: https://github.com/router-for-me/CLIProxyAPI
+- GitHub: https://github.com/xnuyoah/XRouter
 
 ## Commands
 ```bash
 gofmt -w . # Format (required after Go changes)
-go build -o cli-proxy-api ./cmd/server # Build
+go build -o xrouter ./cmd/server # Build
 go run ./cmd/server # Run dev server
 go test ./... # Run all tests
 go test -v -run TestName ./path/to/pkg # Run single test
 go build -o test-output ./cmd/server && rm test-output # Verify compile (REQUIRED after changes)
 ```
-- Common flags: `--config <path>`, `--tui`, `--standalone`, `--local-model`, `--no-browser`, `--oauth-callback-port <port>`
+- Common flags: `--config <path>`
 
 ## Config
 - Default config: `config.yaml` (template: `config.example.yaml`)
@@ -24,21 +24,20 @@ go build -o test-output ./cmd/server && rm test-output # Verify compile (REQUIRE
 
 ## Architecture
 - `cmd/server/` — Server entrypoint
-- `internal/api/` — Gin HTTP API (routes, middleware, modules)
-- `internal/api/modules/amp/` — Amp integration (Amp-style routes + reverse proxy)
+- `internal/api/` — Gin HTTP API (routes, middleware)
+- `internal/api/brand/` — Brand assets served to the management panel
 - `internal/thinking/` — Main thinking/reasoning pipeline. `ApplyThinking()` (apply.go) parses suffixes (`suffix.go`, suffix overrides body), normalizes config to canonical `ThinkingConfig` (`types.go`), normalizes and validates centrally (`validate.go`/`convert.go`), then applies provider-specific output via `ProviderApplier`. Do not break this "canonical representation → per-provider translation" architecture.
-- `internal/runtime/executor/` — Per-provider runtime executors (incl. Codex WebSocket)
+- `internal/runtime/executor/` — Per-provider runtime executors (native API-key families, OpenAI-compatible)
 - `internal/translator/` — Provider protocol translators (and shared `common`)
-- `internal/registry/` — Model registry + remote updater (`StartModelsUpdater`); `--local-model` disables remote updates
+- `internal/registry/` — Model registry publishing client/provider model lists for `/v1/models` and routing hints
 - `internal/store/` — Storage implementations and secret resolution
 - `internal/managementasset/` — Config snapshots and management assets
 - `internal/cache/` — Request signature caching
 - `internal/watcher/` — Config hot-reload and watchers
 - `internal/wsrelay/` — WebSocket relay sessions
-- `internal/usage/` — Usage and token accounting
+- `sdk/cliproxy/usage/` — Usage and token accounting
 - `internal/home/` — CLIProxyAPIHome control plane integration (bootstrap, RESP communication, dispatch coordination)
-- `internal/tui/` — Bubbletea terminal UI (`--tui`, `--standalone`)
-- `sdk/cliproxy/` — Embeddable SDK entry (service/builder/watchers/pipeline)
+- `sdk/cliproxy/` — Embeddable SDK entry (service, builder, watchers, executors)
 - `test/` — Cross-module integration tests
 
 ## Code Conventions
@@ -57,7 +56,7 @@ go build -o test-output ./cmd/server && rm test-output # Verify compile (REQUIRE
 - Wrap defer errors: `defer func() { if err := f.Close(); err != nil { log.Errorf(...) } }()`
 - Use logrus structured logging; avoid leaking secrets/tokens in logs
 - Avoid panics in HTTP handlers; prefer logged errors and meaningful HTTP status codes
-- Timeouts are allowed only during credential acquisition; after an upstream connection is established, do not set timeouts for any subsequent network behavior. Intentional exceptions that must remain allowed are the Codex websocket liveness deadlines in `internal/runtime/executor/codex_websockets_executor.go`, the wsrelay session deadlines in `internal/wsrelay/session.go`, the management APICall timeout in `internal/api/handlers/management/api_tools.go`, and the `cmd/fetch_antigravity_models` utility timeouts
+- Timeouts are allowed only during credential acquisition; after an upstream connection is established, do not set timeouts for any subsequent network behavior. Intentional exceptions that must remain allowed are the wsrelay session deadlines in `internal/wsrelay/session.go` and the management APICall timeout in `internal/api/handlers/management/api_tools.go`.
 - Avoid wall-clock `time.Sleep` in TTL, expiration, ordering, or cache-eviction unit tests due to platform timer granularity (e.g. Windows default timer resolution of ~15.6ms) and CI jitter under load; prefer controllable clocks (`nowFunc` / mock clock), explicit timestamp manipulation, or deterministic synchronization primitives.
 - Note: if modifying features that involve CLIProxyAPIHome, check if corresponding updates are needed in the CLIProxyAPIHome repository.
 - Endpoints under the `/v0/management` base URL are deprecated and no longer maintained. For any feature changes, do not modify endpoints under `/v0/management` unless necessary to fix compilation errors.

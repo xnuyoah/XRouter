@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 func TestOAuthSessionStoreCompleteKeepsShortLivedSession(t *testing.T) {
@@ -159,12 +159,12 @@ func performOAuthStatusRequest(t *testing.T, router http.Handler, state string) 
 
 func TestOAuthSessionStoreCancelRemovesPendingSession(t *testing.T) {
 	store := newOAuthSessionStore(time.Minute)
-	store.Register("pending-state", "xai")
+	store.Register("pending-state", "example-plugin")
 
 	if !store.Cancel("pending-state") {
 		t.Fatal("Cancel() = false, want true for pending session")
 	}
-	if store.IsPending("pending-state", "xai") {
+	if store.IsPending("pending-state", "example-plugin") {
 		t.Fatal("cancelled session remained pending")
 	}
 	if _, ok := store.Get("pending-state"); ok {
@@ -193,10 +193,10 @@ func TestOAuthSessionStoreCancelIgnoresCompletedAndUnknown(t *testing.T) {
 
 func TestOAuthSessionStoreCancelIgnoresErrorSession(t *testing.T) {
 	store := newOAuthSessionStore(time.Minute)
-	store.Register("error-state", "kimi")
+	store.Register("error-state", "example-plugin")
 	store.SetError("error-state", "Authentication failed")
 
-	if store.IsPending("error-state", "kimi") {
+	if store.IsPending("error-state", "example-plugin") {
 		t.Fatal("error session should not be pending")
 	}
 	if store.Cancel("error-state") {
@@ -229,7 +229,7 @@ func TestGuardOAuthSessionPendingForSave(t *testing.T) {
 	store := newOAuthSessionStore(time.Minute)
 	replaceOAuthSessionStoreForTest(t, store)
 
-	providers := []string{"anthropic", "codex", "antigravity", "xai", "kimi", "kimi-ai", "kimi.ai", "meta"}
+	providers := []string{"example-plugin", "example-plugin-a", "example.plugin", "example-plugin-b"}
 	for _, provider := range providers {
 		state := provider + "-save-guard"
 		store.Register(state, provider)
@@ -263,7 +263,7 @@ func TestGuardOAuthSessionPendingForSave(t *testing.T) {
 func TestCancelAuthSessionHandler(t *testing.T) {
 	store := newOAuthSessionStore(time.Minute)
 	replaceOAuthSessionStoreForTest(t, store)
-	store.Register("device-state", "xai")
+	store.Register("device-state", "example-plugin")
 
 	handler := &Handler{}
 	router := gin.New()
@@ -283,7 +283,7 @@ func TestCancelAuthSessionHandler(t *testing.T) {
 	if cancelled.status != http.StatusOK || !cancelled.cancelled || cancelled.bodyStatus != "ok" {
 		t.Fatalf("cancel pending response = %#v, want ok/cancelled", cancelled)
 	}
-	if IsOAuthSessionPending("device-state", "xai") {
+	if IsOAuthSessionPending("device-state", "example-plugin") {
 		t.Fatal("device session still pending after cancel API")
 	}
 

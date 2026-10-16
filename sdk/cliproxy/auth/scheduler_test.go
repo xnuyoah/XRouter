@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/home"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executionregistry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/home"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executionregistry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 type schedulerTestExecutor struct {
@@ -160,14 +160,14 @@ func TestSchedulerPick_RoundRobinHighestPriority(t *testing.T) {
 
 	scheduler := newSchedulerForTest(
 		&RoundRobinSelector{},
-		&Auth{ID: "low", Provider: "gemini", Attributes: map[string]string{"priority": "0"}},
-		&Auth{ID: "high-b", Provider: "gemini", Attributes: map[string]string{"priority": "10"}},
-		&Auth{ID: "high-a", Provider: "gemini", Attributes: map[string]string{"priority": "10"}},
+		&Auth{ID: "low", Provider: "openai", Attributes: map[string]string{"priority": "0"}},
+		&Auth{ID: "high-b", Provider: "openai", Attributes: map[string]string{"priority": "10"}},
+		&Auth{ID: "high-a", Provider: "openai", Attributes: map[string]string{"priority": "10"}},
 	)
 
 	want := []string{"high-a", "high-b", "high-a"}
 	for index, wantID := range want {
-		got, errPick := scheduler.pickSingle(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+		got, errPick := scheduler.pickSingle(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickSingle() #%d error = %v", index, errPick)
 		}
@@ -185,14 +185,14 @@ func TestSchedulerPick_WeightedRoundRobin(t *testing.T) {
 
 	scheduler := newSchedulerForTest(
 		&WeightedRoundRobinSelector{},
-		&Auth{ID: "a", Provider: "gemini", Attributes: map[string]string{AttributeWeight: "5"}},
-		&Auth{ID: "b", Provider: "gemini", Attributes: map[string]string{AttributeWeight: "3"}},
-		&Auth{ID: "c", Provider: "gemini", Attributes: map[string]string{AttributeWeight: "2"}},
+		&Auth{ID: "a", Provider: "openai", Attributes: map[string]string{AttributeWeight: "5"}},
+		&Auth{ID: "b", Provider: "openai", Attributes: map[string]string{AttributeWeight: "3"}},
+		&Auth{ID: "c", Provider: "openai", Attributes: map[string]string{AttributeWeight: "2"}},
 	)
 
 	counts := make(map[string]int)
 	for index := 0; index < 100; index++ {
-		got, errPick := scheduler.pickSingle(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+		got, errPick := scheduler.pickSingle(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickSingle() #%d error = %v", index, errPick)
 		}
@@ -210,8 +210,8 @@ func TestManagerLoad_WeightedRoundRobinUsesPersistedMetadataWeight(t *testing.T)
 	t.Parallel()
 
 	manager := NewManager(&schedulerLoadStore{auths: []*Auth{
-		{ID: "a", Provider: "gemini", Metadata: map[string]any{AttributeWeight: float64(5)}},
-		{ID: "b", Provider: "gemini", Metadata: map[string]any{AttributeWeight: float64(1)}},
+		{ID: "a", Provider: "openai", Metadata: map[string]any{AttributeWeight: float64(5)}},
+		{ID: "b", Provider: "openai", Metadata: map[string]any{AttributeWeight: float64(1)}},
 	}}, &WeightedRoundRobinSelector{}, nil)
 	if errLoad := manager.Load(context.Background()); errLoad != nil {
 		t.Fatalf("Load() error = %v", errLoad)
@@ -219,7 +219,7 @@ func TestManagerLoad_WeightedRoundRobinUsesPersistedMetadataWeight(t *testing.T)
 
 	counts := make(map[string]int)
 	for index := 0; index < 60; index++ {
-		got, errPick := manager.scheduler.pickSingle(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+		got, errPick := manager.scheduler.pickSingle(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickSingle() #%d error = %v", index, errPick)
 		}
@@ -233,11 +233,11 @@ func TestManagerLoad_WeightedRoundRobinUsesPersistedMetadataWeight(t *testing.T)
 func TestSchedulerPick_WeightedRoundRobinResetsCreditsWhenWeightsChange(t *testing.T) {
 	t.Parallel()
 
-	authA := &Auth{ID: "a", Provider: "gemini", Attributes: map[string]string{AttributeWeight: "1000000"}}
-	authB := &Auth{ID: "b", Provider: "gemini", Attributes: map[string]string{AttributeWeight: "1"}}
+	authA := &Auth{ID: "a", Provider: "openai", Attributes: map[string]string{AttributeWeight: "1000000"}}
+	authB := &Auth{ID: "b", Provider: "openai", Attributes: map[string]string{AttributeWeight: "1"}}
 	scheduler := newSchedulerForTest(&WeightedRoundRobinSelector{}, authA, authB)
 	for index := 0; index < 1000; index++ {
-		if _, errPick := scheduler.pickSingle(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil); errPick != nil {
+		if _, errPick := scheduler.pickSingle(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil); errPick != nil {
 			t.Fatalf("warmup pickSingle() #%d error = %v", index, errPick)
 		}
 	}
@@ -246,7 +246,7 @@ func TestSchedulerPick_WeightedRoundRobinResetsCreditsWhenWeightsChange(t *testi
 	scheduler.upsertAuth(authA)
 	counts := make(map[string]int)
 	for index := 0; index < 20; index++ {
-		got, errPick := scheduler.pickSingle(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+		got, errPick := scheduler.pickSingle(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickSingle() after weight change #%d error = %v", index, errPick)
 		}
@@ -287,27 +287,27 @@ func TestSchedulerPick_WeightedWebsocketResetsCreditsWhenWeightsChange(t *testin
 
 func TestManagerLegacyWeightedRoundRobinKeepsIndependentAliasPrefixedModelState(t *testing.T) {
 	manager := NewManager(nil, &WeightedRoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
+	manager.executors["openai"] = schedulerTestExecutor{}
 	manager.SetPluginScheduler(&fakePluginScheduler{})
 
 	auths := []*Auth{
-		{ID: "a-heavy", Provider: "gemini", Attributes: map[string]string{AttributeWeight: "3"}},
-		{ID: "a-light", Provider: "gemini", Attributes: map[string]string{AttributeWeight: "1"}},
-		{ID: "b-light", Provider: "gemini", Attributes: map[string]string{AttributeWeight: "1"}},
-		{ID: "b-heavy", Provider: "gemini", Attributes: map[string]string{AttributeWeight: "3"}},
+		{ID: "a-heavy", Provider: "openai", Attributes: map[string]string{AttributeWeight: "3"}},
+		{ID: "a-light", Provider: "openai", Attributes: map[string]string{AttributeWeight: "1"}},
+		{ID: "b-light", Provider: "openai", Attributes: map[string]string{AttributeWeight: "1"}},
+		{ID: "b-heavy", Provider: "openai", Attributes: map[string]string{AttributeWeight: "3"}},
 	}
 	for _, auth := range auths {
 		if _, errRegister := manager.Register(context.Background(), auth); errRegister != nil {
 			t.Fatalf("Register(%s) error = %v", auth.ID, errRegister)
 		}
 	}
-	registerSchedulerModels(t, "gemini", "team-a/shared", "a-heavy", "a-light")
-	registerSchedulerModels(t, "gemini", "team-b/shared", "b-light", "b-heavy")
+	registerSchedulerModels(t, "openai", "team-a/shared", "a-heavy", "a-light")
+	registerSchedulerModels(t, "openai", "team-b/shared", "b-light", "b-heavy")
 
 	counts := make(map[string]int)
 	for index := 0; index < 40; index++ {
 		for _, model := range []string{"team-a/shared", "team-b/shared"} {
-			got, _, errPick := manager.pickNext(context.Background(), "gemini", model, cliproxyexecutor.Options{}, nil)
+			got, _, errPick := manager.pickNext(context.Background(), "openai", model, cliproxyexecutor.Options{}, nil)
 			if errPick != nil {
 				t.Fatalf("pickNext(%q) #%d error = %v", model, index, errPick)
 			}
@@ -327,10 +327,10 @@ func TestSchedulerPick_WeightedRoundRobinSkipsNonPositiveWeightPriorityTier(t *t
 
 	scheduler := newSchedulerForTest(
 		&WeightedRoundRobinSelector{},
-		&Auth{ID: "excluded", Provider: "gemini", Attributes: map[string]string{"priority": "10", AttributeWeight: "0"}},
-		&Auth{ID: "available", Provider: "gemini", Attributes: map[string]string{"priority": "0", AttributeWeight: "1"}},
+		&Auth{ID: "excluded", Provider: "openai", Attributes: map[string]string{"priority": "10", AttributeWeight: "0"}},
+		&Auth{ID: "available", Provider: "openai", Attributes: map[string]string{"priority": "0", AttributeWeight: "1"}},
 	)
-	got, errPick := scheduler.pickSingle(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+	got, errPick := scheduler.pickSingle(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickSingle() error = %v", errPick)
 	}
@@ -344,13 +344,13 @@ func TestSchedulerPick_FillFirstSticksToFirstReady(t *testing.T) {
 
 	scheduler := newSchedulerForTest(
 		&FillFirstSelector{},
-		&Auth{ID: "b", Provider: "gemini"},
-		&Auth{ID: "a", Provider: "gemini"},
-		&Auth{ID: "c", Provider: "gemini"},
+		&Auth{ID: "b", Provider: "openai"},
+		&Auth{ID: "a", Provider: "openai"},
+		&Auth{ID: "c", Provider: "openai"},
 	)
 
 	for index := 0; index < 3; index++ {
-		got, errPick := scheduler.pickSingle(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+		got, errPick := scheduler.pickSingle(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickSingle() #%d error = %v", index, errPick)
 		}
@@ -366,13 +366,13 @@ func TestSchedulerPick_FillFirstSticksToFirstReady(t *testing.T) {
 func TestSchedulerPick_PromotesExpiredCooldownBeforePick(t *testing.T) {
 	t.Parallel()
 
-	model := "gemini-2.5-pro"
-	registerSchedulerModels(t, "gemini", model, "cooldown-expired")
+	model := "gpt-2.5-pro"
+	registerSchedulerModels(t, "openai", model, "cooldown-expired")
 	scheduler := newSchedulerForTest(
 		&RoundRobinSelector{},
 		&Auth{
 			ID:       "cooldown-expired",
-			Provider: "gemini",
+			Provider: "openai",
 			ModelStates: map[string]*ModelState{
 				model: {
 					Status:         StatusError,
@@ -383,7 +383,7 @@ func TestSchedulerPick_PromotesExpiredCooldownBeforePick(t *testing.T) {
 		},
 	)
 
-	got, errPick := scheduler.pickSingle(context.Background(), "gemini", model, cliproxyexecutor.Options{}, nil)
+	got, errPick := scheduler.pickSingle(context.Background(), "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickSingle() error = %v", errPick)
 	}
@@ -409,32 +409,6 @@ func TestSchedulerPick_CodexWebsocketPrefersWebsocketEnabledSubset(t *testing.T)
 	want := []string{"codex-ws-a", "codex-ws-b", "codex-ws-a"}
 	for index, wantID := range want {
 		got, errPick := scheduler.pickSingle(ctx, "codex", "", cliproxyexecutor.Options{}, nil)
-		if errPick != nil {
-			t.Fatalf("pickSingle() #%d error = %v", index, errPick)
-		}
-		if got == nil {
-			t.Fatalf("pickSingle() #%d auth = nil", index)
-		}
-		if got.ID != wantID {
-			t.Fatalf("pickSingle() #%d auth.ID = %q, want %q", index, got.ID, wantID)
-		}
-	}
-}
-
-func TestSchedulerPick_XAIWebsocketPrefersWebsocketEnabledSubset(t *testing.T) {
-	t.Parallel()
-
-	scheduler := newSchedulerForTest(
-		&RoundRobinSelector{},
-		&Auth{ID: "xai-http", Provider: "xai"},
-		&Auth{ID: "xai-ws-a", Provider: "xai", Attributes: map[string]string{"websockets": "true"}},
-		&Auth{ID: "xai-ws-b", Provider: "xai", Attributes: map[string]string{"websockets": "true"}},
-	)
-
-	ctx := cliproxyexecutor.WithDownstreamWebsocket(context.Background())
-	want := []string{"xai-ws-a", "xai-ws-b", "xai-ws-a"}
-	for index, wantID := range want {
-		got, errPick := scheduler.pickSingle(ctx, "xai", "", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickSingle() #%d error = %v", index, errPick)
 		}
@@ -478,15 +452,15 @@ func TestSchedulerPick_MixedProvidersUsesWeightedProviderRotationOverReadyCandid
 
 	scheduler := newSchedulerForTest(
 		&RoundRobinSelector{},
-		&Auth{ID: "gemini-a", Provider: "gemini"},
-		&Auth{ID: "gemini-b", Provider: "gemini"},
+		&Auth{ID: "gpt-a", Provider: "openai"},
+		&Auth{ID: "gpt-b", Provider: "openai"},
 		&Auth{ID: "claude-a", Provider: "claude"},
 	)
 
-	wantProviders := []string{"gemini", "gemini", "claude", "gemini"}
-	wantIDs := []string{"gemini-a", "gemini-b", "claude-a", "gemini-a"}
+	wantProviders := []string{"openai", "openai", "claude", "openai"}
+	wantIDs := []string{"gpt-a", "gpt-b", "claude-a", "gpt-a"}
 	for index := range wantProviders {
-		got, provider, errPick := scheduler.pickMixed(context.Background(), []string{"gemini", "claude"}, "", cliproxyexecutor.Options{}, nil)
+		got, provider, errPick := scheduler.pickMixed(context.Background(), []string{"openai", "claude"}, "", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickMixed() #%d error = %v", index, errPick)
 		}
@@ -507,14 +481,14 @@ func TestSchedulerPick_MixedProvidersWeightedRoundRobin(t *testing.T) {
 
 	scheduler := newSchedulerForTest(
 		&WeightedRoundRobinSelector{},
-		&Auth{ID: "gemini-a", Provider: "gemini", Attributes: map[string]string{AttributeWeight: "5"}},
+		&Auth{ID: "gpt-a", Provider: "openai", Attributes: map[string]string{AttributeWeight: "5"}},
 		&Auth{ID: "claude-b", Provider: "claude", Attributes: map[string]string{AttributeWeight: "3"}},
 		&Auth{ID: "claude-c", Provider: "claude", Attributes: map[string]string{AttributeWeight: "2"}},
 	)
 
 	counts := make(map[string]int)
 	for index := 0; index < 100; index++ {
-		got, provider, errPick := scheduler.pickMixed(context.Background(), []string{"gemini", "claude"}, "", cliproxyexecutor.Options{}, nil)
+		got, provider, errPick := scheduler.pickMixed(context.Background(), []string{"openai", "claude"}, "", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickMixed() #%d error = %v", index, errPick)
 		}
@@ -523,7 +497,7 @@ func TestSchedulerPick_MixedProvidersWeightedRoundRobin(t *testing.T) {
 		}
 		counts[got.ID]++
 	}
-	want := map[string]int{"gemini-a": 50, "claude-b": 30, "claude-c": 20}
+	want := map[string]int{"gpt-a": 50, "claude-b": 30, "claude-c": 20}
 	for authID, wantCount := range want {
 		if counts[authID] != wantCount {
 			t.Fatalf("auth %q picks = %d, want %d", authID, counts[authID], wantCount)
@@ -534,10 +508,10 @@ func TestSchedulerPick_MixedProvidersWeightedRoundRobin(t *testing.T) {
 func TestSchedulerPick_MixedProvidersResetsCreditsWhenWeightsChange(t *testing.T) {
 	t.Parallel()
 
-	authA := &Auth{ID: "gemini-a", Provider: "gemini", Attributes: map[string]string{AttributeWeight: "1000000"}}
+	authA := &Auth{ID: "gpt-a", Provider: "openai", Attributes: map[string]string{AttributeWeight: "1000000"}}
 	authB := &Auth{ID: "claude-b", Provider: "claude", Attributes: map[string]string{AttributeWeight: "1"}}
 	scheduler := newSchedulerForTest(&WeightedRoundRobinSelector{}, authA, authB)
-	providers := []string{"gemini", "claude"}
+	providers := []string{"openai", "claude"}
 	for index := 0; index < 1000; index++ {
 		if _, _, errPick := scheduler.pickMixed(context.Background(), providers, "", cliproxyexecutor.Options{}, nil); errPick != nil {
 			t.Fatalf("warmup pickMixed() #%d error = %v", index, errPick)
@@ -758,15 +732,15 @@ func TestManagerRoundRobinPreservesSuccessorAcrossCooldown(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
 	model := "test-successor-model"
 	authIDs := []string{"successor-auth-a", "successor-auth-b", "successor-auth-c"}
-	registerSchedulerModels(t, "gemini", model, authIDs...)
+	registerSchedulerModels(t, "openai", model, authIDs...)
 
 	for _, id := range authIDs {
-		if _, errRegister := manager.Register(context.Background(), &Auth{ID: id, Provider: "gemini"}); errRegister != nil {
+		if _, errRegister := manager.Register(context.Background(), &Auth{ID: id, Provider: "openai"}); errRegister != nil {
 			t.Fatalf("Register(%s) error = %v", id, errRegister)
 		}
 	}
 
-	got, errPick := manager.scheduler.pickSingle(context.Background(), "gemini", model, cliproxyexecutor.Options{}, nil)
+	got, errPick := manager.scheduler.pickSingle(context.Background(), "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickSingle #1 error = %v", errPick)
 	}
@@ -776,13 +750,13 @@ func TestManagerRoundRobinPreservesSuccessorAcrossCooldown(t *testing.T) {
 
 	manager.MarkResult(context.Background(), Result{
 		AuthID:   "successor-auth-a",
-		Provider: "gemini",
+		Provider: "openai",
 		Model:    model,
 		Success:  false,
 		Error:    &Error{HTTPStatus: 429, Message: "rate limit"},
 	})
 
-	got, errPick = manager.scheduler.pickSingle(context.Background(), "gemini", model, cliproxyexecutor.Options{}, nil)
+	got, errPick = manager.scheduler.pickSingle(context.Background(), "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickSingle #2 after successor-auth-a cooldown error = %v", errPick)
 	}
@@ -792,13 +766,13 @@ func TestManagerRoundRobinPreservesSuccessorAcrossCooldown(t *testing.T) {
 
 	manager.MarkResult(context.Background(), Result{
 		AuthID:   "successor-auth-b",
-		Provider: "gemini",
+		Provider: "openai",
 		Model:    model,
 		Success:  false,
 		Error:    &Error{HTTPStatus: 429, Message: "rate limit"},
 	})
 
-	got, errPick = manager.scheduler.pickSingle(context.Background(), "gemini", model, cliproxyexecutor.Options{}, nil)
+	got, errPick = manager.scheduler.pickSingle(context.Background(), "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickSingle #3 after successor-auth-b cooldown error = %v", errPick)
 	}
@@ -877,22 +851,22 @@ func TestManager_PickNextMixed_UsesWeightedProviderRotationBeforeCredentialRotat
 	t.Parallel()
 
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
+	manager.executors["openai"] = schedulerTestExecutor{}
 	manager.executors["claude"] = schedulerTestExecutor{}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gemini-a", Provider: "gemini"}); errRegister != nil {
-		t.Fatalf("Register(gemini-a) error = %v", errRegister)
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gpt-a", Provider: "openai"}); errRegister != nil {
+		t.Fatalf("Register(gpt-a) error = %v", errRegister)
 	}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gemini-b", Provider: "gemini"}); errRegister != nil {
-		t.Fatalf("Register(gemini-b) error = %v", errRegister)
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gpt-b", Provider: "openai"}); errRegister != nil {
+		t.Fatalf("Register(gpt-b) error = %v", errRegister)
 	}
 	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "claude-a", Provider: "claude"}); errRegister != nil {
 		t.Fatalf("Register(claude-a) error = %v", errRegister)
 	}
 
-	wantProviders := []string{"gemini", "gemini", "claude", "gemini"}
-	wantIDs := []string{"gemini-a", "gemini-b", "claude-a", "gemini-a"}
+	wantProviders := []string{"openai", "openai", "claude", "openai"}
+	wantIDs := []string{"gpt-a", "gpt-b", "claude-a", "gpt-a"}
 	for index := range wantProviders {
-		got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"gemini", "claude"}, "", cliproxyexecutor.Options{}, map[string]struct{}{})
+		got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"openai", "claude"}, "", cliproxyexecutor.Options{}, map[string]struct{}{})
 		if errPick != nil {
 			t.Fatalf("pickNextMixed() #%d error = %v", index, errPick)
 		}
@@ -943,11 +917,11 @@ func TestManager_PickNextMixed_DisallowFreeAuthSkipsCodexFreePlan(t *testing.T) 
 
 func TestManagerPluginSchedulerSelectsAuthID(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "gemini"}); errRegister != nil {
+	manager.executors["openai"] = schedulerTestExecutor{}
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register(auth-a) error = %v", errRegister)
 	}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "gemini"}); errRegister != nil {
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register(auth-b) error = %v", errRegister)
 	}
 
@@ -957,7 +931,7 @@ func TestManagerPluginSchedulerSelectsAuthID(t *testing.T) {
 	}
 	manager.SetPluginScheduler(scheduler)
 
-	got, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{Stream: true}, nil)
+	got, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{Stream: true}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNext() error = %v", errPick)
 	}
@@ -980,9 +954,9 @@ func TestManagerPluginSchedulerSelectsAuthID(t *testing.T) {
 
 func TestManagerPluginSchedulerAcrossPriorities(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
-	authHigh := &Auth{ID: "auth-high", Provider: "gemini", Attributes: map[string]string{"priority": "10", "weight": "100"}}
-	authLow := &Auth{ID: "auth-low", Provider: "gemini", Attributes: map[string]string{"priority": "5", "weight": "50"}}
+	manager.executors["openai"] = schedulerTestExecutor{}
+	authHigh := &Auth{ID: "auth-high", Provider: "openai", Attributes: map[string]string{"priority": "10", "weight": "100"}}
+	authLow := &Auth{ID: "auth-low", Provider: "openai", Attributes: map[string]string{"priority": "5", "weight": "50"}}
 	if _, errRegister := manager.Register(context.Background(), authHigh); errRegister != nil {
 		t.Fatalf("Register(authHigh) error = %v", errRegister)
 	}
@@ -997,7 +971,7 @@ func TestManagerPluginSchedulerAcrossPriorities(t *testing.T) {
 	}
 	manager.SetPluginScheduler(scheduler)
 
-	got, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+	got, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNext() error = %v", errPick)
 	}
@@ -1014,9 +988,9 @@ func TestManagerPluginSchedulerAcrossPriorities(t *testing.T) {
 
 func TestManagerPluginSchedulerAcrossPrioritiesMixed(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
+	manager.executors["openai"] = schedulerTestExecutor{}
 	manager.executors["claude"] = schedulerTestExecutor{}
-	authHigh := &Auth{ID: "auth-high", Provider: "gemini", Attributes: map[string]string{"priority": "10", "weight": "100"}}
+	authHigh := &Auth{ID: "auth-high", Provider: "openai", Attributes: map[string]string{"priority": "10", "weight": "100"}}
 	authLow := &Auth{ID: "auth-low", Provider: "claude", Attributes: map[string]string{"priority": "5", "weight": "50"}}
 	if _, errRegister := manager.Register(context.Background(), authHigh); errRegister != nil {
 		t.Fatalf("Register(authHigh) error = %v", errRegister)
@@ -1032,7 +1006,7 @@ func TestManagerPluginSchedulerAcrossPrioritiesMixed(t *testing.T) {
 	}
 	manager.SetPluginScheduler(scheduler)
 
-	got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"gemini", "claude"}, "", cliproxyexecutor.Options{}, nil)
+	got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"openai", "claude"}, "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNextMixed() error = %v", errPick)
 	}
@@ -1052,9 +1026,9 @@ func TestManagerPluginSchedulerAcrossPrioritiesMixed(t *testing.T) {
 
 func TestManagerPluginSchedulerDefaultHighestPriorityOnly(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
-	authHigh := &Auth{ID: "auth-high", Provider: "gemini", Attributes: map[string]string{"priority": "10", "weight": "100"}}
-	authLow := &Auth{ID: "auth-low", Provider: "gemini", Attributes: map[string]string{"priority": "5", "weight": "50"}}
+	manager.executors["openai"] = schedulerTestExecutor{}
+	authHigh := &Auth{ID: "auth-high", Provider: "openai", Attributes: map[string]string{"priority": "10", "weight": "100"}}
+	authLow := &Auth{ID: "auth-low", Provider: "openai", Attributes: map[string]string{"priority": "5", "weight": "50"}}
 	if _, errRegister := manager.Register(context.Background(), authHigh); errRegister != nil {
 		t.Fatalf("Register(authHigh) error = %v", errRegister)
 	}
@@ -1069,7 +1043,7 @@ func TestManagerPluginSchedulerDefaultHighestPriorityOnly(t *testing.T) {
 	}
 	manager.SetPluginScheduler(scheduler)
 
-	got, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+	got, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNext() error = %v", errPick)
 	}
@@ -1086,9 +1060,9 @@ func TestManagerPluginSchedulerDefaultHighestPriorityOnly(t *testing.T) {
 
 func TestManagerPluginSchedulerAcrossPrioritiesUnhandledFallsBackToHighestPriority(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
-	authHigh := &Auth{ID: "auth-high", Provider: "gemini", Attributes: map[string]string{"priority": "10", "weight": "100"}}
-	authLow := &Auth{ID: "auth-low", Provider: "gemini", Attributes: map[string]string{"priority": "5", "weight": "50"}}
+	manager.executors["openai"] = schedulerTestExecutor{}
+	authHigh := &Auth{ID: "auth-high", Provider: "openai", Attributes: map[string]string{"priority": "10", "weight": "100"}}
+	authLow := &Auth{ID: "auth-low", Provider: "openai", Attributes: map[string]string{"priority": "5", "weight": "50"}}
 	if _, errRegister := manager.Register(context.Background(), authHigh); errRegister != nil {
 		t.Fatalf("Register(authHigh) error = %v", errRegister)
 	}
@@ -1102,7 +1076,7 @@ func TestManagerPluginSchedulerAcrossPrioritiesUnhandledFallsBackToHighestPriori
 	}
 	manager.SetPluginScheduler(scheduler)
 
-	got, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+	got, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNext() error = %v", errPick)
 	}
@@ -1120,12 +1094,12 @@ func TestManagerPluginSchedulerAcrossPrioritiesUnhandledFallsBackToHighestPriori
 
 func TestManagerPluginSchedulerAcrossPrioritiesAttributesAndCooldownFilter(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
+	manager.executors["openai"] = schedulerTestExecutor{}
 
-	authHighActive := &Auth{ID: "high-act", Provider: "gemini", Attributes: map[string]string{"priority": "10", "weight": "100"}}
+	authHighActive := &Auth{ID: "high-act", Provider: "openai", Attributes: map[string]string{"priority": "10", "weight": "100"}}
 	authHighCooldown := &Auth{
 		ID:         "high-cool",
-		Provider:   "gemini",
+		Provider:   "openai",
 		Attributes: map[string]string{"priority": "10", "weight": "80"},
 		Quota: QuotaState{
 			Exceeded:      true,
@@ -1133,8 +1107,8 @@ func TestManagerPluginSchedulerAcrossPrioritiesAttributesAndCooldownFilter(t *te
 			NextRecoverAt: time.Now().Add(time.Hour),
 		},
 	}
-	authLowActive := &Auth{ID: "low-act", Provider: "gemini", Attributes: map[string]string{"priority": "5", "weight": "50"}}
-	authLowDisabled := &Auth{ID: "low-dis", Provider: "gemini", Disabled: true, Attributes: map[string]string{"priority": "5", "weight": "20"}}
+	authLowActive := &Auth{ID: "low-act", Provider: "openai", Attributes: map[string]string{"priority": "5", "weight": "50"}}
+	authLowDisabled := &Auth{ID: "low-dis", Provider: "openai", Disabled: true, Attributes: map[string]string{"priority": "5", "weight": "20"}}
 
 	for _, a := range []*Auth{authHighActive, authHighCooldown, authLowActive, authLowDisabled} {
 		if _, err := manager.Register(context.Background(), a); err != nil {
@@ -1149,7 +1123,7 @@ func TestManagerPluginSchedulerAcrossPrioritiesAttributesAndCooldownFilter(t *te
 	}
 	manager.SetPluginScheduler(scheduler)
 
-	got, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+	got, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNext() error = %v", errPick)
 	}
@@ -1186,10 +1160,10 @@ func TestManagerPluginSchedulerAcrossPrioritiesAttributesAndCooldownFilter(t *te
 
 func TestManagerPluginSchedulerAcrossPrioritiesMixedUnhandledFallsBackToHighestPriority(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
+	manager.executors["openai"] = schedulerTestExecutor{}
 	manager.executors["claude"] = schedulerTestExecutor{}
 
-	authHigh := &Auth{ID: "auth-high", Provider: "gemini", Attributes: map[string]string{"priority": "10"}}
+	authHigh := &Auth{ID: "auth-high", Provider: "openai", Attributes: map[string]string{"priority": "10"}}
 	authLow := &Auth{ID: "auth-low", Provider: "claude", Attributes: map[string]string{"priority": "5"}}
 
 	for _, a := range []*Auth{authHigh, authLow} {
@@ -1204,7 +1178,7 @@ func TestManagerPluginSchedulerAcrossPrioritiesMixedUnhandledFallsBackToHighestP
 	}
 	manager.SetPluginScheduler(scheduler)
 
-	got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"gemini", "claude"}, "", cliproxyexecutor.Options{}, nil)
+	got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"openai", "claude"}, "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNextMixed() error = %v", errPick)
 	}
@@ -1217,8 +1191,8 @@ func TestManagerPluginSchedulerAcrossPrioritiesMixedUnhandledFallsBackToHighestP
 	if got == nil || got.ID != "auth-high" {
 		t.Fatalf("picked auth = %v, want auth-high", got)
 	}
-	if provider != "gemini" {
-		t.Fatalf("provider = %q, want gemini", provider)
+	if provider != "openai" {
+		t.Fatalf("provider = %q, want openai", provider)
 	}
 }
 
@@ -1347,8 +1321,8 @@ func TestManagerWeightedRoundRobinDisallowFreeAuthIgnoresFreeWeight(t *testing.T
 			manager.executors["codex"] = schedulerTestExecutor{}
 			lightProvider := "codex"
 			if tt.mixed {
-				lightProvider = "gemini"
-				manager.executors["gemini"] = schedulerTestExecutor{provider: "gemini"}
+				lightProvider = "openai"
+				manager.executors["openai"] = schedulerTestExecutor{provider: "openai"}
 			}
 			for _, candidate := range []*Auth{
 				{ID: "free-high", Provider: "codex", Attributes: map[string]string{"plan_type": "free", AttributeWeight: "100"}, Metadata: map[string]any{"access_token": "free-token"}},
@@ -1366,7 +1340,7 @@ func TestManagerWeightedRoundRobinDisallowFreeAuthIgnoresFreeWeight(t *testing.T
 				var selected *Auth
 				var errPick error
 				if tt.mixed {
-					selected, _, _, errPick = manager.pickNextMixed(context.Background(), []string{"codex", "gemini"}, "", opts, nil)
+					selected, _, _, errPick = manager.pickNextMixed(context.Background(), []string{"codex", "openai"}, "", opts, nil)
 				} else {
 					selected, _, errPick = manager.pickNext(context.Background(), "codex", "", opts, nil)
 				}
@@ -1650,7 +1624,7 @@ func TestManagerPluginSchedulerSkippedWhenHomeEnabled(t *testing.T) {
 	}
 	manager.SetPluginScheduler(scheduler)
 
-	_, _, _ = manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+	_, _, _ = manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 
 	if scheduler.calls != 0 {
 		t.Fatalf("scheduler.calls = %d, want %d", scheduler.calls, 0)
@@ -1659,22 +1633,22 @@ func TestManagerPluginSchedulerSkippedWhenHomeEnabled(t *testing.T) {
 
 func TestManagerInactivePluginSchedulerKeepsFastPath(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "gemini"}); errRegister != nil {
+	manager.executors["openai"] = schedulerTestExecutor{}
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register(auth-a) error = %v", errRegister)
 	}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "gemini"}); errRegister != nil {
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register(auth-b) error = %v", errRegister)
 	}
 
 	scheduler := &inactivePluginScheduler{}
 	manager.SetPluginScheduler(scheduler)
 
-	gotA, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+	gotA, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNext() first error = %v", errPick)
 	}
-	gotB, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+	gotB, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNext() second error = %v", errPick)
 	}
@@ -1691,8 +1665,8 @@ func TestManagerInactivePluginSchedulerKeepsFastPath(t *testing.T) {
 
 func TestManagerPluginSchedulerCalledOutsideManagerLock(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "gemini"}); errRegister != nil {
+	manager.executors["openai"] = schedulerTestExecutor{}
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register(auth-a) error = %v", errRegister)
 	}
 
@@ -1708,7 +1682,7 @@ func TestManagerPluginSchedulerCalledOutsideManagerLock(t *testing.T) {
 	}
 	manager.SetPluginScheduler(scheduler)
 
-	got, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+	got, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNext() error = %v", errPick)
 	}
@@ -1725,8 +1699,8 @@ func TestManagerPluginSchedulerCalledOutsideManagerLock(t *testing.T) {
 
 func TestManagerPluginSchedulerErrorStopsPick(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "gemini"}); errRegister != nil {
+	manager.executors["openai"] = schedulerTestExecutor{}
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register(auth-a) error = %v", errRegister)
 	}
 
@@ -1736,7 +1710,7 @@ func TestManagerPluginSchedulerErrorStopsPick(t *testing.T) {
 	}
 	manager.SetPluginScheduler(scheduler)
 
-	got, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+	got, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 	if errPick == nil {
 		t.Fatalf("pickNext() error = nil, want tenant denied")
 	}
@@ -1767,18 +1741,18 @@ func TestManagerPluginSchedulerFallsBackWhenUnhandledOrUnknown(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			manager := NewManager(nil, &FillFirstSelector{}, nil)
-			manager.executors["gemini"] = schedulerTestExecutor{}
-			if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "gemini"}); errRegister != nil {
+			manager.executors["openai"] = schedulerTestExecutor{}
+			if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "openai"}); errRegister != nil {
 				t.Fatalf("Register(auth-b) error = %v", errRegister)
 			}
-			if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "gemini"}); errRegister != nil {
+			if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "openai"}); errRegister != nil {
 				t.Fatalf("Register(auth-a) error = %v", errRegister)
 			}
 
 			scheduler := &fakePluginScheduler{resp: tc.resp, handled: tc.handled}
 			manager.SetPluginScheduler(scheduler)
 
-			got, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+			got, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 			if errPick != nil {
 				t.Fatalf("pickNext() error = %v", errPick)
 			}
@@ -1795,11 +1769,11 @@ func TestManagerPluginSchedulerFallsBackWhenUnhandledOrUnknown(t *testing.T) {
 func TestManagerPluginSchedulerDelegatesBuiltin(t *testing.T) {
 	t.Run("round-robin", func(t *testing.T) {
 		manager := NewManager(nil, &FillFirstSelector{}, nil)
-		manager.executors["gemini"] = schedulerTestExecutor{}
-		if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "gemini"}); errRegister != nil {
+		manager.executors["openai"] = schedulerTestExecutor{}
+		if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "openai"}); errRegister != nil {
 			t.Fatalf("Register(auth-a) error = %v", errRegister)
 		}
-		if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "gemini"}); errRegister != nil {
+		if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "openai"}); errRegister != nil {
 			t.Fatalf("Register(auth-b) error = %v", errRegister)
 		}
 		manager.SetPluginScheduler(&fakePluginScheduler{
@@ -1807,11 +1781,11 @@ func TestManagerPluginSchedulerDelegatesBuiltin(t *testing.T) {
 			handled: true,
 		})
 
-		gotA, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+		gotA, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickNext() first error = %v", errPick)
 		}
-		gotB, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+		gotB, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickNext() second error = %v", errPick)
 		}
@@ -1827,18 +1801,18 @@ func TestManagerPluginSchedulerDelegatesBuiltin(t *testing.T) {
 		reg := registry.GetGlobalRegistry()
 		models := []*registry.ModelInfo{{ID: "model-a"}, {ID: "model-b"}}
 		for _, authID := range []string{"auth-a", "auth-b"} {
-			reg.RegisterClient(authID, "gemini", models)
+			reg.RegisterClient(authID, "openai", models)
 			t.Cleanup(func() {
 				reg.UnregisterClient(authID)
 			})
 		}
 
 		manager := NewManager(nil, &FillFirstSelector{}, nil)
-		manager.executors["gemini"] = schedulerTestExecutor{}
-		if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "gemini"}); errRegister != nil {
+		manager.executors["openai"] = schedulerTestExecutor{}
+		if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "openai"}); errRegister != nil {
 			t.Fatalf("Register(auth-a) error = %v", errRegister)
 		}
-		if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "gemini"}); errRegister != nil {
+		if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "openai"}); errRegister != nil {
 			t.Fatalf("Register(auth-b) error = %v", errRegister)
 		}
 		manager.SetPluginScheduler(&fakePluginScheduler{
@@ -1846,11 +1820,11 @@ func TestManagerPluginSchedulerDelegatesBuiltin(t *testing.T) {
 			handled: true,
 		})
 
-		gotModelA, _, errPick := manager.pickNext(context.Background(), "gemini", "model-a", cliproxyexecutor.Options{}, nil)
+		gotModelA, _, errPick := manager.pickNext(context.Background(), "openai", "model-a", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickNext(model-a) error = %v", errPick)
 		}
-		gotModelB, _, errPick := manager.pickNext(context.Background(), "gemini", "model-b", cliproxyexecutor.Options{}, nil)
+		gotModelB, _, errPick := manager.pickNext(context.Background(), "openai", "model-b", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickNext(model-b) error = %v", errPick)
 		}
@@ -1864,11 +1838,11 @@ func TestManagerPluginSchedulerDelegatesBuiltin(t *testing.T) {
 
 	t.Run("fill-first", func(t *testing.T) {
 		manager := NewManager(nil, &RoundRobinSelector{}, nil)
-		manager.executors["gemini"] = schedulerTestExecutor{}
-		if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "gemini"}); errRegister != nil {
+		manager.executors["openai"] = schedulerTestExecutor{}
+		if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "openai"}); errRegister != nil {
 			t.Fatalf("Register(auth-b) error = %v", errRegister)
 		}
-		if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "gemini"}); errRegister != nil {
+		if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "openai"}); errRegister != nil {
 			t.Fatalf("Register(auth-a) error = %v", errRegister)
 		}
 		manager.SetPluginScheduler(&fakePluginScheduler{
@@ -1876,7 +1850,7 @@ func TestManagerPluginSchedulerDelegatesBuiltin(t *testing.T) {
 			handled: true,
 		})
 
-		got, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+		got, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickNext() error = %v", errPick)
 		}
@@ -1891,13 +1865,13 @@ func TestManagerPluginSchedulerDelegatesBuiltin(t *testing.T) {
 
 func TestManagerPluginSchedulerDelegateRoundRobinUsesNativeMixedRotation(t *testing.T) {
 	manager := NewManager(nil, &FillFirstSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
+	manager.executors["openai"] = schedulerTestExecutor{}
 	manager.executors["claude"] = schedulerTestExecutor{}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gemini-a", Provider: "gemini"}); errRegister != nil {
-		t.Fatalf("Register(gemini-a) error = %v", errRegister)
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gpt-a", Provider: "openai"}); errRegister != nil {
+		t.Fatalf("Register(gpt-a) error = %v", errRegister)
 	}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gemini-b", Provider: "gemini"}); errRegister != nil {
-		t.Fatalf("Register(gemini-b) error = %v", errRegister)
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gpt-b", Provider: "openai"}); errRegister != nil {
+		t.Fatalf("Register(gpt-b) error = %v", errRegister)
 	}
 	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "claude-a", Provider: "claude"}); errRegister != nil {
 		t.Fatalf("Register(claude-a) error = %v", errRegister)
@@ -1907,10 +1881,10 @@ func TestManagerPluginSchedulerDelegateRoundRobinUsesNativeMixedRotation(t *test
 		handled: true,
 	})
 
-	wantProviders := []string{"gemini", "gemini", "claude", "gemini"}
-	wantIDs := []string{"gemini-a", "gemini-b", "claude-a", "gemini-a"}
+	wantProviders := []string{"openai", "openai", "claude", "openai"}
+	wantIDs := []string{"gpt-a", "gpt-b", "claude-a", "gpt-a"}
 	for index := range wantProviders {
-		got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"gemini", "claude"}, "", cliproxyexecutor.Options{}, nil)
+		got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"openai", "claude"}, "", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickNextMixed() #%d error = %v", index, errPick)
 		}
@@ -1928,10 +1902,10 @@ func TestManagerPluginSchedulerDelegateRoundRobinUsesNativeMixedRotation(t *test
 
 func TestManagerPluginSchedulerPickNextMixedSelectsProvider(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
+	manager.executors["openai"] = schedulerTestExecutor{}
 	manager.executors["claude"] = schedulerTestExecutor{}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gemini-a", Provider: "gemini"}); errRegister != nil {
-		t.Fatalf("Register(gemini-a) error = %v", errRegister)
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gpt-a", Provider: "openai"}); errRegister != nil {
+		t.Fatalf("Register(gpt-a) error = %v", errRegister)
 	}
 	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "claude-a", Provider: "claude"}); errRegister != nil {
 		t.Fatalf("Register(claude-a) error = %v", errRegister)
@@ -1942,7 +1916,7 @@ func TestManagerPluginSchedulerPickNextMixedSelectsProvider(t *testing.T) {
 	}
 	manager.SetPluginScheduler(scheduler)
 
-	got, executor, provider, errPick := manager.pickNextMixed(context.Background(), []string{"gemini", "claude"}, "", cliproxyexecutor.Options{}, nil)
+	got, executor, provider, errPick := manager.pickNextMixed(context.Background(), []string{"openai", "claude"}, "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNextMixed() error = %v", errPick)
 	}
@@ -1965,17 +1939,17 @@ func TestManagerPluginSchedulerPickNextMixedSelectsProvider(t *testing.T) {
 	if req.Provider != "" {
 		t.Fatalf("scheduler request Provider = %q, want empty for mixed provider pick", req.Provider)
 	}
-	if len(req.Providers) != 2 || req.Providers[0] != "gemini" || req.Providers[1] != "claude" {
-		t.Fatalf("scheduler request Providers = %#v, want [gemini claude]", req.Providers)
+	if len(req.Providers) != 2 || req.Providers[0] != "openai" || req.Providers[1] != "claude" {
+		t.Fatalf("scheduler request Providers = %#v, want [openai claude]", req.Providers)
 	}
 }
 
 func TestManagerInactivePluginSchedulerKeepsMixedFastPath(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
+	manager.executors["openai"] = schedulerTestExecutor{}
 	manager.executors["claude"] = schedulerTestExecutor{}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gemini-a", Provider: "gemini"}); errRegister != nil {
-		t.Fatalf("Register(gemini-a) error = %v", errRegister)
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gpt-a", Provider: "openai"}); errRegister != nil {
+		t.Fatalf("Register(gpt-a) error = %v", errRegister)
 	}
 	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "claude-a", Provider: "claude"}); errRegister != nil {
 		t.Fatalf("Register(claude-a) error = %v", errRegister)
@@ -1984,18 +1958,18 @@ func TestManagerInactivePluginSchedulerKeepsMixedFastPath(t *testing.T) {
 	scheduler := &inactivePluginScheduler{}
 	manager.SetPluginScheduler(scheduler)
 
-	got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"gemini", "claude"}, "", cliproxyexecutor.Options{}, nil)
+	got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"openai", "claude"}, "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNextMixed() error = %v", errPick)
 	}
 	if got == nil {
 		t.Fatalf("pickNextMixed() auth = nil")
 	}
-	if provider != "gemini" {
-		t.Fatalf("pickNextMixed() provider = %q, want gemini", provider)
+	if provider != "openai" {
+		t.Fatalf("pickNextMixed() provider = %q, want openai", provider)
 	}
-	if got.ID != "gemini-a" {
-		t.Fatalf("pickNextMixed() auth.ID = %q, want gemini-a", got.ID)
+	if got.ID != "gpt-a" {
+		t.Fatalf("pickNextMixed() auth.ID = %q, want gpt-a", got.ID)
 	}
 	if scheduler.calls != 0 {
 		t.Fatalf("scheduler.calls = %d, want %d", scheduler.calls, 0)
@@ -2004,10 +1978,10 @@ func TestManagerInactivePluginSchedulerKeepsMixedFastPath(t *testing.T) {
 
 func TestManagerPluginSchedulerCandidatesAreSafeCopies(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
+	manager.executors["openai"] = schedulerTestExecutor{}
 	auth := &Auth{
 		ID:       "auth-a",
-		Provider: "gemini",
+		Provider: "openai",
 		Status:   StatusActive,
 		Attributes: map[string]string{
 			"access_token": "token-value",
@@ -2029,7 +2003,7 @@ func TestManagerPluginSchedulerCandidatesAreSafeCopies(t *testing.T) {
 				t.Fatalf("len(req.Candidates) = %d, want %d", len(req.Candidates), 1)
 			}
 			candidate := req.Candidates[0]
-			if candidate.ID != "auth-a" || candidate.Provider != "gemini" || candidate.Priority != 7 || candidate.Status != string(StatusActive) {
+			if candidate.ID != "auth-a" || candidate.Provider != "openai" || candidate.Priority != 7 || candidate.Status != string(StatusActive) {
 				t.Fatalf("scheduler candidate = %#v, want sanitized auth-a metadata", candidate)
 			}
 			for _, key := range []string{"access_token", "api_key", "cookie"} {
@@ -2050,7 +2024,7 @@ func TestManagerPluginSchedulerCandidatesAreSafeCopies(t *testing.T) {
 	}
 	manager.SetPluginScheduler(scheduler)
 
-	if _, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil); errPick != nil {
+	if _, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil); errPick != nil {
 		t.Fatalf("pickNext() error = %v", errPick)
 	}
 
@@ -2071,11 +2045,11 @@ func TestManagerCustomSelector_FallsBackToLegacyPath(t *testing.T) {
 
 	selector := &trackingSelector{}
 	manager := NewManager(nil, selector, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
-	manager.auths["auth-a"] = &Auth{ID: "auth-a", Provider: "gemini"}
-	manager.auths["auth-b"] = &Auth{ID: "auth-b", Provider: "gemini"}
+	manager.executors["openai"] = schedulerTestExecutor{}
+	manager.auths["auth-a"] = &Auth{ID: "auth-a", Provider: "openai"}
+	manager.auths["auth-b"] = &Auth{ID: "auth-b", Provider: "openai"}
 
-	got, _, errPick := manager.pickNext(context.Background(), "gemini", "", cliproxyexecutor.Options{}, map[string]struct{}{})
+	got, _, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, map[string]struct{}{})
 	if errPick != nil {
 		t.Fatalf("pickNext() error = %v", errPick)
 	}
@@ -2114,14 +2088,14 @@ func TestManager_SchedulerTracksRegisterAndUpdate(t *testing.T) {
 	t.Parallel()
 
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "gemini"}); errRegister != nil {
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register(auth-b) error = %v", errRegister)
 	}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "gemini"}); errRegister != nil {
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register(auth-a) error = %v", errRegister)
 	}
 
-	got, errPick := manager.scheduler.pickSingle(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+	got, errPick := manager.scheduler.pickSingle(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("scheduler.pickSingle() error = %v", errPick)
 	}
@@ -2129,11 +2103,11 @@ func TestManager_SchedulerTracksRegisterAndUpdate(t *testing.T) {
 		t.Fatalf("scheduler.pickSingle() auth = %v, want auth-a", got)
 	}
 
-	if _, errUpdate := manager.Update(context.Background(), &Auth{ID: "auth-a", Provider: "gemini", Disabled: true}); errUpdate != nil {
+	if _, errUpdate := manager.Update(context.Background(), &Auth{ID: "auth-a", Provider: "openai", Disabled: true}); errUpdate != nil {
 		t.Fatalf("Update(auth-a) error = %v", errUpdate)
 	}
 
-	got, errPick = manager.scheduler.pickSingle(context.Background(), "gemini", "", cliproxyexecutor.Options{}, nil)
+	got, errPick = manager.scheduler.pickSingle(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("scheduler.pickSingle() after update error = %v", errPick)
 	}
@@ -2146,22 +2120,22 @@ func TestManager_PickNextMixed_UsesSchedulerRotation(t *testing.T) {
 	t.Parallel()
 
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
+	manager.executors["openai"] = schedulerTestExecutor{}
 	manager.executors["claude"] = schedulerTestExecutor{}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gemini-a", Provider: "gemini"}); errRegister != nil {
-		t.Fatalf("Register(gemini-a) error = %v", errRegister)
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gpt-a", Provider: "openai"}); errRegister != nil {
+		t.Fatalf("Register(gpt-a) error = %v", errRegister)
 	}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gemini-b", Provider: "gemini"}); errRegister != nil {
-		t.Fatalf("Register(gemini-b) error = %v", errRegister)
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gpt-b", Provider: "openai"}); errRegister != nil {
+		t.Fatalf("Register(gpt-b) error = %v", errRegister)
 	}
 	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "claude-a", Provider: "claude"}); errRegister != nil {
 		t.Fatalf("Register(claude-a) error = %v", errRegister)
 	}
 
-	wantProviders := []string{"gemini", "gemini", "claude", "gemini"}
-	wantIDs := []string{"gemini-a", "gemini-b", "claude-a", "gemini-a"}
+	wantProviders := []string{"openai", "openai", "claude", "openai"}
+	wantIDs := []string{"gpt-a", "gpt-b", "claude-a", "gpt-a"}
 	for index := range wantProviders {
-		got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"gemini", "claude"}, "", cliproxyexecutor.Options{}, nil)
+		got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"openai", "claude"}, "", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("pickNextMixed() #%d error = %v", index, errPick)
 		}
@@ -2181,23 +2155,23 @@ func TestManager_SchedulerSharesThinkingSuffixCooldownAndRegistryState(t *testin
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
 	reg := registry.GetGlobalRegistry()
 	baseModel := "scheduler-thinking-model"
-	reg.RegisterClient("thinking-auth-a", "gemini", []*registry.ModelInfo{{ID: baseModel}})
-	reg.RegisterClient("thinking-auth-b", "gemini", []*registry.ModelInfo{{ID: baseModel}})
+	reg.RegisterClient("thinking-auth-a", "openai", []*registry.ModelInfo{{ID: baseModel}})
+	reg.RegisterClient("thinking-auth-b", "openai", []*registry.ModelInfo{{ID: baseModel}})
 	t.Cleanup(func() {
 		reg.UnregisterClient("thinking-auth-a")
 		reg.UnregisterClient("thinking-auth-b")
 	})
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "thinking-auth-a", Provider: "gemini"}); errRegister != nil {
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "thinking-auth-a", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register(thinking-auth-a) error = %v", errRegister)
 	}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "thinking-auth-b", Provider: "gemini"}); errRegister != nil {
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "thinking-auth-b", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register(thinking-auth-b) error = %v", errRegister)
 	}
 
 	retryAfter := time.Hour
 	manager.MarkResult(context.Background(), Result{
 		AuthID:     "thinking-auth-a",
-		Provider:   "gemini",
+		Provider:   "openai",
 		Model:      baseModel + "(high)",
 		Success:    false,
 		Error:      &Error{HTTPStatus: 429, Message: "quota"},
@@ -2216,7 +2190,7 @@ func TestManager_SchedulerSharesThinkingSuffixCooldownAndRegistryState(t *testin
 		t.Fatalf("registry model count during cooldown = %d, want 1", count)
 	}
 	for _, model := range []string{baseModel, baseModel + "(medium)", baseModel + "(low)"} {
-		got, errPick := manager.scheduler.pickSingle(context.Background(), "gemini", model, cliproxyexecutor.Options{}, nil)
+		got, errPick := manager.scheduler.pickSingle(context.Background(), "openai", model, cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("scheduler.pickSingle(%q) error = %v", model, errPick)
 		}
@@ -2227,7 +2201,7 @@ func TestManager_SchedulerSharesThinkingSuffixCooldownAndRegistryState(t *testin
 
 	manager.MarkResult(context.Background(), Result{
 		AuthID:   "thinking-auth-a",
-		Provider: "gemini",
+		Provider: "openai",
 		Model:    baseModel + "(low)",
 		Success:  true,
 	})
@@ -2250,14 +2224,14 @@ func TestManager_PickNextMixed_SkipsProvidersWithoutExecutors(t *testing.T) {
 
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
 	manager.executors["claude"] = schedulerTestExecutor{}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gemini-a", Provider: "gemini"}); errRegister != nil {
-		t.Fatalf("Register(gemini-a) error = %v", errRegister)
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "gpt-a", Provider: "openai"}); errRegister != nil {
+		t.Fatalf("Register(gpt-a) error = %v", errRegister)
 	}
 	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "claude-a", Provider: "claude"}); errRegister != nil {
 		t.Fatalf("Register(claude-a) error = %v", errRegister)
 	}
 
-	got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"gemini", "claude"}, "", cliproxyexecutor.Options{}, nil)
+	got, _, provider, errPick := manager.pickNextMixed(context.Background(), []string{"openai", "claude"}, "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNextMixed() error = %v", errPick)
 	}
@@ -2277,28 +2251,28 @@ func TestManager_SchedulerTracksMarkResultCooldownAndRecovery(t *testing.T) {
 
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient("auth-a", "gemini", []*registry.ModelInfo{{ID: "test-model"}})
-	reg.RegisterClient("auth-b", "gemini", []*registry.ModelInfo{{ID: "test-model"}})
+	reg.RegisterClient("auth-a", "openai", []*registry.ModelInfo{{ID: "test-model"}})
+	reg.RegisterClient("auth-b", "openai", []*registry.ModelInfo{{ID: "test-model"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient("auth-a")
 		reg.UnregisterClient("auth-b")
 	})
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "gemini"}); errRegister != nil {
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register(auth-a) error = %v", errRegister)
 	}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "gemini"}); errRegister != nil {
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register(auth-b) error = %v", errRegister)
 	}
 
 	manager.MarkResult(context.Background(), Result{
 		AuthID:   "auth-a",
-		Provider: "gemini",
+		Provider: "openai",
 		Model:    "test-model",
 		Success:  false,
 		Error:    &Error{HTTPStatus: 429, Message: "quota"},
 	})
 
-	got, errPick := manager.scheduler.pickSingle(context.Background(), "gemini", "test-model", cliproxyexecutor.Options{}, nil)
+	got, errPick := manager.scheduler.pickSingle(context.Background(), "openai", "test-model", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("scheduler.pickSingle() after cooldown error = %v", errPick)
 	}
@@ -2308,14 +2282,14 @@ func TestManager_SchedulerTracksMarkResultCooldownAndRecovery(t *testing.T) {
 
 	manager.MarkResult(context.Background(), Result{
 		AuthID:   "auth-a",
-		Provider: "gemini",
+		Provider: "openai",
 		Model:    "test-model",
 		Success:  true,
 	})
 
 	seen := make(map[string]struct{}, 2)
 	for index := 0; index < 2; index++ {
-		got, errPick = manager.scheduler.pickSingle(context.Background(), "gemini", "test-model", cliproxyexecutor.Options{}, nil)
+		got, errPick = manager.scheduler.pickSingle(context.Background(), "openai", "test-model", cliproxyexecutor.Options{}, nil)
 		if errPick != nil {
 			t.Fatalf("scheduler.pickSingle() after recovery #%d error = %v", index, errPick)
 		}
@@ -2382,18 +2356,18 @@ func TestManagerPluginSchedulerTerminalRejection(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			manager := NewManager(nil, &FillFirstSelector{}, nil)
-			manager.executors["gemini"] = schedulerTestExecutor{}
-			if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "gemini"}); errRegister != nil {
+			manager.executors["openai"] = schedulerTestExecutor{}
+			if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "openai"}); errRegister != nil {
 				t.Fatalf("Register(auth-a) error = %v", errRegister)
 			}
-			if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "gemini"}); errRegister != nil {
+			if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-b", Provider: "openai"}); errRegister != nil {
 				t.Fatalf("Register(auth-b) error = %v", errRegister)
 			}
 
 			scheduler := &fakePluginScheduler{resp: tc.resp, handled: true}
 			manager.SetPluginScheduler(scheduler)
 
-			got, errSelect := manager.SelectAuth(context.Background(), "gemini", "", cliproxyexecutor.Options{})
+			got, errSelect := manager.SelectAuth(context.Background(), "openai", "", cliproxyexecutor.Options{})
 			if got != nil {
 				t.Fatalf("SelectAuth() got auth %v, want nil", got.ID)
 			}
@@ -2411,7 +2385,7 @@ func TestManagerPluginSchedulerTerminalRejection(t *testing.T) {
 				t.Fatalf("SelectAuth() error message = %q, want %q", authErr.Message, tc.wantMessage)
 			}
 
-			gotMixed, _, _, errMixed := manager.pickNextMixed(context.Background(), []string{"gemini"}, "", cliproxyexecutor.Options{}, nil)
+			gotMixed, _, _, errMixed := manager.pickNextMixed(context.Background(), []string{"openai"}, "", cliproxyexecutor.Options{}, nil)
 			if gotMixed != nil {
 				t.Fatalf("pickNextMixed() got auth %v, want nil", gotMixed.ID)
 			}
@@ -2434,8 +2408,8 @@ func TestManagerPluginSchedulerTerminalRejection(t *testing.T) {
 
 func TestManagerPluginSchedulerUnhandledWithRejectFlagFallsBack(t *testing.T) {
 	manager := NewManager(nil, &FillFirstSelector{}, nil)
-	manager.executors["gemini"] = schedulerTestExecutor{}
-	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "gemini"}); errRegister != nil {
+	manager.executors["openai"] = schedulerTestExecutor{}
+	if _, errRegister := manager.Register(context.Background(), &Auth{ID: "auth-a", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register(auth-a) error = %v", errRegister)
 	}
 
@@ -2446,7 +2420,7 @@ func TestManagerPluginSchedulerUnhandledWithRejectFlagFallsBack(t *testing.T) {
 	}
 	manager.SetPluginScheduler(scheduler)
 
-	got, errSelect := manager.SelectAuth(context.Background(), "gemini", "", cliproxyexecutor.Options{})
+	got, errSelect := manager.SelectAuth(context.Background(), "openai", "", cliproxyexecutor.Options{})
 	if errSelect != nil {
 		t.Fatalf("SelectAuth() error = %v, want nil", errSelect)
 	}

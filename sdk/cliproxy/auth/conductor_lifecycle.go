@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
 	log "github.com/sirupsen/logrus"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 // SetRetryConfig updates additional credential retry rounds, the per-round credential limit, and the cooldown wait interval.
@@ -259,13 +259,11 @@ func (m *Manager) updateInternalLocked(ctx context.Context, base, auth *Auth, mo
 	}
 	// Do not let an in-flight refresh overwrite credentials committed after its snapshot.
 	if mode == updateModeRefresh && base != nil && (existing.CredentialVersion != base.CredentialVersion || CredentialsChanged(base, existing)) {
-		if auth.CodexRefreshPatch == nil || !auth.CodexRefreshPatch.CanApplyTo(existing.Metadata) {
-			current := existing.Clone()
-			m.mu.Unlock()
-			// Discarded stale refresh: committed=false so callers do not
-			// run finishAuthUpdate for a state this call did not change.
-			return current, false, false, nil
-		}
+		current := existing.Clone()
+		m.mu.Unlock()
+		// Discarded stale refresh: committed=false so callers do not
+		// run finishAuthUpdate for a state this call did not change.
+		return current, false, false, nil
 	}
 	if mode == updateModeRefresh {
 		merged := MergeRefreshedAuth(base, existing, auth)
@@ -346,14 +344,6 @@ func (m *Manager) updateInternalLocked(ctx context.Context, base, auth *Auth, mo
 	cooldownStateChanged = normalizeModelStates(auth) || cooldownStateChanged
 	if m.cooldownDisabledForAuth(auth) || auth.Disabled || auth.Status == StatusDisabled {
 		cooldownStateChanged = clearCooldownStateForAuth(auth, now) || cooldownStateChanged
-	}
-	if existing.Metadata != nil {
-		if persistedHints, hasHints := existing.Metadata["antigravity_capability_hints"]; hasHints {
-			if auth.Metadata == nil {
-				auth.Metadata = make(map[string]any)
-			}
-			auth.Metadata["antigravity_capability_hints"] = persistedHints
-		}
 	}
 	auth.EnsureIndex()
 	// Save before publication, including the transactional Meta mint path.

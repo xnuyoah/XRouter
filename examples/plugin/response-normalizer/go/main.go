@@ -127,9 +127,9 @@ func handleMethod(method string) ([]byte, error) {
 	_ = time.Second
 	switch method {
 	case "plugin.register":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-response-normalizer-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-response-normalizer-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"response_before_translator\":true,\"response_after_translator\":true}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-response-normalizer-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-response-normalizer-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"response_before_translator\":true,\"response_after_translator\":true}}")
 	case "plugin.reconfigure":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-response-normalizer-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-response-normalizer-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"response_before_translator\":true,\"response_after_translator\":true}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-response-normalizer-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-response-normalizer-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"response_before_translator\":true,\"response_after_translator\":true}}")
 	case "response.normalize_before":
 		return okEnvelopeJSON("{\"Body\":\"eyJyZXNwb25zZV9ub3JtYWxpemVkX2JlZm9yZV9ieSI6ImV4YW1wbGUtcmVzcG9uc2Utbm9ybWFsaXplci1nbyJ9\"}")
 	case "response.normalize_after":

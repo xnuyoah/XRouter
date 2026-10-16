@@ -13,8 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	misc "github.com/router-for-me/CLIProxyAPI/v8/internal/misc"
 	log "github.com/sirupsen/logrus"
+	misc "github.com/xnuyoah/XRouter/v8/internal/misc"
 )
 
 // OpenAIImageModelType marks models that are callable through OpenAI-compatible image endpoints.
@@ -53,11 +53,11 @@ type ModelInfo struct {
 	Created int64 `json:"created"`
 	// OwnedBy indicates the organization that owns the model
 	OwnedBy string `json:"owned_by"`
-	// Type indicates the model type (e.g., "claude", "gemini", "openai")
+	// Type indicates the model type (e.g., "claude", "openai")
 	Type string `json:"type"`
 	// DisplayName is the human-readable name for the model
 	DisplayName string `json:"display_name,omitempty"`
-	// Name is used for Gemini-style model names
+	// Name is the provider-native model identifier when it differs from ID
 	Name string `json:"name,omitempty"`
 	// Version is the model version
 	Version string `json:"version,omitempty"`
@@ -94,7 +94,7 @@ type ModelInfo struct {
 	NativeCapabilities *NativeCapabilities `json:"-"`
 
 	// Thinking holds provider-specific reasoning/thinking budget capabilities.
-	// This is optional and currently used for Gemini thinking budget normalization.
+	// This is optional and currently used for provider-specific thinking budget normalization.
 	Thinking *ThinkingSupport `json:"thinking,omitempty"`
 
 	// Config holds model-specific runtime overrides loaded from models.json.
@@ -272,7 +272,7 @@ func LookupModelInfo(modelID string, provider ...string) *ModelInfo {
 	if info := GetGlobalRegistry().GetModelInfo(modelID, p); info != nil {
 		return cloneModelInfo(info)
 	}
-	return cloneModelInfo(LookupStaticModelInfo(modelID))
+	return nil
 }
 
 // NativeCapabilityRoute describes one registered route to a public model.
@@ -315,9 +315,7 @@ func ResolveResponsesWebSearchCapability(routes []NativeCapabilityRoute) *bool {
 func responsesWebSearchProviderPathSupport(provider string) *bool {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	switch provider {
-	case "codex", "xai", "claude", "antigravity":
-		return boolPointer(true)
-	case "openai", "openai-compatibility", "gemini", "aistudio", "vertex", "kimi", "kimi-ai", "kimi.ai", "kimi.com", "interactions", "gemini-interactions":
+	case "openai", "openai-compatibility", "deepseek", "nvidia":
 		return boolPointer(false)
 	default:
 		if strings.HasPrefix(provider, "openai-compatible-") {
@@ -433,7 +431,7 @@ func (r *ModelRegistry) triggerModelsUnregistered(provider, clientID string) {
 // RegisterClient registers a client and its supported models
 // Parameters:
 //   - clientID: Unique identifier for the client
-//   - clientProvider: Provider name (e.g., "gemini", "claude", "openai")
+//   - clientProvider: Provider name (e.g., "claude", "openai")
 //   - models: List of models that this client can provide
 func (r *ModelRegistry) RegisterClient(clientID, clientProvider string, models []*ModelInfo) {
 	r.mutex.Lock()
@@ -1304,7 +1302,7 @@ func (r *ModelRegistry) IsModelQuotaExceededForClient(clientID, modelID string) 
 
 // GetAvailableModels returns all models that have at least one available client
 // Parameters:
-//   - handlerType: The handler type to filter models for (e.g., "openai", "claude", "gemini")
+//   - handlerType: The handler type to filter models for (e.g., "openai", "claude")
 //
 // Returns:
 //   - []map[string]any: List of available models in the requested format
@@ -1475,7 +1473,7 @@ func cloneModelMapValue(value any) any {
 
 // GetAvailableModelsByProvider returns models available for the given provider identifier.
 // Parameters:
-//   - provider: Provider identifier (e.g., "codex", "gemini", "antigravity")
+//   - provider: Provider identifier (e.g., "codex", "antigravity")
 //
 // Returns:
 //   - []*ModelInfo: List of available models for the provider
@@ -1784,39 +1782,6 @@ func (r *ModelRegistry) convertModelToMap(model *ModelInfo, handlerType string) 
 		result["max_tokens"] = maxOutput
 		return result
 
-	case "gemini":
-		result := map[string]any{}
-		if model.Name != "" {
-			result["name"] = model.Name
-		} else {
-			result["name"] = model.ID
-		}
-		if model.Version != "" {
-			result["version"] = model.Version
-		}
-		if model.DisplayName != "" {
-			result["displayName"] = model.DisplayName
-		}
-		if model.Description != "" {
-			result["description"] = model.Description
-		}
-		if model.InputTokenLimit > 0 {
-			result["inputTokenLimit"] = model.InputTokenLimit
-		}
-		if model.OutputTokenLimit > 0 {
-			result["outputTokenLimit"] = model.OutputTokenLimit
-		}
-		if len(model.SupportedGenerationMethods) > 0 {
-			result["supportedGenerationMethods"] = append([]string(nil), model.SupportedGenerationMethods...)
-		}
-		if len(model.SupportedInputModalities) > 0 {
-			result["supportedInputModalities"] = append([]string(nil), model.SupportedInputModalities...)
-		}
-		if len(model.SupportedOutputModalities) > 0 {
-			result["supportedOutputModalities"] = append([]string(nil), model.SupportedOutputModalities...)
-		}
-		return result
-
 	default:
 		// Generic format
 		result := map[string]any{
@@ -1863,7 +1828,7 @@ func (r *ModelRegistry) CleanupExpiredQuotas() {
 // available clients that are not suspended or over quota.
 //
 // Parameters:
-//   - handlerType: The API handler type (e.g., "openai", "claude", "gemini")
+//   - handlerType: The API handler type (e.g., "openai", "claude")
 //
 // Returns:
 //   - string: The model ID of the first available model, or empty string if none available

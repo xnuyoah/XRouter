@@ -43,9 +43,9 @@ static long usage_count = 0;
 
 static const char* REGISTRATION_RESPONSE =
     "{\"ok\":true,\"result\":{\"schema_version\":1,\"metadata\":{\"Name\":\"example-simple-c\","
-    "\"Version\":\"0.1.0\",\"Author\":\"router-for-me\","
-    "\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\","
-    "\"Logo\":\"https://raw.githubusercontent.com/router-for-me/CLIProxyAPI/main/docs/logo.png\","
+    "\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\","
+    "\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\","
+    "\"Logo\":\"https://raw.githubusercontent.com/xnuyoah/XRouter/main/assets/brand/xrouter-icon.svg\","
     "\"ConfigFields\":["
     "{\"Name\":\"config1\",\"Type\":\"boolean\",\"Description\":\"Enables the example boolean option.\"},"
     "{\"Name\":\"config2\",\"Type\":\"string\",\"Description\":\"Stores the example string option.\"},"

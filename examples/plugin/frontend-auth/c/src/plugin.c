@@ -76,11 +76,11 @@ static int plugin_call(const char* method, const uint8_t* request, size_t reques
 		return 1;
 	}
 	if (strcmp(method, "plugin.register") == 0) {
-		write_response(response, "{\"ok\":true,\"result\":{\"schema_version\":1,\"metadata\":{\"Name\":\"example-frontend-auth-c\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-frontend-auth-c.png\",\"ConfigFields\":[]},\"capabilities\":{\"frontend_auth_provider\":true}}}");
+		write_response(response, "{\"ok\":true,\"result\":{\"schema_version\":1,\"metadata\":{\"Name\":\"example-frontend-auth-c\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-frontend-auth-c.png\",\"ConfigFields\":[]},\"capabilities\":{\"frontend_auth_provider\":true}}}");
 		return 0;
 	}
 	if (strcmp(method, "plugin.reconfigure") == 0) {
-		write_response(response, "{\"ok\":true,\"result\":{\"schema_version\":1,\"metadata\":{\"Name\":\"example-frontend-auth-c\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-frontend-auth-c.png\",\"ConfigFields\":[]},\"capabilities\":{\"frontend_auth_provider\":true}}}");
+		write_response(response, "{\"ok\":true,\"result\":{\"schema_version\":1,\"metadata\":{\"Name\":\"example-frontend-auth-c\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-frontend-auth-c.png\",\"ConfigFields\":[]},\"capabilities\":{\"frontend_auth_provider\":true}}}");
 		return 0;
 	}
 	if (strcmp(method, "frontend_auth.identifier") == 0) {

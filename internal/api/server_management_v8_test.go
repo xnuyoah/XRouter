@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,8 +12,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/api/handlers/management"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/api/handlers/management"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 func TestManagementV8RoutesShareAccessControl(t *testing.T) {
@@ -31,7 +30,7 @@ func TestManagementV8RoutesShareAccessControl(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "config.yaml")
-			if err := os.WriteFile(path, []byte("port: 8317\nremote-management: {secret-key: test-password}\n"), 0600); err != nil {
+			if err := os.WriteFile(path, []byte("port: 11016\nremote-management: {secret-key: test-password}\n"), 0600); err != nil {
 				t.Fatal(err)
 			}
 			cfg, err := config.LoadConfig(path)
@@ -63,7 +62,7 @@ func TestManagementV8RoutesShareAccessControl(t *testing.T) {
 
 func TestManagementV8IndependentContract(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
-	raw := "port: 8317\nrequest-retry: 3\ndebug: false\napi-keys: [client]\nremote-management: {secret-key: test-password}\n"
+	raw := "port: 11016\nrequest-retry: 3\ndebug: false\napi-keys: [client]\nremote-management: {secret-key: test-password}\n"
 	if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +91,7 @@ func TestManagementV8IndependentContract(t *testing.T) {
 		"GET /v8/management/oauth/auth-url", "POST /v8/management/oauth/import", "POST /v8/management/oauth/callback",
 		"POST /v8/management/routing/cooldown/reset",
 		"GET /v8/management/plugins/:id/quota", "POST /v8/management/plugins/:id/quota", "DELETE /v8/management/plugins/:id/quota",
-		"POST /v8/management/plugins/store/:id/install", "DELETE /v8/management/plugins/:id",
+		"DELETE /v8/management/plugins/:id",
 	} {
 		if !routes[route] {
 			t.Errorf("missing route %s", route)
@@ -133,8 +132,6 @@ func TestManagementV8IndependentContract(t *testing.T) {
 		{http.MethodGet, "/v8/management/oauth/auth-url?provider=unknown", `{"error":"provider_not_found"}`, http.StatusNotFound},
 		{http.MethodPost, "/v8/management/oauth/import", `{"error":"provider is required"}`, http.StatusBadRequest},
 		{http.MethodPost, "/v8/management/oauth/import?provider=codex", `{"error":"provider_not_found"}`, http.StatusNotFound},
-		{http.MethodPost, "/v8/management/oauth/import?provider=vertex", `{"error":"file required"}`, http.StatusBadRequest},
-		{http.MethodPost, "/v0/management/vertex/import", `{"error":"file required"}`, http.StatusBadRequest},
 	} {
 		if got := request(tc.method, tc.url, "", tc.status); got != tc.body {
 			t.Fatalf("%s: body=%s, want %s", tc.url, got, tc.body)
@@ -142,26 +139,9 @@ func TestManagementV8IndependentContract(t *testing.T) {
 	}
 	for _, tc := range []struct{ url, provider string }{
 		{"/v8/management/oauth/auth-url?provider=codex", "codex"},
-		{"/v8/management/oauth/auth-url?provider=%20CLAUDE%20", "anthropic"},
 		{"/v0/management/codex-auth-url", "codex"},
-		{"/v0/management/anthropic-auth-url", "anthropic"},
 	} {
-		body := request(http.MethodGet, tc.url, "", http.StatusOK)
-		var login struct{ URL, State string }
-		if errDecode := json.Unmarshal([]byte(body), &login); errDecode != nil {
-			t.Fatal(errDecode)
-		}
-		t.Cleanup(func() { management.CancelOAuthSession(login.State) })
-		if login.URL == "" || !management.IsOAuthSessionPending(login.State, tc.provider) {
-			t.Fatalf("%s: invalid login response %s", tc.url, body)
-		}
-		if got := request(http.MethodGet, "/v8/management/oauth/status?state="+login.State, "", http.StatusOK); got != `{"status":"wait"}` {
-			t.Fatalf("pending login status=%s", got)
-		}
-		request(http.MethodDelete, "/v8/management/oauth/session?state="+login.State, "", http.StatusOK)
-		if management.IsOAuthSessionPending(login.State, tc.provider) {
-			t.Fatal("login session was not cancelled")
-		}
+		request(http.MethodGet, tc.url, "", http.StatusNotFound)
 	}
 	if got := request(http.MethodGet, "/v8/management/config/routing/retry/request-retry", "", http.StatusOK); got != "3" {
 		t.Fatalf("nested value = %s, want 3", got)
@@ -182,7 +162,7 @@ func TestManagementV8IndependentContract(t *testing.T) {
 func TestManagementV8PluginOperationMigratesConfiguration(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.yaml")
-	raw := fmt.Sprintf("codex: {disable-codex-cloaking: true}\nremote-management: {secret-key: test-password}\nplugins:\n  dir: %q\n  configs: {test-plugin: {enabled: false}}\n", filepath.ToSlash(dir))
+	raw := fmt.Sprintf("disable-cooling: true\nremote-management: {secret-key: test-password}\nplugins:\n  dir: %q\n  configs: {test-plugin: {enabled: false}}\n", filepath.ToSlash(dir))
 	if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +191,7 @@ func TestManagementV8PluginOperationMigratesConfiguration(t *testing.T) {
 	}
 	select {
 	case next := <-reloads:
-		if !next.ForAPIKey().Codex.DisableCodexCloaking || !next.Codex.DisableCodexCloaking {
+		if !next.ForAPIKey().DisableCooling || !next.DisableCooling {
 			t.Fatal("plugin operation published an incorrect configuration scope")
 		}
 	case <-time.After(5 * time.Second):

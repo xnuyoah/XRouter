@@ -9,30 +9,20 @@ import (
 
 func TestMaxContextLengthConfigDecoding(t *testing.T) {
 	const want = 1048576
-	const yamlConfig = `codex-api-key:
+	const yamlConfig = `openai-api-key:
   - models:
-      - name: codex-upstream
-        alias: codex-alias
+      - name: openai-upstream
+        alias: openai-alias
         max-context-length: 1048576
-claude-api-key:
+deepseek-api-key:
   - models:
-      - name: claude-upstream
-        alias: claude-alias
+      - name: deepseek-upstream
+        alias: deepseek-alias
         max-context-length: 1048576
-gemini-api-key:
+nvidia-api-key:
   - models:
-      - name: gemini-upstream
-        alias: gemini-alias
-        max-context-length: 1048576
-interactions-api-key:
-  - models:
-      - name: interactions-upstream
-        alias: interactions-alias
-        max-context-length: 1048576
-xai-api-key:
-  - models:
-      - name: xai-upstream
-        alias: xai-alias
+      - name: nvidia-upstream
+        alias: nvidia-alias
         max-context-length: 1048576
 openai-compatibility:
   - models:
@@ -40,7 +30,7 @@ openai-compatibility:
         alias: compat-alias
         max-context-length: 1048576
 `
-	const jsonConfig = `{"codex-api-key":[{"models":[{"name":"codex-upstream","alias":"codex-alias","max-context-length":1048576}]}],"claude-api-key":[{"models":[{"name":"claude-upstream","alias":"claude-alias","max-context-length":1048576}]}],"gemini-api-key":[{"models":[{"name":"gemini-upstream","alias":"gemini-alias","max-context-length":1048576}]}],"interactions-api-key":[{"models":[{"name":"interactions-upstream","alias":"interactions-alias","max-context-length":1048576}]}],"xai-api-key":[{"models":[{"name":"xai-upstream","alias":"xai-alias","max-context-length":1048576}]}],"openai-compatibility":[{"models":[{"name":"compat-upstream","alias":"compat-alias","max-context-length":1048576}]}]}`
+	const jsonConfig = `{"openai-api-key":[{"models":[{"name":"openai-upstream","alias":"openai-alias","max-context-length":1048576}]}],"deepseek-api-key":[{"models":[{"name":"deepseek-upstream","alias":"deepseek-alias","max-context-length":1048576}]}],"nvidia-api-key":[{"models":[{"name":"nvidia-upstream","alias":"nvidia-alias","max-context-length":1048576}]}],"openai-compatibility":[{"models":[{"name":"compat-upstream","alias":"compat-alias","max-context-length":1048576}]}]}`
 
 	for _, testCase := range []struct {
 		name   string
@@ -69,11 +59,9 @@ openai-compatibility:
 				name string
 				got  int
 			}{
-				{name: "codex", got: cfg.CodexKey[0].Models[0].MaxContextLength},
-				{name: "claude", got: cfg.ClaudeKey[0].Models[0].MaxContextLength},
-				{name: "gemini", got: cfg.GeminiKey[0].Models[0].MaxContextLength},
-				{name: "interactions", got: cfg.InteractionsKey[0].Models[0].MaxContextLength},
-				{name: "xai", got: cfg.XAIKey[0].Models[0].MaxContextLength},
+				{name: "openai", got: cfg.OpenAIKey[0].Models[0].MaxContextLength},
+				{name: "deepseek", got: cfg.DeepseekKey[0].Models[0].MaxContextLength},
+				{name: "nvidia", got: cfg.NvidiaKey[0].Models[0].MaxContextLength},
 				{name: "openai compatibility", got: cfg.OpenAICompatibility[0].Models[0].MaxContextLength},
 			}
 			for _, model := range models {

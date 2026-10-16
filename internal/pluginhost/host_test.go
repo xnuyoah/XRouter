@@ -14,12 +14,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginabi"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginabi"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 func enabledPluginConfigs(ids ...string) map[string]config.PluginInstanceConfig {
@@ -77,7 +77,7 @@ func TestHostApplyConfig_DisabledGlobalDoesNotResolvePluginsDir(t *testing.T) {
 	disabledCfg, errParseConfig := config.ParseConfigBytes([]byte(`
 plugins:
   enabled: false
-  dir: "~/.cli-proxy-api/plugins"
+  dir: "~/.xrouter/plugins"
 `))
 	if errParseConfig != nil {
 		t.Fatalf("ParseConfigBytes() error = %v", errParseConfig)
@@ -493,7 +493,7 @@ func TestHostApplyConfigRegistersInterceptorOnlyPlugin(t *testing.T) {
 				Name:             "alpha",
 				Version:          "1.0.0",
 				Author:           "test",
-				GitHubRepository: "https://github.com/router-for-me/CLIProxyAPI",
+				GitHubRepository: "https://github.com/xnuyoah/XRouter",
 			},
 			Capabilities: pluginapi.Capabilities{
 				RequestInterceptor: requestInterceptorFunc(func(ctx context.Context, req pluginapi.RequestInterceptRequest) (pluginapi.RequestInterceptResponse, error) {
@@ -526,7 +526,7 @@ func TestHostApplyConfigDispatchesInterceptorRPCMethods(t *testing.T) {
 				Name:             "alpha",
 				Version:          "1.0.0",
 				Author:           "test",
-				GitHubRepository: "https://github.com/router-for-me/CLIProxyAPI",
+				GitHubRepository: "https://github.com/xnuyoah/XRouter",
 			},
 			Capabilities: pluginapi.Capabilities{
 				RequestInterceptor: requestInterceptorFunc(func(ctx context.Context, req pluginapi.RequestInterceptRequest) (pluginapi.RequestInterceptResponse, error) {
@@ -1510,7 +1510,7 @@ func TestHostApplyConfig_InvalidMetadataOrNoCapabilitiesSkipped(t *testing.T) {
 			Name:             "no-caps",
 			Version:          "1.0.0",
 			Author:           "test",
-			GitHubRepository: "https://github.com/router-for-me/CLIProxyAPI",
+			GitHubRepository: "https://github.com/xnuyoah/XRouter",
 		}}
 	}
 	h := NewForTest(loader)

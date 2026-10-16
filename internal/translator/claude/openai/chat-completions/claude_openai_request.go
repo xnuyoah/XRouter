@@ -8,12 +8,12 @@ package chat_completions
 import (
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/translator/common"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
+	"github.com/xnuyoah/XRouter/v8/internal/translator/common"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
 const (

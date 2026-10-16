@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
 // ComputeOpenAICompatModelsHash returns a stable hash for OpenAI-compatible models.
@@ -26,8 +26,8 @@ func ComputeOpenAICompatModelsHash(models []config.OpenAICompatibilityModel) str
 	return hashJoined(keys)
 }
 
-// ComputeVertexCompatModelsHash returns a stable hash for Vertex-compatible models.
-func ComputeVertexCompatModelsHash(models []config.VertexCompatModel) string {
+// ComputeNativeAPIModelsHash returns a stable hash for native OpenAI-wire API-key models.
+func ComputeNativeAPIModelsHash(models []config.NativeAPIModel) string {
 	keys := modelRoutingKeys(func(out func(key string)) {
 		for _, model := range models {
 			name := strings.TrimSpace(model.Name)
@@ -35,52 +35,7 @@ func ComputeVertexCompatModelsHash(models []config.VertexCompatModel) string {
 			if name == "" && alias == "" {
 				continue
 			}
-			out(strings.ToLower(name) + "|" + strings.ToLower(alias) + "|" + strings.TrimSpace(model.DisplayName) + "|" + fmt.Sprintf("force-mapping=%t", model.ForceMapping) + thinkingHashSuffix(model.Thinking))
-		}
-	})
-	return hashJoined(keys)
-}
-
-// ComputeClaudeModelsHash returns a stable hash for Claude model aliases.
-func ComputeClaudeModelsHash(models []config.ClaudeModel) string {
-	keys := modelRoutingKeys(func(out func(key string)) {
-		for _, model := range models {
-			name := strings.TrimSpace(model.Name)
-			alias := strings.TrimSpace(model.Alias)
-			if name == "" && alias == "" {
-				continue
-			}
-			out(strings.ToLower(name) + "|" + strings.ToLower(alias) + "|" + strings.TrimSpace(model.DisplayName) + "|" + fmt.Sprintf("force-mapping=%t", model.ForceMapping) + "|" + fmt.Sprintf("is-compat=%t", model.IsCompat) + thinkingHashSuffix(model.Thinking))
-		}
-	})
-	return hashJoined(keys)
-}
-
-// ComputeCodexModelsHash returns a stable hash for Codex model aliases.
-func ComputeCodexModelsHash(models []config.CodexModel) string {
-	keys := modelRoutingKeys(func(out func(key string)) {
-		for _, model := range models {
-			name := strings.TrimSpace(model.Name)
-			alias := strings.TrimSpace(model.Alias)
-			if name == "" && alias == "" {
-				continue
-			}
-			out(strings.ToLower(name) + "|" + strings.ToLower(alias) + "|" + strings.TrimSpace(model.DisplayName) + "|" + fmt.Sprintf("force-mapping=%t", model.ForceMapping) + "|" + fmt.Sprintf("is-compat=%t", model.IsCompat) + thinkingHashSuffix(model.Thinking))
-		}
-	})
-	return hashJoined(keys)
-}
-
-// ComputeGeminiModelsHash returns a stable hash for Gemini model aliases.
-func ComputeGeminiModelsHash(models []config.GeminiModel) string {
-	keys := modelRoutingKeys(func(out func(key string)) {
-		for _, model := range models {
-			name := strings.TrimSpace(model.Name)
-			alias := strings.TrimSpace(model.Alias)
-			if name == "" && alias == "" {
-				continue
-			}
-			out(strings.ToLower(name) + "|" + strings.ToLower(alias) + "|" + strings.TrimSpace(model.DisplayName) + "|" + fmt.Sprintf("force-mapping=%t", model.ForceMapping) + "|" + fmt.Sprintf("is-compat=%t", model.IsCompat) + thinkingHashSuffix(model.Thinking))
+			out(strings.ToLower(name) + "|" + strings.ToLower(alias) + "|" + strings.TrimSpace(model.DisplayName) + "|" + fmt.Sprintf("image=%t", model.Image) + "|" + fmt.Sprintf("force-mapping=%t", model.ForceMapping) + "|" + fmt.Sprintf("is-compat=%t", model.IsCompat) + "|" + fmt.Sprintf("use-max-completion-tokens=%t", model.UseMaxCompletionTokens) + "|input=" + strings.Join(normalizeModalities(model.InputModalities), ",") + "|output=" + strings.Join(normalizeModalities(model.OutputModalities), ",") + thinkingHashSuffix(model.Thinking))
 		}
 	})
 	return hashJoined(keys)

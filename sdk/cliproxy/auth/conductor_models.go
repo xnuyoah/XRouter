@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 func (m *Manager) lookupAPIKeyUpstreamModel(authID, requestedModel string) string {
@@ -448,34 +448,14 @@ func configuredModelAliasEntries(cfg *internalconfig.Config, auth *Auth) []model
 	provider := strings.ToLower(strings.TrimSpace(auth.Provider))
 	var models []modelAliasEntry
 	switch provider {
-	case "gemini":
-		if entry := resolveGeminiAPIKeyConfig(cfg, auth); entry != nil {
-			models = asModelAliasEntries(entry.Models)
-		}
-	case "gemini-interactions":
-		if entry := resolveInteractionsAPIKeyConfig(cfg, auth); entry != nil {
-			models = asModelAliasEntries(entry.Models)
-		}
-	case "claude":
-		if entry := resolveClaudeAPIKeyConfig(cfg, auth); entry != nil {
-			models = asModelAliasEntries(entry.Models)
-		}
-	case "codex":
-		if entry := resolveCodexAPIKeyConfig(cfg, auth); entry != nil {
-			models = asModelAliasEntries(entry.Models)
-		}
-	case "xai":
-		if entry := resolveXAIAPIKeyConfig(cfg, auth); entry != nil {
-			models = asModelAliasEntries(entry.Models)
-		}
-	case "vertex":
-		if entry := resolveVertexAPIKeyConfig(cfg, auth); entry != nil {
-			models = asModelAliasEntries(entry.Models)
-		}
-	case "meta":
-		if entry := resolveMetaAPIKeyConfig(cfg, auth); entry != nil {
-			models = asModelAliasEntries(entry.Models)
-		}
+	case "openai":
+		models = asModelAliasEntries(nativeAPIEffectiveModels(resolveOpenAIAPIKeyConfig(cfg, auth), "openai"))
+	case "deepseek":
+		models = asModelAliasEntries(nativeAPIEffectiveModels(resolveDeepseekAPIKeyConfig(cfg, auth), "deepseek"))
+	case "nvidia":
+		models = asModelAliasEntries(nativeAPIEffectiveModels(resolveNvidiaAPIKeyConfig(cfg, auth), "nvidia"))
+	case "agnes":
+		models = asModelAliasEntries(nativeAPIEffectiveModels(resolveAgnesAPIKeyConfig(cfg, auth), "agnes"))
 	default:
 		providerKey := ""
 		compatName := ""
@@ -608,34 +588,14 @@ func (m *Manager) rebuildAPIKeyModelAliasLocked(cfg *internalconfig.Config) {
 		byAlias := make(map[string]string)
 		provider := strings.ToLower(strings.TrimSpace(auth.Provider))
 		switch provider {
-		case "gemini":
-			if entry := resolveGeminiAPIKeyConfig(cfg, auth); entry != nil {
-				compileAPIKeyModelAliasForModels(byAlias, entry.Models)
-			}
-		case "gemini-interactions":
-			if entry := resolveInteractionsAPIKeyConfig(cfg, auth); entry != nil {
-				compileAPIKeyModelAliasForModels(byAlias, entry.Models)
-			}
-		case "claude":
-			if entry := resolveClaudeAPIKeyConfig(cfg, auth); entry != nil {
-				compileAPIKeyModelAliasForModels(byAlias, entry.Models)
-			}
-		case "codex":
-			if entry := resolveCodexAPIKeyConfig(cfg, auth); entry != nil {
-				compileAPIKeyModelAliasForModels(byAlias, entry.Models)
-			}
-		case "xai":
-			if entry := resolveXAIAPIKeyConfig(cfg, auth); entry != nil {
-				compileAPIKeyModelAliasForModels(byAlias, entry.Models)
-			}
-		case "vertex":
-			if entry := resolveVertexAPIKeyConfig(cfg, auth); entry != nil {
-				compileAPIKeyModelAliasForModels(byAlias, entry.Models)
-			}
-		case "meta":
-			if entry := resolveMetaAPIKeyConfig(cfg, auth); entry != nil {
-				compileAPIKeyModelAliasForModels(byAlias, entry.Models)
-			}
+		case "openai":
+			compileAPIKeyModelAliasForModels(byAlias, nativeAPIEffectiveModels(resolveOpenAIAPIKeyConfig(cfg, auth), "openai"))
+		case "deepseek":
+			compileAPIKeyModelAliasForModels(byAlias, nativeAPIEffectiveModels(resolveDeepseekAPIKeyConfig(cfg, auth), "deepseek"))
+		case "nvidia":
+			compileAPIKeyModelAliasForModels(byAlias, nativeAPIEffectiveModels(resolveNvidiaAPIKeyConfig(cfg, auth), "nvidia"))
+		case "agnes":
+			compileAPIKeyModelAliasForModels(byAlias, nativeAPIEffectiveModels(resolveAgnesAPIKeyConfig(cfg, auth), "agnes"))
 		default:
 			// OpenAI-compat uses config selection from auth.Attributes.
 			providerKey := ""
@@ -744,20 +704,14 @@ func (m *Manager) applyAPIKeyModelAliasWithRouting(routing *apiKeyModelRoutingSn
 	provider := strings.ToLower(strings.TrimSpace(auth.Provider))
 	upstreamModel := ""
 	switch provider {
-	case "gemini":
-		upstreamModel = resolveUpstreamModelForGeminiAPIKey(cfg, auth, requestedModel)
-	case "gemini-interactions":
-		upstreamModel = resolveUpstreamModelForInteractionsAPIKey(cfg, auth, requestedModel)
-	case "claude":
-		upstreamModel = resolveUpstreamModelForClaudeAPIKey(cfg, auth, requestedModel)
-	case "codex":
-		upstreamModel = resolveUpstreamModelForCodexAPIKey(cfg, auth, requestedModel)
-	case "xai":
-		upstreamModel = resolveUpstreamModelForXAIAPIKey(cfg, auth, requestedModel)
-	case "vertex":
-		upstreamModel = resolveUpstreamModelForVertexAPIKey(cfg, auth, requestedModel)
-	case "meta":
-		upstreamModel = resolveUpstreamModelForMetaAPIKey(cfg, auth, requestedModel)
+	case "openai":
+		upstreamModel = resolveUpstreamModelForOpenAIAPIKey(cfg, auth, requestedModel)
+	case "deepseek":
+		upstreamModel = resolveUpstreamModelForDeepseekAPIKey(cfg, auth, requestedModel)
+	case "nvidia":
+		upstreamModel = resolveUpstreamModelForNvidiaAPIKey(cfg, auth, requestedModel)
+	case "agnes":
+		upstreamModel = resolveUpstreamModelForAgnesAPIKey(cfg, auth, requestedModel)
 	default:
 		upstreamModel = resolveUpstreamModelForOpenAICompatAPIKey(cfg, auth, requestedModel)
 	}
@@ -823,109 +777,53 @@ func resolveAPIKeyConfig[T APIKeyConfigEntry](entries []T, auth *Auth) *T {
 	return nil
 }
 
-func resolveGeminiAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.GeminiKey {
+func resolveOpenAIAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.OpenAIKey {
 	if cfg == nil {
 		return nil
 	}
-	return resolveAPIKeyConfig(cfg.GeminiKey, auth)
+	return resolveAPIKeyConfig(cfg.OpenAIKey, auth)
 }
 
-func resolveInteractionsAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.GeminiKey {
+func resolveDeepseekAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.DeepseekKey {
 	if cfg == nil {
 		return nil
 	}
-	return resolveAPIKeyConfig(cfg.InteractionsKey, auth)
+	return resolveAPIKeyConfig(cfg.DeepseekKey, auth)
 }
 
-func resolveClaudeAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.ClaudeKey {
+func resolveNvidiaAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.NvidiaKey {
 	if cfg == nil {
 		return nil
 	}
-	return resolveAPIKeyConfig(cfg.ClaudeKey, auth)
+	return resolveAPIKeyConfig(cfg.NvidiaKey, auth)
 }
 
-func resolveCodexAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.CodexKey {
+func resolveAgnesAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.AgnesKey {
 	if cfg == nil {
 		return nil
 	}
-	return resolveAPIKeyConfig(cfg.CodexKey, auth)
+	return resolveAPIKeyConfig(cfg.AgnesKey, auth)
 }
 
-func resolveXAIAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.XAIKey {
-	if cfg == nil {
-		return nil
-	}
-	return resolveAPIKeyConfig(cfg.XAIKey, auth)
+// nativeAPIEffectiveModels returns the credential's declared models or the family defaults.
+func nativeAPIEffectiveModels(entry *internalconfig.NativeAPIKey, provider string) []internalconfig.NativeAPIModel {
+	return internalconfig.NativeAPIEffectiveModels(entry, provider)
 }
 
-func resolveVertexAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.VertexCompatKey {
-	if cfg == nil {
-		return nil
-	}
-	return resolveAPIKeyConfig(cfg.VertexCompatAPIKey, auth)
+func resolveUpstreamModelForOpenAIAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
+	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(nativeAPIEffectiveModels(resolveOpenAIAPIKeyConfig(cfg, auth), "openai")))
 }
 
-func resolveMetaAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.MetaKey {
-	if cfg == nil {
-		return nil
-	}
-	return resolveAPIKeyConfig(cfg.MetaKey, auth)
+func resolveUpstreamModelForDeepseekAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
+	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(nativeAPIEffectiveModels(resolveDeepseekAPIKeyConfig(cfg, auth), "deepseek")))
 }
 
-func resolveUpstreamModelForGeminiAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
-	entry := resolveGeminiAPIKeyConfig(cfg, auth)
-	if entry == nil {
-		return ""
-	}
-	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(entry.Models))
+func resolveUpstreamModelForNvidiaAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
+	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(nativeAPIEffectiveModels(resolveNvidiaAPIKeyConfig(cfg, auth), "nvidia")))
 }
 
-func resolveUpstreamModelForInteractionsAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
-	entry := resolveInteractionsAPIKeyConfig(cfg, auth)
-	if entry == nil {
-		return ""
-	}
-	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(entry.Models))
-}
-
-func resolveUpstreamModelForClaudeAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
-	entry := resolveClaudeAPIKeyConfig(cfg, auth)
-	if entry == nil {
-		return ""
-	}
-	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(entry.Models))
-}
-
-func resolveUpstreamModelForCodexAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
-	entry := resolveCodexAPIKeyConfig(cfg, auth)
-	if entry == nil {
-		return ""
-	}
-	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(entry.Models))
-}
-
-func resolveUpstreamModelForXAIAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
-	entry := resolveXAIAPIKeyConfig(cfg, auth)
-	if entry == nil {
-		return ""
-	}
-	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(entry.Models))
-}
-
-func resolveUpstreamModelForVertexAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
-	entry := resolveVertexAPIKeyConfig(cfg, auth)
-	if entry == nil {
-		return ""
-	}
-	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(entry.Models))
-}
-
-func resolveUpstreamModelForMetaAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
-	entry := resolveMetaAPIKeyConfig(cfg, auth)
-	if entry == nil {
-		return ""
-	}
-	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(entry.Models))
+func resolveUpstreamModelForAgnesAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
+	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(nativeAPIEffectiveModels(resolveAgnesAPIKeyConfig(cfg, auth), "agnes")))
 }
 
 func resolveUpstreamModelForOpenAICompatAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {

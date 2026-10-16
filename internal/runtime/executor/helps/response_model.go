@@ -3,8 +3,8 @@ package helps
 import (
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
 	"github.com/tidwall/gjson"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
 )
 
 const (
@@ -26,8 +26,6 @@ func extractResponseModelEvent(payload []byte, provider string) (model string, t
 		return extractCodexResponseModelEvent(payload)
 	case "claude":
 		return extractClaudeResponseModelEvent(data)
-	case "gemini", "gemini-interactions", "vertex", "aistudio", "antigravity":
-		return extractGeminiResponseModelEvent(data)
 	default:
 		return extractGenericResponseModelEvent(data)
 	}
@@ -74,44 +72,6 @@ func extractClaudeResponseModelEvent(data []byte) (model string, terminal bool) 
 		}
 		return "", false
 	}
-}
-
-// extractGeminiResponseModelEvent extracts the response model from a Google Gemini / Vertex / AIStudio response.
-func extractGeminiResponseModelEvent(data []byte) (model string, terminal bool) {
-	if !gjson.ValidBytes(data) {
-		return "", false
-	}
-	m := gjson.GetBytes(data, "response.modelVersion")
-	if !m.Exists() || m.Type != gjson.String {
-		m = gjson.GetBytes(data, "modelVersion")
-	}
-	if !m.Exists() || m.Type != gjson.String {
-		m = gjson.GetBytes(data, "interaction.model")
-	}
-	if !m.Exists() || m.Type != gjson.String {
-		m = gjson.GetBytes(data, "model")
-	}
-	var served string
-	if m.Type == gjson.String {
-		served = strings.TrimSpace(m.String())
-		if len(served) > maxResponseModelLength {
-			served = ""
-		}
-	}
-	cand := gjson.GetBytes(data, "candidates.0.finishReason")
-	if !cand.Exists() {
-		cand = gjson.GetBytes(data, "response.candidates.0.finishReason")
-	}
-	terminal = cand.Exists() && cand.String() != ""
-	if !terminal {
-		eventType := gjson.GetBytes(data, "event_type").String()
-		if eventType == "" {
-			eventType = gjson.GetBytes(data, "type").String()
-		}
-		status := gjson.GetBytes(data, "interaction.status").String()
-		terminal = isInteractionsTerminal(eventType, status)
-	}
-	return served, terminal
 }
 
 // extractGenericResponseModelEvent extracts the response model from standard JSON / SSE responses.

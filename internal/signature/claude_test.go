@@ -431,18 +431,13 @@ func TestClaudeCAISSignature_ObservedOpus5Layout(t *testing.T) {
 	}
 }
 
-func TestClaudeCAISSignature_NotCompatibleWithGemini(t *testing.T) {
-	if normalized, ok := CompatibleSignatureForProvider(SignatureProviderGemini, observedFable5Sample); ok || normalized != "" {
-		t.Fatalf("CompatibleSignatureForProvider(Gemini) = %q, %v; want empty and false", normalized, ok)
-	}
-	if IsSignatureCompatibleWithProvider(SignatureProviderGemini, observedFable5Sample) {
-		t.Fatal("IsSignatureCompatibleWithProvider(Gemini) = true, want false")
-	}
-	if isRecognizedGeminiProviderSignature(observedFable5Sample, SignatureBlockKindUnknown) {
-		t.Fatal("isRecognizedGeminiProviderSignature = true, want false")
-	}
-	if _, err := InspectGeminiThoughtSignature(observedFable5Sample); err == nil {
-		t.Fatal("InspectGeminiThoughtSignature should fail for Claude CAIS signature")
+// TestClaudeCAISSignature_NotCompatibleWithOtherProviders pins that a Claude
+// CAIS signature can only be replayed to a Claude target.
+func TestClaudeCAISSignature_NotCompatibleWithOtherProviders(t *testing.T) {
+	for _, target := range []SignatureProvider{SignatureProviderGPT, SignatureProviderKimi, SignatureProviderGrok} {
+		if normalized, ok := CompatibleSignatureForProvider(target, observedFable5Sample); ok || normalized != "" {
+			t.Fatalf("CompatibleSignatureForProvider(%s) = %q, %v; want empty and false", target, normalized, ok)
+		}
 	}
 }
 
@@ -471,57 +466,12 @@ func TestClaudeCAISSignature_CompatibleWithAllClaudeTargets(t *testing.T) {
 	if normalized, ok := CompatibleSignatureForProvider(SignatureProviderClaude, observedFable5Sample); !ok || normalized != observedFable5Sample {
 		t.Fatalf("CompatibleSignatureForProvider(Claude, observedFable5Sample) = %q, %v; want %q, true", normalized, ok, observedFable5Sample)
 	}
-
-	decisionGemini := DecideSignatureCompatibilityForModel(SignatureProviderGemini, "claude-fable-5", observedFable5Sample, SignatureBlockKindClaudeThinking)
-	if decisionGemini.Compatible {
-		t.Fatalf("DecideSignatureCompatibilityForModel(Gemini, claude-fable-5) = %+v, want incompatible", decisionGemini)
-	}
-}
-
-func TestSanitizeClaudeMessagesForClaudeUpstream_ClaudeCAIS(t *testing.T) {
-	inputSame := []byte(`{"messages":[{"role":"assistant","content":[{"type":"thinking","thinking":"keep","signature":"` + observedFable5Sample + `"},{"type":"text","text":"answer"}]}]}`)
-
-	outputSame, reportSame := SanitizeClaudeMessagesForClaudeUpstream(inputSame, "claude-fable-5")
-	if reportSame.Preserved != 1 || reportSame.DroppedBlocks != 0 {
-		t.Fatalf("unexpected report for same model: %+v", reportSame)
-	}
-	if got := gjson.GetBytes(outputSame, "messages.0.content.0.signature").String(); got != observedFable5Sample {
-		t.Fatalf("signature = %q, want preserved %q", got, observedFable5Sample)
-	}
-
-	inputTool := []byte(`{"messages":[{"role":"assistant","content":[{"type":"thinking","thinking":"keep","signature":"` + observedFable5Sample + `"},{"type":"text","text":"answer"},{"type":"tool_use","id":"toolu_1","name":"Bash","input":{"command":"pwd"},"signature":"` + observedFable5Sample + `"}]}]}`)
-	outputTool, reportTool := SanitizeClaudeMessagesForClaudeUpstream(inputTool, "claude-fable-5")
-	if reportTool.Preserved != 1 {
-		t.Fatalf("unexpected report for tool input: %+v", reportTool)
-	}
-	partsTool := gjson.GetBytes(outputTool, "messages.0.content").Array()
-	if len(partsTool) != 3 {
-		t.Fatalf("content len = %d, want 3", len(partsTool))
-	}
-	if partsTool[0].Get("signature").String() != observedFable5Sample {
-		t.Fatalf("thinking block signature lost: %s", partsTool[0].Raw)
-	}
-	if partsTool[2].Get("signature").Exists() {
-		t.Fatalf("tool_use signature should be stripped: %s", partsTool[2].Raw)
-	}
-
-	inputDiff := []byte(`{"messages":[{"role":"assistant","content":[{"type":"thinking","thinking":"keep","signature":"` + observedFable5Sample + `"},{"type":"text","text":"answer"}]}]}`)
-	outputDiff, reportDiff := SanitizeClaudeMessagesForClaudeUpstream(inputDiff, "claude-opus-5")
-	if reportDiff.Preserved != 1 || reportDiff.DroppedBlocks != 0 {
-		t.Fatalf("unexpected report for cross model: %+v", reportDiff)
-	}
-	partsDiff := gjson.GetBytes(outputDiff, "messages.0.content").Array()
-	if len(partsDiff) != 2 {
-		t.Fatalf("content len = %d, want 2: %s", len(partsDiff), outputDiff)
-	}
-	if got := partsDiff[0].Get("signature").String(); got != observedFable5Sample {
-		t.Fatalf("thinking signature = %q, want %q", got, observedFable5Sample)
-	}
 }
 
 // TestClaudeCAISSignature_ToleratesUpstreamFieldDrift pins the deliberately
-// structural validation: rejecting a signature drops the whole thinking block,
-// so incidental values observed today must not become hard requirements.
+// structural validation: rejecting a signature would discard the associated
+// thinking block, so incidental values observed today must not become hard
+// requirements for recognizing the envelope.
 func TestClaudeCAISSignature_ToleratesUpstreamFieldDrift(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -588,15 +538,6 @@ func TestClaudeCAISSignature_ToleratesUpstreamFieldDrift(t *testing.T) {
 			if got := DetectSignatureProviderForBlock(sig, SignatureBlockKindClaudeThinking); got != SignatureProviderClaude {
 				t.Fatalf("DetectSignatureProviderForBlock = %q, want %q", got, SignatureProviderClaude)
 			}
-
-			input := []byte(`{"messages":[{"role":"assistant","content":[{"type":"thinking","thinking":"keep","signature":"` + sig + `"}]}]}`)
-			output, report := SanitizeClaudeMessagesForClaudeUpstream(input, "claude-opus-5")
-			if report.Preserved != 1 || report.DroppedBlocks != 0 {
-				t.Fatalf("report = %+v, want preserved thinking block", report)
-			}
-			if got := gjson.GetBytes(output, "messages.0.content.0.signature").String(); got != sig {
-				t.Fatalf("signature = %q, want preserved %q", got, sig)
-			}
 		})
 	}
 }
@@ -659,7 +600,7 @@ func TestClaudeCAISSignature_RejectsMalformedPayloads(t *testing.T) {
 			return p.encode()
 		}()},
 		{"foreign model text", func() string {
-			p := defaultClaudeCAISParts("gemini-3-pro")
+			p := defaultClaudeCAISParts("gpt-5-pro")
 			return p.encode()
 		}()},
 		{"invalid utf-8 model text", func() string {
@@ -693,49 +634,5 @@ func TestClaudeCAISSignature_DoesNotShadowClassicClaudeSignature(t *testing.T) {
 	}
 	if got := DetectSignatureProviderForBlock(classic, SignatureBlockKindClaudeThinking); got != SignatureProviderClaude {
 		t.Fatalf("DetectSignatureProviderForBlock(classic) = %q, want %q", got, SignatureProviderClaude)
-	}
-
-	input := []byte(`{"messages":[{"role":"assistant","content":[{"type":"thinking","thinking":"keep","signature":"` + classic + `"}]}]}`)
-	output, report := SanitizeClaudeMessagesForClaudeUpstream(input, "claude-sonnet-4-6")
-	if report.Preserved != 1 || report.DroppedBlocks != 0 {
-		t.Fatalf("report = %+v, want preserved classic thinking block", report)
-	}
-	if got := gjson.GetBytes(output, "messages.0.content.0.signature").String(); got != classic {
-		t.Fatalf("signature = %q, want provider-native E-form %q", got, classic)
-	}
-}
-
-// TestClaudeCAISSignature_CachePrefixSurvivesClaudeUpstreamSanitize covers the
-// cached-signature path: cache.GetModelGroup collapses every Claude model to the
-// "claude" prefix, so a CAIS signature reaches the sanitizer as "claude#..." and
-// must be replayed with the prefix stripped instead of being dropped.
-func TestClaudeCAISSignature_CachePrefixSurvivesClaudeUpstreamSanitize(t *testing.T) {
-	for _, prefix := range []string{"claude#", "anthropic#", "cais#", "ccmax#"} {
-		t.Run(prefix, func(t *testing.T) {
-			prefixed := prefix + observedFable5Sample
-			input := []byte(`{"messages":[{"role":"assistant","content":[{"type":"thinking","thinking":"keep","signature":"` + prefixed + `"}]}]}`)
-			output, report := SanitizeClaudeMessagesForClaudeUpstream(input, "claude-fable-5")
-			if report.Preserved != 1 || report.DroppedBlocks != 0 {
-				t.Fatalf("report = %+v, want preserved thinking block", report)
-			}
-			if got := gjson.GetBytes(output, "messages.0.content.0.signature").String(); got != observedFable5Sample {
-				t.Fatalf("signature = %q, want unprefixed %q", got, observedFable5Sample)
-			}
-		})
-	}
-}
-
-func TestCompatibleAntigravityClaudeThinkingSignature_RejectsClaudeCAIS(t *testing.T) {
-	if normalized, ok := CompatibleAntigravityClaudeThinkingSignature(observedFable5Sample); ok || normalized != "" {
-		t.Fatalf("CompatibleAntigravityClaudeThinkingSignature(ClaudeCAIS) = %q, %v; want empty and false", normalized, ok)
-	}
-	if normalized, ok := CompatibleAntigravityClaudeThinkingSignature("ccmax#" + observedFable5Sample); ok || normalized != "" {
-		t.Fatalf("CompatibleAntigravityClaudeThinkingSignature(ccmax#ClaudeCAIS) = %q, %v; want empty and false", normalized, ok)
-	}
-	if normalized, ok := CompatibleAntigravityClaudeThinkingSignature("cais#" + observedFable5Sample); ok || normalized != "" {
-		t.Fatalf("CompatibleAntigravityClaudeThinkingSignature(cais#ClaudeCAIS) = %q, %v; want empty and false", normalized, ok)
-	}
-	if normalized, ok := CompatibleAntigravityClaudeThinkingSignature("claude-cais#" + observedFable5Sample); ok || normalized != "" {
-		t.Fatalf("CompatibleAntigravityClaudeThinkingSignature(claude-cais#ClaudeCAIS) = %q, %v; want empty and false", normalized, ok)
 	}
 }

@@ -15,14 +15,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/clienterror"
-	internallogging "github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/xnuyoah/XRouter/v8/internal/clienterror"
+	internallogging "github.com/xnuyoah/XRouter/v8/internal/logging"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
+	cliproxyauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
 )
 
 type UsageReporter struct {
@@ -66,7 +66,7 @@ type UsageReporter struct {
 
 	upstreamModelMu sync.RWMutex
 	// upstreamModel holds the canonical upstream model expected to be served when
-	// it differs from the requested model (e.g. local Kimi model mappings).
+	// it differs from the requested model (e.g. local model mappings).
 	upstreamModel string
 }
 
@@ -822,21 +822,6 @@ func AccessProviderFromContext(ctx context.Context) string {
 
 func resolveUsageSource(auth *cliproxyauth.Auth, ctxAPIKey string) string {
 	if auth != nil {
-		provider := strings.TrimSpace(auth.Provider)
-		if strings.EqualFold(provider, "vertex") {
-			if auth.Metadata != nil {
-				if projectID, ok := auth.Metadata["project_id"].(string); ok {
-					if trimmed := strings.TrimSpace(projectID); trimmed != "" {
-						return trimmed
-					}
-				}
-				if project, ok := auth.Metadata["project"].(string); ok {
-					if trimmed := strings.TrimSpace(project); trimmed != "" {
-						return trimmed
-					}
-				}
-			}
-		}
 		if _, value := auth.AccountInfo(); value != "" {
 			return strings.TrimSpace(value)
 		}
@@ -1218,7 +1203,7 @@ func parseClaudeUsageNode(usageNode gjson.Result) usage.Detail {
 	return detail
 }
 
-func parseGeminiFamilyUsageDetail(node gjson.Result) usage.Detail {
+func parseUsageMetadataDetail(node gjson.Result) usage.Detail {
 	cachedTokens := node.Get("cachedContentTokenCount").Int()
 	toolUseTokens := firstExistingUsageNode(node, "toolUsePromptTokenCount", "tool_use_prompt_token_count").Int()
 	inputTokens, okInput := safeUsageTokenSum(node.Get("promptTokenCount").Int(), toolUseTokens)
@@ -1308,7 +1293,7 @@ func ParseInteractionsUsage(data []byte) usage.Detail {
 		return usage.Detail{}
 	}
 	if node.Get("promptTokenCount").Exists() || node.Get("candidatesTokenCount").Exists() {
-		detail := parseGeminiFamilyUsageDetail(node)
+		detail := parseUsageMetadataDetail(node)
 		detail.ResponseServiceTier = extractResponseServiceTier(data)
 		return detail
 	}
@@ -1343,37 +1328,6 @@ func ParseInteractionsStreamUsage(line []byte) (usage.Detail, bool) {
 	}
 	detail := ParseInteractionsUsage(payload)
 	if !hasUsageDetail(detail) {
-		return usage.Detail{}, false
-	}
-	return detail, true
-}
-
-func ParseGeminiUsage(data []byte) usage.Detail {
-	usageNode := gjson.ParseBytes(data)
-	node := usageNode.Get("usageMetadata")
-	if !node.Exists() {
-		node = usageNode.Get("usage_metadata")
-	}
-	if !node.Exists() {
-		return usage.Detail{}
-	}
-	return parseGeminiFamilyUsageDetail(node)
-}
-
-func ParseGeminiStreamUsage(line []byte) (usage.Detail, bool) {
-	payload := jsonPayload(line)
-	if len(payload) == 0 || !gjson.ValidBytes(payload) {
-		return usage.Detail{}, false
-	}
-	node := gjson.GetBytes(payload, "usageMetadata")
-	if !node.Exists() {
-		node = gjson.GetBytes(payload, "usage_metadata")
-	}
-	if !node.Exists() {
-		return usage.Detail{}, false
-	}
-	detail := parseGeminiFamilyUsageDetail(node)
-	if !hasNonZeroTokenUsage(detail) {
 		return usage.Detail{}, false
 	}
 	return detail, true
@@ -1424,7 +1378,7 @@ func ParseAntigravityUsage(data []byte) usage.Detail {
 	if !node.Exists() {
 		return usage.Detail{}
 	}
-	return parseGeminiFamilyUsageDetail(node)
+	return parseUsageMetadataDetail(node)
 }
 
 func ParseAntigravityStreamUsage(line []byte) (usage.Detail, bool) {
@@ -1442,7 +1396,7 @@ func ParseAntigravityStreamUsage(line []byte) (usage.Detail, bool) {
 	if !node.Exists() {
 		return usage.Detail{}, false
 	}
-	return parseGeminiFamilyUsageDetail(node), true
+	return parseUsageMetadataDetail(node), true
 }
 
 var stopChunkWithoutUsage sync.Map
@@ -1454,7 +1408,7 @@ func rememberStopWithoutUsage(traceID string) {
 
 // FilterSSEUsageMetadata removes usageMetadata from SSE events that are not
 // terminal (finishReason != "stop"). Stop chunks are left untouched. This
-// function is shared between aistudio and antigravity executors.
+// function is used for wrapped Google-style response envelopes.
 func FilterSSEUsageMetadata(payload []byte) []byte {
 	if len(payload) == 0 {
 		return payload
@@ -1516,16 +1470,15 @@ func FilterSSEUsageMetadata(payload []byte) []byte {
 }
 
 // StripUsageMetadataFromJSON drops usageMetadata unless finishReason is present (terminal).
-// It handles both formats:
-// - Aistudio: candidates.0.finishReason
-// - Antigravity: response.candidates.0.finishReason
+// It handles both the unwrapped (candidates.0.finishReason) and the wrapped
+// (response.candidates.0.finishReason) envelope shapes.
 func StripUsageMetadataFromJSON(rawJSON []byte) ([]byte, bool) {
 	jsonBytes := bytes.TrimSpace(rawJSON)
 	if len(jsonBytes) == 0 || !gjson.ValidBytes(jsonBytes) {
 		return rawJSON, false
 	}
 
-	// Check for finishReason in both aistudio and antigravity formats
+	// Check for finishReason in both the unwrapped and the wrapped envelope shapes
 	finishReason := gjson.GetBytes(jsonBytes, "candidates.0.finishReason")
 	if !finishReason.Exists() {
 		finishReason = gjson.GetBytes(jsonBytes, "response.candidates.0.finishReason")

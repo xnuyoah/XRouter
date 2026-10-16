@@ -1,30 +1,29 @@
-// Package constant defines provider name constants used throughout the CLI Proxy API.
+// Package constant defines provider name constants used throughout XRouter.
 // These constants identify different AI service providers and their variants,
 // ensuring consistent naming across the application.
 package constant
 
 const (
-	// Gemini represents the Google Gemini provider identifier.
-	Gemini = "gemini"
-
-	// GeminiInteractions represents the native Google Interactions API provider identifier.
-	GeminiInteractions = "gemini-interactions"
-
-	// Codex represents the OpenAI Codex provider identifier.
-	Codex = "codex"
-
-	// Claude represents the Anthropic Claude provider identifier.
-	Claude = "claude"
-
-	// OpenAI represents the OpenAI provider identifier.
+	// OpenAI represents the native OpenAI provider identifier.
 	OpenAI = "openai"
+
+	// Deepseek represents the native DeepSeek provider identifier.
+	Deepseek = "deepseek"
+
+	// Nvidia represents the native NVIDIA provider identifier.
+	Nvidia = "nvidia"
+
+	// Agnes represents the native Agnes AI provider identifier.
+	Agnes = "agnes"
 
 	// OpenaiResponse represents the OpenAI response format identifier.
 	OpenaiResponse = "openai-response"
 
-	// Antigravity represents the Antigravity response format identifier.
-	Antigravity = "antigravity"
+	// Claude represents the Anthropic Messages wire-format identifier. It names a
+	// protocol, not an upstream provider.
+	Claude = "claude"
 
-	// Interactions represents the Google Interactions API format identifier.
-	Interactions = "interactions"
+	// Codex represents the OpenAI Responses wire-format identifier. It names a
+	// protocol, not an upstream provider.
+	Codex = "codex"
 )

@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher/synthesizer"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher/synthesizer"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 var snapshotCoreAuthsFunc = snapshotCoreAuths
@@ -363,7 +363,6 @@ func normalizeAuth(a *coreauth.Auth) *coreauth.Auth {
 	clone.Runtime = nil
 	clone.Quota.NextRecoverAt = time.Time{}
 	if clone.Metadata != nil {
-		delete(clone.Metadata, "antigravity_capability_hints")
 	}
 	return clone
 }

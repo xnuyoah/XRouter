@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 type rpcHostAuthGetRequest struct {

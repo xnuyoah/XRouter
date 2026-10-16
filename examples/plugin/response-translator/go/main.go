@@ -127,9 +127,9 @@ func handleMethod(method string) ([]byte, error) {
 	_ = time.Second
 	switch method {
 	case "plugin.register":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-response-translator-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-response-translator-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"response_translator\":true}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-response-translator-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-response-translator-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"response_translator\":true}}")
 	case "plugin.reconfigure":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-response-translator-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-response-translator-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"response_translator\":true}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-response-translator-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-response-translator-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"response_translator\":true}}")
 	case "response.translate":
 		return okEnvelopeJSON("{\"Body\":\"eyJyZXNwb25zZV90cmFuc2xhdGVkX2J5IjoiZXhhbXBsZS1yZXNwb25zZS10cmFuc2xhdG9yLWdvIn0=\"}")
 	default:

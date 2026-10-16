@@ -51,10 +51,10 @@ func TestNormalizeHomePort(t *testing.T) {
 		port int
 		want int
 	}{
-		{name: "zero defaults to 8317", port: 0, want: 8317},
-		{name: "negative defaults to 8317", port: -1, want: 8317},
+		{name: "zero defaults to 11016", port: 0, want: 11016},
+		{name: "negative defaults to 11016", port: -1, want: 11016},
 		{name: "port 8327 preserved", port: 8327, want: 8327},
-		{name: "standard 8317 preserved", port: 8317, want: 8317},
+		{name: "standard 11016 preserved", port: 11016, want: 11016},
 		{name: "custom port 8080 preserved", port: 8080, want: 8080},
 		{name: "custom port 9090 preserved", port: 9090, want: 9090},
 	}

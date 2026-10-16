@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
 )
 
 const oauthModelAliasesAttributeKey = "model_aliases"
@@ -252,7 +252,7 @@ func resolveModelAliasResultFromConfigModels(requestedModel string, models []mod
 // If an alias exists, returns the original (upstream) model name that corresponds
 // to the requested alias.
 //
-// If the requested model contains a thinking suffix (e.g., "gemini-2.5-pro(8192)"),
+// If the requested model contains a thinking suffix (e.g., "gpt-5(8192)"),
 // the suffix is preserved in the returned model name. However, if the alias's
 // original name already contains a suffix, the config suffix takes priority.
 func (m *Manager) resolveOAuthUpstreamModel(auth *Auth, requestedModel string) string {
@@ -471,28 +471,15 @@ func modelAliasChannel(auth *Auth) string {
 // and auth kind. Returns empty string if the provider/authKind combination doesn't support
 // OAuth model alias (e.g., API key authentication).
 //
-// Built-in channels: vertex, aistudio, antigravity, claude, codex, kimi, xai, meta.
-// Plugin OAuth providers use their normalized provider key as the channel.
+// The channel is the normalized provider key, for plugin OAuth providers and built-in
+// protocol providers alike.
 func OAuthModelAliasChannel(provider, authKind string) string {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	authKind = normalizeOAuthModelAliasAuthKind(authKind)
 	if authKind == "apikey" {
 		return ""
 	}
-	switch provider {
-	case "gemini":
-		return ""
-	case "vertex":
-		return "vertex"
-	case "claude":
-		return "claude"
-	case "codex":
-		return "codex"
-	case "aistudio", "antigravity", "kimi", "kimi-ai", "kimi.ai", "kimi.com", "xai", "meta":
-		return provider
-	default:
-		return provider
-	}
+	return provider
 }
 
 func normalizeOAuthModelAliasAuthKind(authKind string) string {

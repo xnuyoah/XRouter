@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/interfaces"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor/helps"
-	coreexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	coreusage "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
+	"github.com/xnuyoah/XRouter/v8/internal/interfaces"
+	"github.com/xnuyoah/XRouter/v8/internal/runtime/executor/helps"
+	coreexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	coreusage "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 	"golang.org/x/net/context"
 )
 
@@ -290,12 +290,6 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 		routeDecision = h.applyModelRouter(ctx, entryProtocol, modelName, rawJSON, true, execOptions)
 	}
 	responseProtocol := modelExecutionResponseProtocol(entryProtocol, exitProtocol)
-	if errMsg := validateNativeInteractionsExecution(entryProtocol, execOptions, routeDecision); errMsg != nil {
-		errChan := make(chan *interfaces.ErrorMessage, 1)
-		errChan <- errMsg
-		close(errChan)
-		return nil, nil, errChan
-	}
 	if routeDecision.ExecutorPluginID != "" {
 		return h.streamWithPluginExecutor(ctx, entryProtocol, responseProtocol, modelName, originalRequestedModel, rawJSON, alt, routeDecision.ExecutorPluginID, execOptions)
 	}
@@ -306,7 +300,6 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 		close(errChan)
 		return nil, nil, errChan
 	}
-	providers = adjustExecutionProvidersForEntryProtocol(entryProtocol, providers)
 	reqMeta := requestExecutionMetadata(ctx)
 	if execOptions.Path != "" {
 		reqMeta[coreexecutor.RequestPathMetadataKey] = execOptions.Path

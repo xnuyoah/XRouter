@@ -7,14 +7,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor/helps"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	coreexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	coreusage "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
+	"github.com/xnuyoah/XRouter/v8/internal/logging"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/internal/runtime/executor/helps"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	coreexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	coreusage "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 type testUsageCapturePlugin struct {
@@ -826,13 +826,13 @@ func TestExecutorAdapterExecuteStreamErrorChunkImmediatePublishWithoutClose(t *t
 	}
 }
 
-func TestObservePluginExecutorStreamTTFT_Antigravity(t *testing.T) {
-	reporter := helps.NewUsageReporter(context.Background(), "antigravity", "test-model", nil)
+func TestObservePluginExecutorStreamTTFT_OpenAIChat(t *testing.T) {
+	reporter := helps.NewUsageReporter(context.Background(), "openai", "test-model", nil)
 	reporter.StartResponseTTFT()
-	antigravityChunk := []byte(`data: {"response":{"candidates":[{"content":{"parts":[{"text":"hello"}]}}]}}`)
-	helps.ObservePluginExecutorStreamTTFT("antigravity", reporter, antigravityChunk)
+	chatChunk := []byte(`data: {"id":"chatcmpl-1","choices":[{"index":0,"delta":{"content":"hello"}}]}`)
+	helps.ObservePluginExecutorStreamTTFT("openai", reporter, chatChunk)
 	if !reporter.IsTTFTSet() {
-		t.Errorf("ObservePluginExecutorStreamTTFT for antigravity should set TTFT on token event")
+		t.Errorf("ObservePluginExecutorStreamTTFT for openai chat should set TTFT on token event")
 	}
 }
 

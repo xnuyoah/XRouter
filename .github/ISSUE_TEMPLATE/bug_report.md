@@ -18,10 +18,10 @@ Our team doesn't have any GODs or ORACLEs or MIND READERs. Please make sure to a
 A clear and concise description of what the bug is.
 
 **CLI Type**
-What type of CLI account do you use?  (gemini, codex, claude code or openai-compatibility)
+What type of upstream account do you use?  (openai, deepseek, nvidia, agnes or openai-compatibility)
 
 **Model Name**
-What model are you using? (example: gemini-2.5-pro, claude-sonnet-4-20250514, gpt-5, etc.)
+What model are you using? (example: gpt-5.6-luna, deepseek-v4.1-flash, agnes-3.0-flash, etc.)
 
 **LLM Client**
 What LLM Client are you using? (example: roo-code, cline, claude code, etc.)

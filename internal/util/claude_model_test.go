@@ -21,8 +21,8 @@ func TestIsClaudeThinkingModel(t *testing.T) {
 		{"claude-3-5-sonnet", "claude-3-5-sonnet-20240620", false},
 
 		// Non-Claude models - should return false
-		{"gemini-3-pro-preview", "gemini-3-pro-preview", false},
-		{"gemini-thinking model", "gemini-3-pro-thinking", false}, // not Claude
+		{"kimi-k2-thinking", "kimi-k2-thinking", false},
+		{"kimi-thinking model", "kimi-k2-thinking", false}, // not Claude
 		{"gpt-4o", "gpt-4o", false},
 		{"empty string", "", false},
 
@@ -50,7 +50,7 @@ func TestIsClaudeModel(t *testing.T) {
 		{"Claude model", "claude-sonnet-4-6", true},
 		{"Claude thinking model", "claude-opus-4-6-thinking", true},
 		{"case insensitive", "Claude-Sonnet-4-5", true},
-		{"Gemini model", "gemini-3-pro-preview", false},
+		{"Kimi model", "kimi-k2-thinking", false},
 		{"empty string", "", false},
 	}
 

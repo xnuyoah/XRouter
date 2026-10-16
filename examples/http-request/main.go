@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	clipexec "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
 	log "github.com/sirupsen/logrus"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	clipexec "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 const providerKey = "echo"

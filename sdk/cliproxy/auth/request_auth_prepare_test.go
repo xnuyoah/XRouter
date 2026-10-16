@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executionregistry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executionregistry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 type requestPrepareStore struct {
@@ -434,7 +434,7 @@ func assertHomeExecutionResultStateUnchanged(t *testing.T, manager *Manager, sto
 }
 
 func TestManagerExecute_PreparesAndPersistsMissingRequestAuthMetadata(t *testing.T) {
-	const model = "gemini-3.1-pro"
+	const model = "gpt-3.1-pro"
 	store := &requestPrepareStore{}
 	executor := &requestPrepareExecutor{}
 	manager := NewManager(store, nil, nil)
@@ -488,7 +488,7 @@ func TestManagerExecute_PrepareAuth403TriggersCooldown(t *testing.T) {
 	quotaCooldownDisabled.Store(false)
 	t.Cleanup(func() { quotaCooldownDisabled.Store(previous) })
 
-	const model = "gemini-3.1-pro"
+	const model = "gpt-3.1-pro"
 	store := &requestPrepareStore{}
 	executor := &requestPrepareExecutor{
 		prepareErr: customStatusError{code: http.StatusForbidden, msg: "forbidden"},

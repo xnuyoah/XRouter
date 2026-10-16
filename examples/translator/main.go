@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
-	_ "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator/builtin"
+	"github.com/xnuyoah/XRouter/v8/sdk/translator"
+	_ "github.com/xnuyoah/XRouter/v8/sdk/translator/builtin"
 )
 
 func main() {

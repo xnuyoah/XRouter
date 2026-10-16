@@ -840,8 +840,8 @@ func TestConvertClaudeRequestToCodex_OutputConfigFormat(t *testing.T) {
 		if got := root.Get("text.format.type").String(); got != "json_schema" {
 			t.Errorf("expected text.format.type to be 'json_schema', got %q", got)
 		}
-		if got := root.Get("text.format.name").String(); got != "cli_proxy_structured_output" {
-			t.Errorf("expected text.format.name to be 'cli_proxy_structured_output', got %q", got)
+		if got := root.Get("text.format.name").String(); got != "xrouter_structured_output" {
+			t.Errorf("expected text.format.name to be 'xrouter_structured_output', got %q", got)
 		}
 		if got := root.Get("text.format.strict").Bool(); !got {
 			t.Errorf("expected text.format.strict to be true, got %v", got)
@@ -924,7 +924,7 @@ func TestConvertClaudeRequestToCodex_OutputConfigFormat(t *testing.T) {
 			"output_config": {
 				"format": {
 					"type": "json_schema",
-					"name": "cli_proxy_structured_output",
+					"name": "xrouter_structured_output",
 					"strict": true,
 					"schema": {
 						"type": "object",
@@ -944,7 +944,7 @@ func TestConvertClaudeRequestToCodex_OutputConfigFormat(t *testing.T) {
 		if got := root.Get("text.format.strict").Bool(); got != false {
 			t.Errorf("expected text.format.strict to be false for non-strict-compatible schema, got %v (%s)", got, translated)
 		}
-		if got := root.Get("text.format.name").String(); got != "cli_proxy_structured_output" {
+		if got := root.Get("text.format.name").String(); got != "xrouter_structured_output" {
 			t.Errorf("expected text.format.name to be preserved, got %q", got)
 		}
 	})

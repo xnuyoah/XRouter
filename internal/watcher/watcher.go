@@ -10,13 +10,13 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher/synthesizer"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher/synthesizer"
 	"gopkg.in/yaml.v3"
 
-	sdkAuth "github.com/router-for-me/CLIProxyAPI/v8/sdk/auth"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
+	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 // storePersister captures persistence-capable token store methods used by the watcher.

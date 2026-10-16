@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	internalpluginstore "github.com/router-for-me/CLIProxyAPI/v8/internal/pluginstore"
+	internalpluginstore "github.com/xnuyoah/XRouter/v8/internal/pluginstore"
 )
 
 const (

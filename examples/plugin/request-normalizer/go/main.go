@@ -127,9 +127,9 @@ func handleMethod(method string) ([]byte, error) {
 	_ = time.Second
 	switch method {
 	case "plugin.register":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-request-normalizer-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-request-normalizer-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"request_normalizer\":true}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-request-normalizer-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-request-normalizer-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"request_normalizer\":true}}")
 	case "plugin.reconfigure":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-request-normalizer-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-request-normalizer-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"request_normalizer\":true}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-request-normalizer-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-request-normalizer-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"request_normalizer\":true}}")
 	case "request.normalize":
 		return okEnvelopeJSON("{\"Body\":\"eyJub3JtYWxpemVkX2J5IjoiZXhhbXBsZS1yZXF1ZXN0LW5vcm1hbGl6ZXItZ28ifQ==\"}")
 	default:

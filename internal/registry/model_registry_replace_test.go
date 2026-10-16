@@ -18,7 +18,7 @@ func TestReplaceClientModelsProjectionGeneration(t *testing.T) {
 			default:
 				provider := "antigravity"
 				if mode == "new-provider" {
-					provider = "gemini"
+					provider = "openai"
 				}
 				if _, ok := r.ReplaceClientModels("account", provider, epoch, models); !ok {
 					t.Fatal("replacement rejected")

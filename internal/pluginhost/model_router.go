@@ -5,8 +5,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 func (h *Host) RouteModel(ctx context.Context, req pluginapi.ModelRouteRequest) (pluginapi.ModelRouteResponse, bool) {

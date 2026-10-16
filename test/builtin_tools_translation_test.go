@@ -3,10 +3,10 @@ package test
 import (
 	"testing"
 
-	_ "github.com/router-for-me/CLIProxyAPI/v8/internal/translator"
+	_ "github.com/xnuyoah/XRouter/v8/internal/translator"
 
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 	"github.com/tidwall/gjson"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 func TestOpenAIToCodex_PreservesBuiltinTools(t *testing.T) {

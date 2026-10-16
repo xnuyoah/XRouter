@@ -7,49 +7,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestCodexModelSupportConfigurationUpdate(t *testing.T) {
-	const yamlConfig = `codex-api-key:
-  - models:
-      - name: custom-one
-        support-configuration-update: true
-      - name: custom-two
-`
-	const jsonConfig = `{"codex-api-key":[{"models":[{"name":"custom-one","support-configuration-update":true},{"name":"custom-two"}]}]}`
-
-	for _, testCase := range []struct {
-		name   string
-		decode func(*Config) error
-	}{
-		{
-			name: "YAML",
-			decode: func(cfg *Config) error {
-				return yaml.Unmarshal([]byte(yamlConfig), cfg)
-			},
-		},
-		{
-			name: "JSON",
-			decode: func(cfg *Config) error {
-				return json.Unmarshal([]byte(jsonConfig), cfg)
-			},
-		},
-	} {
-		t.Run(testCase.name, func(t *testing.T) {
-			var cfg Config
-			if errDecode := testCase.decode(&cfg); errDecode != nil {
-				t.Fatalf("decode error: %v", errDecode)
-			}
-			if len(cfg.CodexKey) != 1 || len(cfg.CodexKey[0].Models) != 2 {
-				t.Fatalf("unexpected codex-api-key models: %+v", cfg.CodexKey)
-			}
-			if !cfg.CodexKey[0].Models[0].SupportConfigurationUpdate || cfg.CodexKey[0].Models[1].SupportConfigurationUpdate {
-				t.Fatalf("unexpected configuration update flags: %+v", cfg.CodexKey[0].Models)
-			}
-		})
-	}
-}
-
-func TestCodexModelIsCompatConfigDecoding(t *testing.T) {
-	const yamlConfig = `codex-api-key:
+func TestNativeAPIModelIsCompatConfigDecoding(t *testing.T) {
+	const yamlConfig = `openai-api-key:
   - models:
       - name: deepseek-upstream
         alias: deepseek-alias
@@ -57,7 +16,7 @@ func TestCodexModelIsCompatConfigDecoding(t *testing.T) {
       - name: native-upstream
         alias: native-alias
 `
-	const jsonConfig = `{"codex-api-key":[{"models":[{"name":"deepseek-upstream","alias":"deepseek-alias","is-compat":true},{"name":"native-upstream","alias":"native-alias"}]}]}`
+	const jsonConfig = `{"openai-api-key":[{"models":[{"name":"deepseek-upstream","alias":"deepseek-alias","is-compat":true},{"name":"native-upstream","alias":"native-alias"}]}]}`
 
 	for _, testCase := range []struct {
 		name   string
@@ -81,16 +40,16 @@ func TestCodexModelIsCompatConfigDecoding(t *testing.T) {
 			if errDecode := testCase.decode(&cfg); errDecode != nil {
 				t.Fatalf("decode error: %v", errDecode)
 			}
-			if len(cfg.CodexKey) != 1 || len(cfg.CodexKey[0].Models) != 2 {
-				t.Fatalf("unexpected codex-api-key models: %+v", cfg.CodexKey)
+			if len(cfg.OpenAIKey) != 1 || len(cfg.OpenAIKey[0].Models) != 2 {
+				t.Fatalf("unexpected openai-api-key models: %+v", cfg.OpenAIKey)
 			}
-			if !cfg.CodexKey[0].Models[0].IsCompat {
+			if !cfg.OpenAIKey[0].Models[0].IsCompat {
 				t.Fatalf("Models[0].IsCompat = false, want true")
 			}
-			if cfg.CodexKey[0].Models[1].IsCompat {
+			if cfg.OpenAIKey[0].Models[1].IsCompat {
 				t.Fatalf("Models[1].IsCompat = true, want default false")
 			}
-			if !cfg.CodexKey[0].Models[0].GetIsCompat() {
+			if !cfg.OpenAIKey[0].Models[0].GetIsCompat() {
 				t.Fatalf("GetIsCompat() = false, want true")
 			}
 		})

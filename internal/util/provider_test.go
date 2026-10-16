@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
 // TestMaskSensitiveQueryMasksValue covers the related half of issue #6666:

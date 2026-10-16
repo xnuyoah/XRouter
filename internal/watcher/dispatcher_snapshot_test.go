@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher/synthesizer"
-	sdkAuth "github.com/router-for-me/CLIProxyAPI/v8/sdk/auth"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher/synthesizer"
+	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 // pauseAuthSnapshot suspends a real scan after reading files, before publishing them.

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 type failExecutor struct {
@@ -250,7 +250,7 @@ func TestSessionAffinityOnResultWithMismatchedNamespaceFailsToUnbind(t *testing.
 	// Call OnResult with options carrying the propagated "mixed" namespace
 	res := Result{
 		AuthID:   authID,
-		Provider: "gemini", // actual provider
+		Provider: "openai", // actual provider
 		Model:    model,
 		Success:  false,
 		Error:    &Error{HTTPStatus: http.StatusInternalServerError},

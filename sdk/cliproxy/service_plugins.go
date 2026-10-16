@@ -6,15 +6,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/pluginhost"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	sdkaccess "github.com/router-for-me/CLIProxyAPI/v8/sdk/access"
-	sdkAuth "github.com/router-for-me/CLIProxyAPI/v8/sdk/auth"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
-	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	sdkaccess "github.com/xnuyoah/XRouter/v8/sdk/access"
+	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 const (
@@ -344,66 +343,4 @@ func modelRegistrationMaxWorkersForCategory(category string) int {
 		return modelRegistrationMaxWorkersOpenAICompatibility
 	}
 	return modelRegistrationMaxWorkersPerCategory
-}
-
-func (s *Service) registerModelRefreshCallback() {
-	// Register callback for startup and periodic model catalog refresh.
-	// When remote model definitions change, re-register models for affected providers.
-	// This intentionally rebuilds per-auth model availability from the latest catalog
-	// snapshot instead of preserving prior registry suppression state.
-	registry.SetModelRefreshCallback(func(changedProviders []string) {
-		if s == nil || s.coreManager == nil || len(changedProviders) == 0 {
-			return
-		}
-
-		providerSet := make(map[string]bool, len(changedProviders))
-		for _, p := range changedProviders {
-			norm := strings.ToLower(strings.TrimSpace(p))
-			if norm != "" {
-				providerSet[norm] = true
-				switch norm {
-				case "kimi", "kimi-ai", "kimi.ai", "kimi.com":
-					providerSet["kimi"] = true
-					providerSet["kimi-ai"] = true
-					providerSet["kimi.ai"] = true
-					providerSet["kimi.com"] = true
-				}
-			}
-		}
-
-		auths := s.coreManager.List()
-		refreshed := 0
-		var refreshedMu sync.Mutex
-		tasks := make([]modelRegistrationTask, 0, len(auths))
-		for _, item := range auths {
-			if item == nil || item.ID == "" {
-				continue
-			}
-			auth, ok := s.coreManager.GetByID(item.ID)
-			if !ok || auth == nil || auth.Disabled {
-				continue
-			}
-			provider := strings.ToLower(strings.TrimSpace(auth.Provider))
-			if !providerSet[provider] {
-				continue
-			}
-			authForRefresh := auth
-			tasks = append(tasks, modelRegistrationTask{
-				phase:    modelRegistrationPhase(authForRefresh),
-				category: modelRegistrationCategory(authForRefresh),
-				run: func(compatCache *openAICompatibilityRegistrationCache) {
-					if s.refreshModelRegistrationForAuthWithCache(authForRefresh, compatCache) {
-						refreshedMu.Lock()
-						refreshed++
-						refreshedMu.Unlock()
-					}
-				},
-			})
-		}
-		s.runModelRegistrationTasks(context.Background(), tasks)
-
-		if refreshed > 0 {
-			log.Infof("re-registered models for %d auth(s) due to model catalog changes: %v", refreshed, changedProviders)
-		}
-	})
 }

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
 // ValidateConfig validates a thinking configuration against model capabilities.
@@ -54,7 +54,7 @@ func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFo
 	}
 
 	// allowClampUnsupported determines whether to clamp unsupported levels instead of returning an error.
-	// This applies when crossing provider families (e.g., openai→gemini, claude→gemini) and the target
+	// This applies when crossing provider families (e.g., openai→claude, codex→claude) and the target
 	// model supports discrete levels. Same-family conversions require strict validation.
 	//
 	// modelFamilyMismatch covers providers that reuse another protocol on the wire
@@ -166,25 +166,18 @@ func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFo
 		}
 	}
 
-	if config.Mode == ModeNone && toFormat == "claude" {
-		// Claude supports explicit disable via thinking.type="disabled".
-		// Keep Budget=0 so applier can omit budget_tokens.
-		config.Budget = 0
-		config.Level = ""
-	} else {
-		switch config.Mode {
-		case ModeBudget, ModeAuto, ModeNone:
-			config.Budget = clampBudget(config.Budget, modelInfo, toFormat)
-		}
+	switch config.Mode {
+	case ModeBudget, ModeAuto, ModeNone:
+		config.Budget = clampBudget(config.Budget, modelInfo, toFormat)
+	}
 
-		// ModeNone for a model that cannot be disabled falls back to the lowest
-		// supported level. Budget-capable models reach this path with Budget > 0;
-		// level-only models need the capability flags checked explicitly because
-		// their Min/Max range is zero.
-		cannotDisableLevelModel := !support.ZeroAllowed && !isLevelSupported(string(LevelNone), support.Levels)
-		if config.Mode == ModeNone && len(support.Levels) > 0 && (config.Budget > 0 || cannotDisableLevelModel) {
-			config.Level = ThinkingLevel(support.Levels[0])
-		}
+	// ModeNone for a model that cannot be disabled falls back to the lowest
+	// supported level. Budget-capable models reach this path with Budget > 0;
+	// level-only models need the capability flags checked explicitly because
+	// their Min/Max range is zero.
+	cannotDisableLevelModel := !support.ZeroAllowed && !isLevelSupported(string(LevelNone), support.Levels)
+	if config.Mode == ModeNone && len(support.Levels) > 0 && (config.Budget > 0 || cannotDisableLevelModel) {
+		config.Level = ThinkingLevel(support.Levels[0])
 	}
 
 	return &config, nil
@@ -361,26 +354,6 @@ func normalizeLevels(levels []string) []string {
 	return out
 }
 
-// isBudgetCapableProvider returns true if the provider supports budget-based thinking.
-// These providers may also support level-based thinking (hybrid models).
-func isBudgetCapableProvider(provider string) bool {
-	switch provider {
-	case "gemini", "antigravity", "claude":
-		return true
-	default:
-		return false
-	}
-}
-
-func isGeminiFamily(provider string) bool {
-	switch provider {
-	case "gemini", "antigravity":
-		return true
-	default:
-		return false
-	}
-}
-
 func isOpenAIFamily(provider string) bool {
 	switch provider {
 	case "openai", "openai-response", "codex":
@@ -394,8 +367,7 @@ func isSameProviderFamily(from, to string) bool {
 	if from == to {
 		return true
 	}
-	return (isGeminiFamily(from) && isGeminiFamily(to)) ||
-		(isOpenAIFamily(from) && isOpenAIFamily(to))
+	return isOpenAIFamily(from) && isOpenAIFamily(to)
 }
 
 func abs(x int) int {

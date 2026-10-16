@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	coreusage "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	coreusage "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
 )
 
 type noForkAliasTestExecutor struct {
@@ -81,8 +81,8 @@ func (e *noForkAliasTestExecutor) LastAuthID() string {
 func TestManager_NoForkAlias_RetainsCooldownAfterReconcile(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -158,8 +158,8 @@ func TestManager_NoForkAlias_RetainsCooldownAfterReconcile(t *testing.T) {
 func TestManager_NoForkAlias_BypassesCoolingAuthOnSubsequentRequest(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -233,8 +233,8 @@ func TestManager_NoForkAlias_BypassesCoolingAuthOnSubsequentRequest(t *testing.T
 func TestManager_NoForkAlias_CooldownPersistenceConsistency(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 	)
 
 	store := &recordingCooldownStateStore{}
@@ -318,9 +318,9 @@ func TestManager_NoForkAlias_CooldownPersistenceConsistency(t *testing.T) {
 func TestManager_NoForkAlias_MultipleAliasesToSameTarget(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel1 = "[ant1]gemini-3.7-flash-high"
-		routeModel2 = "[ant2]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel1 = "[ant1]gpt-3.7-flash-high"
+		routeModel2 = "[ant2]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -406,8 +406,8 @@ func TestManager_NoForkAlias_MultipleAliasesToSameTarget(t *testing.T) {
 func TestManager_NoForkAlias_CleanupAfterAliasRemoved(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 		otherModel  = "other-model"
 	)
 
@@ -558,8 +558,8 @@ func TestManager_ForkTrue_RetainsStateAndSuspendsBoth(t *testing.T) {
 func TestManager_NoForkAlias_ExpiredCooldownResetClean(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -617,8 +617,8 @@ func TestManager_NoForkAlias_ExpiredCooldownResetClean(t *testing.T) {
 func TestManager_NoForkAlias_MarkResultAndResetQuotaProjection(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -688,9 +688,9 @@ func TestManager_NoForkAlias_MarkResultAndResetQuotaProjection(t *testing.T) {
 func TestManager_NoForkAlias_PerAuthAlias_RetainsCooldownAfterReconcile(t *testing.T) {
 	const (
 		provider      = "antigravity"
-		routeModel    = "[ant]gemini-3.7-flash-high"
-		globalTarget  = "gemini-3.7-flash-global"
-		perAuthTarget = "gemini-3.7-flash-perauth"
+		routeModel    = "[ant]gpt-3.7-flash-high"
+		globalTarget  = "gpt-3.7-flash-global"
+		perAuthTarget = "gpt-3.7-flash-perauth"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -784,8 +784,8 @@ func TestManager_NoForkAlias_PerAuthAlias_RetainsCooldownAfterReconcile(t *testi
 func TestManager_NoForkAlias_RealPersistenceRestore_BypassesCoolingAuth(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 	)
 
 	initialStore := &recordingCooldownStateStore{}
@@ -900,8 +900,8 @@ func TestManager_NoForkAlias_RealPersistenceRestore_BypassesCoolingAuth(t *testi
 func TestManager_NoForkAlias_StorePersistenceCleanedWhenAliasRemoved(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 		otherModel  = "other-clean-model"
 	)
 
@@ -983,9 +983,9 @@ func TestManager_NoForkAlias_StorePersistenceCleanedWhenAliasRemoved(t *testing.
 func TestManager_NoForkAlias_MultipleAliases_BothSkipCoolingAuthEndToEnd(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel1 = "[ant1]gemini-3.7-flash-high"
-		routeModel2 = "[ant2]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel1 = "[ant1]gpt-3.7-flash-high"
+		routeModel2 = "[ant2]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -1065,9 +1065,9 @@ func TestManager_NoForkAlias_MultipleAliases_BothSkipCoolingAuthEndToEnd(t *test
 func TestManager_NoForkAlias_AliasRepointing_PrunesOldTargetAndReconciles(t *testing.T) {
 	const (
 		provider = "antigravity"
-		modelA   = "gemini-model-a"
-		modelB   = "[alias]gemini-model-b"
-		modelC   = "gemini-model-c"
+		modelA   = "gpt-model-a"
+		modelB   = "[alias]gpt-model-b"
+		modelC   = "gpt-model-c"
 	)
 
 	// Scenario 1: B -> A changed to B -> C
@@ -1222,8 +1222,8 @@ func TestManager_NoForkAlias_AliasRepointing_PrunesOldTargetAndReconciles(t *tes
 func TestManager_NoForkAlias_ConcurrentReconcileAndMarkResult(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 	)
 
 	store := &recordingCooldownStateStore{}
@@ -1309,8 +1309,8 @@ func TestManager_NoForkAlias_ConcurrentReconcileAndMarkResult(t *testing.T) {
 func TestManager_NoForkAlias_MarkResultRouteModelWritesAuthoritativeState(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -1412,8 +1412,8 @@ func TestManager_NoForkAlias_MarkResultRouteModelWritesAuthoritativeState(t *tes
 func TestManager_NoForkAlias_LegacyModelStatePrunedOnReconcile(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -1491,8 +1491,8 @@ func TestManager_NoForkAlias_LegacyModelStatePrunedOnReconcile(t *testing.T) {
 func TestManager_NoForkAlias_RealDiskFileStoreRestore_BypassesCoolingAuth(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 	)
 
 	tempDir := t.TempDir()
@@ -1626,8 +1626,8 @@ func TestManager_NoForkAlias_RealDiskFileStoreRestore_BypassesCoolingAuth(t *tes
 func TestManager_NoForkAlias_ConcurrentReconcileMarkResult_FullConsistency(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 	)
 
 	store := &recordingCooldownStateStore{}
@@ -1787,8 +1787,8 @@ func TestManager_NoForkAlias_ConcurrentReconcileMarkResult_FullConsistency(t *te
 func TestManager_NoForkAlias_CancelledContextReconcile_CooldownStoreCleaned(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-high"
-		targetModel = "gemini-3.7-flash-high"
+		routeModel  = "[ant]gpt-3.7-flash-high"
+		targetModel = "gpt-3.7-flash-high"
 		otherModel  = "other-clean-model"
 	)
 
@@ -1968,8 +1968,8 @@ func TestManager_NoForkAlias_MarkResultTargetModelNoSecondaryAliasResolution(t *
 func TestManager_NoForkAlias_MarkResultTransientErrorsSyncSuspendRegistry(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-transient"
-		targetModel = "gemini-3.7-flash-transient"
+		routeModel  = "[ant]gpt-3.7-flash-transient"
+		targetModel = "gpt-3.7-flash-transient"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -2069,7 +2069,7 @@ func TestManager_NoForkAlias_MarkResultTransientErrorsSyncSuspendRegistry(t *tes
 func TestManager_Scheduler_StaleDisabledSnapshotCannotRemoveActiveEntry(t *testing.T) {
 	const (
 		provider = "antigravity"
-		model    = "gemini-3.7-flash-gen-test"
+		model    = "gpt-3.7-flash-gen-test"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -2201,8 +2201,8 @@ func (s *strictContextCheckingStore) savedRecords() []CooldownStateRecord {
 func TestManager_NoForkAlias_StrictContextCheckingStore_ReconcilePersistsUnderCancelledContext(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-strict"
-		targetModel = "gemini-3.7-flash-strict"
+		routeModel  = "[ant]gpt-3.7-flash-strict"
+		targetModel = "gpt-3.7-flash-strict"
 		otherModel  = "other-model-strict"
 	)
 
@@ -2300,7 +2300,7 @@ func TestManager_NoForkAlias_StrictContextCheckingStore_ReconcilePersistsUnderCa
 func TestManager_Scheduler_Tombstone_StaleActiveSnapshotCannotReactivateDisabledEntry(t *testing.T) {
 	const (
 		provider = "antigravity"
-		model    = "gemini-3.7-tombstone-test"
+		model    = "gpt-3.7-tombstone-test"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -2366,8 +2366,8 @@ func TestManager_Scheduler_Tombstone_StaleActiveSnapshotCannotReactivateDisabled
 func TestModelRegistry_Projection_GenerationProtection(t *testing.T) {
 	const (
 		clientID = "client-projection-gen-test"
-		modelID  = "gemini-3.7-proj-test"
-		provider = "gemini"
+		modelID  = "gpt-3.7-proj-test"
+		provider = "openai"
 	)
 
 	reg := registry.GetGlobalRegistry()
@@ -2432,8 +2432,8 @@ func TestModelRegistry_Projection_GenerationProtection(t *testing.T) {
 func TestManager_NoForkAlias_HistoricalRouteStateOnly_MigratedToTargetCooldown(t *testing.T) {
 	const (
 		provider     = "antigravity"
-		routeModelB  = "[ant]gemini-3.7-flash-mig"
-		targetModelA = "gemini-3.7-flash-mig"
+		routeModelB  = "[ant]gpt-3.7-flash-mig"
+		targetModelA = "gpt-3.7-flash-mig"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -2503,8 +2503,8 @@ func TestManager_NoForkAlias_HistoricalRouteStateOnly_MigratedToTargetCooldown(t
 func TestManager_NoForkAlias_ResetQuota_CancelledContextCleansCooldownStore(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-rq-test"
-		targetModel = "gemini-3.7-flash-rq-test"
+		routeModel  = "[ant]gpt-3.7-flash-rq-test"
+		targetModel = "gpt-3.7-flash-rq-test"
 	)
 
 	store := &strictContextCheckingStore{}
@@ -2589,8 +2589,8 @@ func TestManager_NoForkAlias_ResetQuota_CancelledContextCleansCooldownStore(t *t
 func TestManager_NoForkAlias_ConcurrentOperations_NaturalFinalConsistency(t *testing.T) {
 	const (
 		provider    = "antigravity"
-		routeModel  = "[ant]gemini-3.7-flash-nat-test"
-		targetModel = "gemini-3.7-flash-nat-test"
+		routeModel  = "[ant]gpt-3.7-flash-nat-test"
+		targetModel = "gpt-3.7-flash-nat-test"
 	)
 
 	store := &strictContextCheckingStore{}
@@ -2734,7 +2734,7 @@ func TestManager_NoForkAlias_ConcurrentOperations_NaturalFinalConsistency(t *tes
 func TestManager_Scheduler_Tombstone_RemoveRejectsDelayedActiveSnapshotAndRebuild(t *testing.T) {
 	const (
 		provider = "antigravity"
-		model    = "gemini-3.7-flash-remove-tombstone"
+		model    = "gpt-3.7-flash-remove-tombstone"
 	)
 
 	manager := NewManager(nil, nil, nil)
@@ -2801,7 +2801,7 @@ func TestModelRegistry_UnregisterClient_TombstoneAndGhostProjectionProtection(t 
 		clientOther  = "client-other-multi-test"
 		modelShared  = "model-shared-multi-test"
 		modelOwner   = "model-owner-only-multi-test"
-		providerName = "gemini"
+		providerName = "openai"
 	)
 
 	reg := registry.GetGlobalRegistry()
@@ -3017,7 +3017,7 @@ func TestModelRegistry_UnregisterAndReRegister_ResetsTombstone(t *testing.T) {
 	const (
 		clientID     = "client-rereg-gen-test"
 		modelName    = "model-rereg-test"
-		providerName = "gemini"
+		providerName = "openai"
 	)
 
 	reg := registry.GetGlobalRegistry()
@@ -3067,8 +3067,8 @@ func TestModelRegistry_UnregisterAndReRegister_ResetsTombstone(t *testing.T) {
 // Test 33: Remove and re-register same authID clears scheduler tombstone
 func TestManager_RemoveAndReRegister_ClearsSchedulerTombstone(t *testing.T) {
 	const (
-		provider = "gemini"
-		model    = "gemini-3.7-flash-rereg-test"
+		provider = "openai"
+		model    = "gpt-3.7-flash-rereg-test"
 		authID   = "auth-rereg-tombstone-test"
 	)
 
@@ -3331,7 +3331,7 @@ func TestManager_NoForkAlias_ResetQuota_ErrorPersistCleansCooldownStore(t *testi
 // Test 36: Model A cooldown does NOT suspend independent Model C, and no aggregation fallback flip occurs
 func TestManager_NoForkAlias_PerModelIsolation_NoAggregationFallbackFlip(t *testing.T) {
 	const (
-		provider = "gemini"
+		provider = "openai"
 		modelA   = "model-a-isolated"
 		modelC   = "model-c-isolated"
 		authID   = "auth-isolation-test"
@@ -3393,8 +3393,8 @@ func TestManager_NoForkAlias_PerModelIsolation_NoAggregationFallbackFlip(t *test
 // Test 37: Monotonically increasing Registration Epoch ensures delayed high-generation snapshots from old epoch are rejected in both ModelRegistry and Scheduler
 func TestManager_NoForkAlias_MonotonicRegistrationEpoch_RejectsOldEpochHighGeneration(t *testing.T) {
 	const (
-		provider = "gemini"
-		modelID  = "gemini-epoch-test-model"
+		provider = "openai"
+		modelID  = "gpt-epoch-test-model"
 		authID   = "auth-epoch-gen-test"
 	)
 
@@ -3527,10 +3527,10 @@ func TestManager_NoForkAlias_MonotonicRegistrationEpoch_RejectsOldEpochHighGener
 // Test 38: Reconcile detects concurrent RegisterClient epoch bump, reloads latest supported models atomically and preserves active cooldown
 func TestManager_NoForkAlias_Reconcile_ConcurrentClientRegistrationEpochChange_PreservesCooldown(t *testing.T) {
 	const (
-		provider = "gemini"
-		modelA   = "gemini-route-model-a"
-		modelB   = "gemini-route-model-b"
-		modelC   = "gemini-route-model-c"
+		provider = "openai"
+		modelA   = "gpt-route-model-a"
+		modelB   = "gpt-route-model-b"
+		modelC   = "gpt-route-model-c"
 		authID   = "auth-reconcile-epoch-change-test"
 	)
 
@@ -3612,7 +3612,7 @@ func TestManager_NoForkAlias_Reconcile_ConcurrentClientRegistrationEpochChange_P
 // Test 39: High concurrency stability test under simultaneous Register, Reconcile, MarkResult, Unregister, and Projections
 func TestManager_NoForkAlias_ConcurrentHighLoadStability_EpochAndReconcile(t *testing.T) {
 	const (
-		provider   = "gemini"
+		provider   = "openai"
 		authID     = "auth-high-load-stability"
 		numWorkers = 8
 		numIters   = 50
@@ -3736,7 +3736,7 @@ func TestManager_NoForkAlias_ConcurrentHighLoadStability_EpochAndReconcile(t *te
 // Test 40: Manager Update rejects stale registration epoch
 func TestManager_Update_RejectsStaleRegistrationEpoch(t *testing.T) {
 	const (
-		provider = "gemini"
+		provider = "openai"
 		authID   = "auth-update-stale-epoch-test"
 	)
 
@@ -3798,8 +3798,8 @@ func TestManager_Update_RejectsStaleRegistrationEpoch(t *testing.T) {
 // Test 41: Manager Remove increments epoch and tombstone blocks high-gen old epoch snapshot
 func TestManager_Remove_IncrementsAuthEpoch_AndRejectsDelayedOldEpochSnapshot(t *testing.T) {
 	const (
-		provider = "gemini"
-		model    = "gemini-remove-tombstone-epoch-model"
+		provider = "openai"
+		model    = "gpt-remove-tombstone-epoch-model"
 		authID   = "auth-remove-tombstone-epoch-test"
 	)
 
@@ -3866,7 +3866,7 @@ func TestModelRegistry_ApplyClientModelProjections_StrictEpochAndBatchValidation
 		clientID     = "client-proj-strict-test"
 		model1       = "model-proj-strict-1"
 		modelUnowned = "model-proj-strict-unowned"
-		provider     = "gemini"
+		provider     = "openai"
 	)
 
 	reg := registry.GetGlobalRegistry()
@@ -3920,8 +3920,8 @@ func TestModelRegistry_ApplyClientModelProjections_StrictEpochAndBatchValidation
 // Test 43: Scheduler rejects delayed old-epoch Remove tombstone after new-epoch registration
 func TestManager_Scheduler_DelayedOldEpochRemoveTombstone_RejectedAndNewAuthSchedulable(t *testing.T) {
 	const (
-		provider = "gemini"
-		model    = "gemini-old-tombstone-rejection-model"
+		provider = "openai"
+		model    = "gpt-old-tombstone-rejection-model"
 		authID   = "auth-old-tombstone-rejection-test"
 	)
 
@@ -4015,9 +4015,9 @@ func TestManager_Scheduler_DelayedOldEpochRemoveTombstone_RejectedAndNewAuthSche
 // Test 44: Reconcile with exhausted retries due to persistent epoch mismatches safely aborts without committing stale snapshot
 func TestManager_NoForkAlias_Reconcile_ExhaustedRetryOnEpochMismatch_PreservesStateAndNoStaleSnapshot(t *testing.T) {
 	const (
-		provider = "gemini"
-		modelA   = "gemini-reconcile-exhaust-model-a"
-		modelB   = "gemini-reconcile-exhaust-model-b"
+		provider = "openai"
+		modelA   = "gpt-reconcile-exhaust-model-a"
+		modelB   = "gpt-reconcile-exhaust-model-b"
 		authID   = "auth-reconcile-exhaust-test"
 	)
 
@@ -4157,8 +4157,8 @@ func (s *memoryAuthTestStore) Delete(ctx context.Context, id string) error {
 // Test 45: Manager Load assigns monotonically increasing epochs on reload and records tombstones for removed items
 func TestManager_Load_MonotonicEpochAssignment_AndRemovalTombstones(t *testing.T) {
 	const (
-		provider = "gemini"
-		model    = "gemini-load-epoch-test-model"
+		provider = "openai"
+		model    = "gpt-load-epoch-test-model"
 		authID1  = "auth-load-epoch-1"
 		authID2  = "auth-load-epoch-2"
 	)

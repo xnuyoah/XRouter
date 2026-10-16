@@ -14,13 +14,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/clienterror"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/interfaces"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	translatorcommon "github.com/router-for-me/CLIProxyAPI/v8/internal/translator/common"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	coreexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	sdkconfig "github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/internal/clienterror"
+	"github.com/xnuyoah/XRouter/v8/internal/interfaces"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	translatorcommon "github.com/xnuyoah/XRouter/v8/internal/translator/common"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	coreexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	sdkconfig "github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 type directResponseTestError struct {
@@ -271,7 +271,7 @@ func TestEnrichAuthSelectionError_DefaultsTo503WithContext(t *testing.T) {
 
 func TestEnrichAuthSelectionError_PreservesExplicitStatus(t *testing.T) {
 	in := &coreauth.Error{Code: "auth_unavailable", Message: "no auth available", HTTPStatus: http.StatusTooManyRequests}
-	out := enrichAuthSelectionError(in, []string{"gemini"}, "gemini-2.5-pro")
+	out := enrichAuthSelectionError(in, []string{"claude"}, "claude-sonnet-4-6")
 
 	var got *coreauth.Error
 	if !errors.As(out, &got) || got == nil {

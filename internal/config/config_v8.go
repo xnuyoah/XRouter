@@ -23,48 +23,18 @@ var v8Paths = buildV8Paths()
 
 // Historical spellings are YAML-boundary aliases, not provider runtime fields.
 // The canonical client path wins by presence (including explicit false/null).
-// If it is absent, prefer the previous v8 OAuth path, then providers, then codex.
-var v8ClientPaths = []configPath{
-	{"oauth.providers.codex.optimize-multi-agent-v2", "client.codex.optimize-multi-agent-v2"},
-	{"providers.codex.optimize-multi-agent-v2", "client.codex.optimize-multi-agent-v2"},
-	{"codex.optimize-multi-agent-v2", "client.codex.optimize-multi-agent-v2"},
-}
+var v8ClientPaths = []configPath{}
 
 // Canonical upstream fields win by presence; historical OAuth fields precede globals.
-var v8SharedPaths = []configPath{
-	{"oauth.providers.codex.disable-codex-cloaking", "upstream.codex.disable-codex-cloaking"},
-	{"oauth.providers.codex.stream-bootstrap-buffering", "upstream.codex.stream-bootstrap-buffering"},
-	{"oauth.providers.codex.stream-bootstrap-timeout", "upstream.codex.stream-bootstrap-timeout"},
-	{"oauth.providers.codex.orphan-delegation-compatibility", "upstream.codex.orphan-delegation-compatibility"},
-	{"oauth.providers.codex.model-level-cooling", "upstream.codex.model-level-cooling"},
-	{"oauth.providers.codex.response-steering", "upstream.codex.response-steering"},
-	{"oauth.providers.claude.model-level-cooling", "upstream.claude.model-level-cooling"},
-	{"oauth.providers.claude.claude-code.disable-cloaking-model-list", "upstream.claude.disable-cloaking-model-list"},
-	{"oauth.providers.claude.disable-claude-cloak-mode", "upstream.claude.disable-claude-cloak-mode"},
-	{"oauth.providers.claude.header-defaults.user-agent", "upstream.claude.header-defaults.user-agent"},
-	{"oauth.providers.claude.header-defaults.package-version", "upstream.claude.header-defaults.package-version"},
-	{"oauth.providers.claude.header-defaults.runtime-version", "upstream.claude.header-defaults.runtime-version"},
-	{"oauth.providers.claude.header-defaults.os", "upstream.claude.header-defaults.os"},
-	{"oauth.providers.claude.header-defaults.arch", "upstream.claude.header-defaults.arch"},
-	{"oauth.providers.claude.header-defaults.timeout", "upstream.claude.header-defaults.timeout"},
-	{"oauth.providers.claude.header-defaults.timezone", "upstream.claude.header-defaults.timezone"},
-	{"oauth.providers.claude.header-defaults.stabilize-device-profile", "upstream.claude.header-defaults.stabilize-device-profile"},
-	{"oauth.providers.xai.inject-x-search", "upstream.xai.inject-x-search"},
-}
+var v8SharedPaths = []configPath{}
 
 var v8Aliases = append(append([]configPath(nil), v8ClientPaths...), v8SharedPaths...)
 
-var v8SharedStructPaths = []configPath{
-	{"oauth.providers.claude.header-defaults", "upstream.claude.header-defaults"},
-	{"oauth.providers.claude.claude-code", "upstream.claude"},
-	{"oauth.providers.claude", "upstream.claude"},
-	{"oauth.providers.xai", "upstream.xai"},
-}
+var v8SharedStructPaths = []configPath{}
 
 var v8KeyFamilies = []configPath{
-	{"gemini-api-key", "gemini"}, {"interactions-api-key", "interactions"},
-	{"vertex-api-key", "vertex"}, {"codex-api-key", "codex"},
-	{"claude-api-key", "claude"}, {"xai-api-key", "xai"}, {"meta-api-key", "meta"},
+	{"openai-api-key", "openai"}, {"deepseek-api-key", "deepseek"}, {"nvidia-api-key", "nvidia"},
+	{"agnes-api-key", "agnes"},
 	{"openai-compatibility", "openai-compatibility"},
 }
 
@@ -84,24 +54,8 @@ func buildV8Paths() []configPath {
 		{"nonstream-keepalive-interval", "requests.nonstream-keepalive-interval"}, {"streaming", "requests.streaming"}, {"payload", "requests.payload"},
 		{"auth-dir", "oauth.auth-dir"}, {"auth-auto-refresh-workers", "oauth.auth-auto-refresh-workers"},
 		{"oauth-model-alias", "oauth.model-alias"}, {"oauth-excluded-models", "oauth.excluded-models"},
-		{"oauth-request-scoped-errors", "oauth.request-scoped-errors"}, {"oauth-settings", "oauth.settings"}, {"ws-auth", "oauth.providers.aistudio.ws-auth"},
-		{"codex.disable-codex-cloaking", "upstream.codex.disable-codex-cloaking"},
-		{"codex.stream-bootstrap-buffering", "upstream.codex.stream-bootstrap-buffering"},
-		{"codex.stream-bootstrap-timeout", "upstream.codex.stream-bootstrap-timeout"},
-		{"codex.orphan-delegation-compatibility", "upstream.codex.orphan-delegation-compatibility"},
-		{"codex.model-level-cooling", "upstream.codex.model-level-cooling"},
-		{"codex.response-steering", "upstream.codex.response-steering"},
-		{"codex", "oauth.providers.codex"}, {"codex-header-defaults", "oauth.providers.codex.header-defaults"},
-		{"claude", "upstream.claude"}, {"claude-code", "upstream.claude"},
-		{"disable-claude-cloak-mode", "upstream.claude.disable-claude-cloak-mode"},
-		{"claude-header-defaults", "upstream.claude.header-defaults"},
-		{"antigravity", "oauth.providers.antigravity"},
-		{"antigravity-signature-cache-enabled", "oauth.providers.antigravity.signature-cache-enabled"},
-		{"antigravity-signature-bypass-strict", "oauth.providers.antigravity.signature-bypass-strict"},
-		{"quota-exceeded.antigravity-credits", "oauth.providers.antigravity.antigravity-credits"},
-		{"xai", "upstream.xai"}, {"devin", "oauth.providers.devin"},
-		{"disable-image-generation", "multimedia.disable-image-generation"}, {"gpt-image-2-base-model", "multimedia.gpt-image-2-base-model"},
-		{"video-result-auth-cache-ttl", "multimedia.video-result-auth-cache-ttl"},
+		{"oauth-request-scoped-errors", "oauth.request-scoped-errors"}, {"oauth-settings", "oauth.settings"},
+		{"disable-image-generation", "multimedia.disable-image-generation"},
 		{"debug", "observability.logs.debug"}, {"logging-to-file", "observability.logs.logging-to-file"},
 		{"logs-max-total-size-mb", "observability.logs.logs-max-total-size-mb"}, {"request-log", "observability.logs.request-log"},
 		{"error-logs-max-files", "observability.logs.error-logs-max-files"},
@@ -250,9 +204,6 @@ func (cfg *Config) UnmarshalYAML(node *yaml.Node) error {
 	if err = root.Decode(&decoded); err != nil {
 		return err
 	}
-	if errValidate := decoded.Models.Validate(); errValidate != nil {
-		return errValidate
-	}
 	*cfg = Config(decoded)
 	cfg.OAuthOnlyFields = nil
 	source := expandConfigAliases(node)
@@ -278,9 +229,6 @@ func flattenV8(node *yaml.Node) (*yaml.Node, error) {
 		return nil, err
 	}
 	node = expandConfigAliases(node)
-	if _, err := normalizeV8PrivateIPAlias(node, true); err != nil {
-		return nil, err
-	}
 	for _, path := range append(append([]configPath(nil), v8Paths...), v8Aliases...) {
 		parts := strings.Split(path.current, ".")
 		for i := 1; i < len(parts); i++ {
@@ -386,9 +334,13 @@ func expandV8Groups(groups *yaml.Node, provider string) (*yaml.Node, error) {
 			out.Content = append(out.Content, item)
 			continue
 		}
+		// The native OpenAI-wire families support a group-level disable switch and
+		// prompt-cache derivation flag that every contained key inherits.
+		nativeFamily := provider == "openai" || provider == "deepseek" || provider == "nvidia" || provider == "agnes"
+		nativeGroupFields := map[string]bool{"disabled": true, "support-prompt-cache-key": true}
 		for i := 0; i < len(group.Content); i += 2 {
 			field := group.Content[i].Value
-			if field != "name" && field != "base-url" && field != "keys" && !sharedKeyFields[field] {
+			if field != "name" && field != "base-url" && field != "keys" && !sharedKeyFields[field] && !(nativeFamily && nativeGroupFields[field]) {
 				return nil, fmt.Errorf("api-keys.%s: unsupported group field %s", provider, field)
 			}
 		}
@@ -402,7 +354,7 @@ func expandV8Groups(groups *yaml.Node, provider string) (*yaml.Node, error) {
 			item := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
 			for i := 0; i < len(group.Content); i += 2 {
 				field := group.Content[i].Value
-				if field == "base-url" || sharedKeyFields[field] {
+				if field == "base-url" || sharedKeyFields[field] || (nativeFamily && nativeGroupFields[field]) {
 					setYAMLPath(item, field, group.Content[i+1])
 				}
 			}
@@ -470,10 +422,7 @@ func NormalizeConfigLayout(data []byte, migrate bool) ([]byte, bool, error) {
 	}
 	root = expandConfigAliases(root)
 	doc.Content[0] = root
-	changed, err := normalizeV8PrivateIPAlias(root, migrate)
-	if err != nil {
-		return nil, false, err
-	}
+	changed := false
 	// Empty legacy structs have no leaf fields to move. Preserve them as empty v8
 	// mappings; null structs also mean defaults. User-owned maps are not included.
 	paths := append(append([]configPath(nil), v8Aliases...), v8Paths...)
@@ -709,35 +658,6 @@ func commentUnknownV8Fields(node *yaml.Node, archive *yaml.Node, allowed map[str
 	return nil
 }
 
-// The deprecated allow flag is the inverse of disable-private-remote-ips.
-// Resolve it before applying v8 precedence so both names cannot reach the runtime
-// decoder together. Legacy-only files are left untouched until a migration/save.
-func normalizeV8PrivateIPAlias(root *yaml.Node, migrate bool) (bool, error) {
-	const old = "codex.live-media-relay.allow-private-remote-ips"
-	const canonical = "codex.live-media-relay.disable-private-remote-ips"
-	value := yamlPath(root, old)
-	if value == nil {
-		return false, nil
-	}
-	if yamlPath(root, "oauth.providers."+canonical) != nil {
-		return deleteYAMLPath(root, old), nil
-	}
-	if !migrate || yamlPath(root, canonical) != nil {
-		return false, nil
-	}
-	var allow bool
-	if err := value.Decode(&allow); err != nil {
-		return false, fmt.Errorf("decode %s: %w", old, err)
-	}
-	replacement := deepCopyNode(value)
-	if err := replacement.Encode(!allow); err != nil {
-		return false, err
-	}
-	setYAMLPath(root, canonical, replacement)
-	deleteYAMLPath(root, old)
-	return true, nil
-}
-
 // restoreV8Layout lets v0 handlers update the effective runtime fields without
 // reintroducing their legacy spellings into an existing v8 document.
 func restoreV8Layout(root, layout *yaml.Node, original []byte, generated *yaml.Node) error {
@@ -914,5 +834,5 @@ func ValidateV8Config(data []byte) error {
 	if errDecode := decoder.Decode(&cfg); errDecode != nil {
 		return errDecode
 	}
-	return cfg.Models.Validate()
+	return nil
 }

@@ -21,7 +21,7 @@ func TestAPIKeyWeightValidation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, errParse := ParseConfigBytes([]byte("gemini-api-key:\n  - api-key: key\n    weight: " + test.weight + "\n"))
+			_, errParse := ParseConfigBytes([]byte("nvidia-api-key:\n  - api-key: key\n    weight: " + test.weight + "\n"))
 			if (errParse == nil) != test.valid {
 				t.Fatalf("ParseConfigBytes(weight=%s) error = %v, want valid=%v", test.weight, errParse, test.valid)
 			}
@@ -30,22 +30,22 @@ func TestAPIKeyWeightValidation(t *testing.T) {
 }
 
 func TestAPIKeyWeightParsingAndZeroPersistence(t *testing.T) {
-	cfg, errParse := ParseConfigBytes([]byte(`xai-api-key:
+	cfg, errParse := ParseConfigBytes([]byte(`nvidia-api-key:
   - api-key: key
-    base-url: https://api.x.ai/v1
+    base-url: https://integrate.api.nvidia.com/v1
     weight: 0
 `))
 	if errParse != nil {
 		t.Fatalf("ParseConfigBytes() error = %v", errParse)
 	}
-	if len(cfg.XAIKey) != 1 || cfg.XAIKey[0].Weight == nil || *cfg.XAIKey[0].Weight != 0 {
-		t.Fatalf("parsed weight = %#v, want explicit zero", cfg.XAIKey)
+	if len(cfg.NvidiaKey) != 1 || cfg.NvidiaKey[0].Weight == nil || *cfg.NvidiaKey[0].Weight != 0 {
+		t.Fatalf("parsed weight = %#v, want explicit zero", cfg.NvidiaKey)
 	}
 
 	configPath := filepath.Join(t.TempDir(), "config.yaml")
-	if errWrite := os.WriteFile(configPath, []byte(`xai-api-key:
+	if errWrite := os.WriteFile(configPath, []byte(`nvidia-api-key:
   - api-key: key
-    base-url: https://api.x.ai/v1
+    base-url: https://integrate.api.nvidia.com/v1
 `), 0644); errWrite != nil {
 		t.Fatalf("WriteFile() error = %v", errWrite)
 	}

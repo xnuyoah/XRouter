@@ -5,9 +5,9 @@ import (
 	"strings"
 	"sync"
 
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/proxyutil"
 	log "github.com/sirupsen/logrus"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/proxyutil"
 )
 
 // defaultRoundTripperProvider returns a per-auth HTTP RoundTripper based on

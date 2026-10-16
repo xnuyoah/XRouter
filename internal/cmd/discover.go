@@ -13,7 +13,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/discovery"
+	"github.com/xnuyoah/XRouter/v8/internal/discovery"
 	"gopkg.in/yaml.v3"
 )
 
@@ -256,9 +256,6 @@ func runDiscoverWithOptions(opts DiscoverOptions, stdout, stderr io.Writer, newB
 
 		if anthropicPath, ok := gw.Endpoints["anthropic"]; ok {
 			fmt.Fprintf(stdout, "      - Anthropic: %s://%s%s\n", scheme, hostPort, sanitizeTerminal(anthropicPath))
-		}
-		if geminiPath, ok := gw.Endpoints["gemini"]; ok {
-			fmt.Fprintf(stdout, "      - Gemini:    %s://%s%s\n", scheme, hostPort, sanitizeTerminal(geminiPath))
 		}
 
 		fmt.Fprintln(stdout)

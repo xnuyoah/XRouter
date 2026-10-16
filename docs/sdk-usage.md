@@ -5,7 +5,7 @@ The `sdk/cliproxy` module exposes the proxy as a reusable Go library so external
 ## Install & Import
 
 ```bash
-go get github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy
+go get github.com/xnuyoah/XRouter/v8/sdk/cliproxy
 ```
 
 ```go
@@ -14,8 +14,8 @@ import (
     "errors"
     "time"
 
-    "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-    "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy"
+    "github.com/xnuyoah/XRouter/v8/internal/config"
+    "github.com/xnuyoah/XRouter/v8/sdk/cliproxy"
 )
 ```
 
@@ -106,10 +106,10 @@ Programmatic execution is available on the manager:
 
 ```go
 // Non‑streaming
-resp, err := core.Execute(ctx, []string{"gemini"}, req, opts)
+resp, err := core.Execute(ctx, []string{"openai"}, req, opts)
 
 // Streaming
-chunks, err := core.ExecuteStream(ctx, []string{"gemini"}, req, opts)
+chunks, err := core.ExecuteStream(ctx, []string{"openai"}, req, opts)
 for ch := range chunks { /* ... */ }
 ```
 
@@ -160,4 +160,3 @@ _ = svc.Shutdown(ctx)
 
 - Hot reload: changes to `config.yaml` and `auths/` are picked up automatically.
 - Request logging can be toggled at runtime via the Management API.
-- Gemini Web features (`gemini-web.*`) are honored in the embedded server.

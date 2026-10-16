@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 func TestPatchPriorityForEveryProvider(t *testing.T) {
@@ -19,63 +19,6 @@ func TestPatchPriorityForEveryProvider(t *testing.T) {
 		endpoint string
 		get      func(*config.Config) int
 	}{
-		{
-			name:     "claude",
-			setup:    func(cfg *config.Config) { cfg.ClaudeKey = []config.ClaudeKey{{APIKey: "key"}} },
-			patch:    (*Handler).PatchClaudeKey,
-			endpoint: "/v0/management/claude-api-key",
-			get:      func(cfg *config.Config) int { return cfg.ClaudeKey[0].Priority },
-		},
-		{
-			name: "xai",
-			setup: func(cfg *config.Config) {
-				cfg.XAIKey = []config.XAIKey{{APIKey: "key", BaseURL: "https://example.com"}}
-			},
-			patch:    (*Handler).PatchXAIKey,
-			endpoint: "/v0/management/xai-api-key",
-			get:      func(cfg *config.Config) int { return cfg.XAIKey[0].Priority },
-		},
-		{
-			name: "meta",
-			setup: func(cfg *config.Config) {
-				cfg.MetaKey = []config.MetaKey{{APIKey: "key", BaseURL: "https://example.com"}}
-			},
-			patch:    (*Handler).PatchMetaKey,
-			endpoint: "/v0/management/meta-api-key",
-			get:      func(cfg *config.Config) int { return cfg.MetaKey[0].Priority },
-		},
-		{
-			name: "codex",
-			setup: func(cfg *config.Config) {
-				cfg.CodexKey = []config.CodexKey{{APIKey: "key", BaseURL: "https://example.com"}}
-			},
-			patch:    (*Handler).PatchCodexKey,
-			endpoint: "/v0/management/codex-api-key",
-			get:      func(cfg *config.Config) int { return cfg.CodexKey[0].Priority },
-		},
-		{
-			name:     "gemini",
-			setup:    func(cfg *config.Config) { cfg.GeminiKey = []config.GeminiKey{{APIKey: "key"}} },
-			patch:    (*Handler).PatchGeminiKey,
-			endpoint: "/v0/management/gemini-api-key",
-			get:      func(cfg *config.Config) int { return cfg.GeminiKey[0].Priority },
-		},
-		{
-			name:     "interactions",
-			setup:    func(cfg *config.Config) { cfg.InteractionsKey = []config.GeminiKey{{APIKey: "key"}} },
-			patch:    (*Handler).PatchInteractionsKey,
-			endpoint: "/v0/management/interactions-api-key",
-			get:      func(cfg *config.Config) int { return cfg.InteractionsKey[0].Priority },
-		},
-		{
-			name: "vertex",
-			setup: func(cfg *config.Config) {
-				cfg.VertexCompatAPIKey = []config.VertexCompatKey{{APIKey: "key", BaseURL: "https://example.com"}}
-			},
-			patch:    (*Handler).PatchVertexCompatKey,
-			endpoint: "/v0/management/vertex-api-key",
-			get:      func(cfg *config.Config) int { return cfg.VertexCompatAPIKey[0].Priority },
-		},
 		{
 			name: "openai compatibility",
 			setup: func(cfg *config.Config) {

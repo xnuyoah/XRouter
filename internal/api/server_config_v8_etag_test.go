@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	proxyconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	proxyconfig "github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 // TestConfigV8ETagExposedForCORS covers issue #6666 through the real server:
@@ -17,7 +17,7 @@ func TestConfigV8ETagExposedForCORS(t *testing.T) {
 	t.Setenv("MANAGEMENT_PASSWORD", "test-management-key")
 
 	server := newTestServer(t)
-	if err := os.WriteFile(server.configFilePath, []byte("config-version: 8\nserver: {port: 8317}\n"), 0600); err != nil {
+	if err := os.WriteFile(server.configFilePath, []byte("config-version: 8\nserver: {port: 11016}\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := proxyconfig.LoadConfig(server.configFilePath)

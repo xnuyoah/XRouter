@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 // tlsHandshakeTimeoutContextKey carries the opt-in TLS establishment bound

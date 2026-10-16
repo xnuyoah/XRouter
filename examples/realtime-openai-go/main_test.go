@@ -187,18 +187,18 @@ func validAudioSession(body map[string]any) bool {
 }
 
 func TestNormalizeBaseURLAddsV1(t *testing.T) {
-	baseURL, errNormalize := normalizeBaseURL("http://127.0.0.1:8317/")
+	baseURL, errNormalize := normalizeBaseURL("http://127.0.0.1:11016/")
 	if errNormalize != nil {
 		t.Fatalf("normalizeBaseURL() error = %v", errNormalize)
 	}
-	if baseURL != "http://127.0.0.1:8317/v1" {
+	if baseURL != "http://127.0.0.1:11016/v1" {
 		t.Fatalf("baseURL = %q", baseURL)
 	}
 	websocketURL, errWebsocketURL := realtimeWebsocketURL(baseURL, defaultModel)
 	if errWebsocketURL != nil {
 		t.Fatalf("realtimeWebsocketURL() error = %v", errWebsocketURL)
 	}
-	wantWebsocketURL := "ws://127.0.0.1:8317/v1/realtime?model=" + defaultModel
+	wantWebsocketURL := "ws://127.0.0.1:11016/v1/realtime?model=" + defaultModel
 	if websocketURL != wantWebsocketURL {
 		t.Fatalf("websocketURL = %q", websocketURL)
 	}

@@ -14,8 +14,7 @@ import (
 	"sync"
 	"time"
 
-	baseauth "github.com/router-for-me/CLIProxyAPI/v8/internal/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/auth/codex"
+	baseauth "github.com/xnuyoah/XRouter/v8/internal/auth"
 )
 
 // PostAuthHook defines a function that is called after an Auth record is created
@@ -57,16 +56,14 @@ type Auth struct {
 	Generation uint64 `json:"generation,omitempty"`
 	// Index is a stable runtime identifier derived from auth metadata (not persisted).
 	Index string `json:"-"`
-	// Provider is the upstream provider key (e.g. "gemini", "claude").
+	// Provider is the upstream provider key (e.g. "openai", "claude").
 	Provider string `json:"provider"`
-	// Prefix optionally namespaces models for routing (e.g., "teamA/gemini-3-pro-preview").
+	// Prefix optionally namespaces models for routing (e.g., "teamA/gpt-4o").
 	Prefix string `json:"prefix,omitempty"`
 	// FileName stores the relative or absolute path of the backing auth file.
 	FileName string `json:"-"`
 	// Storage holds the token persistence implementation used during login flows.
 	Storage baseauth.TokenStorage `json:"-"`
-	// CodexRefreshPatch carries an immutable pending credential update, never configuration.
-	CodexRefreshPatch *codex.CredentialRefreshPatch `json:"-"`
 	// Label is an optional human readable label for logging.
 	Label string `json:"label,omitempty"`
 	// Status is the lifecycle status managed by the AuthManager.
@@ -426,18 +423,14 @@ func (a *Auth) indexSeed() string {
 		switch {
 		case compatName != "" || strings.EqualFold(provider, "openai-compatibility"):
 			apiPrefix = "openai-compatibility"
-		case strings.EqualFold(provider, "gemini"):
-			apiPrefix = "gemini-api-key"
-		case strings.EqualFold(provider, "gemini-interactions"):
-			apiPrefix = "interactions-api-key"
-		case strings.EqualFold(provider, "codex"):
-			apiPrefix = "codex-api-key"
-		case strings.EqualFold(provider, "xai"):
-			apiPrefix = "xai-api-key"
-		case strings.EqualFold(provider, "claude"):
-			apiPrefix = "claude-api-key"
-		case strings.EqualFold(provider, "meta"):
-			apiPrefix = "meta-api-key"
+		case strings.EqualFold(provider, "openai"):
+			apiPrefix = "openai-api-key"
+		case strings.EqualFold(provider, "deepseek"):
+			apiPrefix = "deepseek-api-key"
+		case strings.EqualFold(provider, "nvidia"):
+			apiPrefix = "nvidia-api-key"
+		case strings.EqualFold(provider, "agnes"):
+			apiPrefix = "agnes-api-key"
 		}
 	}
 	if apiPrefix != "" {
@@ -776,10 +769,6 @@ func CodexOuterNeedsRefresh(a *Auth, now time.Time) (dueAt time.Time, hasRefresh
 		provider = strings.ToLower(authMetadataString(a, "type"))
 	}
 	lead := ProviderRefreshLead(provider, a.Runtime)
-	if lead == nil && provider == "codex" {
-		d := 24 * time.Hour
-		lead = &d
-	}
 	if lead == nil {
 		return time.Time{}, false, false
 	}

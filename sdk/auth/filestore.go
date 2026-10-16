@@ -13,8 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	cliproxyauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 // PluginAuthParser parses auth JSON owned by plugin providers.
@@ -110,11 +110,7 @@ func (s *FileTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (str
 		SetMetadata(map[string]any)
 	}
 
-	if handled, errCodex := cliproxyauth.PersistCodexAuthFile(ctx, path, auth); handled {
-		if errCodex != nil {
-			return "", errCodex
-		}
-	} else {
+	{
 		switch {
 		case auth.Storage != nil:
 			if auth.Metadata == nil {
@@ -251,9 +247,6 @@ func (s *FileTokenStore) readAuthFiles(path, baseDir string) ([]*cliproxyauth.Au
 	}
 	provider, _ := metadata["type"].(string)
 	provider = strings.TrimSpace(provider)
-	if strings.EqualFold(provider, "gemini") {
-		return nil, nil
-	}
 	info, errStat := os.Stat(path)
 	if errStat != nil {
 		return nil, fmt.Errorf("stat file: %w", errStat)

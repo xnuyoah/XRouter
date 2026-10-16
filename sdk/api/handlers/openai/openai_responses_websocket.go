@@ -15,14 +15,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/interfaces"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/xnuyoah/XRouter/v8/internal/interfaces"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 const (
@@ -279,11 +279,9 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 	// The reader owns the client socket so an in-flight interrupt is not stuck
 	// behind the response currently being forwarded.
 	requestLogEnabled := false
-	codexResponseSteering := false
 	if h != nil {
 		if cfg := h.CurrentConfig(); cfg != nil {
 			requestLogEnabled = cfg.RequestLog
-			codexResponseSteering = cfg.CodexResponseSteering
 		}
 	}
 	wsTimelineLog := newWebsocketTimelineLog(requestLogEnabled, websocketTimelineSourceFromContext(c))
@@ -291,10 +289,6 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 	input, inputDone := readResponsesWebsocketInput(socketCtx, cancelSocket, conn, func(payload []byte) error {
 		return h.forwardResponsesWebsocketInterrupt(socketCtx, passthroughSessionID, payload)
 	}, localInterrupt, writer, wsTimelineLog)
-	var duplexInput <-chan cliproxyexecutor.WebsocketInput
-	if codexResponseSteering {
-		duplexInput = input
-	}
 	downstreamSessionKey := websocketDownstreamSessionKey(c.Request)
 	retainResponsesWebsocketToolCaches(downstreamSessionKey)
 	clientIP := websocketClientAddress(c)
@@ -308,7 +302,7 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 		type upstreamDisconnectSubscriber interface {
 			UpstreamDisconnectChan(sessionID string) <-chan error
 		}
-		for _, provider := range []string{"codex", "xai"} {
+		for _, provider := range []string{"codex"} {
 			exec, ok := h.AuthManager.Executor(provider)
 			if !ok || exec == nil {
 				continue
@@ -391,7 +385,7 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 	upstreamModeForAuth := func(auth *coreauth.Auth) string {
 		if auth != nil && websocketUpstreamSupportsIncrementalInput(auth.Attributes, auth.Metadata) {
 			provider := strings.ToLower(strings.TrimSpace(auth.Provider))
-			if provider == "codex" || provider == "xai" {
+			if provider == "codex" {
 				return responsesWebsocketUpstreamModeWS
 			}
 		}
@@ -504,7 +498,7 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 		if pinnedAuthID != "" {
 			if pinnedAuth, ok := sessionAuthByID(pinnedAuthID); ok && responsesWebsocketAuthSupportsIncrementalInput(pinnedAuth) {
 				provider := strings.ToLower(strings.TrimSpace(pinnedAuth.Provider))
-				useUpstreamWebsocketPassthrough = provider == "codex" || provider == "xai"
+				useUpstreamWebsocketPassthrough = provider == "codex"
 			}
 		}
 		nativeWebsocketPassthrough := !routeOverridesModelResolution && responsesWebsocketNativePassthroughAllowed(
@@ -661,9 +655,6 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 			continue
 		}
 
-		requestJSON = h.prepareCodexMultiAgentV2Tools(c, requestJSON)
-		requestJSON = h.prepareCodexOrphanDelegation(c, requestJSON)
-
 		if isPrewarm {
 			if updated, errDelete := sjson.DeleteBytes(requestJSON, "generate"); errDelete == nil {
 				requestJSON = updated
@@ -706,13 +697,6 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 		pinnedAuthAttempted := false
 		cliCtx, cliCancel := h.GetContextWithCancel(h, c, executionParent)
 		cliCtx = cliproxyexecutor.WithDownstreamWebsocket(cliCtx)
-		if duplexInput != nil {
-			cliCtx = cliproxyexecutor.WithWebsocketInput(cliCtx, duplexInput)
-			cliCtx = cliproxyexecutor.WithWebsocketAuthCheck(cliCtx, func(authID string) bool {
-				current, ok := sessionAuthByID(authID)
-				return ok && current != nil && !current.Disabled && current.Status != coreauth.StatusDisabled
-			})
-		}
 		if nativeWebsocketPassthrough && requestRequiresCurrentUpstreamWebsocket {
 			cliCtx = cliproxyexecutor.WithRequiredUpstreamWebsocket(cliCtx)
 		}
@@ -732,7 +716,7 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 				return
 			}
 			attemptedUpstreamMode = upstreamModeForAuth(selectedAuth)
-			codexDuplexStream.Store(duplexInput != nil && attemptedUpstreamMode == responsesWebsocketUpstreamModeWS && strings.EqualFold(strings.TrimSpace(selectedAuth.Provider), "codex"))
+			codexDuplexStream.Store(false)
 			preserveNativeOutput.Store(nativeRequest && strings.EqualFold(strings.TrimSpace(selectedAuth.Provider), "codex"))
 		})
 		executionAuthID := ""

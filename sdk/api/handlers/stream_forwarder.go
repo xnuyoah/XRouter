@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/interfaces"
+	"github.com/xnuyoah/XRouter/v8/internal/interfaces"
 	"golang.org/x/net/context"
 )
 

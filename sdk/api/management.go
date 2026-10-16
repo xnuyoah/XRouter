@@ -1,4 +1,4 @@
-// Package api exposes helpers for embedding CLIProxyAPI.
+// Package api exposes helpers for embedding XRouter.
 //
 // It wraps internal management handler types and helpers so external projects
 // can integrate management endpoints without importing internal packages.
@@ -8,9 +8,9 @@ import (
 	"context"
 
 	"github.com/gin-gonic/gin"
-	internalmanagement "github.com/router-for-me/CLIProxyAPI/v8/internal/api/handlers/management"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	internalmanagement "github.com/xnuyoah/XRouter/v8/internal/api/handlers/management"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 // Handler re-exports the management handler used by the internal HTTP API.
@@ -18,10 +18,6 @@ type Handler = internalmanagement.Handler
 
 // ManagementTokenRequester exposes a limited subset of management endpoints for requesting tokens.
 type ManagementTokenRequester interface {
-	RequestAnthropicToken(*gin.Context)
-	RequestCodexToken(*gin.Context)
-	RequestAntigravityToken(*gin.Context)
-	RequestKimiToken(*gin.Context)
 	GetAuthStatus(c *gin.Context)
 	PostOAuthCallback(c *gin.Context)
 }
@@ -45,22 +41,6 @@ func NewManagementTokenRequester(cfg *config.Config, manager *coreauth.Manager) 
 	return &managementTokenRequester{
 		handler: NewHandlerWithoutConfigFilePath(cfg, manager),
 	}
-}
-
-func (m *managementTokenRequester) RequestAnthropicToken(c *gin.Context) {
-	m.handler.RequestAnthropicToken(c)
-}
-
-func (m *managementTokenRequester) RequestCodexToken(c *gin.Context) {
-	m.handler.RequestCodexToken(c)
-}
-
-func (m *managementTokenRequester) RequestAntigravityToken(c *gin.Context) {
-	m.handler.RequestAntigravityToken(c)
-}
-
-func (m *managementTokenRequester) RequestKimiToken(c *gin.Context) {
-	m.handler.RequestKimiToken(c)
 }
 
 func (m *managementTokenRequester) GetAuthStatus(c *gin.Context) {

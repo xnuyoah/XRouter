@@ -3,9 +3,9 @@ package management
 import (
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher/synthesizer"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher/synthesizer"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 func TestSetConfigAPIKeyExcludedAll(t *testing.T) {
@@ -19,22 +19,22 @@ func TestSetConfigAPIKeyExcludedAll(t *testing.T) {
 	}
 }
 
-func TestToggleConfigAPIKeyExcludedAll_XAI(t *testing.T) {
+func TestToggleConfigAPIKeyExcludedAll_OpenAI(t *testing.T) {
 	cfg := &config.Config{
-		XAIKey: []config.XAIKey{{
-			APIKey:  "xai-test",
-			BaseURL: "https://api.x.ai/v1",
+		OpenAIKey: []config.OpenAIKey{{
+			APIKey:  "openai-test",
+			BaseURL: "https://api.openai.com/v1",
 		}},
 	}
 	idGen := synthesizer.NewStableIDGenerator()
-	authID, _ := idGen.Next("xai:apikey", "xai-test", "https://api.x.ai/v1", "", "", "")
+	authID, _ := idGen.Next("openai:apikey", "openai-test", "https://api.openai.com/v1", "", "", "")
 	auth := &coreauth.Auth{
 		ID:       authID,
-		Provider: "xai",
+		Provider: "openai",
 		Attributes: map[string]string{
-			"api_key":  "xai-test",
-			"base_url": "https://api.x.ai/v1",
-			"source":   "config:xai[abc]",
+			"api_key":  "openai-test",
+			"base_url": "https://api.openai.com/v1",
+			"source":   "config:openai[abc]",
 		},
 	}
 
@@ -42,27 +42,27 @@ func TestToggleConfigAPIKeyExcludedAll_XAI(t *testing.T) {
 	if errToggle != nil || !handled {
 		t.Fatalf("toggle disable: handled=%v err=%v", handled, errToggle)
 	}
-	if len(cfg.XAIKey[0].ExcludedModels) != 1 || cfg.XAIKey[0].ExcludedModels[0] != "*" {
-		t.Fatalf("excluded-models = %#v, want [*]", cfg.XAIKey[0].ExcludedModels)
+	if len(cfg.OpenAIKey[0].ExcludedModels) != 1 || cfg.OpenAIKey[0].ExcludedModels[0] != "*" {
+		t.Fatalf("excluded-models = %#v, want [*]", cfg.OpenAIKey[0].ExcludedModels)
 	}
 }
 
-func TestToggleConfigAPIKeyExcludedAll_Meta(t *testing.T) {
+func TestToggleConfigAPIKeyExcludedAll_Deepseek(t *testing.T) {
 	cfg := &config.Config{
-		MetaKey: []config.MetaKey{{
-			APIKey:  "meta-test",
-			BaseURL: "https://api.meta.ai/v1",
+		DeepseekKey: []config.DeepseekKey{{
+			APIKey:  "deepseek-test",
+			BaseURL: "https://api.deepseek.com/v1",
 		}},
 	}
 	idGen := synthesizer.NewStableIDGenerator()
-	authID, _ := idGen.Next("meta:apikey", "meta-test", "https://api.meta.ai/v1", "", "", "")
+	authID, _ := idGen.Next("deepseek:apikey", "deepseek-test", "https://api.deepseek.com/v1", "", "", "")
 	auth := &coreauth.Auth{
 		ID:       authID,
-		Provider: "meta",
+		Provider: "deepseek",
 		Attributes: map[string]string{
-			"api_key":  "meta-test",
-			"base_url": "https://api.meta.ai/v1",
-			"source":   "config:meta[abc]",
+			"api_key":  "deepseek-test",
+			"base_url": "https://api.deepseek.com/v1",
+			"source":   "config:deepseek[abc]",
 		},
 	}
 
@@ -70,27 +70,27 @@ func TestToggleConfigAPIKeyExcludedAll_Meta(t *testing.T) {
 	if errToggle != nil || !handled {
 		t.Fatalf("toggle disable: handled=%v err=%v", handled, errToggle)
 	}
-	if len(cfg.MetaKey[0].ExcludedModels) != 1 || cfg.MetaKey[0].ExcludedModels[0] != "*" {
-		t.Fatalf("excluded-models = %#v, want [*]", cfg.MetaKey[0].ExcludedModels)
+	if len(cfg.DeepseekKey[0].ExcludedModels) != 1 || cfg.DeepseekKey[0].ExcludedModels[0] != "*" {
+		t.Fatalf("excluded-models = %#v, want [*]", cfg.DeepseekKey[0].ExcludedModels)
 	}
 }
 
-func TestToggleConfigAPIKeyExcludedAll_Codex(t *testing.T) {
+func TestToggleConfigAPIKeyExcludedAll_Nvidia(t *testing.T) {
 	cfg := &config.Config{
-		CodexKey: []config.CodexKey{{
-			APIKey:  "sk-test",
-			BaseURL: "https://example.com/v1",
+		NvidiaKey: []config.NvidiaKey{{
+			APIKey:  "nvidia-test",
+			BaseURL: "https://integrate.api.nvidia.com/v1",
 		}},
 	}
 	idGen := synthesizer.NewStableIDGenerator()
-	authID, _ := idGen.Next("codex:apikey", "sk-test", "https://example.com/v1", "", "", "")
+	authID, _ := idGen.Next("nvidia:apikey", "nvidia-test", "https://integrate.api.nvidia.com/v1", "", "", "")
 	auth := &coreauth.Auth{
 		ID:       authID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Attributes: map[string]string{
-			"api_key":  "sk-test",
-			"base_url": "https://example.com/v1",
-			"source":   "config:codex[abc]",
+			"api_key":  "nvidia-test",
+			"base_url": "https://integrate.api.nvidia.com/v1",
+			"source":   "config:nvidia[abc]",
 		},
 	}
 
@@ -98,93 +98,66 @@ func TestToggleConfigAPIKeyExcludedAll_Codex(t *testing.T) {
 	if err != nil || !handled {
 		t.Fatalf("toggle disable: handled=%v err=%v", handled, err)
 	}
-	if len(cfg.CodexKey[0].ExcludedModels) != 1 || cfg.CodexKey[0].ExcludedModels[0] != "*" {
-		t.Fatalf("expected excluded-models [*], got %#v", cfg.CodexKey[0].ExcludedModels)
+	if len(cfg.NvidiaKey[0].ExcludedModels) != 1 || cfg.NvidiaKey[0].ExcludedModels[0] != "*" {
+		t.Fatalf("expected excluded-models [*], got %#v", cfg.NvidiaKey[0].ExcludedModels)
 	}
 
 	handled, err = toggleConfigAPIKeyExcludedAll(cfg, auth, false)
 	if err != nil || !handled {
 		t.Fatalf("toggle enable: handled=%v err=%v", handled, err)
 	}
-	if len(cfg.CodexKey[0].ExcludedModels) != 0 {
-		t.Fatalf("expected excluded-models cleared, got %#v", cfg.CodexKey[0].ExcludedModels)
-	}
-}
-
-func TestToggleConfigAPIKeyExcludedAll_Vertex_NoBaseURL(t *testing.T) {
-	cfg := &config.Config{
-		VertexCompatAPIKey: []config.VertexCompatKey{{
-			APIKey: "vertex-key-only",
-		}},
-	}
-	idGen := synthesizer.NewStableIDGenerator()
-	authID, _ := idGen.Next("vertex:apikey", "vertex-key-only", "", "")
-	auth := &coreauth.Auth{
-		ID:       authID,
-		Provider: "vertex",
-		Attributes: map[string]string{
-			"auth_kind": "apikey",
-			"api_key":   "vertex-key-only",
-			"source":    "config:vertex[xyz]",
-		},
-	}
-
-	handled, errToggle := toggleConfigAPIKeyExcludedAll(cfg, auth, true)
-	if errToggle != nil || !handled {
-		t.Fatalf("toggle disable: handled=%v err=%v", handled, errToggle)
-	}
-	if len(cfg.VertexCompatAPIKey[0].ExcludedModels) != 1 || cfg.VertexCompatAPIKey[0].ExcludedModels[0] != "*" {
-		t.Fatalf("excluded-models = %#v, want [*]", cfg.VertexCompatAPIKey[0].ExcludedModels)
+	if len(cfg.NvidiaKey[0].ExcludedModels) != 0 {
+		t.Fatalf("expected excluded-models cleared, got %#v", cfg.NvidiaKey[0].ExcludedModels)
 	}
 }
 
 func TestToggleConfigAPIKeyExcludedAll_EmptyKeyWithBaseURL(t *testing.T) {
 	cfg := &config.Config{
-		ClaudeKey: []config.ClaudeKey{{
+		DeepseekKey: []config.DeepseekKey{{
 			APIKey:  "",
-			BaseURL: "https://custom-claude.example.com",
+			BaseURL: "https://custom-deepseek.example.com",
 		}},
-		GeminiKey: []config.GeminiKey{{
+		AgnesKey: []config.AgnesKey{{
 			APIKey:  "   ",
-			BaseURL: "https://custom-gemini.example.com",
+			BaseURL: "https://custom-agnes.example.com",
 		}},
 	}
 	idGen := synthesizer.NewStableIDGenerator()
-	claudeID, _ := idGen.Next("claude:apikey", "", "https://custom-claude.example.com", "", "", "")
-	geminiID, _ := idGen.Next("gemini:apikey", "", "https://custom-gemini.example.com", "", "", "")
+	deepseekID, _ := idGen.Next("deepseek:apikey", "", "https://custom-deepseek.example.com", "", "", "")
+	agnesID, _ := idGen.Next("agnes:apikey", "", "https://custom-agnes.example.com", "", "", "")
 
-	claudeAuth := &coreauth.Auth{
-		ID:       claudeID,
-		Provider: "claude",
+	deepseekAuth := &coreauth.Auth{
+		ID:       deepseekID,
+		Provider: "deepseek",
 		Attributes: map[string]string{
 			"auth_kind": "apikey",
-			"base_url":  "https://custom-claude.example.com",
-			"source":    "config:claude[abc]",
+			"base_url":  "https://custom-deepseek.example.com",
+			"source":    "config:deepseek[abc]",
 		},
 	}
-	geminiAuth := &coreauth.Auth{
-		ID:       geminiID,
-		Provider: "gemini",
+	agnesAuth := &coreauth.Auth{
+		ID:       agnesID,
+		Provider: "agnes",
 		Attributes: map[string]string{
 			"auth_kind": "apikey",
-			"base_url":  "https://custom-gemini.example.com",
-			"source":    "config:gemini[def]",
+			"base_url":  "https://custom-agnes.example.com",
+			"source":    "config:agnes[def]",
 		},
 	}
 
-	handled, err := toggleConfigAPIKeyExcludedAll(cfg, claudeAuth, true)
+	handled, err := toggleConfigAPIKeyExcludedAll(cfg, deepseekAuth, true)
 	if err != nil || !handled {
-		t.Fatalf("toggle claude: handled=%v err=%v", handled, err)
+		t.Fatalf("toggle deepseek: handled=%v err=%v", handled, err)
 	}
-	if len(cfg.ClaudeKey[0].ExcludedModels) != 1 || cfg.ClaudeKey[0].ExcludedModels[0] != "*" {
-		t.Fatalf("claude excluded-models = %#v, want [*]", cfg.ClaudeKey[0].ExcludedModels)
+	if len(cfg.DeepseekKey[0].ExcludedModels) != 1 || cfg.DeepseekKey[0].ExcludedModels[0] != "*" {
+		t.Fatalf("deepseek excluded-models = %#v, want [*]", cfg.DeepseekKey[0].ExcludedModels)
 	}
 
-	handled, err = toggleConfigAPIKeyExcludedAll(cfg, geminiAuth, true)
+	handled, err = toggleConfigAPIKeyExcludedAll(cfg, agnesAuth, true)
 	if err != nil || !handled {
-		t.Fatalf("toggle gemini: handled=%v err=%v", handled, err)
+		t.Fatalf("toggle agnes: handled=%v err=%v", handled, err)
 	}
-	if len(cfg.GeminiKey[0].ExcludedModels) != 1 || cfg.GeminiKey[0].ExcludedModels[0] != "*" {
-		t.Fatalf("gemini excluded-models = %#v, want [*]", cfg.GeminiKey[0].ExcludedModels)
+	if len(cfg.AgnesKey[0].ExcludedModels) != 1 || cfg.AgnesKey[0].ExcludedModels[0] != "*" {
+		t.Fatalf("agnes excluded-models = %#v, want [*]", cfg.AgnesKey[0].ExcludedModels)
 	}
 }

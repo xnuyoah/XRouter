@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
-	_ "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator/builtin"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
+	_ "github.com/xnuyoah/XRouter/v8/sdk/translator/builtin"
 )
 
 type registryModelInfo = registry.ModelInfo

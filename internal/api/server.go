@@ -1,6 +1,6 @@
-// Package api provides the HTTP API server implementation for the CLI Proxy API.
+// Package api provides the HTTP API server implementation for XRouter.
 // It includes the main server struct, routing setup, middleware for CORS and authentication,
-// and integration with various AI API handlers (OpenAI, Claude, Gemini).
+// and integration with various AI API handlers (OpenAI, Claude).
 // The server supports hot-reloading of clients and configuration.
 package api
 
@@ -18,19 +18,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	managementHandlers "github.com/router-for-me/CLIProxyAPI/v8/internal/api/handlers/management"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/api/middleware"
-	codexlive "github.com/router-for-me/CLIProxyAPI/v8/internal/client/codex/live"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/githubauth"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/managementasset"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/pluginhost"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/redisqueue"
-	sdkaccess "github.com/router-for-me/CLIProxyAPI/v8/sdk/access"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
+	managementHandlers "github.com/xnuyoah/XRouter/v8/internal/api/handlers/management"
+	"github.com/xnuyoah/XRouter/v8/internal/api/middleware"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/githubauth"
+	"github.com/xnuyoah/XRouter/v8/internal/logging"
+	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
+	"github.com/xnuyoah/XRouter/v8/internal/redisqueue"
+	sdkaccess "github.com/xnuyoah/XRouter/v8/sdk/access"
+	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 	"golang.org/x/net/http2"
 	"gopkg.in/yaml.v3"
 )
@@ -52,8 +50,7 @@ type Server struct {
 	muxHTTPListener *muxListener
 
 	// handlers contains the API handlers for processing requests.
-	handlers         *handlers.BaseAPIHandler
-	codexLiveHandler *codexlive.Handler
+	handlers *handlers.BaseAPIHandler
 
 	// cfg holds the current server configuration.
 	cfgMu sync.RWMutex
@@ -75,12 +72,6 @@ type Server struct {
 
 	// currentPath is the absolute path to the current working directory.
 	currentPath string
-
-	// wsRoutes tracks registered websocket upgrade paths.
-	wsRouteMu     sync.Mutex
-	wsRoutes      map[string]struct{}
-	wsAuthChanged func(bool, bool)
-	wsAuthEnabled atomic.Bool
 
 	// management handler
 	mgmt *managementHandlers.Handler
@@ -163,7 +154,6 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 		configFilePath:               configFilePath,
 		currentPath:                  wd,
 		envManagementSecret:          envManagementSecret,
-		wsRoutes:                     make(map[string]struct{}),
 		pluginHost:                   optionState.pluginHost,
 		exampleAPIKeySafeModeEnabled: optionState.exampleAPIKeySafeMode,
 	}
@@ -196,7 +186,6 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	s.loggerToggle = toggle
 
 	engine.Use(corsMiddleware())
-	s.wsAuthEnabled.Store(cfg.WebsocketAuth)
 	s.exampleAPIKeySafeModeActive.Store(s.exampleAPIKeySafeModeRequired(cfg))
 	s.handlers.SetPluginHost(optionState.pluginHost)
 	if optionState.pluginHost != nil {
@@ -210,11 +199,9 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 		authManager.SetRetryConfig(cfg.RequestRetry, time.Duration(cfg.MaxRetryInterval)*time.Second, cfg.MaxRetryCredentials)
 	}
 	githubauth.SetToken(cfg.GitHubToken)
-	managementasset.SetCurrentConfig(cfg)
 	auth.SetQuotaCooldownDisabled(cfg.DisableCooling)
 	auth.SetTransientErrorCooldownSeconds(cfg.TransientErrorCooldownSeconds)
 	applySignatureCacheConfig(nil, cfg)
-	applyClaudeToolSearchConfig(cfg)
 	// Initialize management handler
 	s.mgmt = managementHandlers.NewHandler(cfg, configFilePath, authManager)
 	s.mgmt.SetPluginHost(optionState.pluginHost)
@@ -246,7 +233,7 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	}
 
 	// Register management routes when configuration or environment secrets are available,
-	// or when a local management password is provided (e.g. TUI mode).
+	// or when a local management password is provided.
 	hasManagementSecret := cfg.RemoteManagement.SecretKey != "" || envManagementSecret || s.localPassword != ""
 	s.managementRoutesEnabled.Store(hasManagementSecret)
 	redisqueue.SetEnabled(hasManagementSecret || (cfg != nil && cfg.Home.Enabled))
@@ -445,9 +432,6 @@ func (s *Server) Stop(ctx context.Context) error {
 		if errors.Is(errCloseServer, http.ErrServerClosed) || errors.Is(errCloseServer, net.ErrClosed) {
 			errCloseServer = nil
 		}
-	}
-	if s.codexLiveHandler != nil {
-		s.codexLiveHandler.Close()
 	}
 	if errCloseServer != nil {
 		return fmt.Errorf("failed to shutdown HTTP server: %v", errCloseServer)

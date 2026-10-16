@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/discovery"
+	"github.com/xnuyoah/XRouter/v8/internal/discovery"
 )
 
 type fakeBrowser struct {
@@ -184,9 +184,9 @@ func TestRunDiscoverClampsTimeoutAndPrintsText(t *testing.T) {
 	code := runDiscover(2*time.Minute, false, &stdout, &stderr, func() (discovery.Browser, error) {
 		return &fakeBrowser{result: []discovery.DiscoveredService{{
 			InstanceName: "office-gateway",
-			Product:      "cliproxyapi",
+			Product:      "xrouter",
 			Version:      "1",
-			Port:         8317,
+			Port:         11016,
 			IPv4:         []net.IP{net.ParseIP("192.0.2.10")},
 			Endpoints:    map[string]string{"openai": "/v1"},
 			RawTXT:       map[string]string{"tls": "0"},

@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 type mockBatchTestExecutor struct {
@@ -36,7 +36,7 @@ func (e mockBatchTestExecutor) HttpRequest(context.Context, *coreauth.Auth, *htt
 func TestRegisterModelsForAuthBatch_StaleSnapshot_Issue6453(t *testing.T) {
 	ctx := context.Background()
 	manager := coreauth.NewManager(nil, &coreauth.RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(mockBatchTestExecutor{provider: "codex"})
+	manager.RegisterExecutor(mockBatchTestExecutor{provider: "nvidia"})
 	service := &Service{
 		cfg:         &config.Config{},
 		coreManager: manager,
@@ -45,7 +45,7 @@ func TestRegisterModelsForAuthBatch_StaleSnapshot_Issue6453(t *testing.T) {
 	authID := "auth-codex-batch-stale-6453"
 	auth := &coreauth.Auth{
 		ID:       authID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
 			"auth_kind": "oauth",
@@ -59,7 +59,7 @@ func TestRegisterModelsForAuthBatch_StaleSnapshot_Issue6453(t *testing.T) {
 	allowedID := "auth-codex-batch-allowed-6453"
 	allowedAuth := &coreauth.Auth{
 		ID:       allowedID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
 			"auth_kind": "oauth",
@@ -86,7 +86,7 @@ func TestRegisterModelsForAuthBatch_StaleSnapshot_Issue6453(t *testing.T) {
 	updatedAuth.Attributes = map[string]string{
 		"auth_kind":       "oauth",
 		"plan_type":       "pro",
-		"excluded_models": "gpt-6-astra,gpt-6.1-sol",
+		"excluded_models": "nemotron-3-ultra,nemotron-3.5-lightning",
 	}
 	if _, errUpdate := manager.Update(ctx, updatedAuth); errUpdate != nil {
 		t.Fatalf("failed to update auth: %v", errUpdate)
@@ -96,22 +96,22 @@ func TestRegisterModelsForAuthBatch_StaleSnapshot_Issue6453(t *testing.T) {
 	service.registerModelsForAuthBatch(ctx, staleSnapshot)
 
 	// Verify that the excluded models are not supported for this client
-	if reg.ClientSupportsModel(authID, "gpt-6-astra") {
+	if reg.ClientSupportsModel(authID, "nemotron-3-ultra") {
 		t.Errorf("expected gpt-6-astra to be excluded for %s, but registry supports it", authID)
 	}
-	if reg.ClientSupportsModel(authID, "gpt-6.1-sol") {
+	if reg.ClientSupportsModel(authID, "nemotron-3.5-lightning") {
 		t.Errorf("expected gpt-6.1-sol to be excluded for %s, but registry supports it", authID)
 	}
 
 	clientModels := reg.GetModelsForClient(authID)
 	for _, m := range clientModels {
-		if m != nil && (strings.EqualFold(m.ID, "gpt-6-astra") || strings.EqualFold(m.ID, "gpt-6.1-sol")) {
+		if m != nil && (strings.EqualFold(m.ID, "nemotron-3-ultra") || strings.EqualFold(m.ID, "nemotron-3.5-lightning")) {
 			t.Errorf("model %q should have been excluded from registered models for %s", m.ID, authID)
 		}
 	}
 
 	// Verify scheduler selection picks the allowed account and never the masked account
-	selected, errSelect := manager.SelectAuth(ctx, "codex", "gpt-6-astra", cliproxyexecutor.Options{})
+	selected, errSelect := manager.SelectAuth(ctx, "nvidia", "nemotron-3-ultra", cliproxyexecutor.Options{})
 	if errSelect != nil {
 		t.Fatalf("failed to select auth for gpt-6-astra: %v", errSelect)
 	}
@@ -123,7 +123,7 @@ func TestRegisterModelsForAuthBatch_StaleSnapshot_Issue6453(t *testing.T) {
 func TestRegisterModelsForAuthBatch_ConcurrentUpdateDuringBatch_Issue6453(t *testing.T) {
 	ctx := context.Background()
 	manager := coreauth.NewManager(nil, &coreauth.RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(mockBatchTestExecutor{provider: "codex"})
+	manager.RegisterExecutor(mockBatchTestExecutor{provider: "nvidia"})
 	service := &Service{
 		cfg:         &config.Config{},
 		coreManager: manager,
@@ -132,7 +132,7 @@ func TestRegisterModelsForAuthBatch_ConcurrentUpdateDuringBatch_Issue6453(t *tes
 	authID := "auth-codex-batch-concurrent-6453"
 	auth := &coreauth.Auth{
 		ID:       authID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
 			"auth_kind": "oauth",
@@ -146,7 +146,7 @@ func TestRegisterModelsForAuthBatch_ConcurrentUpdateDuringBatch_Issue6453(t *tes
 	allowedID := "auth-codex-batch-concurrent-allowed-6453"
 	allowedAuth := &coreauth.Auth{
 		ID:       allowedID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
 			"auth_kind": "oauth",
@@ -173,7 +173,7 @@ func TestRegisterModelsForAuthBatch_ConcurrentUpdateDuringBatch_Issue6453(t *tes
 			updatedAuth.Attributes = map[string]string{
 				"auth_kind":       "oauth",
 				"plan_type":       "pro",
-				"excluded_models": "gpt-6-astra,gpt-6.1-sol",
+				"excluded_models": "nemotron-3-ultra,nemotron-3.5-lightning",
 			}
 			if _, errUpdate := manager.Update(ctx, updatedAuth); errUpdate != nil {
 				t.Errorf("failed to update auth in hook: %v", errUpdate)
@@ -185,22 +185,22 @@ func TestRegisterModelsForAuthBatch_ConcurrentUpdateDuringBatch_Issue6453(t *tes
 	service.registerModelsForAuthBatch(ctx, manager.List())
 
 	// Verify that the excluded models are not supported for this client after batch registration completes
-	if reg.ClientSupportsModel(authID, "gpt-6-astra") {
+	if reg.ClientSupportsModel(authID, "nemotron-3-ultra") {
 		t.Errorf("expected gpt-6-astra to be excluded for %s, but registry supports it", authID)
 	}
-	if reg.ClientSupportsModel(authID, "gpt-6.1-sol") {
+	if reg.ClientSupportsModel(authID, "nemotron-3.5-lightning") {
 		t.Errorf("expected gpt-6.1-sol to be excluded for %s, but registry supports it", authID)
 	}
 
 	clientModels := reg.GetModelsForClient(authID)
 	for _, m := range clientModels {
-		if m != nil && (strings.EqualFold(m.ID, "gpt-6-astra") || strings.EqualFold(m.ID, "gpt-6.1-sol")) {
+		if m != nil && (strings.EqualFold(m.ID, "nemotron-3-ultra") || strings.EqualFold(m.ID, "nemotron-3.5-lightning")) {
 			t.Errorf("model %q should have been excluded from registered models for %s", m.ID, authID)
 		}
 	}
 
 	// Verify scheduler selection picks the allowed account and never the masked account
-	selected, errSelect := manager.SelectAuth(ctx, "codex", "gpt-6-astra", cliproxyexecutor.Options{})
+	selected, errSelect := manager.SelectAuth(ctx, "nvidia", "nemotron-3-ultra", cliproxyexecutor.Options{})
 	if errSelect != nil {
 		t.Fatalf("failed to select auth for gpt-6-astra: %v", errSelect)
 	}
@@ -212,7 +212,7 @@ func TestRegisterModelsForAuthBatch_ConcurrentUpdateDuringBatch_Issue6453(t *tes
 func TestRegisterModelsForAuthBatch_PostBatchReconciliation_Issue6453(t *testing.T) {
 	ctx := context.Background()
 	manager := coreauth.NewManager(nil, &coreauth.RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(mockBatchTestExecutor{provider: "codex"})
+	manager.RegisterExecutor(mockBatchTestExecutor{provider: "nvidia"})
 	service := &Service{
 		cfg:         &config.Config{},
 		coreManager: manager,
@@ -221,7 +221,7 @@ func TestRegisterModelsForAuthBatch_PostBatchReconciliation_Issue6453(t *testing
 	authID := "auth-codex-batch-reconcile-6453"
 	auth := &coreauth.Auth{
 		ID:       authID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
 			"auth_kind": "oauth",
@@ -235,7 +235,7 @@ func TestRegisterModelsForAuthBatch_PostBatchReconciliation_Issue6453(t *testing
 	allowedID := "auth-codex-batch-reconcile-allowed-6453"
 	allowedAuth := &coreauth.Auth{
 		ID:       allowedID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
 			"auth_kind": "oauth",
@@ -265,7 +265,7 @@ func TestRegisterModelsForAuthBatch_PostBatchReconciliation_Issue6453(t *testing
 			updatedAuth.Attributes = map[string]string{
 				"auth_kind":       "oauth",
 				"plan_type":       "pro",
-				"excluded_models": "gpt-6-astra,gpt-6.1-sol",
+				"excluded_models": "nemotron-3-ultra,nemotron-3.5-lightning",
 			}
 			if _, errUpdate := manager.Update(ctx, updatedAuth); errUpdate != nil {
 				t.Errorf("failed to update auth in post-run hook: %v", errUpdate)
@@ -281,22 +281,22 @@ func TestRegisterModelsForAuthBatch_PostBatchReconciliation_Issue6453(t *testing
 	}
 
 	// Verify that the post-batch reconciliation corrected the model list so excluded models are not supported
-	if reg.ClientSupportsModel(authID, "gpt-6-astra") {
+	if reg.ClientSupportsModel(authID, "nemotron-3-ultra") {
 		t.Errorf("expected gpt-6-astra to be excluded for %s after reconciliation, but registry supports it", authID)
 	}
-	if reg.ClientSupportsModel(authID, "gpt-6.1-sol") {
+	if reg.ClientSupportsModel(authID, "nemotron-3.5-lightning") {
 		t.Errorf("expected gpt-6.1-sol to be excluded for %s after reconciliation, but registry supports it", authID)
 	}
 
 	clientModels := reg.GetModelsForClient(authID)
 	for _, m := range clientModels {
-		if m != nil && (strings.EqualFold(m.ID, "gpt-6-astra") || strings.EqualFold(m.ID, "gpt-6.1-sol")) {
+		if m != nil && (strings.EqualFold(m.ID, "nemotron-3-ultra") || strings.EqualFold(m.ID, "nemotron-3.5-lightning")) {
 			t.Errorf("model %q should have been excluded from registered models for %s", m.ID, authID)
 		}
 	}
 
 	// Verify scheduler selection picks the allowed account and never the masked account
-	selected, errSelect := manager.SelectAuth(ctx, "codex", "gpt-6-astra", cliproxyexecutor.Options{})
+	selected, errSelect := manager.SelectAuth(ctx, "nvidia", "nemotron-3-ultra", cliproxyexecutor.Options{})
 	if errSelect != nil {
 		t.Fatalf("failed to select auth for gpt-6-astra: %v", errSelect)
 	}

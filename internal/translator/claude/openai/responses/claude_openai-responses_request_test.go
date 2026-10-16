@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	sigcompat "github.com/router-for-me/CLIProxyAPI/v8/internal/signature"
 	"github.com/tidwall/gjson"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	sigcompat "github.com/xnuyoah/XRouter/v8/internal/signature"
 	"google.golang.org/protobuf/encoding/protowire"
 )
 
@@ -43,7 +44,22 @@ func TestConvertOpenAIResponsesRequestToClaude_SanitizesToolCallIDsForClaude(t *
 	}
 }
 
+func registerClaudeResponsesMaxTokensModels(t *testing.T) {
+	t.Helper()
+	reg := registry.GetGlobalRegistry()
+	const clientID = "claude-responses-max-tokens-registry-limit"
+	reg.RegisterClient(clientID, "claude", []*registry.ModelInfo{
+		{ID: "claude-fable-5-1", Type: "claude", MaxCompletionTokens: 128000},
+		{ID: "claude-3-5-haiku-20241022", Type: "claude", MaxCompletionTokens: 8192},
+		{ID: "claude-opus-5-5", Type: "claude", MaxCompletionTokens: 128000},
+		{ID: "claude-sonnet-4-6", Type: "claude", MaxCompletionTokens: 64000},
+	})
+	t.Cleanup(func() { reg.UnregisterClient(clientID) })
+}
+
 func TestConvertOpenAIResponsesRequestToClaude_FableMaxTokens(t *testing.T) {
+	registerClaudeResponsesMaxTokensModels(t)
+
 	t.Run("defaults to 64k", func(t *testing.T) {
 		out, _ := ConvertOpenAIResponsesRequestToClaude(
 			"claude-fable-5-1",
@@ -101,6 +117,7 @@ func TestConvertOpenAIResponsesRequestToClaude_FableMaxTokens(t *testing.T) {
 }
 
 func TestConvertOpenAIResponsesRequestToClaude_OmittedMaxOutputTokensUsesRegistryLimit(t *testing.T) {
+	registerClaudeResponsesMaxTokensModels(t)
 	tests := []struct {
 		name      string
 		model     string

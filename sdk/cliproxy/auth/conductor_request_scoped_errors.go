@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 // Request-scoped error actions.
@@ -131,29 +131,21 @@ func extractRequestScopedErrorRules(auth *Auth, cfg *internalconfig.Config) []in
 	}
 
 	switch provider {
-	case "claude":
-		if index >= 0 && index < len(cfg.ClaudeKey) {
-			return cfg.ClaudeKey[index].RequestScopedErrors
+	case "openai":
+		if index >= 0 && index < len(cfg.OpenAIKey) {
+			return cfg.OpenAIKey[index].RequestScopedErrors
 		}
-	case "codex":
-		if index >= 0 && index < len(cfg.CodexKey) {
-			return cfg.CodexKey[index].RequestScopedErrors
+	case "deepseek":
+		if index >= 0 && index < len(cfg.DeepseekKey) {
+			return cfg.DeepseekKey[index].RequestScopedErrors
 		}
-	case "xai":
-		if index >= 0 && index < len(cfg.XAIKey) {
-			return cfg.XAIKey[index].RequestScopedErrors
+	case "nvidia":
+		if index >= 0 && index < len(cfg.NvidiaKey) {
+			return cfg.NvidiaKey[index].RequestScopedErrors
 		}
-	case "meta":
-		if index >= 0 && index < len(cfg.MetaKey) {
-			return cfg.MetaKey[index].RequestScopedErrors
-		}
-	case "gemini":
-		if index >= 0 && index < len(cfg.GeminiKey) {
-			return cfg.GeminiKey[index].RequestScopedErrors
-		}
-	case "interactions", "gemini-interactions":
-		if index >= 0 && index < len(cfg.InteractionsKey) {
-			return cfg.InteractionsKey[index].RequestScopedErrors
+	case "agnes":
+		if index >= 0 && index < len(cfg.AgnesKey) {
+			return cfg.AgnesKey[index].RequestScopedErrors
 		}
 	}
 

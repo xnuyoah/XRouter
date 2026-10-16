@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 	"github.com/tidwall/gjson"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 func parseClaudeResponsesSSEEvent(t *testing.T, chunk []byte) (string, gjson.Result) {

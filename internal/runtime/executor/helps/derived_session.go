@@ -1,14 +1,11 @@
 package helps
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
-	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	cliproxysession "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/session"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	cliproxysession "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/session"
 )
 
 // DerivedSessionID returns the first context-derived session identity in metadata order.
@@ -42,19 +39,8 @@ func stableProviderSessionUUID(provider string, kind string, identityValue strin
 	if provider == "" || identityValue == "" {
 		return ""
 	}
-	identity := strings.Join([]string{"cli-proxy-api", provider, kind, identityValue}, "\x00")
+	identity := strings.Join([]string{"xrouter", provider, kind, identityValue}, "\x00")
 	return uuid.NewSHA1(uuid.NameSpaceOID, []byte(identity)).String()
-}
-
-// DerivedAntigravitySessionID maps a derived session identity to Antigravity's negative decimal format.
-func DerivedAntigravitySessionID(metadataSets ...map[string]any) string {
-	derivedID := DerivedSessionID(metadataSets...)
-	if derivedID == "" {
-		return ""
-	}
-	sum := sha256.Sum256([]byte("cli-proxy-api:antigravity:derived-session\x00" + derivedID))
-	value := int64(binary.BigEndian.Uint64(sum[:8])) & 0x7FFFFFFFFFFFFFFF
-	return "-" + strconv.FormatInt(value, 10)
 }
 
 func metadataString(metadata map[string]any, key string) string {

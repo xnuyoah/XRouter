@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
 	"github.com/tidwall/gjson"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
 type fakePluginHooks struct {

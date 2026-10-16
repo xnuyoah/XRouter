@@ -13,10 +13,10 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/api"
-	internalregistry "github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/internal/api"
+	internalregistry "github.com/xnuyoah/XRouter/v8/internal/registry"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 func TestPutOpenAICompatConcurrentWithAuthFieldsPatch_Issue6559(t *testing.T) {
@@ -25,7 +25,7 @@ func TestPutOpenAICompatConcurrentWithAuthFieldsPatch_Issue6559(t *testing.T) {
 	filePath := filepath.Join(authDir, fileName)
 
 	teamIDToken := "eyJhbGciOiJub25lIn0.eyJlbWFpbCI6ICJ1c2VyQGV4YW1wbGUuY29tIiwgImh0dHBzOi8vYXBpLm9wZW5haS5jb20vYXV0aCI6IHsiY2hhdGdwdF9wbGFuX3R5cGUiOiAidGVhbSIsICJjaGF0Z3B0X2FjY291bnRfaWQiOiAiYWNjLTEyMyJ9fQ.sig"
-	initialContent := fmt.Sprintf(`{"type":"codex","email":"user@example.com","access_token":"token-initial","id_token":%q}`, teamIDToken)
+	initialContent := fmt.Sprintf(`{"type":"openai","email":"user@example.com","access_token":"token-initial","id_token":%q}`, teamIDToken)
 	if errWrite := os.WriteFile(filePath, []byte(initialContent), 0o600); errWrite != nil {
 		t.Fatalf("write auth file: %v", errWrite)
 	}
@@ -37,7 +37,7 @@ func TestPutOpenAICompatConcurrentWithAuthFieldsPatch_Issue6559(t *testing.T) {
 	}
 
 	configPath := filepath.Join(authDir, "config.yaml")
-	initialYAML := fmt.Sprintf("port: 8317\nauth-dir: %q\nremote-management:\n  allow-remote: true\n  secret-key: %q\n", filepath.ToSlash(authDir), string(hashedSecret))
+	initialYAML := fmt.Sprintf("port: 11016\nauth-dir: %q\nremote-management:\n  allow-remote: true\n  secret-key: %q\n", filepath.ToSlash(authDir), string(hashedSecret))
 	if errWrite := os.WriteFile(configPath, []byte(initialYAML), 0o600); errWrite != nil {
 		t.Fatalf("write config file: %v", errWrite)
 	}
@@ -112,16 +112,16 @@ func TestPutOpenAICompatConcurrentWithAuthFieldsPatch_Issue6559(t *testing.T) {
 	auth := &coreauth.Auth{
 		ID:       authID,
 		FileName: fileName,
-		Provider: "codex",
+		Provider: "openai",
 		Status:   coreauth.StatusActive,
 		Metadata: map[string]any{
-			"type":         "codex",
+			"type":         "openai",
 			"email":        "user@example.com",
 			"access_token": "token-initial",
 			"id_token":     teamIDToken,
 		},
 		Attributes: map[string]string{
-			"plan_type": "team",
+			"auth_kind": "apikey",
 			"path":      filePath,
 		},
 	}
@@ -177,7 +177,9 @@ func TestPutOpenAICompatConcurrentWithAuthFieldsPatch_Issue6559(t *testing.T) {
 	service.reloadConfigFromWatcher()
 	service.registerConfigAPIKeyAuths(ctx, service.currentConfig())
 
-	finalPrefixModel := fmt.Sprintf("pfx-%d/gpt-6-astra", iterations-1)
+	// The auth is file-backed with provider "openai", so it serves the native OpenAI
+	// family's default catalog under its patched prefix.
+	finalPrefixModel := fmt.Sprintf("pfx-%d/gpt-5.6-luna", iterations-1)
 	if !reg.ClientSupportsModel(authID, finalPrefixModel) {
 		t.Fatalf("expected auth %s to support final prefixed model %q", authID, finalPrefixModel)
 	}
@@ -201,13 +203,13 @@ func TestPutOpenAICompatConcurrentWithConfigReloadAndAuthUpdate_Issue6559(t *tes
 	filePath := filepath.Join(authDir, fileName)
 
 	teamIDToken := "eyJhbGciOiJub25lIn0.eyJlbWFpbCI6ICJ1c2VyQGV4YW1wbGUuY29tIiwgImh0dHBzOi8vYXBpLm9wZW5haS5jb20vYXV0aCI6IHsiY2hhdGdwdF9wbGFuX3R5cGUiOiAidGVhbSIsICJjaGF0Z3B0X2FjY291bnRfaWQiOiAiYWNjLTEyMyJ9fQ.sig"
-	initialContent := fmt.Sprintf(`{"type":"codex","email":"user@example.com","access_token":"token-initial","id_token":%q}`, teamIDToken)
+	initialContent := fmt.Sprintf(`{"type":"openai","email":"user@example.com","access_token":"token-initial","id_token":%q}`, teamIDToken)
 	if errWrite := os.WriteFile(filePath, []byte(initialContent), 0o600); errWrite != nil {
 		t.Fatalf("write auth file: %v", errWrite)
 	}
 
 	configPath := filepath.Join(authDir, "config.yaml")
-	if errWrite := os.WriteFile(configPath, []byte("port: 8317\n"), 0o600); errWrite != nil {
+	if errWrite := os.WriteFile(configPath, []byte("port: 11016\n"), 0o600); errWrite != nil {
 		t.Fatalf("write config file: %v", errWrite)
 	}
 
@@ -272,16 +274,16 @@ func TestPutOpenAICompatConcurrentWithConfigReloadAndAuthUpdate_Issue6559(t *tes
 	auth := &coreauth.Auth{
 		ID:       authID,
 		FileName: fileName,
-		Provider: "codex",
+		Provider: "openai",
 		Status:   coreauth.StatusActive,
 		Metadata: map[string]any{
-			"type":         "codex",
+			"type":         "openai",
 			"email":        "user@example.com",
 			"access_token": "token-initial",
 			"id_token":     teamIDToken,
 		},
 		Attributes: map[string]string{
-			"plan_type": "team",
+			"auth_kind": "apikey",
 			"path":      filePath,
 		},
 	}

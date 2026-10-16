@@ -1,11 +1,8 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -13,31 +10,15 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	managementHandlers "github.com/router-for-me/CLIProxyAPI/v8/internal/api/handlers/management"
-	claudemodels "github.com/router-for-me/CLIProxyAPI/v8/internal/client/claude/models"
-	codexlive "github.com/router-for-me/CLIProxyAPI/v8/internal/client/codex/live"
-	codexmodels "github.com/router-for-me/CLIProxyAPI/v8/internal/client/codex/models"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/client/grokbuild"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/clienterror"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/home"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor/helps"
-	responsesclaude "github.com/router-for-me/CLIProxyAPI/v8/internal/translator/claude/openai/responses"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers/claude"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers/gemini"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers/openai"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	coreexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
-	log "github.com/sirupsen/logrus"
+	claudemodels "github.com/xnuyoah/XRouter/v8/internal/client/claude/models"
+	"github.com/xnuyoah/XRouter/v8/internal/home"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
+	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers/claude"
+	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers/openai"
 )
 
-const oauthCallbackSuccessHTML = `<html><head><meta charset="utf-8"><title>Authentication successful</title><script>setTimeout(function(){window.close();},5000);</script></head><body><h1>Authentication successful!</h1><p>You can close this window.</p><p>This window will close automatically in 5 seconds.</p></body></html>`
-
-const codexAlphaSearchSourceFormat = "codex-alpha-search"
+const oauthCallbackSuccessHTML = `<html><head><meta charset="utf-8"><title>Authentication successful</title><link rel="icon" href="/favicon.ico"><script>setTimeout(function(){window.close();},5000);</script></head><body><h1>Authentication successful!</h1><p>You can close this window.</p><p>This window will close automatically in 5 seconds.</p></body></html>`
 
 // setupRoutes configures the API routes for the server.
 // It defines the endpoints and associates them with their respective handlers.
@@ -54,11 +35,10 @@ func (s *Server) setupRoutes() {
 	s.engine.HEAD("/healthz", healthzHandler)
 
 	s.engine.GET("/management.html", s.serveManagementControlPanel)
+	s.engine.GET("/favicon.ico", s.serveFavicon)
 	openaiHandlers := openai.NewOpenAIAPIHandler(s.handlers)
-	geminiHandlers := gemini.NewGeminiAPIHandler(s.handlers)
 	claudeCodeHandlers := claude.NewClaudeCodeAPIHandler(s.handlers)
 	openaiResponsesHandlers := openai.NewOpenAIResponsesAPIHandler(s.handlers)
-	s.codexLiveHandler = codexlive.NewHandler(s.handlers.AuthManager, s.cfg)
 
 	// OpenAI compatible API routes
 	v1 := s.engine.Group("/v1")
@@ -73,46 +53,11 @@ func (s *Server) setupRoutes() {
 		v1.POST("/completions", openaiHandlers.Completions)
 		v1.POST("/images/generations", openaiHandlers.ImagesGenerations)
 		v1.POST("/images/edits", openaiHandlers.ImagesEdits)
-		v1.POST("/videos", openaiHandlers.XAIVideosGenerations)
-		v1.POST("/videos/generations", openaiHandlers.XAIVideosGenerations)
-		v1.POST("/videos/edits", openaiHandlers.XAIVideosEdits)
-		v1.POST("/videos/extensions", openaiHandlers.XAIVideosExtensions)
-		v1.GET("/videos/:request_id", openaiHandlers.XAIVideosRetrieve)
-		v1.POST("/audio/speech", openaiHandlers.AudioSpeech)
-		v1.POST("/tts", openaiHandlers.XAITTS)
 		v1.POST("/messages", claudeCodeHandlers.ClaudeMessages)
 		v1.POST("/messages/count_tokens", claudeCodeHandlers.ClaudeCountTokens)
 		v1.GET("/responses", openaiResponsesHandlers.ResponsesWebsocket)
 		v1.POST("/responses", openaiResponsesHandlers.Responses)
 		v1.POST("/responses/compact", openaiResponsesHandlers.Compact)
-		v1.POST("/alpha/search", s.codexAlphaSearch)
-		v1.POST("/live", s.codexLiveHandler.Handle)
-		v1.GET("/live/:call_id", s.codexLiveHandler.HandleSideband)
-	}
-
-	realtimeAuth := realtimeAuthMiddleware(s.accessManager, s.codexLiveHandler)
-	standardAuth := realtimeStandardAuthMiddleware(s.accessManager)
-	s.engine.GET("/v1/realtime", realtimeAuth, s.codexLiveHandler.HandleRealtimeWebsocket)
-	s.engine.POST("/v1/realtime", realtimeAuth, s.codexLiveHandler.Handle)
-	s.engine.POST("/v1/realtime/calls", realtimeAuth, s.codexLiveHandler.Handle)
-	s.engine.GET("/v1/realtime/calls/:call_id", realtimeAuth, s.codexLiveHandler.HandleSideband)
-	s.engine.POST("/v1/realtime/client_secrets", standardAuth, s.codexLiveHandler.CreateClientSecret)
-	s.engine.POST("/v1/realtime/sessions", standardAuth, s.codexLiveHandler.CreateLegacySession)
-	s.engine.POST("/v1/realtime/transcription_sessions", standardAuth, s.codexLiveHandler.HandleTranscriptionSession)
-	s.engine.GET("/v1/realtime/translations", realtimeAuth, s.codexLiveHandler.HandleTranslation)
-	s.engine.POST("/v1/realtime/translations", realtimeAuth, s.codexLiveHandler.HandleTranslation)
-	s.engine.POST("/v1/realtime/translations/client_secrets", standardAuth, s.codexLiveHandler.HandleTranslation)
-	s.engine.POST("/v1/realtime/calls/:call_id/hangup", standardAuth, s.codexLiveHandler.HandleHangup)
-	s.engine.POST("/v1/realtime/calls/:call_id/accept", standardAuth, s.codexLiveHandler.HandleSIPControl)
-	s.engine.POST("/v1/realtime/calls/:call_id/reject", standardAuth, s.codexLiveHandler.HandleSIPControl)
-	s.engine.POST("/v1/realtime/calls/:call_id/refer", standardAuth, s.codexLiveHandler.HandleSIPControl)
-
-	openaiV1 := s.engine.Group("/openai/v1")
-	openaiV1.Use(AuthMiddleware(s.accessManager))
-	{
-		openaiV1.POST("/videos", openaiHandlers.VideosCreate)
-		openaiV1.GET("/videos/:video_id/content", openaiHandlers.VideosContent)
-		openaiV1.GET("/videos/:video_id", openaiHandlers.VideosRetrieve)
 	}
 
 	// Codex CLI direct route aliases (chatgpt_base_url compatible)
@@ -122,478 +67,14 @@ func (s *Server) setupRoutes() {
 		codexDirect.GET("/responses", openaiResponsesHandlers.ResponsesWebsocket)
 		codexDirect.POST("/responses", openaiResponsesHandlers.Responses)
 		codexDirect.POST("/responses/compact", openaiResponsesHandlers.Compact)
-		codexDirect.POST("/alpha/search", s.codexAlphaSearch)
 	}
 
-	// Gemini compatible API routes
-	v1beta := s.engine.Group("/v1beta")
-	v1beta.Use(AuthMiddleware(s.accessManager))
-	{
-		v1beta.GET("/models", s.geminiModelsHandler(geminiHandlers))
-		v1beta.POST("/interactions", geminiHandlers.Interactions)
-		v1beta.POST("/models/*action", geminiHandlers.GeminiHandler)
-		v1beta.GET("/models/*action", s.geminiGetHandler(geminiHandlers))
-	}
-
-	// Root endpoint
+	// Root endpoint redirects to the management control panel.
 	s.engine.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "CLI Proxy API Server",
-			"endpoints": []string{
-				"POST /v1/chat/completions",
-				"POST /v1/completions",
-				"GET /v1/models",
-			},
-		})
+		c.Redirect(http.StatusFound, "/management.html")
 	})
-
-	// OAuth callback endpoints (reuse main server port)
-	// These endpoints receive provider redirects and persist
-	// the short-lived code/state for the waiting goroutine.
-	s.engine.GET("/anthropic/callback", func(c *gin.Context) {
-		code := c.Query("code")
-		state := c.Query("state")
-		errStr := c.Query("error")
-		if errStr == "" {
-			errStr = c.Query("error_description")
-		}
-		if state != "" {
-			if cfg := s.getConfig(); cfg != nil {
-				_, _ = managementHandlers.WriteOAuthCallbackFileForPendingSession(cfg.AuthDir, "anthropic", state, code, errStr)
-			}
-		}
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, oauthCallbackSuccessHTML)
-	})
-
-	s.engine.GET("/codex/callback", func(c *gin.Context) {
-		code := c.Query("code")
-		state := c.Query("state")
-		errStr := c.Query("error")
-		if errStr == "" {
-			errStr = c.Query("error_description")
-		}
-		if state != "" {
-			if cfg := s.getConfig(); cfg != nil {
-				_, _ = managementHandlers.WriteOAuthCallbackFileForPendingSession(cfg.AuthDir, "codex", state, code, errStr)
-			}
-		}
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, oauthCallbackSuccessHTML)
-	})
-
-	s.engine.GET("/antigravity/callback", func(c *gin.Context) {
-		code := c.Query("code")
-		state := c.Query("state")
-		errStr := c.Query("error")
-		if errStr == "" {
-			errStr = c.Query("error_description")
-		}
-		if state != "" {
-			if cfg := s.getConfig(); cfg != nil {
-				_, _ = managementHandlers.WriteOAuthCallbackFileForPendingSession(cfg.AuthDir, "antigravity", state, code, errStr)
-			}
-		}
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, oauthCallbackSuccessHTML)
-	})
-
-	devinCallbackHandler := func(c *gin.Context) {
-		c.Header("Cache-Control", "no-store")
-		code := strings.TrimSpace(c.Query("code"))
-		state := strings.TrimSpace(c.Query("state"))
-		errStr := strings.TrimSpace(c.Query("error"))
-		if errStr == "" {
-			errStr = strings.TrimSpace(c.Query("error_description"))
-		}
-		if code == "" && errStr == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "code or error is required"})
-			return
-		}
-		cfg := s.getConfig()
-		authDir := ""
-		if cfg != nil {
-			authDir = cfg.AuthDir
-		}
-		if _, errWrite := managementHandlers.WriteOAuthCallbackFileForPendingSession(authDir, "devin", state, code, errStr); errWrite != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or expired OAuth callback"})
-			return
-		}
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, oauthCallbackSuccessHTML)
-	}
-
-	s.engine.GET("/callback", devinCallbackHandler)
-	s.engine.GET("/devin/callback", devinCallbackHandler)
 
 	// Management routes are registered lazily by registerManagementRoutes when a secret is configured.
-}
-
-func (s *Server) codexAlphaSearchModelRouterHost() handlers.PluginModelRouterHost {
-	if s == nil {
-		return nil
-	}
-	if s.pluginHost != nil {
-		return s.pluginHost
-	}
-	if s.handlers != nil {
-		if host := s.handlers.ModelRouterHostSnapshot(); host != nil {
-			return host
-		}
-	}
-	return nil
-}
-
-func (s *Server) codexAlphaSearchSelectionModel(ctx context.Context, c *gin.Context, body []byte, model string) (string, error) {
-	host := s.codexAlphaSearchModelRouterHost()
-	if host == nil {
-		return model, nil
-	}
-
-	var headers http.Header
-	queryValues := make(map[string][]string)
-	requestPath := ""
-	if c != nil && c.Request != nil {
-		headers = c.Request.Header.Clone()
-		if c.Request.URL != nil {
-			queryValues = c.Request.URL.Query()
-			requestPath = c.Request.URL.Path
-		}
-	}
-	metadata := map[string]any{
-		coreexecutor.RequestedModelMetadataKey: model,
-	}
-	if requestPath != "" {
-		metadata[coreexecutor.RequestPathMetadataKey] = requestPath
-	}
-	resp, handled := host.RouteModel(ctx, pluginapi.ModelRouteRequest{
-		SourceFormat:   codexAlphaSearchSourceFormat,
-		RequestedModel: model,
-		Headers:        headers,
-		Query:          queryValues,
-		Body:           body,
-		Metadata:       metadata,
-	})
-	if !handled || !resp.Handled {
-		return model, nil
-	}
-	if resp.TargetKind != pluginapi.ModelRouteTargetProvider || !strings.EqualFold(strings.TrimSpace(resp.Target), "codex") {
-		return "", fmt.Errorf("unsupported Codex Alpha Search model route target %q (%q)", resp.TargetKind, resp.Target)
-	}
-	if targetModel := strings.TrimSpace(resp.TargetModel); targetModel != "" {
-		return targetModel, nil
-	}
-	return model, nil
-}
-
-func sanitizeCodexAlphaSearchBody(body []byte) []byte {
-	var payload map[string]json.RawMessage
-	if errUnmarshal := json.Unmarshal(body, &payload); errUnmarshal != nil || payload == nil {
-		return body
-	}
-
-	removed := false
-	for _, field := range []string{"prompt_cache_key", "prompt_cache_retention"} {
-		if _, exists := payload[field]; exists {
-			delete(payload, field)
-			removed = true
-		}
-	}
-	if !removed {
-		return body
-	}
-
-	sanitizedBody, errMarshal := json.Marshal(payload)
-	if errMarshal != nil {
-		return body
-	}
-	return sanitizedBody
-}
-
-// rewriteCodexAlphaSearchModel replaces the top-level model field with the
-// credential-resolved upstream model before the request is forwarded.
-func rewriteCodexAlphaSearchModel(body []byte, upstreamModel string) []byte {
-	upstreamModel = strings.TrimSpace(upstreamModel)
-	if upstreamModel == "" {
-		return body
-	}
-
-	var payload map[string]json.RawMessage
-	if errUnmarshal := json.Unmarshal(body, &payload); errUnmarshal != nil || payload == nil {
-		return body
-	}
-	if _, exists := payload["model"]; !exists {
-		return body
-	}
-
-	modelJSON, errMarshalModel := json.Marshal(upstreamModel)
-	if errMarshalModel != nil {
-		return body
-	}
-	if string(payload["model"]) == string(modelJSON) {
-		return body
-	}
-
-	payload["model"] = modelJSON
-	rewrittenBody, errMarshal := json.Marshal(payload)
-	if errMarshal != nil {
-		return body
-	}
-	return rewrittenBody
-}
-
-func homeSelectionAttemptContext(ctx context.Context, selection *auth.HomeDispatchSelection) (context.Context, func(), error) {
-	if selection == nil {
-		return nil, func() {}, errors.New("Home dispatch selection is nil")
-	}
-	return selection.AttemptContext(ctx)
-}
-
-// codexAlphaSearch forwards the standalone search endpoint used by current
-// Codex clients. Unlike /responses, this payload is already in Codex search
-// format and must not pass through a protocol translator.
-func (s *Server) codexAlphaSearch(c *gin.Context) {
-	if s == nil || s.handlers == nil || s.handlers.AuthManager == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Codex auth manager unavailable"})
-		return
-	}
-
-	body, err := io.ReadAll(io.LimitReader(c.Request.Body, 16<<20))
-	if err != nil {
-		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadRequest), gin.H{"error": "Failed to read search request"})
-		return
-	}
-
-	var routing struct {
-		ID    string `json:"id"`
-		Model string `json:"model"`
-	}
-	_ = json.Unmarshal(body, &routing)
-	upstreamRequestBody := sanitizeCodexAlphaSearchBody(body)
-
-	selectionHeaders := c.Request.Header.Clone()
-	if sessionID := strings.TrimSpace(routing.ID); sessionID != "" {
-		selectionHeaders.Set("X-Session-ID", sessionID)
-	}
-	ctx := context.WithValue(c.Request.Context(), "gin", c)
-	ctx = handlers.EnrichContextWithSessionHierarchy(ctx, selectionHeaders, body, nil)
-	selectionModel, errRoute := s.codexAlphaSearchSelectionModel(ctx, c, body, strings.TrimSpace(routing.Model))
-	if errRoute != nil {
-		log.WithError(errRoute).Warn("codex alpha search: model router returned an unsupported target")
-		c.JSON(clienterror.HTTPStatusFromErrorOr(errRoute, http.StatusServiceUnavailable), gin.H{"error": errRoute.Error()})
-		return
-	}
-	selectionOpts := coreexecutor.Options{Headers: selectionHeaders, OriginalRequest: body}
-	var selection *auth.HomeDispatchSelection
-	var selected *auth.Auth
-	if s.handlers.AuthManager.HomeEnabled() {
-		selection, err = s.handlers.AuthManager.SelectHomeAuthWithCredentialPolicy(ctx, "codex", selectionModel, auth.CredentialPolicyCodexAlphaSearchV1, selectionOpts)
-		if selection != nil {
-			selected = selection.CloneAuth()
-		}
-	} else {
-		selected, err = s.handlers.AuthManager.SelectAuthWithCredentialPolicy(ctx, "codex", selectionModel, auth.CredentialPolicyCodexAlphaSearchV1, selectionOpts)
-	}
-	if err != nil {
-		status := clienterror.HTTPStatusFromErrorOr(err, http.StatusServiceUnavailable)
-		for _, value := range auth.SafeResponseHeaders(err).Values("Retry-After") {
-			c.Writer.Header().Add("Retry-After", value)
-		}
-		c.JSON(status, gin.H{"error": err.Error()})
-		return
-	}
-	if selected == nil {
-		if selection != nil {
-			selection.End("missing_auth")
-		}
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Codex auth unavailable"})
-		return
-	}
-	if selection != nil && selection.CanonicalSessionID != "" {
-		meta := logging.GetClientRequestMetadata(ctx)
-		meta.SessionID = selection.CanonicalSessionID
-		if selection.ParentSessionID != "" {
-			meta.ParentSessionID = selection.ParentSessionID
-		} else {
-			meta.ParentSessionID = ""
-		}
-		if meta.SessionID == meta.ParentSessionID {
-			meta.ParentSessionID = ""
-		}
-		ctx = logging.WithClientRequestMetadata(ctx, meta)
-	}
-	var releaseAttempt func()
-	if selection != nil {
-		attemptCtx, release, errBind := homeSelectionAttemptContext(ctx, selection)
-		if errBind != nil {
-			selection.End("attempt_bind_failed")
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": errBind.Error()})
-			return
-		}
-		ctx = attemptCtx
-		releaseAttempt = release
-		defer releaseAttempt()
-	}
-	logging.SetGinCPATraceID(c, selected.EnsureIndex())
-
-	baseHeaders := make(http.Header)
-	baseHeaders.Set("Content-Type", "application/json")
-	baseHeaders.Set("Accept", "application/json")
-	baseHeaders.Set("Originator", "codex_cli_rs")
-	for _, name := range []string{"Version", "User-Agent", "Session_id", "X-Client-Request-Id"} {
-		if value := strings.TrimSpace(c.GetHeader(name)); value != "" {
-			baseHeaders.Set(name, value)
-		}
-	}
-
-	errMissingBaseURL := errors.New("Codex Alpha Search API key base URL unavailable")
-	routeModel := strings.TrimSpace(selectionModel)
-	if routeModel == "" {
-		routeModel = strings.TrimSpace(routing.Model)
-	}
-	performRequest := func(current *auth.Auth) (*http.Response, error) {
-		headers := baseHeaders.Clone()
-		if accountID, ok := current.Metadata["account_id"].(string); ok && strings.TrimSpace(accountID) != "" {
-			headers.Set("Chatgpt-Account-Id", accountID)
-		}
-		upstreamURL := "https://chatgpt.com/backend-api/codex/alpha/search"
-		requestBody := upstreamRequestBody
-		// API-key Alpha Search reuses normal credential-aware model resolution so
-		// CPA routing prefixes and model aliases are not forwarded upstream.
-		if current.AuthKind() == auth.AuthKindAPIKey {
-			baseURL := ""
-			if current.Attributes != nil {
-				baseURL = strings.TrimSpace(current.Attributes["base_url"])
-			}
-			if baseURL == "" {
-				return nil, errMissingBaseURL
-			}
-			upstreamURL = strings.TrimRight(baseURL, "/") + "/alpha/search"
-			if upstreamModel := s.handlers.AuthManager.ResolveExecutionModel(current, routeModel); upstreamModel != "" {
-				requestBody = rewriteCodexAlphaSearchModel(upstreamRequestBody, upstreamModel)
-			}
-		}
-		req, errRequest := s.handlers.AuthManager.NewHttpRequest(ctx, current, http.MethodPost, upstreamURL, requestBody, headers)
-		if errRequest != nil {
-			return nil, errRequest
-		}
-		authType, authValue := current.AccountInfo()
-		helps.RecordAPIRequest(ctx, s.getConfig(), helps.UpstreamRequestLog{
-			URL:       upstreamURL,
-			Method:    http.MethodPost,
-			Headers:   req.Header.Clone(),
-			Body:      requestBody,
-			Provider:  "codex",
-			AuthID:    current.ID,
-			AuthLabel: current.Label,
-			AuthType:  authType,
-			AuthValue: authValue,
-		})
-		return s.handlers.AuthManager.HttpRequest(ctx, current, req)
-	}
-
-	if errCtx := ctx.Err(); errCtx != nil {
-		if selection != nil {
-			selection.End("attempt_canceled")
-		}
-		c.JSON(clienterror.HTTPStatusFromErrorOr(errCtx, http.StatusRequestTimeout), gin.H{"error": errCtx.Error()})
-		return
-	}
-	cfg := s.getConfig()
-	resp, err := performRequest(selected)
-	if err != nil {
-		if errors.Is(err, errMissingBaseURL) {
-			if selection != nil {
-				selection.End("missing_base_url")
-			}
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
-			return
-		}
-		if selection != nil {
-			selection.End("request_failed")
-		}
-		helps.RecordAPIResponseError(ctx, cfg, err)
-		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadGateway), gin.H{"error": err.Error()})
-		return
-	}
-	closeResponseBody := func() error {
-		errClose := resp.Body.Close()
-		if errClose != nil {
-			log.Errorf("codex alpha search: close response body error: %v", errClose)
-		}
-		return errClose
-	}
-	if selection != nil {
-		if errBind := selection.Bind(closeResponseBody); errBind != nil {
-			if resp.StatusCode == http.StatusUnauthorized {
-				s.handlers.AuthManager.ReportHomeUnauthorized(ctx, selected, "codex", selectionModel)
-			}
-			selection.End("response_bind_failed")
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": errBind.Error()})
-			return
-		}
-		defer selection.End("response_closed")
-	} else {
-		defer func() { _ = closeResponseBody() }()
-	}
-	helps.RecordAPIResponseMetadata(ctx, cfg, resp.StatusCode, resp.Header.Clone())
-	upstreamBody, err := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
-	if err != nil {
-		helps.AppendAPIResponseChunk(ctx, cfg, upstreamBody)
-		if selection != nil && resp.StatusCode == http.StatusUnauthorized {
-			s.handlers.AuthManager.ReportHomeUnauthorized(ctx, selected, "codex", selectionModel, upstreamBody)
-		}
-		helps.RecordAPIResponseError(ctx, cfg, err)
-		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadGateway), gin.H{"error": "Failed to read Codex search response"})
-		return
-	}
-	helps.AppendAPIResponseChunk(ctx, cfg, upstreamBody)
-	if selection != nil && resp.StatusCode == http.StatusUnauthorized {
-		s.handlers.AuthManager.ReportHomeUnauthorized(ctx, selected, "codex", selectionModel, upstreamBody)
-		log.WithField("status", resp.StatusCode).Warnf("codex alpha search upstream request failed: %s", logging.SafeDiagnosticForLog(string(upstreamBody)))
-	}
-	if contentType := resp.Header.Get("Content-Type"); contentType != "" {
-		c.Header("Content-Type", contentType)
-	}
-	c.Status(resp.StatusCode)
-	_, _ = c.Writer.Write(upstreamBody)
-}
-
-// AttachWebsocketRoute registers a websocket upgrade handler on the primary Gin engine.
-// The handler is served as-is without additional middleware beyond the standard stack already configured.
-func (s *Server) AttachWebsocketRoute(path string, handler http.Handler) {
-	if s == nil || s.engine == nil || handler == nil {
-		return
-	}
-	trimmed := strings.TrimSpace(path)
-	if trimmed == "" {
-		trimmed = "/v1/ws"
-	}
-	if !strings.HasPrefix(trimmed, "/") {
-		trimmed = "/" + trimmed
-	}
-	s.wsRouteMu.Lock()
-	if _, exists := s.wsRoutes[trimmed]; exists {
-		s.wsRouteMu.Unlock()
-		return
-	}
-	s.wsRoutes[trimmed] = struct{}{}
-	s.wsRouteMu.Unlock()
-
-	authMiddleware := AuthMiddleware(s.accessManager)
-	conditionalAuth := func(c *gin.Context) {
-		if !s.wsAuthEnabled.Load() {
-			c.Next()
-			return
-		}
-		authMiddleware(c)
-	}
-	finalHandler := func(c *gin.Context) {
-		handler.ServeHTTP(c.Writer, c.Request)
-		c.Abort()
-	}
-
-	s.engine.GET(trimmed, conditionalAuth, finalHandler)
 }
 
 // isAnthropicModelsRequest reports whether a /v1/models request should be served in
@@ -612,22 +93,7 @@ func isAnthropicModelsRequest(c *gin.Context) bool {
 // route to the Claude handler, otherwise they route to the OpenAI handler.
 func (s *Server) unifiedModelsHandler(openaiHandler *openai.OpenAIAPIHandler, claudeHandler *claude.ClaudeCodeAPIHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if grokbuild.IsGrokShellUserAgent(c.GetHeader("User-Agent")) {
-			s.handleGrokModels(c)
-			return
-		}
-
 		cfg := s.getConfig()
-		if _, ok := c.Request.URL.Query()["client_version"]; ok {
-			clientVersion := c.Query("client_version")
-			if cfg != nil && cfg.Home.Enabled {
-				s.handleHomeCodexClientModels(c, clientVersion)
-				return
-			}
-			openaiHandler.OpenAIModels(c)
-			return
-		}
-
 		if cfg != nil && cfg.Home.Enabled {
 			s.handleHomeModels(c)
 			return
@@ -642,250 +108,12 @@ func (s *Server) unifiedModelsHandler(openaiHandler *openai.OpenAIAPIHandler, cl
 	}
 }
 
-func grokModelsFromHomeEntries(entries []homeModelEntry) []grokbuild.ModelInfo {
-	models := make([]grokbuild.ModelInfo, 0, len(entries))
-	for _, entry := range entries {
-		models = append(models, grokbuild.ModelInfo{
-			ID:            entry.id,
-			DisplayName:   entry.displayName,
-			ContextLength: entry.contextLength,
-		})
-	}
-	return models
-}
-
-func grokModelsFromRegistryInfos(infos []*registry.ModelInfo) []grokbuild.ModelInfo {
-	models := make([]grokbuild.ModelInfo, 0, len(infos))
-	for _, info := range infos {
-		if info == nil {
-			continue
-		}
-		model := grokbuild.ModelInfo{
-			ID:            info.ID,
-			DisplayName:   info.DisplayName,
-			ContextLength: info.ContextLength,
-		}
-		if info.Thinking != nil {
-			model.ReasoningLevels = append([]string(nil), info.Thinking.Levels...)
-		}
-		models = append(models, model)
-	}
-	return models
-}
-
-func (s *Server) handleGrokModels(c *gin.Context) {
-	var models []grokbuild.ModelInfo
-	if cfg := s.getConfig(); cfg != nil && cfg.Home.Enabled {
-		entries, ok := s.loadHomeModelEntries(c)
-		if !ok {
-			return
-		}
-		models = grokModelsFromHomeEntries(entries)
-	} else {
-		models = grokModelsFromRegistryInfos(registry.GetGlobalRegistry().GetAvailableModelInfos())
-	}
-	s.writeModelListResponse(c, "openai", grokbuild.BuildResponse(models))
-}
-
 func (s *Server) writeModelListResponse(c *gin.Context, sourceFormat string, payload any) {
 	if s != nil && s.handlers != nil {
 		s.handlers.WriteModelListResponse(c, sourceFormat, payload)
 		return
 	}
 	c.JSON(http.StatusOK, payload)
-}
-
-// handleHomeCodexClientModels builds the Codex client catalog from Home model IDs.
-// Template metadata still comes from the local/remote codex_client_models catalog.
-func (s *Server) handleHomeCodexClientModels(c *gin.Context, clientVersion string) {
-	entries, ok := s.loadHomeModelEntries(c)
-	if !ok {
-		return
-	}
-
-	cfg := s.getConfig()
-	models := make([]map[string]any, 0, len(entries))
-	for _, entry := range entries {
-		models = append(models, formatHomeCodexModelWithSettings(entry, cfg))
-	}
-
-	var webSearchCapabilityForModel codexmodels.WebSearchCapabilityForModelFunc
-	if clientVersion == "cpa" {
-		webSearchCapabilityForModel = homeWebSearchCapabilityForModel(entries)
-	}
-	var manager *auth.Manager
-	if s.handlers != nil {
-		manager = s.handlers.AuthManager
-	}
-	var applyPatchCapabilityForModel codexmodels.ApplyPatchCapabilityForModelFunc
-	if cfg != nil && cfg.Client.Codex.EnableApplyPatch {
-		applyPatchCapabilityForModel = homeApplyPatchCapabilityForModel(entries, manager)
-	}
-	optimizeMultiAgentV2 := cfg != nil && cfg.Client.Codex.OptimizeMultiAgentV2
-	var payload map[string]any
-	if responsesclaude.ClientToolSearchEnabled() {
-		payload = codexmodels.BuildResponseForClientWithSearchToolRoutes(models, nil, homeProvidersForModel(entries), webSearchCapabilityForModel, applyPatchCapabilityForModel, homeToolSearchCapabilityForModel(entries), optimizeMultiAgentV2, clientVersion)
-	} else {
-		// upstream.claude.tool-search off keeps the catalog that predates
-		// tool_search, which never consulted Home routes for search support.
-		payload = codexmodels.BuildResponseForClientWithToolCapabilities(models, nil, webSearchCapabilityForModel, applyPatchCapabilityForModel, nil, optimizeMultiAgentV2, clientVersion)
-	}
-	body, errMarshal := codexmodels.MarshalCompact(payload)
-	if errMarshal != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errMarshal.Error()})
-		return
-	}
-	s.writeModelListResponse(c, "openai", body)
-}
-
-// homeApplyPatchCapabilityForModel uses only Home's exact public routing evidence,
-// never the local model registry or the template's metadata model ID.
-func homeApplyPatchCapabilityForModel(entries []homeModelEntry, manager *auth.Manager) codexmodels.ApplyPatchCapabilityForModelFunc {
-	providersForModel := homeProvidersForModel(entries)
-	return func(id string) bool {
-		return manager.SupportsApplyPatchForProviders(providersForModel(id))
-	}
-}
-
-// homeProvidersForModel returns Home's routing providers for an exact public
-// model ID. An empty entry stands for an unknown route so it can veto support.
-func homeProvidersForModel(entries []homeModelEntry) codexmodels.ProvidersForModelFunc {
-	providersByID := make(map[string][]string, len(entries))
-	for _, entry := range entries {
-		id := strings.TrimSpace(entry.id)
-		providersByID[id] = append(providersByID[id], entry.providers...)
-		if len(entry.providers) == 0 {
-			providersByID[id] = append(providersByID[id], "")
-		}
-		// The decoder omits empty section names from providers, but an unknown
-		// route must still veto support when combined with a known section.
-		for _, route := range entry.nativeCapabilityRoutes {
-			if strings.TrimSpace(route.Provider) == "" {
-				providersByID[id] = append(providersByID[id], "")
-			}
-		}
-	}
-	return func(id string) []string {
-		return providersByID[strings.TrimSpace(id)]
-	}
-}
-
-// homeToolSearchCapabilityForModel trusts Home's per-route tool_search flag and
-// requires it on every route of the model. A Home that predates the flag never
-// enables native tool search.
-func homeToolSearchCapabilityForModel(entries []homeModelEntry) codexmodels.ToolSearchCapabilityForModelFunc {
-	routesByID := make(map[string][]registry.NativeCapabilityRoute, len(entries))
-	for _, entry := range entries {
-		id := strings.TrimSpace(entry.id)
-		routesByID[id] = append(routesByID[id], entry.nativeCapabilityRoutes...)
-	}
-	return func(id string) bool {
-		routes := routesByID[strings.TrimSpace(id)]
-		if len(routes) == 0 {
-			return false
-		}
-		for _, route := range routes {
-			if route.NativeCapabilities == nil || route.NativeCapabilities.ToolSearch == nil || !*route.NativeCapabilities.ToolSearch {
-				return false
-			}
-		}
-		return true
-	}
-}
-
-func homeWebSearchCapabilityForModel(entries []homeModelEntry) codexmodels.WebSearchCapabilityForModelFunc {
-	routesByID := make(map[string][]registry.NativeCapabilityRoute, len(entries))
-	for _, entry := range entries {
-		routesByID[entry.id] = append([]registry.NativeCapabilityRoute(nil), entry.nativeCapabilityRoutes...)
-	}
-	return func(id string) *bool {
-		return registry.ResolveResponsesWebSearchCapability(routesByID[strings.TrimSpace(id)])
-	}
-}
-
-func formatHomeCodexModel(entry homeModelEntry) map[string]any {
-	model := map[string]any{
-		"id":     entry.id,
-		"object": "model",
-	}
-	if entry.created > 0 {
-		model["created"] = entry.created
-	}
-	if entry.ownedBy != "" {
-		model["owned_by"] = entry.ownedBy
-	}
-	for _, p := range entry.providers {
-		if strings.EqualFold(p, "devin") {
-			model["type"] = "devin"
-			break
-		}
-	}
-	if entry.displayName != "" {
-		model["display_name"] = entry.displayName
-		model["description"] = entry.displayName
-	}
-	if entry.contextLength > 0 {
-		model["context_length"] = entry.contextLength
-	}
-	if entry.maxContextLength > 0 {
-		model["max_context_length"] = entry.maxContextLength
-	}
-	if entry.maxCompletionTokens > 0 {
-		model["max_completion_tokens"] = entry.maxCompletionTokens
-	}
-	if entry.thinking != nil {
-		model["thinking"] = entry.thinking
-	}
-	return model
-}
-
-func formatHomeCodexModelWithSettings(entry homeModelEntry, cfg *config.Config) map[string]any {
-	model := formatHomeCodexModel(entry)
-	if cfg == nil || len(cfg.OAuthSettings) == 0 {
-		return model
-	}
-	providers := append([]string(nil), entry.providers...)
-	sort.SliceStable(providers, func(i, j int) bool {
-		if strings.EqualFold(providers[i], "codex") {
-			return true
-		}
-		if strings.EqualFold(providers[j], "codex") {
-			return false
-		}
-		return strings.ToLower(providers[i]) < strings.ToLower(providers[j])
-	})
-	for _, p := range providers {
-		channel := strings.ToLower(strings.TrimSpace(p))
-		if channelSettings, okChannel := cfg.OAuthSettings[channel]; okChannel {
-			if setting := config.ResolveOAuthModelSetting(channelSettings, entry.id, "", ""); setting != nil && setting.MaxContextLength > 0 {
-				model["max_context_length"] = setting.MaxContextLength
-				break
-			}
-		}
-	}
-	return model
-}
-
-func (s *Server) geminiModelsHandler(geminiHandler *gemini.GeminiAPIHandler) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if cfg := s.getConfig(); cfg != nil && cfg.Home.Enabled {
-			s.handleHomeGeminiModels(c)
-			return
-		}
-
-		geminiHandler.GeminiModels(c)
-	}
-}
-
-func (s *Server) geminiGetHandler(geminiHandler *gemini.GeminiAPIHandler) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if cfg := s.getConfig(); cfg != nil && cfg.Home.Enabled {
-			s.handleHomeGeminiModel(c)
-			return
-		}
-
-		geminiHandler.GeminiGetHandler(c)
-	}
 }
 
 type homeModelEntry struct {
@@ -972,40 +200,6 @@ func formatHomeClaudeModel(entry homeModelEntry) map[string]any {
 	return model
 }
 
-func (s *Server) handleHomeGeminiModels(c *gin.Context) {
-	entries, ok := s.loadHomeModelEntries(c)
-	if !ok {
-		return
-	}
-
-	s.writeModelListResponse(c, "gemini", gin.H{
-		"models": formatHomeGeminiModels(entries),
-	})
-}
-
-func (s *Server) handleHomeGeminiModel(c *gin.Context) {
-	entries, ok := s.loadHomeModelEntries(c)
-	if !ok {
-		return
-	}
-
-	action := strings.TrimPrefix(c.Param("action"), "/")
-	action = strings.TrimSpace(action)
-	for _, entry := range entries {
-		if homeGeminiModelMatches(entry, action) {
-			c.JSON(http.StatusOK, formatHomeGeminiModel(entry))
-			return
-		}
-	}
-
-	c.JSON(http.StatusNotFound, handlers.ErrorResponse{
-		Error: handlers.ErrorDetail{
-			Message: "Not Found",
-			Type:    "not_found",
-		},
-	})
-}
-
 func (s *Server) loadHomeModelEntries(c *gin.Context) ([]homeModelEntry, bool) {
 	if s == nil || c == nil || c.Request == nil {
 		return nil, false
@@ -1054,41 +248,6 @@ func (s *Server) loadHomeModelEntries(c *gin.Context) ([]homeModelEntry, bool) {
 	}
 
 	return entries, true
-}
-
-func formatHomeGeminiModels(entries []homeModelEntry) []map[string]any {
-	out := make([]map[string]any, 0, len(entries))
-	for _, entry := range entries {
-		out = append(out, formatHomeGeminiModel(entry))
-	}
-	return out
-}
-
-func formatHomeGeminiModel(entry homeModelEntry) map[string]any {
-	name := entry.id
-	if !strings.HasPrefix(name, "models/") {
-		name = "models/" + name
-	}
-	displayName := entry.displayName
-	if displayName == "" {
-		displayName = entry.id
-	}
-	return map[string]any{
-		"name":                       name,
-		"displayName":                displayName,
-		"description":                displayName,
-		"supportedGenerationMethods": []string{"generateContent"},
-	}
-}
-
-func homeGeminiModelMatches(entry homeModelEntry, action string) bool {
-	id := strings.TrimSpace(entry.id)
-	if id == "" || action == "" {
-		return false
-	}
-	normalizedAction := strings.TrimPrefix(action, "models/")
-	normalizedID := strings.TrimPrefix(id, "models/")
-	return action == id || action == "models/"+id || normalizedAction == normalizedID
 }
 
 // homeModelsAuthStatus inspects a home models response for an authentication/error envelope.

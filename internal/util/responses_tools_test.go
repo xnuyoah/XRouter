@@ -101,71 +101,6 @@ func TestResponsesToolWinners_DirectBeatsNamespaceChild(t *testing.T) {
 	}
 }
 
-func TestConvertResponsesToolChoiceToGemini(t *testing.T) {
-	tests := []struct {
-		name       string
-		choiceJSON string
-		forwardMap map[string]string
-		wantMode   string
-		wantNames  []string
-	}{
-		{
-			name:       "auto string",
-			choiceJSON: `"auto"`,
-			wantMode:   "AUTO",
-		},
-		{
-			name:       "none string",
-			choiceJSON: `"none"`,
-			wantMode:   "NONE",
-		},
-		{
-			name:       "required string",
-			choiceJSON: `"required"`,
-			wantMode:   "ANY",
-		},
-		{
-			name:       "function object with namespace",
-			choiceJSON: `{"type": "function", "name": "my_fn", "namespace": "my_ns"}`,
-			forwardMap: map[string]string{"my_ns__my_fn": "my_ns__my_fn"},
-			wantMode:   "ANY",
-			wantNames:  []string{"my_ns__my_fn"},
-		},
-		{
-			name:       "custom object",
-			choiceJSON: `{"type": "custom", "name": "exec", "namespace": "functions"}`,
-			forwardMap: map[string]string{"functions__exec": "functions__exec"},
-			wantMode:   "ANY",
-			wantNames:  []string{"functions__exec"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			choice := gjson.Parse(tt.choiceJSON)
-			out, ok := ConvertResponsesToolChoiceToGemini(choice, tt.forwardMap)
-			if !ok {
-				t.Fatalf("ConvertResponsesToolChoiceToGemini returned false")
-			}
-			mode := gjson.GetBytes(out, "mode").String()
-			if mode != tt.wantMode {
-				t.Fatalf("mode = %q, want %q", mode, tt.wantMode)
-			}
-			if len(tt.wantNames) > 0 {
-				names := gjson.GetBytes(out, "allowedFunctionNames").Array()
-				if len(names) != len(tt.wantNames) {
-					t.Fatalf("allowedFunctionNames count = %d, want %d", len(names), len(tt.wantNames))
-				}
-				for i, want := range tt.wantNames {
-					if names[i].String() != want {
-						t.Fatalf("allowedFunctionNames[%d] = %q, want %q", i, names[i].String(), want)
-					}
-				}
-			}
-		})
-	}
-}
-
 func TestUnwrapResponsesCustomToolInput(t *testing.T) {
 	tests := []struct {
 		input string
@@ -362,7 +297,7 @@ func TestBuildGeminiFunctionDeclarations_ToolSearchShimDefaultsAndPrecedence(t *
 						t.Fatalf("expected both user %s and client tool_search shim (with deferred_fn hidden), got %d declarations: %s", userFnName, len(declarations), declarations)
 					}
 					userGeminiName := forwardMap[userFnName]
-					shimGeminiName := MapResponsesClientToolSearchName(forwardMap)
+					shimGeminiName := forwardMap[ResponsesClientToolSearchKey]
 					if userGeminiName != userFnName {
 						t.Fatalf("user function Gemini name = %q, want %s", userGeminiName, userFnName)
 					}
@@ -386,7 +321,7 @@ func TestBuildGeminiFunctionDeclarations_ToolSearchShimDefaultsAndPrecedence(t *
 			t.Fatalf("expected 2 declarations, got %d: %s", len(declarations), declarations)
 		}
 		dottedGeminiName := forwardMap["tool.search"]
-		shimGeminiName := MapResponsesClientToolSearchName(forwardMap)
+		shimGeminiName := forwardMap[ResponsesClientToolSearchKey]
 		if shimGeminiName != "tool_search" {
 			t.Fatalf("shim Gemini name = %q, want tool_search", shimGeminiName)
 		}

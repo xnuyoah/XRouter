@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/homeplugins"
+	"github.com/xnuyoah/XRouter/v8/internal/homeplugins"
 )
 
 const pluginStatusReportTimeout = 10 * time.Second

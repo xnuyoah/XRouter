@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"testing"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 func TestOAuthRequestScopedErrors_AppliesToOAuthAuth(t *testing.T) {
@@ -17,7 +17,7 @@ func TestOAuthRequestScopedErrors_AppliesToOAuthAuth(t *testing.T) {
 
 	cfg := &internalconfig.Config{
 		OAuthRequestScopedErrors: map[string][]internalconfig.RequestScopedErrorRule{
-			"vertex": {
+			"kimi": {
 				{
 					Status: 400,
 					Match: []string{
@@ -38,21 +38,21 @@ func TestOAuthRequestScopedErrors_AppliesToOAuthAuth(t *testing.T) {
 	m.SetConfig(cfg)
 
 	auth1 := &Auth{
-		ID:         "auth-vertex-oauth",
-		Provider:   "vertex",
+		ID:         "auth-kimi-oauth",
+		Provider:   "kimi",
 		Status:     StatusActive,
 		Attributes: map[string]string{"auth_kind": "oauth", "priority": "10"},
 	}
 	auth2 := &Auth{
-		ID:         "auth-vertex-oauth-2",
-		Provider:   "vertex",
+		ID:         "auth-kimi-oauth-2",
+		Provider:   "kimi",
 		Status:     StatusActive,
 		Attributes: map[string]string{"auth_kind": "oauth", "priority": "5"},
 	}
 
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "vertex", []*registry.ModelInfo{{ID: "claude-3-5-sonnet"}})
-	reg.RegisterClient(auth2.ID, "vertex", []*registry.ModelInfo{{ID: "claude-3-5-sonnet"}})
+	reg.RegisterClient(auth1.ID, "kimi", []*registry.ModelInfo{{ID: "kimi-k2.5"}})
+	reg.RegisterClient(auth2.ID, "kimi", []*registry.ModelInfo{{ID: "kimi-k2.5"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 		reg.UnregisterClient(auth2.ID)
@@ -67,7 +67,7 @@ func TestOAuthRequestScopedErrors_AppliesToOAuthAuth(t *testing.T) {
 
 	execCount := 0
 	exec := &mockCustomErrorExecutor{
-		identifier: "vertex",
+		identifier: "kimi",
 		executeFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			execCount++
 			return cliproxyexecutor.Response{}, customStatusError{
@@ -78,10 +78,10 @@ func TestOAuthRequestScopedErrors_AppliesToOAuthAuth(t *testing.T) {
 	}
 	m.RegisterExecutor(exec)
 
-	req := cliproxyexecutor.Request{Model: "claude-3-5-sonnet"}
+	req := cliproxyexecutor.Request{Model: "kimi-k2.5"}
 	opts := cliproxyexecutor.Options{}
 
-	_, errExec := m.Execute(context.Background(), []string{"vertex"}, req, opts)
+	_, errExec := m.Execute(context.Background(), []string{"kimi"}, req, opts)
 	if errExec == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -92,7 +92,7 @@ func TestOAuthRequestScopedErrors_AppliesToOAuthAuth(t *testing.T) {
 	}
 
 	// Action: stop without cooldown should leave auth1 active
-	auth1State, ok := m.GetByID("auth-vertex-oauth")
+	auth1State, ok := m.GetByID("auth-kimi-oauth")
 	if !ok || auth1State.Status != StatusActive || auth1State.Unavailable {
 		t.Fatalf("expected auth1 to remain active, got status=%v unavailable=%v", auth1State.Status, auth1State.Unavailable)
 	}
@@ -105,7 +105,7 @@ func TestOAuthRequestScopedErrors_DoesNotApplyToAPIKey(t *testing.T) {
 
 	cfg := &internalconfig.Config{
 		OAuthRequestScopedErrors: map[string][]internalconfig.RequestScopedErrorRule{
-			"vertex": {
+			"kimi": {
 				{
 					Status: 500,
 					Match:  []string{"internal_server_error"},
@@ -120,21 +120,21 @@ func TestOAuthRequestScopedErrors_DoesNotApplyToAPIKey(t *testing.T) {
 
 	// API key auth must not use oauth-request-scoped-errors
 	auth1 := &Auth{
-		ID:         "auth-vertex-apikey",
-		Provider:   "vertex",
+		ID:         "auth-kimi-apikey",
+		Provider:   "kimi",
 		Status:     StatusActive,
 		Attributes: map[string]string{"auth_kind": "apikey", "api_key": "test-key", "priority": "10"},
 	}
 	auth2 := &Auth{
-		ID:         "auth-vertex-apikey-2",
-		Provider:   "vertex",
+		ID:         "auth-kimi-apikey-2",
+		Provider:   "kimi",
 		Status:     StatusActive,
 		Attributes: map[string]string{"auth_kind": "apikey", "api_key": "test-key-2", "priority": "5"},
 	}
 
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "vertex", []*registry.ModelInfo{{ID: "claude-3-5-sonnet"}})
-	reg.RegisterClient(auth2.ID, "vertex", []*registry.ModelInfo{{ID: "claude-3-5-sonnet"}})
+	reg.RegisterClient(auth1.ID, "kimi", []*registry.ModelInfo{{ID: "kimi-k2.5"}})
+	reg.RegisterClient(auth2.ID, "kimi", []*registry.ModelInfo{{ID: "kimi-k2.5"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 		reg.UnregisterClient(auth2.ID)
@@ -149,7 +149,7 @@ func TestOAuthRequestScopedErrors_DoesNotApplyToAPIKey(t *testing.T) {
 
 	execCount := 0
 	exec := &mockCustomErrorExecutor{
-		identifier: "vertex",
+		identifier: "kimi",
 		executeFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			execCount++
 			if execCount == 1 {
@@ -163,10 +163,10 @@ func TestOAuthRequestScopedErrors_DoesNotApplyToAPIKey(t *testing.T) {
 	}
 	m.RegisterExecutor(exec)
 
-	req := cliproxyexecutor.Request{Model: "claude-3-5-sonnet"}
+	req := cliproxyexecutor.Request{Model: "kimi-k2.5"}
 	opts := cliproxyexecutor.Options{}
 
-	resp, errExec := m.Execute(context.Background(), []string{"vertex"}, req, opts)
+	resp, errExec := m.Execute(context.Background(), []string{"kimi"}, req, opts)
 	if errExec != nil {
 		t.Fatalf("unexpected Execute error: %v", errExec)
 	}

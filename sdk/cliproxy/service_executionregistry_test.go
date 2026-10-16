@@ -9,7 +9,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/http/httptest"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,14 +16,14 @@ import (
 	"testing"
 	"time"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/home"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/homeplugins"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executionregistry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
-	sdkpluginstore "github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginstore"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/home"
+	"github.com/xnuyoah/XRouter/v8/internal/homeplugins"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executionregistry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
+	sdkpluginstore "github.com/xnuyoah/XRouter/v8/sdk/pluginstore"
 )
 
 type blockingServiceCooldownStore struct {
@@ -644,28 +643,6 @@ func TestHomeConfigWorkerShutdownCancelsBlockedRuntimeUpdatesBeforePublish(t *te
 				t.Fatal("canceled runtime update published Home state")
 			}
 		})
-	}
-}
-
-func TestHomeModelRegistrationSkipsAntigravityProbes(t *testing.T) {
-	var requests atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { requests.Add(1); w.WriteHeader(500) }))
-	defer server.Close()
-	cfg := &config.Config{}
-	cfg.Home.Enabled = true
-	manager := coreauth.NewManager(nil, nil, nil)
-	auth := antigravityTestAuth("home-no-probe", server.URL)
-	if _, err := manager.Register(t.Context(), auth); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { GlobalModelRegistry().UnregisterClient(auth.ID) })
-	service := &Service{cfg: cfg, coreManager: manager}
-	service.registerModelsForAuth(t.Context(), auth)
-	service.WaitAntigravityProbes()
-	service.refreshAntigravityModels(t.Context())
-	service.WaitAntigravityProbes()
-	if requests.Load() != 0 {
-		t.Fatal("Home mode launched standalone entitlement probe")
 	}
 }
 

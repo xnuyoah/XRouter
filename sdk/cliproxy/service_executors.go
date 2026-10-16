@@ -5,12 +5,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/constant"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/pluginhost"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/internal/constant"
+	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
+	"github.com/xnuyoah/XRouter/v8/internal/runtime/executor"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 type openAICompatibilityRegistrationCache struct {
@@ -208,19 +208,10 @@ func (s *Service) registerAvailableExecutors(ctx context.Context, opts executorR
 
 func baselineExecutorAuths() []*coreauth.Auth {
 	providers := []string{
-		"codex",
-		"claude",
-		constant.Gemini,
-		constant.GeminiInteractions,
-		"vertex",
-		"aistudio",
-		"antigravity",
-		"kimi",
-		"kimi-ai",
-		"kimi.ai",
-		"xai",
-		"devin",
-		"meta",
+		constant.OpenAI,
+		constant.Deepseek,
+		constant.Nvidia,
+		constant.Agnes,
 		"openai-compatibility",
 	}
 	auths := make([]*coreauth.Auth, 0, len(providers))
@@ -238,21 +229,7 @@ func baselineExecutorAuths() []*coreauth.Auth {
 }
 
 func (s *Service) registerExecutorsForAuths(auths []*coreauth.Auth, forceReplace bool) {
-	reboundCodex := false
-	reboundXAI := false
 	for _, auth := range auths {
-		if auth != nil && strings.EqualFold(strings.TrimSpace(auth.Provider), "codex") {
-			if reboundCodex && forceReplace {
-				continue
-			}
-			reboundCodex = true
-		}
-		if auth != nil && !auth.Disabled && strings.EqualFold(strings.TrimSpace(auth.Provider), "xai") {
-			if reboundXAI && forceReplace {
-				continue
-			}
-			reboundXAI = true
-		}
 		s.registerExecutorForAuth(auth, forceReplace)
 	}
 }
@@ -264,19 +241,6 @@ func (s *Service) registerExecutorForAuth(a *coreauth.Auth, forceReplace bool) {
 	s.cfgMu.RLock()
 	cfg := s.cfg
 	s.cfgMu.RUnlock()
-	if strings.EqualFold(strings.TrimSpace(a.Provider), "codex") {
-		if !forceReplace {
-			existingExecutor, hasExecutor := s.coreManager.Executor("codex")
-			if hasExecutor {
-				existingCodexAutoExecutor, isCodexAutoExecutor := existingExecutor.(*executor.CodexAutoExecutor)
-				if isCodexAutoExecutor && existingCodexAutoExecutor.UsesConfig(cfg) {
-					return
-				}
-			}
-		}
-		s.coreManager.RegisterExecutor(executor.NewCodexAutoExecutor(cfg))
-		return
-	}
 	// Skip disabled auth entries when (re)binding executors.
 	// Disabled auths can linger during config reloads (e.g., removed OpenAI-compat entries)
 	// and must not override active provider executors.
@@ -294,38 +258,14 @@ func (s *Service) registerExecutorForAuth(a *coreauth.Auth, forceReplace bool) {
 		return
 	}
 	switch strings.ToLower(a.Provider) {
-	case constant.Gemini:
-		s.coreManager.RegisterExecutor(executor.NewGeminiExecutor(cfg))
-	case constant.GeminiInteractions:
-		s.coreManager.RegisterExecutor(executor.NewGeminiInteractionsExecutor(cfg))
-	case "vertex":
-		s.coreManager.RegisterExecutor(executor.NewGeminiVertexExecutor(cfg))
-	case "aistudio":
-		if s.wsGateway != nil {
-			s.coreManager.RegisterExecutor(executor.NewAIStudioExecutor(cfg, a.ID, s.wsGateway))
-		}
-		return
-	case "antigravity":
-		s.coreManager.RegisterExecutor(executor.NewAntigravityExecutor(cfg))
-	case "claude":
-		s.coreManager.RegisterExecutor(executor.NewClaudeExecutor(cfg))
-	case "kimi", "kimi-ai", "kimi.ai", "kimi.com":
-		s.coreManager.RegisterExecutor(executor.NewKimiExecutor(cfg))
-	case "xai":
-		if !forceReplace {
-			existingExecutor, hasExecutor := s.coreManager.Executor("xai")
-			if hasExecutor {
-				existingXAIAutoExecutor, isXAIAutoExecutor := existingExecutor.(*executor.XAIAutoExecutor)
-				if isXAIAutoExecutor && existingXAIAutoExecutor.UsesConfig(cfg) {
-					return
-				}
-			}
-		}
-		s.coreManager.RegisterExecutor(executor.NewXAIAutoExecutor(cfg))
-	case "devin":
-		s.coreManager.RegisterExecutor(executor.NewDevinExecutor(cfg))
-	case "meta":
-		s.coreManager.RegisterExecutor(executor.NewMetaExecutor(cfg))
+	case constant.OpenAI:
+		s.coreManager.RegisterExecutor(executor.NewOpenAIExecutor(cfg))
+	case constant.Deepseek:
+		s.coreManager.RegisterExecutor(executor.NewDeepseekExecutor(cfg))
+	case constant.Nvidia:
+		s.coreManager.RegisterExecutor(executor.NewNvidiaExecutor(cfg))
+	case constant.Agnes:
+		s.coreManager.RegisterExecutor(executor.NewAgnesExecutor(cfg))
 	default:
 		providerKey := strings.ToLower(strings.TrimSpace(a.Provider))
 		if providerKey == "" {
@@ -560,9 +500,6 @@ func (s *Service) tryRegisterPluginModelsForAuthWithConfigFenced(ctx context.Con
 	}
 	if result.Err != nil {
 		return true
-	}
-	if s.coreManager != nil && strings.EqualFold(a.Provider, "antigravity") && !s.antigravityHomeEnabled() {
-		defer s.coreManager.ReconcileRegistryModelStates(ctx, a.ID)
 	}
 	activeAuth := a
 	providerKey := strings.ToLower(strings.TrimSpace(result.Provider))

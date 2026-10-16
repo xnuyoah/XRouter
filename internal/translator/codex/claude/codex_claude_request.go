@@ -14,12 +14,12 @@ import (
 	"strconv"
 	"strings"
 
-	sigcompat "github.com/router-for-me/CLIProxyAPI/v8/internal/signature"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
-	translatorcommon "github.com/router-for-me/CLIProxyAPI/v8/internal/translator/common"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	sigcompat "github.com/xnuyoah/XRouter/v8/internal/signature"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
+	translatorcommon "github.com/xnuyoah/XRouter/v8/internal/translator/common"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
 // ConvertClaudeRequestToCodex parses and transforms a Claude Code API request into the internal client format.
@@ -435,7 +435,7 @@ func convertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool, 
 
 	// Map Claude output_config.format to Codex Responses text.format.
 	if format := rootResult.Get("output_config.format"); format.IsObject() && format.Get("type").String() == "json_schema" && format.Get("schema").IsObject() {
-		name := "cli_proxy_structured_output"
+		name := "xrouter_structured_output"
 		if n := format.Get("name").String(); n != "" {
 			name = n
 		}

@@ -1,4 +1,4 @@
-// Package misc provides miscellaneous utility functions for the CLI Proxy API server.
+// Package misc provides miscellaneous utility functions for the XRouter server.
 // It includes helper functions for HTTP header manipulation and other common operations
 // that don't fit into more specific packages.
 package misc

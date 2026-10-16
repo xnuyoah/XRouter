@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
 func TestUpdateAggregatedAvailability_UnavailableWithoutNextRetryDoesNotBlockAuth(t *testing.T) {
@@ -70,8 +70,8 @@ func TestManager_AvailableProvidersAndHasProviderAuth_ExcludeDisabled(t *testing
 	if _, err := manager.Register(ctx, &Auth{ID: "active", Provider: "claude", Status: StatusActive}); err != nil {
 		t.Fatalf("register active auth: %v", err)
 	}
-	// Provider gemini only has an auth with the Disabled flag set.
-	if _, err := manager.Register(ctx, &Auth{ID: "flag-disabled", Provider: "gemini", Disabled: true}); err != nil {
+	// Provider openai only has an auth with the Disabled flag set.
+	if _, err := manager.Register(ctx, &Auth{ID: "flag-disabled", Provider: "openai", Disabled: true}); err != nil {
 		t.Fatalf("register flag-disabled auth: %v", err)
 	}
 	// Provider codex only has an auth whose Status is StatusDisabled.
@@ -87,8 +87,8 @@ func TestManager_AvailableProvidersAndHasProviderAuth_ExcludeDisabled(t *testing
 	if !present["claude"] {
 		t.Errorf("AvailableProviders() = %v, want to include active provider claude", providers)
 	}
-	if present["gemini"] {
-		t.Errorf("AvailableProviders() = %v, want to exclude Disabled provider gemini", providers)
+	if present["openai"] {
+		t.Errorf("AvailableProviders() = %v, want to exclude Disabled provider openai", providers)
 	}
 	if present["codex"] {
 		t.Errorf("AvailableProviders() = %v, want to exclude StatusDisabled provider codex", providers)
@@ -97,8 +97,8 @@ func TestManager_AvailableProvidersAndHasProviderAuth_ExcludeDisabled(t *testing
 	if !manager.HasProviderAuth("claude") {
 		t.Errorf("HasProviderAuth(claude) = false, want true")
 	}
-	if manager.HasProviderAuth("gemini") {
-		t.Errorf("HasProviderAuth(gemini) = true, want false (only Disabled auth registered)")
+	if manager.HasProviderAuth("openai") {
+		t.Errorf("HasProviderAuth(openai) = true, want false (only Disabled auth registered)")
 	}
 	if manager.HasProviderAuth("codex") {
 		t.Errorf("HasProviderAuth(codex) = true, want false (only StatusDisabled auth registered)")

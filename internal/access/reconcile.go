@@ -6,10 +6,10 @@ import (
 	"sort"
 	"strings"
 
-	configaccess "github.com/router-for-me/CLIProxyAPI/v8/internal/access/config_access"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	sdkaccess "github.com/router-for-me/CLIProxyAPI/v8/sdk/access"
 	log "github.com/sirupsen/logrus"
+	configaccess "github.com/xnuyoah/XRouter/v8/internal/access/config_access"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	sdkaccess "github.com/xnuyoah/XRouter/v8/sdk/access"
 )
 
 // ReconcileProviders builds the desired provider list by reusing existing providers when possible

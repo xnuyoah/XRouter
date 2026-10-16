@@ -1,4 +1,4 @@
-// Package misc provides miscellaneous utility functions and embedded data for the CLI Proxy API.
+// Package misc provides miscellaneous utility functions and embedded data for XRouter.
 // This package contains general-purpose helpers and embedded resources that do not fit into
 // more specific domain packages. It includes a comprehensive MIME type mapping for file operations.
 package misc

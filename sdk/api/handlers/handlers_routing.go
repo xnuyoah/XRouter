@@ -8,12 +8,11 @@ import (
 
 	"github.com/tidwall/sjson"
 
-	. "github.com/router-for-me/CLIProxyAPI/v8/internal/constant"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/interfaces"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	coreexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	"github.com/xnuyoah/XRouter/v8/internal/interfaces"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	coreexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 	"golang.org/x/net/context"
 )
 
@@ -35,91 +34,8 @@ type modelRouterSkipDetector interface {
 	HasModelRoutersExcept(string) bool
 }
 
-func preferExecutionProvider(providers []string, preferred string) []string {
-	preferred = strings.ToLower(strings.TrimSpace(preferred))
-	if preferred == "" || len(providers) < 2 {
-		return providers
-	}
-	preferredIndex := -1
-	for i := range providers {
-		if strings.ToLower(strings.TrimSpace(providers[i])) == preferred {
-			preferredIndex = i
-			break
-		}
-	}
-	if preferredIndex <= 0 {
-		return providers
-	}
-	out := make([]string, 0, len(providers))
-	out = append(out, providers[preferredIndex])
-	out = append(out, providers[:preferredIndex]...)
-	out = append(out, providers[preferredIndex+1:]...)
-	return out
-}
-
-func adjustExecutionProvidersForEntryProtocol(entryProtocol string, providers []string) []string {
-	if entryProtocol == Interactions {
-		return preferExecutionProvider(providers, GeminiInteractions)
-	}
-	if supportsNativeInteractionsEntryProtocol(entryProtocol) {
-		return providers
-	}
-	return excludeExecutionProvider(providers, GeminiInteractions)
-}
-
-func supportsNativeInteractionsEntryProtocol(entryProtocol string) bool {
-	switch entryProtocol {
-	case Interactions, OpenAI, OpenaiResponse, Claude, Gemini:
-		return true
-	default:
-		return false
-	}
-}
-
-func excludeExecutionProvider(providers []string, excluded string) []string {
-	excluded = strings.ToLower(strings.TrimSpace(excluded))
-	if excluded == "" || len(providers) == 0 {
-		return providers
-	}
-	excludedIndex := -1
-	for i := range providers {
-		if strings.ToLower(strings.TrimSpace(providers[i])) == excluded {
-			excludedIndex = i
-			break
-		}
-	}
-	if excludedIndex == -1 {
-		return providers
-	}
-	out := make([]string, 0, len(providers)-1)
-	out = append(out, providers[:excludedIndex]...)
-	out = append(out, providers[excludedIndex+1:]...)
-	return out
-}
-
 func (h *BaseAPIHandler) getRequestDetails(modelName string) (providers []string, normalizedModel string, err *interfaces.ErrorMessage) {
 	return h.getRequestDetailsWithOptions(modelName, false, false)
-}
-
-func validateNativeInteractionsExecution(entryProtocol string, execOptions modelExecutionOptions, routeDecision modelRouteDecision) *interfaces.ErrorMessage {
-	forcedProvider := strings.ToLower(strings.TrimSpace(execOptions.ForcedProvider))
-	if forcedProvider == "" || entryProtocol != Interactions {
-		return nil
-	}
-	if routeDecision.ExecutorPluginID != "" {
-		return nativeInteractionsExecutionError()
-	}
-	if routeProvider := strings.ToLower(strings.TrimSpace(routeDecision.Provider)); routeProvider != "" && routeProvider != forcedProvider {
-		return nativeInteractionsExecutionError()
-	}
-	return nil
-}
-
-func nativeInteractionsExecutionError() *interfaces.ErrorMessage {
-	return &interfaces.ErrorMessage{
-		StatusCode: http.StatusBadRequest,
-		Error:      fmt.Errorf("agent is only supported for native interactions execution"),
-	}
 }
 
 // providersForExecution resolves the providers and normalized model for a request. When a model
@@ -129,10 +45,16 @@ func (h *BaseAPIHandler) providersForExecution(modelName, originalRequestedModel
 	forcedProvider := strings.ToLower(strings.TrimSpace(execOptions.ForcedProvider))
 	if forcedProvider != "" {
 		if routeDecision.ExecutorPluginID != "" {
-			return nil, "", nativeInteractionsExecutionError()
+			return nil, "", &interfaces.ErrorMessage{
+				StatusCode: http.StatusBadRequest,
+				Error:      fmt.Errorf("forced provider %q cannot be combined with a plugin executor route", forcedProvider),
+			}
 		}
 		if routeProvider := strings.ToLower(strings.TrimSpace(routeDecision.Provider)); routeProvider != "" && routeProvider != forcedProvider {
-			return nil, "", nativeInteractionsExecutionError()
+			return nil, "", &interfaces.ErrorMessage{
+				StatusCode: http.StatusBadRequest,
+				Error:      fmt.Errorf("model router selected provider %q but provider %q was forced", routeProvider, forcedProvider),
+			}
 		}
 		normalizedModel := strings.TrimSpace(modelName)
 		if normalizedModel == "" {

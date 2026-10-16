@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
 	"github.com/tidwall/gjson"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
 )
 
 // ParsePluginExecutorResponseUsage extracts token usage from a non-streaming plugin executor response.
@@ -16,8 +16,8 @@ func ParsePluginExecutorResponseUsage(protocol string, payload []byte) usage.Det
 	switch strings.ToLower(strings.TrimSpace(protocol)) {
 	case "claude":
 		return parseClaudePayloadUsage(payload)
-	case "gemini":
-		return ParseGeminiUsage(payload)
+	// The interactions/antigravity shapes are kept for plugin executors that
+	// declare them in ExecutorOutputFormats; no built-in executor emits them.
 	case "interactions", "interactions-response":
 		return ParseInteractionsUsage(payload)
 	case "antigravity":
@@ -62,12 +62,8 @@ func ObservePluginExecutorStreamUsage(protocol string, payload []byte, buffer *S
 				ObserveMergedStreamUsage(buffer, detail)
 			}
 		})
-	case "gemini":
-		IterateStreamLines(payload, func(line []byte) {
-			if detail, ok := ParseGeminiStreamUsage(line); ok {
-				buffer.Observe(detail, ok)
-			}
-		})
+	// The interactions/antigravity shapes are kept for plugin executors that
+	// declare them in ExecutorOutputFormats; no built-in executor emits them.
 	case "interactions", "interactions-response":
 		IterateStreamLines(payload, func(line []byte) {
 			if detail, ok := ParseInteractionsStreamUsage(line); ok {
@@ -108,8 +104,6 @@ func ObservePluginExecutorStreamTTFT(protocol string, reporter *UsageReporter, p
 	switch strings.ToLower(strings.TrimSpace(protocol)) {
 	case "claude":
 		ObserveClaudeTokenEvent(reporter, payload)
-	case "gemini", "antigravity", "interactions", "interactions-response":
-		ObserveGeminiTokenEvent(reporter, payload)
 	case "codex", "openai-response":
 		ObserveResponsesTokenEvent(reporter, payload)
 	default:

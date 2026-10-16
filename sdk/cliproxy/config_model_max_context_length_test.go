@@ -3,7 +3,7 @@ package cliproxy
 import (
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 func TestBuildConfigModelsPropagatesMaxContextLength(t *testing.T) {
@@ -14,53 +14,13 @@ func TestBuildConfigModelsPropagatesMaxContextLength(t *testing.T) {
 		got  func() *ModelInfo
 	}{
 		{
-			name: "codex",
+			name: "openai",
 			got: func() *ModelInfo {
-				return buildCodexConfigModels(&config.CodexKey{
-					Models: []config.CodexModel{{
-						Name: "codex-upstream", Alias: "codex-alias", MaxContextLength: want,
+				return buildNativeAPIConfigModels(&config.NativeAPIKey{
+					Models: []config.NativeAPIModel{{
+						Name: "openai-upstream", Alias: "openai-alias", MaxContextLength: want,
 					}},
-				})[0]
-			},
-		},
-		{
-			name: "claude",
-			got: func() *ModelInfo {
-				return buildClaudeConfigModels(&config.ClaudeKey{
-					Models: []config.ClaudeModel{{
-						Name: "claude-upstream", Alias: "claude-alias", MaxContextLength: want,
-					}},
-				})[0]
-			},
-		},
-		{
-			name: "gemini",
-			got: func() *ModelInfo {
-				return buildGeminiConfigModels(&config.GeminiKey{
-					Models: []config.GeminiModel{{
-						Name: "gemini-upstream", Alias: "gemini-alias", MaxContextLength: want,
-					}},
-				})[0]
-			},
-		},
-		{
-			name: "interactions",
-			got: func() *ModelInfo {
-				return buildGeminiConfigModels(&config.GeminiKey{
-					Models: []config.GeminiModel{{
-						Name: "interactions-upstream", Alias: "interactions-alias", MaxContextLength: want,
-					}},
-				})[0]
-			},
-		},
-		{
-			name: "xai",
-			got: func() *ModelInfo {
-				return buildXAIConfigModels(&config.XAIKey{
-					Models: []config.XAIModel{{
-						Name: "xai-upstream", Alias: "xai-alias", MaxContextLength: want,
-					}},
-				})[0]
+				}, "openai")[0]
 			},
 		},
 		{

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 type schedulerProviderTestExecutor struct {
@@ -291,15 +291,15 @@ func TestManager_RefreshSchedulerEntry_RebuildsSupportedModelSetAfterModelRegist
 			manager := NewManager(nil, &RoundRobinSelector{}, nil)
 			auth := &Auth{
 				ID:       "refresh-entry-" + testCase.name,
-				Provider: "gemini",
+				Provider: "openai",
 			}
 			if errPrime := testCase.prime(manager, auth); errPrime != nil {
 				t.Fatalf("prime auth %s: %v", testCase.name, errPrime)
 			}
 
-			registerSchedulerModels(t, "gemini", "scheduler-refresh-model", auth.ID)
+			registerSchedulerModels(t, "openai", "scheduler-refresh-model", auth.ID)
 
-			got, errPick := manager.scheduler.pickSingle(ctx, "gemini", "scheduler-refresh-model", cliproxyexecutor.Options{}, nil)
+			got, errPick := manager.scheduler.pickSingle(ctx, "openai", "scheduler-refresh-model", cliproxyexecutor.Options{}, nil)
 			var authErr *Error
 			if !errors.As(errPick, &authErr) || authErr == nil {
 				t.Fatalf("pickSingle() before refresh error = %v, want auth_not_found", errPick)
@@ -313,7 +313,7 @@ func TestManager_RefreshSchedulerEntry_RebuildsSupportedModelSetAfterModelRegist
 
 			manager.RefreshSchedulerEntry(auth.ID)
 
-			got, errPick = manager.scheduler.pickSingle(ctx, "gemini", "scheduler-refresh-model", cliproxyexecutor.Options{}, nil)
+			got, errPick = manager.scheduler.pickSingle(ctx, "openai", "scheduler-refresh-model", cliproxyexecutor.Options{}, nil)
 			if errPick != nil {
 				t.Fatalf("pickSingle() after refresh error = %v", errPick)
 			}
@@ -327,13 +327,13 @@ func TestManager_RefreshSchedulerEntry_RebuildsSupportedModelSetAfterModelRegist
 func TestManager_PickNext_RebuildsSchedulerAfterModelCooldownError(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "gemini"})
+	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "openai"})
 
-	registerSchedulerModels(t, "gemini", "scheduler-cooldown-rebuild-model", "cooldown-stale-old")
+	registerSchedulerModels(t, "openai", "scheduler-cooldown-rebuild-model", "cooldown-stale-old")
 
 	oldAuth := &Auth{
 		ID:       "cooldown-stale-old",
-		Provider: "gemini",
+		Provider: "openai",
 	}
 	if _, errRegister := manager.Register(ctx, oldAuth); errRegister != nil {
 		t.Fatalf("register old auth: %v", errRegister)
@@ -341,7 +341,7 @@ func TestManager_PickNext_RebuildsSchedulerAfterModelCooldownError(t *testing.T)
 
 	manager.MarkResult(ctx, Result{
 		AuthID:   oldAuth.ID,
-		Provider: "gemini",
+		Provider: "openai",
 		Model:    "scheduler-cooldown-rebuild-model",
 		Success:  false,
 		Error:    &Error{HTTPStatus: http.StatusTooManyRequests, Message: "quota"},
@@ -349,19 +349,19 @@ func TestManager_PickNext_RebuildsSchedulerAfterModelCooldownError(t *testing.T)
 
 	newAuth := &Auth{
 		ID:       "cooldown-stale-new",
-		Provider: "gemini",
+		Provider: "openai",
 	}
 	if _, errRegister := manager.Register(ctx, newAuth); errRegister != nil {
 		t.Fatalf("register new auth: %v", errRegister)
 	}
 
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(newAuth.ID, "gemini", []*registry.ModelInfo{{ID: "scheduler-cooldown-rebuild-model"}})
+	reg.RegisterClient(newAuth.ID, "openai", []*registry.ModelInfo{{ID: "scheduler-cooldown-rebuild-model"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(newAuth.ID)
 	})
 
-	got, errPick := manager.scheduler.pickSingle(ctx, "gemini", "scheduler-cooldown-rebuild-model", cliproxyexecutor.Options{}, nil)
+	got, errPick := manager.scheduler.pickSingle(ctx, "openai", "scheduler-cooldown-rebuild-model", cliproxyexecutor.Options{}, nil)
 	var cooldownErr *modelCooldownError
 	if !errors.As(errPick, &cooldownErr) {
 		t.Fatalf("pickSingle() before sync error = %v, want modelCooldownError", errPick)
@@ -370,7 +370,7 @@ func TestManager_PickNext_RebuildsSchedulerAfterModelCooldownError(t *testing.T)
 		t.Fatalf("pickSingle() before sync auth = %v, want nil", got)
 	}
 
-	got, executor, errPick := manager.pickNext(ctx, "gemini", "scheduler-cooldown-rebuild-model", cliproxyexecutor.Options{}, nil)
+	got, executor, errPick := manager.pickNext(ctx, "openai", "scheduler-cooldown-rebuild-model", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNext() error = %v", errPick)
 	}
@@ -1315,7 +1315,7 @@ func TestManager_RefreshAuth_PreservesConcurrentModelCooldown(t *testing.T) {
 
 	<-executor.started
 
-	// While refresh is running, model "gemini-pro" gets put in 429 quota cooldown
+	// While refresh is running, model "gpt-pro" gets put in 429 quota cooldown
 	current, ok := manager.GetByID(auth.ID)
 	if !ok {
 		t.Fatalf("auth not found: %s", auth.ID)
@@ -1324,7 +1324,7 @@ func TestManager_RefreshAuth_PreservesConcurrentModelCooldown(t *testing.T) {
 		current.ModelStates = make(map[string]*ModelState)
 	}
 	recoverTime := time.Now().Add(10 * time.Minute)
-	current.ModelStates["gemini-pro"] = &ModelState{
+	current.ModelStates["gpt-pro"] = &ModelState{
 		Status:         StatusError,
 		Unavailable:    true,
 		NextRetryAfter: recoverTime,
@@ -1341,15 +1341,15 @@ func TestManager_RefreshAuth_PreservesConcurrentModelCooldown(t *testing.T) {
 	if !ok {
 		t.Fatalf("auth not found: %s", auth.ID)
 	}
-	// The model cooldown on "gemini-pro" MUST be preserved
-	ms := finalAuth.ModelStates["gemini-pro"]
+	// The model cooldown on "gpt-pro" MUST be preserved
+	ms := finalAuth.ModelStates["gpt-pro"]
 	if ms == nil {
-		t.Fatal("ModelStates[gemini-pro] is nil, want preserved cooldown")
+		t.Fatal("ModelStates[gpt-pro] is nil, want preserved cooldown")
 	}
 	if !ms.Unavailable {
-		t.Fatal("ModelStates[gemini-pro].Unavailable = false, want true")
+		t.Fatal("ModelStates[gpt-pro].Unavailable = false, want true")
 	}
 	if ms.StatusMessage != "quota exceeded" {
-		t.Fatalf("ModelStates[gemini-pro].StatusMessage = %q, want quota exceeded", ms.StatusMessage)
+		t.Fatalf("ModelStates[gpt-pro].StatusMessage = %q, want quota exceeded", ms.StatusMessage)
 	}
 }

@@ -8,18 +8,19 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	tls "github.com/refraction-networking/utls"
-	internalcache "github.com/router-for-me/CLIProxyAPI/v8/internal/cache"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/httpwire"
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/httptransport"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/proxyutil"
 	log "github.com/sirupsen/logrus"
+	internalcache "github.com/xnuyoah/XRouter/v8/internal/cache"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/httpwire"
+	cliproxyauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/httptransport"
+	"github.com/xnuyoah/XRouter/v8/sdk/proxyutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/proxy"
 )
@@ -403,6 +404,17 @@ type fallbackRoundTripper struct {
 	anthropic http.RoundTripper
 	chrome    http.RoundTripper
 	fallback  http.RoundTripper
+}
+
+// IsAnthropicUpstreamURL reports whether a resolved request targets Anthropic's
+// first-party API origin. Claude-format upstream behavior must use this gate so
+// it cannot drift onto custom ports or userinfo URLs.
+func IsAnthropicUpstreamURL(u *url.URL) bool {
+	if u == nil || u.User != nil || !strings.EqualFold(u.Scheme, "https") || !strings.EqualFold(u.Hostname(), "api.anthropic.com") {
+		return false
+	}
+	port := u.Port()
+	return port == "" || port == "443"
 }
 
 func (f *fallbackRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {

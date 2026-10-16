@@ -13,9 +13,9 @@ func TestManager_RegisterCanonicalizesThinkingSuffixModelStates(t *testing.T) {
 
 	registered, errRegister := manager.Register(context.Background(), &Auth{
 		ID:       "auth-thinking-states",
-		Provider: "gemini",
+		Provider: "openai",
 		ModelStates: map[string]*ModelState{
-			"gemini-3.1-pro-preview(high)": {
+			"gpt-3.1-pro-preview(high)": {
 				Status:         StatusError,
 				Unavailable:    true,
 				NextRetryAfter: now.Add(time.Hour),
@@ -26,7 +26,7 @@ func TestManager_RegisterCanonicalizesThinkingSuffixModelStates(t *testing.T) {
 				},
 				UpdatedAt: now,
 			},
-			"gemini-3.1-pro-preview(low)": {
+			"gpt-3.1-pro-preview(low)": {
 				Status:         StatusError,
 				Unavailable:    true,
 				NextRetryAfter: laterRetry,
@@ -45,7 +45,7 @@ func TestManager_RegisterCanonicalizesThinkingSuffixModelStates(t *testing.T) {
 	if len(registered.ModelStates) != 1 {
 		t.Fatalf("len(ModelStates) = %d, want 1: %+v", len(registered.ModelStates), registered.ModelStates)
 	}
-	state := registered.ModelStates["gemini-3.1-pro-preview"]
+	state := registered.ModelStates["gpt-3.1-pro-preview"]
 	if state == nil || !state.Unavailable || !state.NextRetryAfter.Equal(laterRetry) {
 		t.Fatalf("canonical model state = %+v, want unavailable until %v", state, laterRetry)
 	}

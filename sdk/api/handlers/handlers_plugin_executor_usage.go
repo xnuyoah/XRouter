@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor/helps"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
+	"github.com/xnuyoah/XRouter/v8/internal/runtime/executor/helps"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
 )
 
 func parsePluginExecutorResponseUsage(protocol string, payload []byte) usage.Detail {

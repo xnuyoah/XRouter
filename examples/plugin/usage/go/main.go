@@ -127,9 +127,9 @@ func handleMethod(method string) ([]byte, error) {
 	_ = time.Second
 	switch method {
 	case "plugin.register":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-usage-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-usage-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"usage_plugin\":true}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-usage-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-usage-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"usage_plugin\":true}}")
 	case "plugin.reconfigure":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-usage-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-usage-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"usage_plugin\":true}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-usage-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-usage-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"usage_plugin\":true}}")
 	case "usage.handle":
 		return okEnvelopeJSON("{}")
 	default:

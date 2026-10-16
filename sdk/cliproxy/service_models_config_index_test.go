@@ -3,8 +3,8 @@ package cliproxy
 import (
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 func TestOpenAICompatibilityRegistrationCacheUsesConfigIndex(t *testing.T) {
@@ -23,18 +23,18 @@ func TestOpenAICompatibilityRegistrationCacheUsesConfigIndex(t *testing.T) {
 	}
 }
 
-func TestResolveConfigClaudeKeyUsesConfigIndex(t *testing.T) {
-	service := &Service{cfg: &config.Config{ClaudeKey: []config.ClaudeKey{
-		{APIKey: "shared-key", Models: []config.ClaudeModel{{Name: "first"}}},
-		{APIKey: "shared-key", Models: []config.ClaudeModel{{Name: "second"}}},
+func TestResolveConfigDeepseekKeyUsesConfigIndex(t *testing.T) {
+	service := &Service{cfg: &config.Config{DeepseekKey: []config.DeepseekKey{
+		{APIKey: "shared-key", Models: []config.NativeAPIModel{{Name: "first"}}},
+		{APIKey: "shared-key", Models: []config.NativeAPIModel{{Name: "second"}}},
 	}}}
 	auth := &coreauth.Auth{Attributes: map[string]string{
 		coreauth.AttributeAPIKey:      "shared-key",
-		coreauth.AttributeSource:      "config:claude[token-1]",
+		coreauth.AttributeSource:      "config:deepseek[token-1]",
 		coreauth.AttributeConfigIndex: "1",
 	}}
 
-	entry := service.resolveConfigClaudeKey(auth)
+	entry := service.resolveConfigDeepseekKey(auth)
 	if entry == nil || len(entry.Models) != 1 || entry.Models[0].Name != "second" {
 		t.Fatalf("resolved config entry = %+v, want second entry", entry)
 	}
