@@ -82,6 +82,8 @@ func nativeAPICompatConfig(cfg *config.Config, auth *cliproxyauth.Auth, req clip
 			entry = resolveNativeAPIKeyEntry(cfg.DeepseekKey, auth)
 		case constant.Nvidia:
 			entry = resolveNativeAPIKeyEntry(cfg.NvidiaKey, auth)
+		case constant.Agnes:
+			entry = resolveNativeAPIKeyEntry(cfg.AgnesKey, auth)
 		}
 	}
 	if entry == nil {

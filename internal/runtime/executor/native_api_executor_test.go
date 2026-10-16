@@ -167,6 +167,48 @@ func TestNativeAPIExecutorHonorsConfiguredMaxCompletionTokens(t *testing.T) {
 	}
 }
 
+// Every native family must resolve its configured credential: an omitted family
+// silently drops per-model options such as use-max-completion-tokens.
+func TestNativeAPIExecutorHonorsConfiguredOptionsPerFamily(t *testing.T) {
+	families := []struct {
+		provider string
+		model    string
+	}{
+		{provider: "openai", model: "gpt-5.5"},
+		{provider: "deepseek", model: "deepseek-chat"},
+		{provider: "nvidia", model: "nemotron-3-ultra"},
+		{provider: "agnes", model: "agnes-3.0-flash"},
+	}
+	for _, family := range families {
+		t.Run(family.provider, func(t *testing.T) {
+			cfg := &config.Config{}
+			entry := config.NativeAPIKey{
+				APIKey: "test-" + family.provider,
+				Models: []config.NativeAPIModel{{Name: family.model, UseMaxCompletionTokens: true}},
+			}
+			switch family.provider {
+			case "openai":
+				cfg.OpenAIKey = []config.OpenAIKey{entry}
+			case "deepseek":
+				cfg.DeepseekKey = []config.DeepseekKey{entry}
+			case "nvidia":
+				cfg.NvidiaKey = []config.NvidiaKey{entry}
+			case "agnes":
+				cfg.AgnesKey = []config.AgnesKey{entry}
+			}
+			exec, auth, upstream := newNativeAPITestExecutor(t, family.provider, cfg, nativeAPITestChatReply)
+			payload := nativeAPITestRequest(family.model, `"max_tokens":123`)
+			if _, errExecute := exec.Execute(t.Context(), auth, cliproxyexecutor.Request{Model: family.model, Payload: payload}, cliproxyexecutor.Options{SourceFormat: sdktranslator.FormatOpenAI, OriginalRequest: payload}); errExecute != nil {
+				t.Fatalf("execute: %v", errExecute)
+			}
+			body := <-upstream.bodies
+			if got := gjson.GetBytes(body, "max_completion_tokens").Int(); got != 123 {
+				t.Fatalf("max_completion_tokens = %d, want 123 (configured model options not resolved for %s): %s", got, family.provider, body)
+			}
+		})
+	}
+}
+
 func TestNativeAPIExecutorStreamsChatCompletion(t *testing.T) {
 	reply := "data: " + `{"id":"chatcmpl-1","object":"chat.completion.chunk","model":"deepseek-chat","choices":[{"index":0,"delta":{"role":"assistant","content":"po"}}]}` + "\n\n" +
 		"data: " + `{"id":"chatcmpl-1","object":"chat.completion.chunk","model":"deepseek-chat","choices":[{"index":0,"delta":{"content":"ng"},"finish_reason":"stop"}]}` + "\n\n" +

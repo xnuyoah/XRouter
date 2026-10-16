@@ -26,6 +26,10 @@ COPY --from=builder ./app/xrouter /xrouter/xrouter
 
 COPY config.example.yaml /xrouter/config.example.yaml
 
+# Ship the management panel inside the image: it is served from disk as-is and
+# is never downloaded at runtime.
+COPY static/management.html /xrouter/static/management.html
+
 WORKDIR /xrouter
 
 EXPOSE 11016

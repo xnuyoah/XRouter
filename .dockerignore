@@ -23,7 +23,8 @@ plugins
 config.yaml
 
 # Runtime assets and development scripts
-static
+# static/ is intentionally kept in the build context: the management panel ships
+# with the image so /management.html works without any download.
 scripts
 
 # Development/editor
