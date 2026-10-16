@@ -40,8 +40,8 @@ import (
 	"encoding/json"
 	"unsafe"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginabi"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginabi"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 type envelope struct {
@@ -138,8 +138,8 @@ func exampleRegistration() registration {
 		Metadata: pluginapi.Metadata{
 			Name:             "example-frontend-auth-exclusive-go",
 			Version:          "0.1.0",
-			Author:           "router-for-me",
-			GitHubRepository: "https://github.com/router-for-me/CLIProxyAPI",
+			Author:           "xnuyoah",
+			GitHubRepository: "https://github.com/xnuyoah/XRouter",
 			Logo:             "https://example.invalid/example-frontend-auth-exclusive-go.png",
 			ConfigFields:     []pluginapi.ConfigField{},
 		},

@@ -29,7 +29,7 @@ const seedTestPlaintextSecret = "seed-plaintext-secret"
 // seeding: the file cannot be parsed, or a YAML anchor keeps the plaintext after the
 // referencing key is hashed or dropped as a conflicting legacy field.
 var seedTestConfigsKeepingPlaintext = map[string]string{
-	"unparsable":      "remote-management:\n  secret-key: " + seedTestPlaintextSecret + "\nport: [8317\n",
+	"unparsable":      "remote-management:\n  secret-key: " + seedTestPlaintextSecret + "\nport: [11016\n",
 	"anchored secret": "defaults: &management\n  secret-key: " + seedTestPlaintextSecret + "\nmanagement: *management\n",
 	"anchored legacy secret beside v8 secret": "defaults: &legacy\n  secret-key: " + seedTestPlaintextSecret + "\nremote-management: *legacy\nmanagement:\n  secret-key: current-plaintext-secret\n",
 }
@@ -37,7 +37,7 @@ var seedTestConfigsKeepingPlaintext = map[string]string{
 var seedTestDriverID atomic.Uint64
 
 func seedTestPlaintextConfig(section string) string {
-	return "# operator note\nport: 8317\n" + section + ":\n  secret-key: " + seedTestPlaintextSecret + "\n"
+	return "# operator note\nport: 11016\n" + section + ":\n  secret-key: " + seedTestPlaintextSecret + "\n"
 }
 
 // seedTestSettledConfigs hold no plaintext secret, so seeding must upload them unchanged.
@@ -48,8 +48,8 @@ func seedTestSettledConfigs(t *testing.T) map[string]string {
 		t.Fatalf("bcrypt.GenerateFromPassword() error = %v", errHash)
 	}
 	return map[string]string{
-		"hashed secret": "# operator note\nport: 8317\nremote-management:\n  secret-key: '" + string(hashed) + "'\n",
-		"null secret":   "# operator note\nport: 8317\nmanagement:\n  secret-key: null\n",
+		"hashed secret": "# operator note\nport: 11016\nremote-management:\n  secret-key: '" + string(hashed) + "'\n",
+		"null secret":   "# operator note\nport: 11016\nmanagement:\n  secret-key: null\n",
 	}
 }
 

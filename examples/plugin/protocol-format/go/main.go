@@ -127,9 +127,9 @@ func handleMethod(method string) ([]byte, error) {
 	_ = time.Second
 	switch method {
 	case "plugin.register":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-protocol-format-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-protocol-format-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"executor\":true,\"executor_model_scope\":\"both\",\"executor_input_formats\":[\"chat-completions\"],\"executor_output_formats\":[\"responses\"]}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-protocol-format-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-protocol-format-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"executor\":true,\"executor_model_scope\":\"both\",\"executor_input_formats\":[\"chat-completions\"],\"executor_output_formats\":[\"responses\"]}}")
 	case "plugin.reconfigure":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-protocol-format-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-protocol-format-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"executor\":true,\"executor_model_scope\":\"both\",\"executor_input_formats\":[\"chat-completions\"],\"executor_output_formats\":[\"responses\"]}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-protocol-format-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-protocol-format-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"executor\":true,\"executor_model_scope\":\"both\",\"executor_input_formats\":[\"chat-completions\"],\"executor_output_formats\":[\"responses\"]}}")
 	case "executor.identifier":
 		return okEnvelopeJSON("{\"identifier\":\"example-protocol-format-go\"}")
 	case "executor.execute":

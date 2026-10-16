@@ -7,11 +7,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	translatorcommon "github.com/router-for-me/CLIProxyAPI/v8/internal/translator/common"
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	translatorcommon "github.com/xnuyoah/XRouter/v8/internal/translator/common"
+	cliproxyauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 // A turn whose only content is a file the target cannot receive must be refused
@@ -56,16 +56,6 @@ func TestExecutorsRefuseAFileOnlyTurnBeforeCallingUpstream(t *testing.T) {
 	}{
 		{"claude to openai-compat", NewOpenAICompatExecutor("openai-compatibility", &config.Config{OpenAICompatibility: []config.OpenAICompatibility{{Name: "compat"}}}),
 			keyAuth("openai-compatibility", map[string]string{"base_url": server.URL + "/v1", "compat_name": "compat", "provider_key": "compat"}), "claude", claudeFile, "container_upload"},
-		{"claude to codex", NewCodexExecutor(&config.Config{}), keyAuth("codex", map[string]string{"plan_type": "pro"}), "claude", claudeFile, "container_upload"},
-		{"openai to claude", NewClaudeExecutor(&config.Config{}), keyAuth("claude", nil), "openai", openAIFile, "file"},
-		{"openai to gemini", NewGeminiExecutor(&config.Config{}), keyAuth("gemini", nil), "openai", openAIFile, "file"},
-		{"openai image_url to gemini", NewGeminiExecutor(&config.Config{}), keyAuth("gemini", nil), "openai", openAIImageURL, "image_url"},
-		{"gemini audio to claude", NewClaudeExecutor(&config.Config{}), keyAuth("claude", nil), "gemini", geminiAudio, "inlineData"},
-		{"interactions developer step to claude", NewClaudeExecutor(&config.Config{}), keyAuth("claude", nil), "interactions", interactionsDeveloper, "document"},
-		{"interactions developer step to gemini", NewGeminiExecutor(&config.Config{}), keyAuth("gemini", nil), "interactions", interactionsDeveloper, "document"},
-		{"interactions developer role to codex", NewCodexExecutor(&config.Config{}), keyAuth("codex", map[string]string{"plan_type": "pro"}), "interactions", interactionsCodexAudioRoleDeveloper, "audio"},
-		{"interactions system type to codex", NewCodexExecutor(&config.Config{}), keyAuth("codex", map[string]string{"plan_type": "pro"}), "interactions", interactionsCodexAudioTypeSystem, "audio"},
-		{"interactions developer type to codex", NewCodexExecutor(&config.Config{}), keyAuth("codex", map[string]string{"plan_type": "pro"}), "interactions", interactionsCodexAudioTypeDeveloper, "audio"},
 	}
 	for _, target := range targets {
 		req := cliproxyexecutor.Request{Model: "m", Payload: []byte(target.payload)}

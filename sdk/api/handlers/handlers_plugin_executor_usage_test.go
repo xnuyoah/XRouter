@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	coreexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
-	sdkconfig "github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	coreexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
+	sdkconfig "github.com/xnuyoah/XRouter/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 type noopUsagePlugin struct{}
@@ -326,51 +326,12 @@ func TestHandlerPluginExecutorPublishesUsageStreamClaude(t *testing.T) {
 	}
 }
 
-func TestHandlerPluginExecutorPublishesUsageGemini(t *testing.T) {
-	targetPluginID := "custom-gemini-plugin"
-	plugin := newCapturePluginExecutorUsagePlugin(targetPluginID)
-	registerUsagePluginForTest(t, "test-plugin-executor-usage-gemini", plugin)
-
-	originalModel := "gemini-2.5-flash"
-
-	geminiResponseBody := []byte(`{"candidates":[{"content":{"parts":[{"text":"hello"}]}}],"usageMetadata":{"promptTokenCount":40,"candidatesTokenCount":60,"totalTokenCount":100}}`)
-
-	mockHost := &mockPluginUsageHost{
-		execResp: coreexecutor.Response{
-			Payload: geminiResponseBody,
-		},
-	}
-	mockHost.hasRouters = true
-	mockHost.route = func(ctx context.Context, req pluginapi.ModelRouteRequest) (pluginapi.ModelRouteResponse, bool) {
-		return pluginapi.ModelRouteResponse{Handled: true, TargetKind: pluginapi.ModelRouteTargetExecutor, Target: targetPluginID}, true
-	}
-
-	handler := NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, nil)
-	handler.SetModelRouterHost(mockHost)
-
-	body, _, errMsg := handler.ExecuteWithAuthManager(context.Background(), "gemini", originalModel, []byte(fmt.Sprintf(`{"contents":[{"parts":[{"text":"hi"}]}]}`)), "")
-	if errMsg != nil {
-		t.Fatalf("ExecuteWithAuthManager() error = %+v", errMsg)
-	}
-	if len(body) == 0 {
-		t.Fatal("empty response body")
-	}
-
-	record := plugin.waitRecord(t)
-	if record.Provider != targetPluginID {
-		t.Errorf("record.Provider = %q, want %q", record.Provider, targetPluginID)
-	}
-	if record.Detail.InputTokens != 40 || record.Detail.OutputTokens != 60 || record.Detail.TotalTokens != 100 {
-		t.Errorf("record.Detail = %+v, want prompt=40 candidates=60 total=100", record.Detail)
-	}
-}
-
 func TestHandlerPluginExecutorPublishesUsageStreamInteractions(t *testing.T) {
 	targetPluginID := "custom-interactions-stream-plugin"
 	plugin := newCapturePluginExecutorUsagePlugin(targetPluginID)
 	registerUsagePluginForTest(t, "test-plugin-executor-usage-stream-interactions", plugin)
 
-	originalModel := "gemini-2.5-flash"
+	originalModel := "claude-sonnet-4-6"
 
 	chunks := make(chan coreexecutor.StreamChunk, 2)
 	chunks <- coreexecutor.StreamChunk{Payload: []byte("data: {\"event_type\":\"finish\",\"metadata\":{\"total_usage\":{\"total_input_tokens\":30,\"total_output_tokens\":70,\"total_tokens\":100}}}\n\n")}

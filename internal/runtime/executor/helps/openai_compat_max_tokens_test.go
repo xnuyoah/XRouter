@@ -3,8 +3,8 @@ package helps
 import (
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
 	"github.com/tidwall/gjson"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 func TestShouldUseMaxCompletionTokensForModel(t *testing.T) {

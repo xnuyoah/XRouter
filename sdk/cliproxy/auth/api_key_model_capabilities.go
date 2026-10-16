@@ -5,18 +5,17 @@ import (
 	"maps"
 	"strings"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/modelconfig"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/modelconfig"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 const (
-	resolvedAPIKeyModelInfoMetadataKey     = "cliproxy.resolved_api_key_model_info"
-	resolvedCodexOAuthModelInfoMetadataKey = "cliproxy.resolved_codex_oauth_model_info"
-	resolvedHomeModelInfoMetadataKey       = "cliproxy.resolved_home_model_info"
-	resolvedHomeModelOptionsMetadataKey    = "cliproxy.resolved_home_model_options"
+	resolvedAPIKeyModelInfoMetadataKey  = "cliproxy.resolved_api_key_model_info"
+	resolvedHomeModelInfoMetadataKey    = "cliproxy.resolved_home_model_info"
+	resolvedHomeModelOptionsMetadataKey = "cliproxy.resolved_home_model_options"
 )
 
 type apiKeyModelCapabilityRoute struct {
@@ -68,9 +67,6 @@ func ResolvedModelInfo(req cliproxyexecutor.Request) (*registry.ModelInfo, bool)
 	if modelInfo, ok := req.Metadata[resolvedHomeModelInfoMetadataKey].(*registry.ModelInfo); ok && modelInfo != nil {
 		return modelInfo, true
 	}
-	if modelInfo, ok := req.Metadata[resolvedCodexOAuthModelInfoMetadataKey].(*registry.ModelInfo); ok && modelInfo != nil {
-		return modelInfo, true
-	}
 	return ResolvedAPIKeyModelInfo(req)
 }
 
@@ -79,50 +75,6 @@ func ResolvedModelInfo(req cliproxyexecutor.Request) (*registry.ModelInfo, bool)
 func ResolvedHomeModelOptions(req cliproxyexecutor.Request) (internalconfig.OpenAICompatibilityModel, bool) {
 	options, ok := req.Metadata[resolvedHomeModelOptionsMetadataKey].(internalconfig.OpenAICompatibilityModel)
 	return options, ok
-}
-
-// CodexAPIKeyModelIsCompat reports whether the selected codex-api-key model has
-// is-compat enabled. When true, Codex MultiAgentV2 agent_message items are converted
-// into portable Responses message/user input for third-party Responses-compatible endpoints.
-func CodexAPIKeyModelIsCompat(cfg *internalconfig.Config, auth *Auth, model string) bool {
-	if cfg == nil || auth == nil || !strings.EqualFold(strings.TrimSpace(auth.Provider), "codex") {
-		return false
-	}
-	entry := resolveCodexAPIKeyConfig(cfg, auth)
-	if cfg.Home.Enabled {
-		if options, configured := homeAPIKeyModelOptions(auth, model, model); configured {
-			return options.IsCompat
-		}
-	}
-	if entry == nil || len(entry.Models) == 0 {
-		return false
-	}
-	requested := strings.TrimSpace(model)
-	if requested == "" {
-		return false
-	}
-	baseModel := strings.TrimSpace(thinking.ParseSuffix(requested).ModelName)
-	if baseModel == "" {
-		baseModel = requested
-	}
-	for i := range entry.Models {
-		name := strings.TrimSpace(entry.Models[i].Name)
-		alias := strings.TrimSpace(entry.Models[i].Alias)
-		if name == "" {
-			name = alias
-		}
-		if alias == "" {
-			alias = name
-		}
-		if name == "" {
-			continue
-		}
-		if strings.EqualFold(name, requested) || strings.EqualFold(name, baseModel) ||
-			strings.EqualFold(alias, requested) || strings.EqualFold(alias, baseModel) {
-			return entry.Models[i].IsCompat
-		}
-	}
-	return false
 }
 
 // homeAPIKeyModelOptions reads the selected credential's model configuration.
@@ -194,93 +146,26 @@ func (m *Manager) attachResolvedAPIKeyModelInfo(req cliproxyexecutor.Request, au
 	return attachResolvedAPIKeyModelInfo(m.loadAPIKeyModelRouting(), req, auth, routeModel, upstreamModel)
 }
 
-func attachResolvedExecutionModelInfo(routing *apiKeyModelRoutingSnapshot, req cliproxyexecutor.Request, auth *Auth, routeModel, upstreamModel string, restoreExecutionModel bool) cliproxyexecutor.Request {
-	if restoreExecutionModel {
-		if auth == nil || !strings.EqualFold(strings.TrimSpace(auth.Provider), "codex") {
-			return req
-		}
-		routeModel, upstreamModel = req.Model, req.Model
-	}
+func attachResolvedExecutionModelInfo(routing *apiKeyModelRoutingSnapshot, req cliproxyexecutor.Request, auth *Auth, routeModel, upstreamModel string) cliproxyexecutor.Request {
 	return attachResolvedAPIKeyModelInfo(routing, req, auth, routeModel, upstreamModel)
 }
 
 func attachResolvedAPIKeyModelInfo(routing *apiKeyModelRoutingSnapshot, req cliproxyexecutor.Request, auth *Auth, routeModel, upstreamModel string) cliproxyexecutor.Request {
 	modelInfo, ok := lookupAPIKeyModelCapability(routing, auth, routeModel, upstreamModel)
 	if !ok {
-		modelInfo, ok = lookupUnlistedCodexAPIKeyModelCapability(routing, auth, upstreamModel)
-	}
-	metadataKey := resolvedAPIKeyModelInfoMetadataKey
-	if !ok {
-		modelInfo, ok = lookupCodexOAuthModelCapability(auth, upstreamModel)
-		metadataKey = resolvedCodexOAuthModelInfoMetadataKey
-	}
-	if !ok {
 		_, hadAPIKey := req.Metadata[resolvedAPIKeyModelInfoMetadataKey]
-		_, hadOAuth := req.Metadata[resolvedCodexOAuthModelInfoMetadataKey]
-		if !hadAPIKey && !hadOAuth {
+		if !hadAPIKey {
 			return req
 		}
 	}
 	metadata := make(map[string]any, len(req.Metadata)+1)
 	maps.Copy(metadata, req.Metadata)
 	delete(metadata, resolvedAPIKeyModelInfoMetadataKey)
-	delete(metadata, resolvedCodexOAuthModelInfoMetadataKey)
 	if ok {
-		metadata[metadataKey] = modelInfo
+		metadata[resolvedAPIKeyModelInfoMetadataKey] = modelInfo
 	}
 	req.Metadata = metadata
 	return req
-}
-
-func lookupUnlistedCodexAPIKeyModelCapability(routing *apiKeyModelRoutingSnapshot, auth *Auth, upstreamModel string) (*registry.ModelInfo, bool) {
-	if routing == nil || auth == nil || auth.AuthKind() != AuthKindAPIKey || !strings.EqualFold(strings.TrimSpace(auth.Provider), "codex") || strings.TrimSpace(upstreamModel) == "" {
-		return nil, false
-	}
-	entry := resolveCodexAPIKeyConfig(routing.config, auth)
-	if entry == nil || auth.Attributes == nil {
-		return nil, false
-	}
-	key := strings.TrimSpace(auth.Attributes[AttributeAPIKey])
-	baseURL := strings.TrimSpace(auth.Attributes["base_url"])
-	if (key == "" && baseURL == "") || !strings.EqualFold(key, strings.TrimSpace(entry.APIKey)) ||
-		(strings.TrimSpace(entry.BaseURL) != "" && !strings.EqualFold(baseURL, strings.TrimSpace(entry.BaseURL))) {
-		return nil, false
-	}
-	for _, configured := range entry.Models {
-		if strings.EqualFold(strings.TrimSpace(configured.Name), strings.TrimSpace(upstreamModel)) || configuredUpstreamFallbackMatches(configured.Name, upstreamModel) {
-			info := modelconfig.ResolveModelInfo(upstreamModel, "codex", configured.Thinking)
-			info.SupportConfigurationUpdate = configured.SupportConfigurationUpdate
-			info.IsCompat = configured.IsCompat
-			return info, true
-		}
-	}
-	info := modelconfig.ResolveModelInfo(upstreamModel, "codex", nil)
-	info.SupportConfigurationUpdate = false
-	return info, true
-}
-
-func lookupCodexOAuthModelCapability(auth *Auth, upstreamModel string) (*registry.ModelInfo, bool) {
-	if auth == nil || auth.AuthKind() != AuthKindOAuth || !strings.EqualFold(strings.TrimSpace(auth.Provider), "codex") {
-		return nil, false
-	}
-	var models []*registry.ModelInfo
-	switch strings.ToLower(strings.TrimSpace(auth.Attributes["plan_type"])) {
-	case "plus":
-		models = registry.GetCodexPlusModels()
-	case "team", "business", "go":
-		models = registry.GetCodexTeamModels()
-	case "free":
-		models = registry.GetCodexFreeModels()
-	default:
-		models = registry.GetCodexProModels()
-	}
-	selected := strings.TrimSpace(thinking.ParseSuffix(strings.TrimSpace(upstreamModel)).ModelName)
-	for _, model := range models {
-		if model != nil && strings.EqualFold(model.ID, selected) {
-			return model, true
-		}
-	}
-	return nil, false
 }
 
 func attachResolvedHomeModelInfo(req cliproxyexecutor.Request, auth *Auth, routeModel string, modelInfo *registry.ModelInfo, support *bool) cliproxyexecutor.Request {
@@ -310,9 +195,6 @@ func attachResolvedHomeModelInfo(req cliproxyexecutor.Request, auth *Auth, route
 	selected := *modelInfo
 
 	local, ok := ResolvedAPIKeyModelInfo(req)
-	if !ok {
-		local, ok = req.Metadata[resolvedCodexOAuthModelInfoMetadataKey].(*registry.ModelInfo)
-	}
 	sameModel := ok && local != nil && strings.EqualFold(strings.TrimSpace(thinking.ParseSuffix(local.ID).ModelName), strings.TrimSpace(thinking.ParseSuffix(selected.ID).ModelName))
 	if support != nil {
 		selected.SupportConfigurationUpdate = *support
@@ -370,40 +252,14 @@ func compileAPIKeyModelCapabilitiesForAuth(cfg *internalconfig.Config, auth *Aut
 	}
 	out := make(map[string][]apiKeyModelCapabilityRoute)
 	switch strings.ToLower(strings.TrimSpace(auth.Provider)) {
-	case "gemini":
-		if entry := resolveGeminiAPIKeyConfig(cfg, auth); entry != nil {
-			compileConfiguredModelCapabilities(out, entry.Models, "gemini")
-		}
-	case "gemini-interactions":
-		if entry := resolveInteractionsAPIKeyConfig(cfg, auth); entry != nil {
-			compileConfiguredModelCapabilities(out, entry.Models, "interactions")
-		}
-	case "claude":
-		if entry := resolveClaudeAPIKeyConfig(cfg, auth); entry != nil {
-			compileConfiguredModelCapabilities(out, entry.Models, "claude")
-		}
-	case "codex":
-		if entry := resolveCodexAPIKeyConfig(cfg, auth); entry != nil {
-			for i := range entry.Models {
-				configured := entry.Models[i]
-				info := addConfiguredModelCapability(out, configured.Name, configured.Alias, "codex", configured.Thinking, configured.IsCompat)
-				if info != nil {
-					info.SupportConfigurationUpdate = configured.SupportConfigurationUpdate
-				}
-			}
-		}
-	case "xai":
-		if entry := resolveXAIAPIKeyConfig(cfg, auth); entry != nil {
-			compileConfiguredModelCapabilities(out, entry.Models, "xai")
-		}
-	case "vertex":
-		if entry := resolveVertexAPIKeyConfig(cfg, auth); entry != nil {
-			compileConfiguredModelCapabilities(out, entry.Models, "gemini")
-		}
-	case "meta":
-		if entry := resolveMetaAPIKeyConfig(cfg, auth); entry != nil {
-			compileConfiguredModelCapabilities(out, entry.Models, "meta")
-		}
+	case "openai":
+		compileConfiguredModelCapabilities(out, nativeAPIEffectiveModels(resolveOpenAIAPIKeyConfig(cfg, auth), "openai"), "openai")
+	case "deepseek":
+		compileConfiguredModelCapabilities(out, nativeAPIEffectiveModels(resolveDeepseekAPIKeyConfig(cfg, auth), "deepseek"), "deepseek")
+	case "nvidia":
+		compileConfiguredModelCapabilities(out, nativeAPIEffectiveModels(resolveNvidiaAPIKeyConfig(cfg, auth), "nvidia"), "nvidia")
+	case "agnes":
+		compileConfiguredModelCapabilities(out, nativeAPIEffectiveModels(resolveAgnesAPIKeyConfig(cfg, auth), "agnes"), "agnes")
 	default:
 		providerKey, compatName := "", ""
 		if auth.Attributes != nil {

@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 func TestManagerAliasQuotaFailoverWithUnobservedTargetModel(t *testing.T) {
@@ -114,9 +114,9 @@ func TestManagerAliasQuotaFailoverWithUnobservedTargetModel(t *testing.T) {
 func TestManagerExecute_ModelAliasRequestNotBlockedByOtherModelQuotaCooldown(t *testing.T) {
 	const (
 		provider     = "antigravity"
-		requestModel = "gemini-3.6-flash"
-		targetModel  = "gemini-3.6-flash-high"
-		imageModel   = "gemini-3.1-flash-image"
+		requestModel = "gpt-3.6-flash"
+		targetModel  = "gpt-3.6-flash-high"
+		imageModel   = "gpt-3.1-flash-image"
 	)
 
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
@@ -193,9 +193,9 @@ func TestManagerExecute_ModelAliasRequestNotBlockedByOtherModelQuotaCooldown(t *
 func TestManagerSelectAuth_ModelAliasRequestNotBlockedByOtherModelQuotaCooldown(t *testing.T) {
 	const (
 		provider     = "antigravity"
-		requestModel = "gemini-3.6-flash"
-		targetModel  = "gemini-3.6-flash-high"
-		imageModel   = "gemini-3.1-flash-image"
+		requestModel = "gpt-3.6-flash"
+		targetModel  = "gpt-3.6-flash-high"
+		imageModel   = "gpt-3.1-flash-image"
 	)
 
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
@@ -272,8 +272,8 @@ func TestManagerSelectAuth_ModelAliasRequestNotBlockedByOtherModelQuotaCooldown(
 func TestManagerExecute_ModelAliasRequestBlockedWhenTargetModelInQuotaCooldown(t *testing.T) {
 	const (
 		provider     = "antigravity"
-		requestModel = "gemini-3.6-flash"
-		targetModel  = "gemini-3.6-flash-high"
+		requestModel = "gpt-3.6-flash"
+		targetModel  = "gpt-3.6-flash-high"
 	)
 
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)

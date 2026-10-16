@@ -7,32 +7,20 @@ import (
 )
 
 func TestAPIKeyModelIsCompatConfigDecoding(t *testing.T) {
-	const yamlConfig = `gemini-api-key:
+	const yamlConfig = `openai-api-key:
   - models:
-      - name: gemini-upstream
-        alias: gemini-alias
+      - name: openai-upstream
+        alias: openai-alias
         is-compat: true
-      - name: gemini-native
-        alias: gemini-native
-interactions-api-key:
+deepseek-api-key:
   - models:
-      - name: interactions-upstream
-        alias: interactions-alias
+      - name: deepseek-native-upstream
+        alias: deepseek-native-alias
         is-compat: true
-xai-api-key:
+nvidia-api-key:
   - models:
-      - name: xai-upstream
-        alias: xai-alias
-        is-compat: true
-claude-api-key:
-  - models:
-      - name: claude-upstream
-        alias: claude-alias
-        is-compat: true
-codex-api-key:
-  - models:
-      - name: codex-upstream
-        alias: codex-alias
+      - name: nvidia-upstream
+        alias: nvidia-alias
         is-compat: true
 openai-compatibility:
   - name: deepseek
@@ -49,23 +37,14 @@ openai-compatibility:
 		t.Fatalf("decode error: %v", errDecode)
 	}
 
-	if len(cfg.GeminiKey) != 1 || !cfg.GeminiKey[0].Models[0].IsCompat {
-		t.Fatalf("gemini-api-key IsCompat = %+v, want true", cfg.GeminiKey)
+	if len(cfg.OpenAIKey) != 1 || !cfg.OpenAIKey[0].Models[0].IsCompat {
+		t.Fatalf("openai-api-key IsCompat = %+v, want true", cfg.OpenAIKey)
 	}
-	if cfg.GeminiKey[0].Models[1].IsCompat {
-		t.Fatal("gemini-api-key omitted IsCompat = true, want default false")
+	if len(cfg.DeepseekKey) != 1 || !cfg.DeepseekKey[0].Models[0].IsCompat {
+		t.Fatalf("deepseek-api-key IsCompat = %+v, want true", cfg.DeepseekKey)
 	}
-	if len(cfg.InteractionsKey) != 1 || !cfg.InteractionsKey[0].Models[0].IsCompat {
-		t.Fatalf("interactions-api-key IsCompat = %+v, want true", cfg.InteractionsKey)
-	}
-	if len(cfg.XAIKey) != 1 || !cfg.XAIKey[0].Models[0].IsCompat {
-		t.Fatalf("xai-api-key IsCompat = %+v, want true", cfg.XAIKey)
-	}
-	if len(cfg.ClaudeKey) != 1 || !cfg.ClaudeKey[0].Models[0].IsCompat {
-		t.Fatalf("claude-api-key IsCompat = %+v, want true", cfg.ClaudeKey)
-	}
-	if len(cfg.CodexKey) != 1 || !cfg.CodexKey[0].Models[0].IsCompat {
-		t.Fatalf("codex-api-key IsCompat = %+v, want true", cfg.CodexKey)
+	if len(cfg.NvidiaKey) != 1 || !cfg.NvidiaKey[0].Models[0].IsCompat {
+		t.Fatalf("nvidia-api-key IsCompat = %+v, want true", cfg.NvidiaKey)
 	}
 	if len(cfg.OpenAICompatibility) != 1 || !cfg.OpenAICompatibility[0].Models[0].IsCompat {
 		t.Fatalf("openai-compatibility IsCompat = %+v, want true", cfg.OpenAICompatibility)

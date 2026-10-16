@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/pluginhost"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 func TestPluginLoginPollAuthsExpandsMultipleAuths(t *testing.T) {
@@ -27,16 +27,16 @@ func TestPluginLoginPollAuthsExpandsMultipleAuths(t *testing.T) {
 		Status: pluginapi.AuthLoginStatusSuccess,
 		Auths: []pluginapi.AuthData{
 			{
-				Provider:    "gemini-cli",
-				ID:          "geminicli.json",
-				FileName:    "geminicli.json",
-				StorageJSON: []byte(`{"type":"gemini-cli"}`),
+				Provider:    "example-plugin",
+				ID:          "example-plugin.json",
+				FileName:    "example-plugin.json",
+				StorageJSON: []byte(`{"type":"example-plugin"}`),
 			},
 			{
-				Provider:    "gemini-cli",
-				ID:          "geminicli-project-a.json",
-				FileName:    "geminicli-project-a.json",
-				StorageJSON: []byte(`{"type":"gemini-cli","project_id":"project-a"}`),
+				Provider:    "example-plugin",
+				ID:          "example-plugin-project-a.json",
+				FileName:    "example-plugin-project-a.json",
+				StorageJSON: []byte(`{"type":"example-plugin","project_id":"project-a"}`),
 				Metadata:    map[string]any{"project_id": "project-a"},
 			},
 		},
@@ -46,7 +46,7 @@ func TestPluginLoginPollAuthsExpandsMultipleAuths(t *testing.T) {
 	if len(records) != 2 {
 		t.Fatalf("pluginLoginPollAuths() len = %d, want two records", len(records))
 	}
-	if records[0].ID != "geminicli.json" || records[1].ID != "geminicli-project-a.json" {
+	if records[0].ID != "example-plugin.json" || records[1].ID != "example-plugin-project-a.json" {
 		t.Fatalf("records = %#v, want both plugin auths", records)
 	}
 	if gotProject := records[1].Metadata["project_id"]; gotProject != "project-a" {
@@ -61,16 +61,16 @@ func TestSavePluginLoginRecordsRollsBackSavedAuthsOnFailure(t *testing.T) {
 
 	records := []*coreauth.Auth{
 		{
-			ID:       "geminicli.json",
-			FileName: "geminicli.json",
-			Provider: "gemini-cli",
-			Metadata: map[string]any{"type": "gemini-cli"},
+			ID:       "example-plugin.json",
+			FileName: "example-plugin.json",
+			Provider: "example-plugin",
+			Metadata: map[string]any{"type": "example-plugin"},
 		},
 		{
-			ID:       "geminicli-project-a.json",
-			FileName: "geminicli-project-a.json",
-			Provider: "gemini-cli",
-			Metadata: map[string]any{"type": "gemini-cli", "project_id": "project-a"},
+			ID:       "example-plugin-project-a.json",
+			FileName: "example-plugin-project-a.json",
+			Provider: "example-plugin",
+			Metadata: map[string]any{"type": "example-plugin", "project_id": "project-a"},
 		},
 	}
 
@@ -81,7 +81,7 @@ func TestSavePluginLoginRecordsRollsBackSavedAuthsOnFailure(t *testing.T) {
 	if len(store.saved) != 2 {
 		t.Fatalf("saved len = %d, want two attempted saves", len(store.saved))
 	}
-	if !store.deleted["geminicli.json"] || !store.deleted["geminicli-project-a.json"] {
+	if !store.deleted["example-plugin.json"] || !store.deleted["example-plugin-project-a.json"] {
 		t.Fatalf("deleted = %#v, want both saved auths rolled back", store.deleted)
 	}
 }
@@ -111,7 +111,7 @@ func TestPatchPluginVirtualSourceStatusDisablesAllExpandedAuths(t *testing.T) {
 	authDir := t.TempDir()
 	fileName := "source.json"
 	filePath := filepath.Join(authDir, fileName)
-	if errWrite := os.WriteFile(filePath, []byte(`{"type":"gemini-cli","disabled":false}`), 0o600); errWrite != nil {
+	if errWrite := os.WriteFile(filePath, []byte(`{"type":"example-plugin","disabled":false}`), 0o600); errWrite != nil {
 		t.Fatalf("write source auth file: %v", errWrite)
 	}
 
@@ -178,7 +178,7 @@ func TestDeletePluginVirtualSourceRemovesExpandedRuntimeAuths(t *testing.T) {
 	authDir := t.TempDir()
 	fileName := "source.json"
 	filePath := filepath.Join(authDir, fileName)
-	if errWrite := os.WriteFile(filePath, []byte(`{"type":"gemini-cli"}`), 0o600); errWrite != nil {
+	if errWrite := os.WriteFile(filePath, []byte(`{"type":"example-plugin"}`), 0o600); errWrite != nil {
 		t.Fatalf("write source auth file: %v", errWrite)
 	}
 
@@ -217,12 +217,12 @@ func pluginVirtualAuthForTest(authDir, fileName, id string) *coreauth.Auth {
 	auth := &coreauth.Auth{
 		ID:       id,
 		FileName: fileName,
-		Provider: "gemini-cli",
+		Provider: "example-plugin",
 		Attributes: map[string]string{
 			"path": filePath,
 		},
 		Metadata: map[string]any{
-			"type": "gemini-cli",
+			"type": "example-plugin",
 		},
 	}
 	coreauth.MarkPluginVirtualAuth(auth, filePath, 0)
@@ -380,7 +380,7 @@ func TestV8PluginOAuthUsesIndependentCallback(t *testing.T) {
 			},
 		}},
 	})
-	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir(), Port: 8317}, nil)
+	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir(), Port: 11016}, nil)
 	h.SetPluginHost(host)
 	router := gin.New()
 	router.GET("/v8/management/oauth/auth-url", h.StartOAuthV8)
@@ -396,7 +396,7 @@ func TestV8PluginOAuthUsesIndependentCallback(t *testing.T) {
 		if response.Code != http.StatusOK {
 			t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 		}
-		if captured.BaseURL != "http://127.0.0.1:8317/v8/management/oauth/callback" || captured.Provider != "custom-sso" || !reflect.DeepEqual(captured.Metadata, tc.metadata) {
+		if captured.BaseURL != "http://127.0.0.1:11016/v8/management/oauth/callback" || captured.Provider != "custom-sso" || !reflect.DeepEqual(captured.Metadata, tc.metadata) {
 			t.Fatalf("incorrect v8 login request: %#v", captured)
 		}
 	}

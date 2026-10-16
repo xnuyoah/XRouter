@@ -36,75 +36,6 @@ func TestInspectGrokEncryptedContent_NativeSamples(t *testing.T) {
 	}
 }
 
-func TestInspectGrokEncryptedContent_RejectsAgyGeminiThoughtSignatures(t *testing.T) {
-	_, file, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller failed")
-	}
-	path := filepath.Join(filepath.Dir(file), "testdata", "agy_gemini_thought_signature_entries.json")
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		t.Skip("agy gemini corpus missing; run harvest_agy_gemini_signatures.py")
-	} else if err != nil {
-		t.Fatalf("stat samples: %v", err)
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read samples: %v", err)
-	}
-	var entries []struct {
-		ThoughtSignature string `json:"thoughtSignature"`
-	}
-	if err := json.Unmarshal(raw, &entries); err != nil {
-		t.Fatalf("unmarshal samples: %v", err)
-	}
-	if len(entries) == 0 {
-		t.Fatal("expected agy Gemini thought signatures")
-	}
-	checkedUnpaddedGemini := false
-	for i, entry := range entries {
-		_, err := InspectGrokEncryptedContent(entry.ThoughtSignature)
-		if err == nil {
-			t.Fatalf("entry[%d] should not pass as Grok encrypted_content", i)
-		}
-		if !strings.Contains(entry.ThoughtSignature, "=") {
-			checkedUnpaddedGemini = true
-			if !strings.Contains(err.Error(), "Gemini") {
-				t.Fatalf("entry[%d] error = %q, want Gemini fast-reject detail", i, err.Error())
-			}
-		}
-	}
-	if !checkedUnpaddedGemini {
-		t.Fatal("expected at least one unpadded Gemini thought signature sample")
-	}
-}
-
-func TestInspectGrokEncryptedContent_RejectsGeminiThoughtSignatureEnvelope(t *testing.T) {
-	sample := testGeminiThoughtSignatureEnvelope()
-
-	_, err := InspectGrokEncryptedContent(sample)
-	if err == nil {
-		t.Fatal("expected Gemini thoughtSignature envelope to be rejected")
-	}
-	if !strings.Contains(err.Error(), "Gemini") {
-		t.Fatalf("error = %q, want Gemini fast-reject detail", err.Error())
-	}
-}
-
-// TestInspectGrokEncryptedContent_RetiredGemini25Field1Envelope covers the
-// retired Gemini 2.5 envelope. It is no longer a known Gemini envelope, so the
-// Gemini fast-reject no longer fires for it and it falls to the residual class
-// like any other opaque payload. Recorded here so the change is deliberate rather
-// than an accident of the Gemini validator being narrowed.
-func TestInspectGrokEncryptedContent_RetiredGemini25Field1Envelope(t *testing.T) {
-	sample := testGemini25Field1ThoughtSignatureEnvelope()
-	if IsValidGeminiThoughtSignature(sample, GeminiThoughtSignatureValidationOptions{RequireKnownEnvelope: true}) {
-		t.Fatal("fixture should no longer be a known Gemini thoughtSignature")
-	}
-	if _, err := InspectGrokEncryptedContent(sample); err != nil {
-		t.Fatalf("retired envelope should reach the residual transport check, got %v", err)
-	}
-}
-
 func TestInspectGrokEncryptedContent_RejectsClaudeThinkingSignature(t *testing.T) {
 	sample := testUnpaddedClaudeThinkingSignature()
 	if !IsValidClaudeThinkingSignature(sample, ClaudeSignatureValidationOptions{Strict: true}) {
@@ -178,7 +109,7 @@ func TestInspectGrokEncryptedContent_RejectsClaudeCAISSignature(t *testing.T) {
 // envelopes out of the residual class. A prefixed value belongs to whichever
 // provider the prefix names, and must never be replayed to xAI verbatim.
 func TestInspectGrokEncryptedContent_RejectsProviderCachePrefix(t *testing.T) {
-	for _, prefix := range []string{"claude#", "anthropic#", "gemini#", "openai#", "codex#"} {
+	for _, prefix := range []string{"claude#", "anthropic#", "openai#", "codex#"} {
 		sample := prefix + testUnpaddedClaudeCAISSignature()
 		if _, err := InspectGrokEncryptedContent(sample); err == nil {
 			t.Fatalf("%s prefixed payload should be rejected", prefix)
@@ -248,30 +179,6 @@ func TestByteEntropyRatio_SingleByteReturnsZero(t *testing.T) {
 	}
 }
 
-func testGeminiThoughtSignatureEnvelope() string {
-	payload := []byte{0x01, 0x0c}
-	for i := 0; i < 97; i++ {
-		payload = append(payload, byte(i))
-	}
-	inner := []byte{0x0a, byte(len(payload))}
-	inner = append(inner, payload...)
-	outer := []byte{0x12, byte(len(inner))}
-	outer = append(outer, inner...)
-	return base64.RawStdEncoding.EncodeToString(outer)
-}
-
-func testGemini25Field1ThoughtSignatureEnvelope() string {
-	payload := []byte{0x01}
-	for i := 0; len(payload) < 128; i++ {
-		payload = append(payload, byte((i*37+11)%251))
-	}
-
-	var decoded []byte
-	decoded = protowire.AppendTag(decoded, 1, protowire.BytesType)
-	decoded = protowire.AppendBytes(decoded, payload)
-	return base64.RawStdEncoding.EncodeToString(decoded)
-}
-
 func testUnpaddedClaudeThinkingSignature() string {
 	return testClaudeThinkingSignatureWithOpaqueLen(35)
 }
@@ -334,16 +241,6 @@ func grokEncryptedContentSamplesPath() (string, bool) {
 	return path, true
 }
 
-func TestSignatureProviderFromModelName_Grok(t *testing.T) {
-	for _, model := range []string{"grok-4.5", "grok-4.5-build", "grok-composer-2.5-fast", "grok-code-fast-1"} {
-		t.Run(model, func(t *testing.T) {
-			if got := SignatureProviderFromModelName(model); got != SignatureProviderGrok {
-				t.Errorf("SignatureProviderFromModelName(%q) = %q, want %q", model, got, SignatureProviderGrok)
-			}
-		})
-	}
-}
-
 // TestDetectSignatureProvider_NeverClassifiesGrok pins the contract that xAI is
 // a target-only family. Its ciphertext carries no envelope, no version byte and
 // no fixed length, so a positive detection rule would necessarily also claim
@@ -375,18 +272,5 @@ func TestDetectSignatureProvider_NeverClassifiesGrok(t *testing.T) {
 		if got := DetectSignatureProvider(sig); got != SignatureProviderUnknown {
 			t.Fatalf("DetectSignatureProvider = %q, want %q for native encrypted_content", got, SignatureProviderUnknown)
 		}
-	}
-}
-
-// TestDecideSignatureCompatibility_GrokDropsBlock contrasts with the Kimi
-// policy: xAI decrypts the blob and answers 400 for foreign or mutated input, so
-// an incompatible block cannot survive by shedding just its signature.
-func TestDecideSignatureCompatibility_GrokDropsBlock(t *testing.T) {
-	decision := DecideSignatureCompatibility(SignatureProviderGrok, observedFable5Sample, SignatureBlockKindUnknown)
-	if decision.Compatible {
-		t.Fatalf("Claude signature reported compatible with a Grok target")
-	}
-	if decision.Action != SignatureActionDropBlock {
-		t.Errorf("Action = %q, want %q", decision.Action, SignatureActionDropBlock)
 	}
 }

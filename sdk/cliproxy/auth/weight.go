@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/credentialweight"
+	"github.com/xnuyoah/XRouter/v8/internal/credentialweight"
 )
 
 // ValidateAuthWeight validates every explicit credential weight source.

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 func TestModelQuotaObservationPayloadOmitsUnsupportedProviders(t *testing.T) {
@@ -19,7 +19,7 @@ func TestModelQuotaObservationPayloadOmitsUnsupportedProviders(t *testing.T) {
 	if got := modelQuotaObservationPayload("grok", states); len(got) != 0 {
 		t.Fatalf("unsupported provider returned model observations: %#v", got)
 	}
-	for _, provider := range []string{"gemini", "gemini-interactions", "openai", "openai-compatibility", "plugin-provider"} {
+	for _, provider := range []string{"nvidia", "deepseek", "openai", "openai-compatibility", "plugin-provider"} {
 		if got := modelQuotaObservationPayload(provider, states); len(got) != 0 {
 			t.Fatalf("provider %q returned model observations: %#v", provider, got)
 		}

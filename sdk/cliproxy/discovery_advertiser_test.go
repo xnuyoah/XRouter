@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/discovery"
 	log "github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/discovery"
 )
 
 type fakeAdvertiser struct {
@@ -67,8 +67,8 @@ func newTestDiscoveryManager() *discoveryAdvertiserManager {
 }
 
 func TestSpecEqualDetectsAdvertisedIPChange(t *testing.T) {
-	a := discovery.ServiceSpec{InstanceName: "n", Port: 8317, AdvertisedIPs: []string{"192.0.2.10"}}
-	b := discovery.ServiceSpec{InstanceName: "n", Port: 8317, AdvertisedIPs: []string{"192.0.2.11"}}
+	a := discovery.ServiceSpec{InstanceName: "n", Port: 11016, AdvertisedIPs: []string{"192.0.2.10"}}
+	b := discovery.ServiceSpec{InstanceName: "n", Port: 11016, AdvertisedIPs: []string{"192.0.2.11"}}
 	if specEqual(a, a) != true {
 		t.Fatal("expected identical specs to be equal")
 	}
@@ -78,8 +78,8 @@ func TestSpecEqualDetectsAdvertisedIPChange(t *testing.T) {
 }
 
 func TestSpecEqualDetectsInterfaceIndexChange(t *testing.T) {
-	a := discovery.ServiceSpec{InstanceName: "n", Port: 8317, Interfaces: []net.Interface{{Index: 1, Name: "en0"}}}
-	b := discovery.ServiceSpec{InstanceName: "n", Port: 8317, Interfaces: []net.Interface{{Index: 2, Name: "en0"}}}
+	a := discovery.ServiceSpec{InstanceName: "n", Port: 11016, Interfaces: []net.Interface{{Index: 1, Name: "en0"}}}
+	b := discovery.ServiceSpec{InstanceName: "n", Port: 11016, Interfaces: []net.Interface{{Index: 2, Name: "en0"}}}
 	if !specEqual(a, a) {
 		t.Fatal("expected identical interface specs to be equal")
 	}
@@ -93,15 +93,15 @@ func TestDiscoveryManagerStartsOnceForUnchangedSpec(t *testing.T) {
 	adv := &fakeAdvertiser{}
 	mgr.newAdvertiser = func() discovery.Advertiser { return adv }
 	mgr.buildSpec = func(*config.Config, int, bool) (discovery.ServiceSpec, error) {
-		return discovery.ServiceSpec{InstanceName: "n", Port: 8317, AdvertisedIPs: []string{"192.0.2.10"}}, nil
+		return discovery.ServiceSpec{InstanceName: "n", Port: 11016, AdvertisedIPs: []string{"192.0.2.10"}}, nil
 	}
 	cfg := &config.Config{}
 	cfg.Discovery.Enabled = true
 
-	if !mgr.ApplyContext(context.Background(), cfg, 8317, false) {
+	if !mgr.ApplyContext(context.Background(), cfg, 11016, false) {
 		t.Fatal("first apply failed")
 	}
-	if !mgr.ApplyContext(context.Background(), cfg, 8317, false) {
+	if !mgr.ApplyContext(context.Background(), cfg, 11016, false) {
 		t.Fatal("second apply failed")
 	}
 	starts, stops, _ := adv.snapshot()
@@ -126,7 +126,7 @@ func TestDiscoveryManagerPreservesBoundEndpointOnReload(t *testing.T) {
 	first := &config.Config{}
 	first.Host = ""
 	first.Discovery.Enabled = true
-	if !mgr.ApplyContext(context.Background(), first, 8317, false) {
+	if !mgr.ApplyContext(context.Background(), first, 11016, false) {
 		t.Fatal("initial apply failed")
 	}
 	second := &config.Config{}
@@ -135,7 +135,7 @@ func TestDiscoveryManagerPreservesBoundEndpointOnReload(t *testing.T) {
 	if !mgr.ApplyContext(context.Background(), second, 9999, true) {
 		t.Fatal("reload apply failed")
 	}
-	if gotHost != "" || gotPort != 8317 || gotTLS {
+	if gotHost != "" || gotPort != 11016 || gotTLS {
 		t.Fatalf("reloaded endpoint = host %q port %d tls %t, want original endpoint", gotHost, gotPort, gotTLS)
 	}
 }
@@ -152,18 +152,18 @@ func TestDiscoveryManagerRestartsOnIPChange(t *testing.T) {
 	mgr.buildSpec = func(*config.Config, int, bool) (discovery.ServiceSpec, error) {
 		return discovery.ServiceSpec{
 			InstanceName:  "n",
-			Port:          8317,
+			Port:          11016,
 			AdvertisedIPs: append([]string(nil), ips...),
 		}, nil
 	}
 	cfg := &config.Config{}
 	cfg.Discovery.Enabled = true
 
-	if !mgr.ApplyContext(context.Background(), cfg, 8317, false) {
+	if !mgr.ApplyContext(context.Background(), cfg, 11016, false) {
 		t.Fatal("first apply failed")
 	}
 	ips = []string{"192.0.2.11"}
-	if !mgr.ApplyContext(context.Background(), cfg, 8317, false) {
+	if !mgr.ApplyContext(context.Background(), cfg, 11016, false) {
 		t.Fatal("second apply failed")
 	}
 	if len(created) != 2 {
@@ -191,15 +191,15 @@ func TestDiscoveryManagerStopsAdvertiserOnBuildFailure(t *testing.T) {
 		if buildErr {
 			return discovery.ServiceSpec{}, context.Canceled
 		}
-		return discovery.ServiceSpec{InstanceName: "n", Port: 8317}, nil
+		return discovery.ServiceSpec{InstanceName: "n", Port: 11016}, nil
 	}
 	cfg := &config.Config{}
 	cfg.Discovery.Enabled = true
-	if !mgr.ApplyContext(context.Background(), cfg, 8317, false) {
+	if !mgr.ApplyContext(context.Background(), cfg, 11016, false) {
 		t.Fatal("initial apply failed")
 	}
 	buildErr = true
-	if mgr.ApplyContext(context.Background(), cfg, 8317, false) {
+	if mgr.ApplyContext(context.Background(), cfg, 11016, false) {
 		t.Fatal("expected build failure")
 	}
 	starts, stops, _ := adv.snapshot()
@@ -230,7 +230,7 @@ func TestDiscoveryManagerWarnsOncePerBuildFailure(t *testing.T) {
 		if buildErr != nil {
 			return discovery.ServiceSpec{}, buildErr
 		}
-		return discovery.ServiceSpec{InstanceName: "n", Port: 8317}, nil
+		return discovery.ServiceSpec{InstanceName: "n", Port: 11016}, nil
 	}
 	cfg := &config.Config{}
 	cfg.Discovery.Enabled = true
@@ -245,7 +245,7 @@ func TestDiscoveryManagerWarnsOncePerBuildFailure(t *testing.T) {
 	}
 
 	for i := 0; i < 3; i++ {
-		if mgr.ApplyContext(context.Background(), cfg, 8317, false) {
+		if mgr.ApplyContext(context.Background(), cfg, 11016, false) {
 			t.Fatal("build failure unexpectedly succeeded")
 		}
 	}
@@ -254,15 +254,15 @@ func TestDiscoveryManagerWarnsOncePerBuildFailure(t *testing.T) {
 	}
 
 	buildErr = errors.New("interface address unavailable")
-	if mgr.ApplyContext(context.Background(), cfg, 8317, false) || warnCount() != 2 {
+	if mgr.ApplyContext(context.Background(), cfg, 11016, false) || warnCount() != 2 {
 		t.Fatalf("changed failure warnings=%d, want 2", warnCount())
 	}
 	buildErr = nil
-	if !mgr.ApplyContext(context.Background(), cfg, 8317, false) {
+	if !mgr.ApplyContext(context.Background(), cfg, 11016, false) {
 		t.Fatal("expected recovery to start advertiser")
 	}
 	buildErr = errors.New("no qualified physical interfaces")
-	if mgr.ApplyContext(context.Background(), cfg, 8317, false) || warnCount() != 3 {
+	if mgr.ApplyContext(context.Background(), cfg, 11016, false) || warnCount() != 3 {
 		t.Fatalf("post-recovery failure warnings=%d, want 3", warnCount())
 	}
 	starts, stops, _ := adv.snapshot()
@@ -271,11 +271,11 @@ func TestDiscoveryManagerWarnsOncePerBuildFailure(t *testing.T) {
 	}
 
 	cfg.Discovery.Enabled = false
-	if !mgr.ApplyContext(context.Background(), cfg, 8317, false) {
+	if !mgr.ApplyContext(context.Background(), cfg, 11016, false) {
 		t.Fatal("disable failed")
 	}
 	cfg.Discovery.Enabled = true
-	if mgr.ApplyContext(context.Background(), cfg, 8317, false) || warnCount() != 4 {
+	if mgr.ApplyContext(context.Background(), cfg, 11016, false) || warnCount() != 4 {
 		t.Fatalf("post-disable failure warnings=%d, want 4", warnCount())
 	}
 }
@@ -292,7 +292,7 @@ func TestDiscoveryManagerRejectsApplyAfterShutdown(t *testing.T) {
 	}
 	cfg := &config.Config{}
 	cfg.Discovery.Enabled = true
-	if mgr.ApplyContext(context.Background(), cfg, 8317, false) {
+	if mgr.ApplyContext(context.Background(), cfg, 11016, false) {
 		t.Fatal("apply after shutdown unexpectedly succeeded")
 	}
 	if called {
@@ -316,11 +316,11 @@ func TestDiscoveryManagerConcurrentShutdownIsSafe(t *testing.T) {
 	adv := &fakeAdvertiser{}
 	mgr.newAdvertiser = func() discovery.Advertiser { return adv }
 	mgr.buildSpec = func(*config.Config, int, bool) (discovery.ServiceSpec, error) {
-		return discovery.ServiceSpec{InstanceName: "n", Port: 8317}, nil
+		return discovery.ServiceSpec{InstanceName: "n", Port: 11016}, nil
 	}
 	cfg := &config.Config{}
 	cfg.Discovery.Enabled = true
-	if !mgr.ApplyContext(context.Background(), cfg, 8317, false) {
+	if !mgr.ApplyContext(context.Background(), cfg, 11016, false) {
 		t.Fatal("initial apply failed")
 	}
 
@@ -335,7 +335,7 @@ func TestDiscoveryManagerConcurrentShutdownIsSafe(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	if mgr.ApplyContext(context.Background(), cfg, 8317, false) {
+	if mgr.ApplyContext(context.Background(), cfg, 11016, false) {
 		t.Fatal("apply after concurrent shutdown unexpectedly succeeded")
 	}
 }
@@ -345,15 +345,15 @@ func TestDiscoveryManagerDisableStopsAdvertiser(t *testing.T) {
 	adv := &fakeAdvertiser{}
 	mgr.newAdvertiser = func() discovery.Advertiser { return adv }
 	mgr.buildSpec = func(*config.Config, int, bool) (discovery.ServiceSpec, error) {
-		return discovery.ServiceSpec{InstanceName: "n", Port: 8317}, nil
+		return discovery.ServiceSpec{InstanceName: "n", Port: 11016}, nil
 	}
 	enabled := &config.Config{}
 	enabled.Discovery.Enabled = true
-	if !mgr.ApplyContext(context.Background(), enabled, 8317, false) {
+	if !mgr.ApplyContext(context.Background(), enabled, 11016, false) {
 		t.Fatal("enable failed")
 	}
 	disabled := &config.Config{}
-	if !mgr.ApplyContext(context.Background(), disabled, 8317, false) {
+	if !mgr.ApplyContext(context.Background(), disabled, 11016, false) {
 		t.Fatal("disable failed")
 	}
 	starts, stops, _ := adv.snapshot()
@@ -369,7 +369,7 @@ func TestDiscoveryManagerCanceledApplyStopsInFlightStart(t *testing.T) {
 	adv := &fakeAdvertiser{entered: entered, blockStart: block}
 	mgr.newAdvertiser = func() discovery.Advertiser { return adv }
 	mgr.buildSpec = func(*config.Config, int, bool) (discovery.ServiceSpec, error) {
-		return discovery.ServiceSpec{InstanceName: "n", Port: 8317}, nil
+		return discovery.ServiceSpec{InstanceName: "n", Port: 11016}, nil
 	}
 	cfg := &config.Config{}
 	cfg.Discovery.Enabled = true
@@ -378,7 +378,7 @@ func TestDiscoveryManagerCanceledApplyStopsInFlightStart(t *testing.T) {
 
 	done := make(chan bool, 1)
 	go func() {
-		done <- mgr.ApplyContext(ctx, cfg, 8317, false)
+		done <- mgr.ApplyContext(ctx, cfg, 11016, false)
 	}()
 	select {
 	case <-entered:
@@ -407,14 +407,14 @@ func TestDiscoveryManagerShutdownAbandonsInFlightStart(t *testing.T) {
 	adv := &fakeAdvertiser{entered: entered, blockStart: block}
 	mgr.newAdvertiser = func() discovery.Advertiser { return adv }
 	mgr.buildSpec = func(*config.Config, int, bool) (discovery.ServiceSpec, error) {
-		return discovery.ServiceSpec{InstanceName: "n", Port: 8317}, nil
+		return discovery.ServiceSpec{InstanceName: "n", Port: 11016}, nil
 	}
 	cfg := &config.Config{}
 	cfg.Discovery.Enabled = true
 
 	done := make(chan bool, 1)
 	go func() {
-		done <- mgr.ApplyContext(context.Background(), cfg, 8317, false)
+		done <- mgr.ApplyContext(context.Background(), cfg, 11016, false)
 	}()
 	select {
 	case <-entered:

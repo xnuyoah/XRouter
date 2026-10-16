@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-
-	"github.com/tidwall/gjson"
 )
 
 // UnsupportedPartError is a request-scoped rejection. The part type was present
@@ -100,74 +98,6 @@ func (r *UserRun) Err() error {
 		return nil
 	}
 	return r.drops.Err()
-}
-
-// IsInteractionsInstructionStep reports whether an Interactions step carries
-// developer or system content rather than user content. The step's own role
-// decides, falling back to its type; a step that names neither inherits the
-// answer from the wrapper it sits in. Instruction content is still sent, but it
-// closes the open user turn and never keeps an emptied one alive.
-func IsInteractionsInstructionStep(step gjson.Result, inherited bool) bool {
-	name := strings.ToLower(strings.TrimSpace(step.Get("role").String()))
-	if name == "" {
-		name = strings.ToLower(strings.TrimSpace(step.Get("type").String()))
-	}
-	switch name {
-	case "developer", "system":
-		return true
-	case "user", "assistant", "model", "model_output", "thought":
-		return false
-	}
-	return inherited
-}
-
-// InteractionsAttachmentType names the type of an Interactions content part that
-// carries an attachment, or returns "" for text and for parts that name nothing.
-// It is the type reported when a translation cannot send the part.
-func InteractionsAttachmentType(part gjson.Result) string {
-	if !part.IsObject() {
-		return ""
-	}
-	if partType := strings.ToLower(strings.TrimSpace(part.Get("type").String())); partType != "" {
-		if partType == "text" {
-			return ""
-		}
-		return partType
-	}
-	if part.Get("inlineData").Exists() || part.Get("inline_data").Exists() {
-		return "inlineData"
-	}
-	if part.Get("fileData").Exists() || part.Get("file_data").Exists() {
-		return "fileData"
-	}
-	return ""
-}
-
-// GeminiPartIsSendable reports whether a Gemini part gives the model something to
-// read. A text part that is empty or only whitespace does not.
-func GeminiPartIsSendable(part []byte) bool {
-	parsed := gjson.ParseBytes(part)
-	text := parsed.Get("text")
-	if !text.Exists() || strings.TrimSpace(text.String()) != "" {
-		return true
-	}
-	for _, key := range []string{"functionCall", "functionResponse", "inlineData", "inline_data", "fileData", "file_data"} {
-		if parsed.Get(key).Exists() {
-			return true
-		}
-	}
-	return false
-}
-
-// CountSendableGeminiParts counts the parts for which GeminiPartIsSendable holds.
-func CountSendableGeminiParts(parts [][]byte) int {
-	count := 0
-	for _, part := range parts {
-		if GeminiPartIsSendable(part) {
-			count++
-		}
-	}
-	return count
 }
 
 // IsHTTPURL reports whether value is an absolute http or https URL with a host.

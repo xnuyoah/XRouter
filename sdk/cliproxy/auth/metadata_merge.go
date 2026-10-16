@@ -4,8 +4,6 @@ import (
 	"reflect"
 	"strings"
 	"time"
-
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/auth/codex"
 )
 
 // IsAuthTokenPayloadKey returns true if key is a credential or token lifecycle field
@@ -71,8 +69,6 @@ func MergeRefreshedAuth(base, current, updated *Auth) *Auth {
 	if base != nil && current.RegistrationEpoch != base.RegistrationEpoch {
 		return merged
 	}
-
-	merged.CodexRefreshPatch = updated.CodexRefreshPatch
 
 	// 1. Refresh Lifecycle Timestamps
 	merged.RejectedAccessToken = updated.RejectedAccessToken
@@ -213,9 +209,6 @@ func mergeAuthContent(base, current, updated *Auth) *Auth {
 			if strings.EqualFold(strings.TrimSpace(k), "proxy_url") {
 				continue
 			}
-			if updated.CodexRefreshPatch != nil && codex.IsCodexCredentialKey(strings.ToLower(strings.TrimSpace(k))) {
-				continue
-			}
 			if strings.EqualFold(strings.TrimSpace(k), "siwc") {
 				siwcUpd, okUpd := v.(map[string]any)
 				if !okUpd || len(siwcUpd) == 0 {
@@ -270,10 +263,6 @@ func mergeAuthContent(base, current, updated *Auth) *Auth {
 				}
 			}
 		}
-	}
-
-	if updated.CodexRefreshPatch != nil {
-		merged.Metadata = updated.CodexRefreshPatch.Apply(merged.Metadata)
 	}
 
 	// 2. Storage and Runtime

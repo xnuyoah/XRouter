@@ -11,18 +11,18 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	sdkconfig "github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	sdkconfig "github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 func TestGetRequestDetails_PreservesSuffix(t *testing.T) {
 	modelRegistry := registry.GetGlobalRegistry()
 	now := time.Now().Unix()
 
-	modelRegistry.RegisterClient("test-request-details-gemini", "gemini", []*registry.ModelInfo{
-		{ID: "gemini-2.5-pro", Created: now + 30},
-		{ID: "gemini-2.5-flash", Created: now + 25},
+	modelRegistry.RegisterClient("test-request-details-kimi", "kimi", []*registry.ModelInfo{
+		{ID: "kimi-k2", Created: now + 30},
+		{ID: "kimi-k2-mini", Created: now + 25},
 	})
 	modelRegistry.RegisterClient("test-request-details-openai", "openai", []*registry.ModelInfo{
 		{ID: "gpt-5.2", Created: now + 20},
@@ -33,7 +33,7 @@ func TestGetRequestDetails_PreservesSuffix(t *testing.T) {
 
 	// Ensure cleanup of all test registrations.
 	clientIDs := []string{
-		"test-request-details-gemini",
+		"test-request-details-kimi",
 		"test-request-details-openai",
 		"test-request-details-claude",
 	}
@@ -55,9 +55,9 @@ func TestGetRequestDetails_PreservesSuffix(t *testing.T) {
 	}{
 		{
 			name:          "numeric suffix preserved",
-			inputModel:    "gemini-2.5-pro(8192)",
-			wantProviders: []string{"gemini"},
-			wantModel:     "gemini-2.5-pro(8192)",
+			inputModel:    "kimi-k2(8192)",
+			wantProviders: []string{"kimi"},
+			wantModel:     "kimi-k2(8192)",
 			wantErr:       false,
 		},
 		{
@@ -84,15 +84,15 @@ func TestGetRequestDetails_PreservesSuffix(t *testing.T) {
 		{
 			name:          "auto suffix resolved",
 			inputModel:    "auto(high)",
-			wantProviders: []string{"gemini"},
-			wantModel:     "gemini-2.5-pro(high)",
+			wantProviders: []string{"kimi"},
+			wantModel:     "kimi-k2(high)",
 			wantErr:       false,
 		},
 		{
 			name:          "special suffix none preserved",
-			inputModel:    "gemini-2.5-flash(none)",
-			wantProviders: []string{"gemini"},
-			wantModel:     "gemini-2.5-flash(none)",
+			inputModel:    "kimi-k2-mini(none)",
+			wantProviders: []string{"kimi"},
+			wantModel:     "kimi-k2-mini(none)",
 			wantErr:       false,
 		},
 		{

@@ -29,31 +29,9 @@ func StripThinkingConfig(body []byte, provider string) []byte {
 
 	var paths []string
 	switch provider {
-	case "claude":
-		paths = []string{"thinking", "output_config.effort"}
-	case "gemini":
-		paths = []string{"generationConfig.thinkingConfig"}
-	case "antigravity":
-		paths = []string{"request.generationConfig.thinkingConfig"}
-	case "interactions":
-		paths = []string{
-			"generation_config.thinking_level",
-			"generation_config.thinkingLevel",
-			"generation_config.thinking_budget",
-			"generation_config.thinkingBudget",
-			"generation_config.thinking_summaries",
-			"generation_config.thinkingSummaries",
-			"generation_config.thinking_config",
-			"generation_config.thinkingConfig",
-		}
 	case "openai":
 		paths = []string{"reasoning_effort", "reasoning"}
-	case "kimi", "kimi-ai", "kimi.ai", "kimi.com":
-		paths = []string{
-			"reasoning_effort",
-			"thinking",
-		}
-	case "codex", "xai":
+	case "codex":
 		paths = []string{"reasoning"}
 	default:
 		return body
@@ -62,13 +40,6 @@ func StripThinkingConfig(body []byte, provider string) []byte {
 	result := body
 	for _, path := range paths {
 		result, _ = sjson.DeleteBytes(result, path)
-	}
-
-	// Avoid leaving an empty output_config object for Claude when effort was the only field.
-	if provider == "claude" {
-		if oc := gjson.GetBytes(result, "output_config"); oc.Exists() && oc.IsObject() && len(oc.Map()) == 0 {
-			result, _ = sjson.DeleteBytes(result, "output_config")
-		}
 	}
 	return result
 }

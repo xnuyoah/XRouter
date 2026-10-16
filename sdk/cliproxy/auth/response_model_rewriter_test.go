@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 func TestStreamRewriter_RewriteChunk_KimiMessagesDataPrefixWithoutSpace(t *testing.T) {
@@ -124,12 +124,12 @@ func TestRewriteForceMappedStreamChunk_CodexLineChunksDoNotDuplicateBufferedEven
 }
 
 func TestRewriteModelInResponse_AntigravityModelVersion(t *testing.T) {
-	payload := []byte(`{"response":{"modelVersion":"gemini-3-flash","candidates":[{"content":{"role":"model","parts":[{"text":"AGYMSG"}]}}]}}`)
+	payload := []byte(`{"response":{"modelVersion":"gpt-3-flash","candidates":[{"content":{"role":"model","parts":[{"text":"AGYMSG"}]}}]}}`)
 	got := string(rewriteModelInResponse(payload, "claude-haiku-4-5-20251001"))
 	if !strings.Contains(got, `"modelVersion":"claude-haiku-4-5-20251001"`) {
 		t.Fatalf("rewritten payload = %q, want alias modelVersion", got)
 	}
-	if strings.Contains(got, "gemini-3-flash") {
+	if strings.Contains(got, "gpt-3-flash") {
 		t.Fatalf("rewritten payload still contains upstream modelVersion: %q", got)
 	}
 }
@@ -307,11 +307,11 @@ func TestRewriteForceMappedStreamChunk_CodexDataLinesWithoutNewlines_FinishParse
 }
 
 func TestStreamRewriter_LoggedOnceAndRewrittenChunksCount(t *testing.T) {
-	rewriter := NewStreamRewriter(StreamRewriteOptions{RewriteModel: "gemini-3.8-flash"})
+	rewriter := NewStreamRewriter(StreamRewriteOptions{RewriteModel: "gpt-3.8-flash"})
 	chunks := [][]byte{
-		[]byte("data: {\"modelVersion\":\"gemini-3.8-flash-high\",\"text\":\"part 1\"}\n\n"),
-		[]byte("data: {\"modelVersion\":\"gemini-3.8-flash-high\",\"text\":\"part 2\"}\n\n"),
-		[]byte("data: {\"modelVersion\":\"gemini-3.8-flash-high\",\"text\":\"part 3\"}\n\n"),
+		[]byte("data: {\"modelVersion\":\"gpt-3.8-flash-high\",\"text\":\"part 1\"}\n\n"),
+		[]byte("data: {\"modelVersion\":\"gpt-3.8-flash-high\",\"text\":\"part 2\"}\n\n"),
+		[]byte("data: {\"modelVersion\":\"gpt-3.8-flash-high\",\"text\":\"part 3\"}\n\n"),
 		[]byte("data: [DONE]\n\n"),
 	}
 

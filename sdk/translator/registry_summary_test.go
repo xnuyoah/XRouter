@@ -55,26 +55,6 @@ func TestRegistryTranslateRequestAppliesSummaryIntent(t *testing.T) {
 			want:       "summarized",
 			wantExists: true,
 		},
-		{
-			name:       "responses null summary disables Gemini summaries",
-			from:       FormatOpenAIResponse,
-			to:         FormatGemini,
-			input:      `{"reasoning":{"effort":"high","summary":null}}`,
-			translated: `{"generationConfig":{"thinkingConfig":{"thinkingLevel":"high"}}}`,
-			path:       "generationConfig.thinkingConfig.includeThoughts",
-			want:       "false",
-			wantExists: true,
-		},
-		{
-			name:       "Google Chat extension overrides effort",
-			from:       FormatOpenAI,
-			to:         FormatGemini,
-			input:      `{"reasoning_effort":"high","extra_body":{"google":{"thinking_config":{"include_thoughts":false}}}}`,
-			translated: `{"generationConfig":{"thinkingConfig":{"thinkingLevel":"high","includeThoughts":true}}}`,
-			path:       "generationConfig.thinkingConfig.includeThoughts",
-			want:       "false",
-			wantExists: true,
-		},
 	}
 
 	for _, test := range tests {
@@ -92,26 +72,6 @@ func TestRegistryTranslateRequestAppliesSummaryIntent(t *testing.T) {
 				t.Fatalf("%s = %q, want %q; body=%s", test.path, result.String(), test.want, out)
 			}
 		})
-	}
-}
-
-func TestRegistryTranslateRequestActivatesClaudeForEnabledSummary(t *testing.T) {
-	registry := NewRegistry()
-	registry.Register(FormatOpenAIResponse, FormatClaude, func(_ string, _ []byte, _ bool) ([]byte, error) {
-		return []byte(`{"model":"claude-opus-5","max_tokens":32000}`), nil
-	}, ResponseTransform{})
-	out := registry.TranslateRequest(
-		FormatOpenAIResponse,
-		FormatClaude,
-		"claude-opus-5",
-		[]byte(`{"reasoning":{"summary":"auto"},"input":"hi"}`),
-		false,
-	)
-	if got := gjson.GetBytes(out, "thinking.type").String(); got != "adaptive" {
-		t.Fatalf("thinking.type = %q, want adaptive; body=%s", got, out)
-	}
-	if got := gjson.GetBytes(out, "thinking.display").String(); got != "summarized" {
-		t.Fatalf("thinking.display = %q, want summarized; body=%s", got, out)
 	}
 }
 
@@ -143,13 +103,13 @@ func TestRegistryTranslateRequestPreservesNativeClaudeMissingDisplay(t *testing.
 
 func TestRegistryTranslateRequestDoesNotMixSummaryIntoFallback(t *testing.T) {
 	registry := NewRegistry()
-	body := []byte(`{"model":"gemini-3.6-flash","reasoning":{"summary":"auto"},"input":"hi"}`)
-	out := registry.TranslateRequest(FormatOpenAIResponse, FormatGemini, "gemini-3.6-flash", body, false)
+	body := []byte(`{"model":"antigravity-model","reasoning":{"summary":"auto"},"input":"hi"}`)
+	out := registry.TranslateRequest(FormatOpenAIResponse, FormatAntigravity, "antigravity-model", body, false)
 	if !bytes.Equal(out, body) {
 		t.Fatalf("missing translator changed fallback body: got %s, want %s", out, body)
 	}
 	if gjson.GetBytes(out, "generationConfig").Exists() {
-		t.Fatalf("missing translator mixed Gemini fields into Responses body: %s", out)
+		t.Fatalf("missing translator mixed target-protocol fields into Responses body: %s", out)
 	}
 }
 
@@ -157,31 +117,31 @@ func TestRegistryTranslateRequestPluginMissDoesNotMixSummary(t *testing.T) {
 	registry := NewRegistry()
 	hooks := &fakePluginHooks{requestTranslateOK: false}
 	registry.SetPluginHooks(hooks)
-	body := []byte(`{"model":"gemini-3.6-flash","reasoning":{"summary":"auto"},"input":"hi"}`)
-	out := registry.TranslateRequest(FormatOpenAIResponse, FormatGemini, "gemini-3.6-flash", body, false)
+	body := []byte(`{"model":"antigravity-model","reasoning":{"summary":"auto"},"input":"hi"}`)
+	out := registry.TranslateRequest(FormatOpenAIResponse, FormatAntigravity, "antigravity-model", body, false)
 	if !bytes.Equal(out, body) {
 		t.Fatalf("plugin translation miss changed fallback body: got %s, want %s", out, body)
 	}
 	if gjson.GetBytes(out, "generationConfig").Exists() {
-		t.Fatalf("plugin translation miss mixed Gemini fields into Responses body: %s", out)
+		t.Fatalf("plugin translation miss mixed target-protocol fields into Responses body: %s", out)
 	}
 }
 
 func TestRegistryTranslateRequestAppliesSummaryAfterPluginTranslation(t *testing.T) {
 	registry := NewRegistry()
 	hooks := &fakePluginHooks{
-		requestTranslateBody: []byte(`{"generationConfig":{"thinkingConfig":{"thinkingLevel":"high"}}}`),
+		requestTranslateBody: []byte(`{"thinking":{"type":"adaptive"}}`),
 		requestTranslateOK:   true,
 	}
 	registry.SetPluginHooks(hooks)
 	out := registry.TranslateRequest(
 		FormatOpenAIResponse,
-		FormatGemini,
-		"gemini-3.6-flash",
+		FormatClaude,
+		"claude-sonnet-4-6",
 		[]byte(`{"reasoning":{"summary":"auto"},"input":"hi"}`),
 		false,
 	)
-	if !gjson.GetBytes(out, "generationConfig.thinkingConfig.includeThoughts").Bool() {
+	if gjson.GetBytes(out, "thinking.display").String() != "summarized" {
 		t.Fatalf("plugin-translated request lost canonical summary: %s", out)
 	}
 }
@@ -191,7 +151,7 @@ func TestRegistryTranslateRequestPluginNormalizerOwnsSourceSummaryIntent(t *test
 		name       string
 		normalize  func([]byte) []byte
 		wantExists bool
-		want       bool
+		want       string
 	}{
 		{
 			name: "removed summary remains absent",
@@ -207,7 +167,7 @@ func TestRegistryTranslateRequestPluginNormalizerOwnsSourceSummaryIntent(t *test
 				return out
 			},
 			wantExists: true,
-			want:       false,
+			want:       "omitted",
 		},
 	}
 
@@ -216,24 +176,24 @@ func TestRegistryTranslateRequestPluginNormalizerOwnsSourceSummaryIntent(t *test
 			registry := NewRegistry()
 			hooks := &fakePluginHooks{
 				normalizeRequest:     test.normalize,
-				requestTranslateBody: []byte(`{"generationConfig":{"thinkingConfig":{"thinkingLevel":"high"}}}`),
+				requestTranslateBody: []byte(`{"thinking":{"type":"adaptive"}}`),
 				requestTranslateOK:   true,
 			}
 			registry.SetPluginHooks(hooks)
 
 			out := registry.TranslateRequest(
 				FormatOpenAIResponse,
-				FormatGemini,
-				"gemini-3.6-flash",
+				FormatClaude,
+				"claude-sonnet-4-6",
 				[]byte(`{"reasoning":{"summary":"auto"},"input":"hi"}`),
 				false,
 			)
-			result := gjson.GetBytes(out, "generationConfig.thinkingConfig.includeThoughts")
+			result := gjson.GetBytes(out, "thinking.display")
 			if result.Exists() != test.wantExists {
-				t.Fatalf("includeThoughts exists = %v, want %v; body=%s", result.Exists(), test.wantExists, out)
+				t.Fatalf("thinking.display exists = %v, want %v; body=%s", result.Exists(), test.wantExists, out)
 			}
-			if test.wantExists && result.Bool() != test.want {
-				t.Fatalf("includeThoughts = %v, want %v; body=%s", result.Bool(), test.want, out)
+			if test.wantExists && result.String() != test.want {
+				t.Fatalf("thinking.display = %q, want %q; body=%s", result.String(), test.want, out)
 			}
 		})
 	}
@@ -241,26 +201,26 @@ func TestRegistryTranslateRequestPluginNormalizerOwnsSourceSummaryIntent(t *test
 
 func TestRegistryTranslateRequestNormalizerOwnsFinalSummaryField(t *testing.T) {
 	registry := NewRegistry()
-	registry.Register(FormatOpenAIResponse, FormatGemini, func(_ string, _ []byte, _ bool) ([]byte, error) {
-		return []byte(`{"generationConfig":{"thinkingConfig":{"thinkingLevel":"high"}}}`), nil
+	registry.Register(FormatOpenAIResponse, FormatClaude, func(_ string, _ []byte, _ bool) ([]byte, error) {
+		return []byte(`{"thinking":{"type":"adaptive"}}`), nil
 	}, ResponseTransform{})
 	hooks := &fakePluginHooks{normalizeRequest: func(body []byte) []byte {
-		if !gjson.GetBytes(body, "generationConfig.thinkingConfig.includeThoughts").Bool() {
+		if gjson.GetBytes(body, "thinking.display").String() != "summarized" {
 			t.Fatalf("normalizer did not receive canonical enabled summary: %s", body)
 		}
-		out, _ := sjson.DeleteBytes(body, "generationConfig.thinkingConfig.includeThoughts")
+		out, _ := sjson.DeleteBytes(body, "thinking.display")
 		return out
 	}}
 	registry.SetPluginHooks(hooks)
 
 	out := registry.TranslateRequest(
 		FormatOpenAIResponse,
-		FormatGemini,
-		"gemini-3.6-flash",
+		FormatClaude,
+		"claude-sonnet-4-6",
 		[]byte(`{"reasoning":{"effort":"high","summary":"auto"},"input":"hi"}`),
 		false,
 	)
-	if gjson.GetBytes(out, "generationConfig.thinkingConfig.includeThoughts").Exists() {
+	if gjson.GetBytes(out, "thinking.display").Exists() {
 		t.Fatalf("summary post-processing overrode request normalizer: %s", out)
 	}
 }

@@ -12,14 +12,19 @@ Dockerfile
 # Documentation and license
 docs
 README.md
-README_CN.md
 LICENSE
 
 # Runtime data folders (should be mounted as volumes)
 auths
 logs
 conv
+data
+plugins
 config.yaml
+
+# Runtime assets and development scripts
+static
+scripts
 
 # Development/editor
 bin

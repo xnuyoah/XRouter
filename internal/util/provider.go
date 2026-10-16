@@ -1,4 +1,4 @@
-// Package util provides utility functions used across the CLIProxyAPI application.
+// Package util provides utility functions used across the XRouter application.
 // These functions handle common tasks such as determining AI service providers
 // from model names and managing HTTP proxies.
 package util
@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
 const openAICompatibleProviderPrefix = "openai-compatible-"
@@ -32,7 +32,6 @@ func OpenAICompatibleProviderKey(name string) string {
 // potential providers.
 //
 // Supported providers include (but are not limited to):
-//   - "gemini" for Google's Gemini family
 //   - "codex" for OpenAI GPT-compatible providers
 //   - "claude" for Anthropic models
 //   - "openai-compatibility" for external OpenAI-compatible providers

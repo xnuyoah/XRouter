@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/api/handlers/management"
+	"github.com/xnuyoah/XRouter/v8/internal/api/handlers/management"
 )
 
 // registerManagementV8Routes defines the v8 contract independently of v0.
@@ -55,8 +55,6 @@ func (s *Server) registerManagementV8Routes() {
 
 	v8.GET("/plugins", s.mgmt.ListPlugins)
 	v8.DELETE("/plugins/:id", s.mgmt.DeletePlugin)
-	v8.GET("/plugins/store", s.mgmt.ListPluginStore)
-	v8.POST("/plugins/store/:id/install", s.mgmt.InstallPluginFromStore)
 	v8.GET("/plugins/:id/quota", s.mgmt.GetPluginQuota)
 	v8.POST("/plugins/:id/quota", s.mgmt.FetchPluginQuota)
 	v8.DELETE("/plugins/:id/quota", s.mgmt.ResetPluginQuota)

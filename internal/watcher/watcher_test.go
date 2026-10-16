@@ -14,12 +14,12 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/redisqueue"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher/diff"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher/synthesizer"
-	sdkAuth "github.com/router-for-me/CLIProxyAPI/v8/sdk/auth"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/redisqueue"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher/diff"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher/synthesizer"
+	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 	"gopkg.in/yaml.v3"
 )
 
@@ -63,23 +63,18 @@ func TestApplyAuthExcludedModelsMeta_OAuthProvider(t *testing.T) {
 
 func TestBuildAPIKeyClientsCounts(t *testing.T) {
 	cfg := &config.Config{
-		GeminiKey:       []config.GeminiKey{{APIKey: "g1"}, {APIKey: "g2"}},
-		InteractionsKey: []config.GeminiKey{{APIKey: "i1"}},
-		VertexCompatAPIKey: []config.VertexCompatKey{
-			{APIKey: "v1"},
-		},
-		ClaudeKey: []config.ClaudeKey{{APIKey: "c1"}},
-		CodexKey:  []config.CodexKey{{APIKey: "c1"}, {APIKey: "c2"}},
-		XAIKey:    []config.XAIKey{{APIKey: "x1"}},
-		MetaKey:   []config.MetaKey{{APIKey: "m1"}},
+		AgnesKey:    []config.AgnesKey{{APIKey: "g1"}, {APIKey: "g2"}, {APIKey: "i1"}},
+		OpenAIKey:   []config.OpenAIKey{{APIKey: "c1"}},
+		DeepseekKey: []config.DeepseekKey{{APIKey: "c1"}, {APIKey: "c2"}},
+		NvidiaKey:   []config.NvidiaKey{{APIKey: "x1"}},
 		OpenAICompatibility: []config.OpenAICompatibility{
 			{APIKeyEntries: []config.OpenAICompatibilityAPIKey{{APIKey: "o1"}, {APIKey: "o2"}}},
 		},
 	}
 
-	gemini, vertex, claude, codex, xai, meta, compat := BuildAPIKeyClients(cfg)
-	if gemini != 3 || vertex != 1 || claude != 1 || codex != 2 || xai != 1 || meta != 1 || compat != 2 {
-		t.Fatalf("unexpected counts: %d %d %d %d %d %d %d", gemini, vertex, claude, codex, xai, meta, compat)
+	counts := BuildAPIKeyClients(cfg)
+	if counts.Agnes != 3 || counts.OpenAI != 1 || counts.Deepseek != 2 || counts.Nvidia != 1 || counts.OpenAICompat != 2 {
+		t.Fatalf("unexpected counts: %+v", counts)
 	}
 }
 
@@ -120,12 +115,12 @@ func TestMatchProvider(t *testing.T) {
 func TestSnapshotCoreAuths_ConfigAndAuthFiles(t *testing.T) {
 	authDir := t.TempDir()
 	metadata := map[string]any{
-		"type":       "gemini",
+		"type":       "nvidia",
 		"email":      "user@example.com",
 		"project_id": "proj-a, proj-b",
 		"proxy_url":  "https://proxy",
 	}
-	authFile := filepath.Join(authDir, "gemini.json")
+	authFile := filepath.Join(authDir, "nvidia.json")
 	data, err := json.Marshal(metadata)
 	if err != nil {
 		t.Fatalf("failed to marshal metadata: %v", err)
@@ -136,10 +131,10 @@ func TestSnapshotCoreAuths_ConfigAndAuthFiles(t *testing.T) {
 
 	cfg := &config.Config{
 		AuthDir: authDir,
-		GeminiKey: []config.GeminiKey{
+		NvidiaKey: []config.NvidiaKey{
 			{
 				APIKey:         "g-key",
-				BaseURL:        "https://gemini",
+				BaseURL:        "https://nvidia",
 				ExcludedModels: []string{"Model-A", "model-b"},
 				Headers:        map[string]string{"X-Req": "1"},
 			},
@@ -150,25 +145,32 @@ func TestSnapshotCoreAuths_ConfigAndAuthFiles(t *testing.T) {
 	w.SetConfig(cfg)
 
 	auths := w.SnapshotCoreAuths()
-	if len(auths) != 1 {
-		t.Fatalf("expected 1 config auth entry, got %d", len(auths))
+	if len(auths) != 2 {
+		t.Fatalf("expected config and auth-file entries, got %d", len(auths))
 	}
 
-	var geminiAPIKeyAuth *coreauth.Auth
+	var nvidiaAPIKeyAuth *coreauth.Auth
+	var fileAuth *coreauth.Auth
 	for _, a := range auths {
-		if a.Provider == "gemini" && a.Attributes["api_key"] == "g-key" {
-			geminiAPIKeyAuth = a
+		if a.Provider == "nvidia" && a.Attributes["api_key"] == "g-key" {
+			nvidiaAPIKeyAuth = a
+		}
+		if a.Attributes[coreauth.AttributeSourceBackend] == coreauth.AuthSourceFile {
+			fileAuth = a
 		}
 	}
-	if geminiAPIKeyAuth == nil {
-		t.Fatal("expected synthesized Gemini API key auth")
+	if nvidiaAPIKeyAuth == nil {
+		t.Fatal("expected synthesized NVIDIA API key auth")
+	}
+	if fileAuth == nil || fileAuth.Provider != "nvidia" {
+		t.Fatalf("expected auth-file entry, got %+v", fileAuth)
 	}
 	expectedAPIKeyHash := diff.ComputeExcludedModelsHash([]string{"Model-A", "model-b"})
-	if geminiAPIKeyAuth.Attributes["excluded_models_hash"] != expectedAPIKeyHash {
-		t.Fatalf("expected API key excluded hash %s, got %s", expectedAPIKeyHash, geminiAPIKeyAuth.Attributes["excluded_models_hash"])
+	if nvidiaAPIKeyAuth.Attributes["excluded_models_hash"] != expectedAPIKeyHash {
+		t.Fatalf("expected API key excluded hash %s, got %s", expectedAPIKeyHash, nvidiaAPIKeyAuth.Attributes["excluded_models_hash"])
 	}
-	if geminiAPIKeyAuth.Attributes["auth_kind"] != "apikey" {
-		t.Fatalf("expected auth_kind=apikey, got %s", geminiAPIKeyAuth.Attributes["auth_kind"])
+	if nvidiaAPIKeyAuth.Attributes["auth_kind"] != "apikey" {
+		t.Fatalf("expected auth_kind=apikey, got %s", nvidiaAPIKeyAuth.Attributes["auth_kind"])
 	}
 }
 

@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	homekv "github.com/router-for-me/CLIProxyAPI/v8/internal/home"
 	log "github.com/sirupsen/logrus"
+	homekv "github.com/xnuyoah/XRouter/v8/internal/home"
 )
 
 // SignatureEntry holds a cached thinking signature with timestamp
@@ -108,11 +108,7 @@ func purgeExpiredCaches() {
 		}
 		return true
 	})
-	purgeExpiredCodexReasoningReplayCache(now)
-	purgeExpiredXAIReasoningReplayCache(now)
-	purgeExpiredAntigravityReasoningReplayCache(now)
-	purgeExpiredKimiThinkingReplayCache(now)
-	purgeExpiredClaudeThinkingReplayCache(now)
+	purgeExpiredReasoningReplayCache(now)
 }
 
 // CacheSignature stores a thinking signature for a given model group and text.
@@ -171,9 +167,6 @@ func GetCachedSignatureRequired(ctx context.Context, modelName, text string) (st
 	groupKey := GetModelGroup(modelName)
 
 	if text == "" {
-		if groupKey == "gemini" {
-			return "skip_thought_signature_validator", nil
-		}
 		return "", nil
 	}
 
@@ -187,9 +180,6 @@ func GetCachedSignatureRequired(ctx context.Context, modelName, text string) (st
 			return "", errGet
 		}
 		if !found {
-			if groupKey == "gemini" {
-				return "skip_thought_signature_validator", nil
-			}
 			return "", nil
 		}
 		if _, errExpire := client.KVExpire(ctx, key, SignatureCacheTTL); errExpire != nil {
@@ -200,9 +190,6 @@ func GetCachedSignatureRequired(ctx context.Context, modelName, text string) (st
 
 	val, ok := signatureCache.Load(groupKey)
 	if !ok {
-		if groupKey == "gemini" {
-			return "skip_thought_signature_validator", nil
-		}
 		return "", nil
 	}
 	sc := val.(*groupCache)
@@ -215,17 +202,11 @@ func GetCachedSignatureRequired(ctx context.Context, modelName, text string) (st
 	entry, exists := sc.entries[textHash]
 	if !exists {
 		sc.mu.Unlock()
-		if groupKey == "gemini" {
-			return "skip_thought_signature_validator", nil
-		}
 		return "", nil
 	}
 	if now.Sub(entry.Timestamp) > SignatureCacheTTL {
 		delete(sc.entries, textHash)
 		sc.mu.Unlock()
-		if groupKey == "gemini" {
-			return "skip_thought_signature_validator", nil
-		}
 		return "", nil
 	}
 
@@ -281,7 +262,7 @@ func DeleteCachedSignatureRequired(ctx context.Context, modelName, text string) 
 
 // HasValidSignature checks if a signature is valid (non-empty and long enough)
 func HasValidSignature(modelName, signature string) bool {
-	return (signature != "" && len(signature) >= MinValidSignatureLen) || (signature == "skip_thought_signature_validator" && GetModelGroup(modelName) == "gemini")
+	return signature != "" && len(signature) >= MinValidSignatureLen
 }
 
 func GetModelGroup(modelName string) string {
@@ -289,8 +270,6 @@ func GetModelGroup(modelName string) string {
 		return "gpt"
 	} else if strings.Contains(modelName, "claude") {
 		return "claude"
-	} else if strings.Contains(modelName, "gemini") {
-		return "gemini"
 	}
 	return modelName
 }
@@ -314,7 +293,7 @@ func SetSignatureCacheEnabled(enabled bool) {
 		return
 	}
 	if !enabled {
-		log.Info("antigravity signature cache DISABLED - bypass mode active, cached signatures will not be used for request translation")
+		log.Info("thinking signature cache DISABLED - bypass mode active, cached signatures will not be used for request translation")
 	}
 }
 
@@ -330,9 +309,9 @@ func SetSignatureBypassStrictMode(strict bool) {
 		return
 	}
 	if strict {
-		log.Debug("antigravity bypass signature validation: strict mode (protobuf tree)")
+		log.Debug("thinking signature bypass validation: strict mode (protobuf tree)")
 	} else {
-		log.Debug("antigravity bypass signature validation: basic mode (R/E + 0x12)")
+		log.Debug("thinking signature bypass validation: basic mode (R/E + 0x12)")
 	}
 }
 

@@ -38,8 +38,9 @@ the corresponding group value. Legacy field names are rejected by v8 writes.
 | --- | --- |
 | `/config/access/api-keys` | Client authentication keys, for example `["client-key"]`. |
 | `/config/api-keys` | All upstream provider groups. |
-| `/config/api-keys/codex` | Codex upstream groups. |
-| `/config/client/codex/optimize-multi-agent-v2` | Boolean, default `false`; applies to Codex clients across OAuth and API-key routes. |
+| `/config/api-keys/openai` | Native OpenAI upstream groups. |
+| `/config/api-keys/deepseek` | Native DeepSeek upstream groups. |
+| `/config/api-keys/nvidia` | Native NVIDIA upstream groups. |
 | `/config/observability/logs/debug` | A boolean, for example `true`. |
 | `/config/routing/retry/request-retry` | A number, for example `0`. |
 | `/config/plugins/configs/<id>` | A plugin configuration object. |
@@ -57,28 +58,10 @@ request retries while preserving other settings:
 }
 ```
 
-JSON reads omit TURN usernames and credentials under
-`oauth.providers.codex.live-media-relay.ice-servers`; YAML reads include them.
 The Home-owned revision fields
 `credentials.concurrency.lifecycle-config-revision`,
 `credentials.concurrency.observation-barrier-revision`, and `plugins.auth-revision`
 cannot be changed through these endpoints.
-
-### Codex multi-agent configuration migration
-
-`client.codex.optimize-multi-agent-v2` is the sole runtime setting. Loading older
-YAML accepts `providers.codex.optimize-multi-agent-v2`,
-`oauth.providers.codex.optimize-multi-agent-v2`, and the flat
-`codex.optimize-multi-agent-v2` path. The client path always wins conflicts,
-including explicit `false` or `null`. If it is absent, the historical OAuth path
-wins over `providers`, which wins over the flat path.
-
-These aliases now have client-wide semantics, not OAuth-only scope. Loading does
-not rewrite legacy-only settings; normalization removes aliases conflicting with
-the client path. A successful v8 write migrates the aliases while preserving their
-comments. Historical API paths remain usable. Home configuration publishers
-need matching client schema support before emitting the new path; older YAML
-payloads remain readable.
 
 ## Operational endpoints
 
@@ -104,7 +87,6 @@ retain the corresponding business operation's fields.
 | `/credentials/status` | PATCH | Change credential status. |
 | `/credentials/fields` | PATCH | Change credential fields. |
 | `/credentials/refresh` | POST | Refresh credentials. |
-| `/oauth/import?provider=vertex` | POST | Import a Vertex service account using a multipart `file` upload. |
 | `/oauth/auth-url?provider=<provider>` | GET | Start built-in or plugin OAuth. |
 | `/oauth/status?state=<state>` | GET | Get login status. |
 | `/oauth/session?state=<state>` | DELETE | Cancel a login session. |
@@ -118,11 +100,10 @@ retain the corresponding business operation's fields.
 ## OAuth
 
 The login URL is shared by all providers. Set the required `provider` query
-parameter to `claude`, `codex`, `antigravity`, `kimi`, `kimi-ai`, `xai`, `devin`,
-`meta`, or a registered plugin provider ID. For example:
+parameter to a registered plugin provider ID:
 
 ```http
-GET /v8/management/oauth/auth-url?provider=codex
+GET /v8/management/oauth/auth-url?provider=sample-provider
 Authorization: Bearer <management-key>
 ```
 
@@ -137,18 +118,13 @@ an explicit provider must match that state. Poll until the status is `ok` or
 `error`; `wait` means the login is still pending. Callback acceptance alone does
 not mean credential exchange and persistence have completed.
 
-Import uses `POST /v8/management/oauth/import?provider=vertex`. The `provider`
-query parameter is required; Vertex is currently the supported import provider.
-
 ## v0 compatibility
 
 The `/v0/management` endpoints keep their original paths and payloads, including
 provider-specific OAuth login URLs, callbacks, status queries, and cancellation.
-For example, `GET /v0/management/codex-auth-url` and
-`GET /v8/management/oauth/auth-url?provider=codex` start the same login flow.
 
 Legacy flat configuration endpoints such as `/debug`, `/request-retry`, and
-`/codex-api-key` exist under `/v0/management` only.
+`/claude-api-key` exist under `/v0/management` only.
 `/v0/management/api-keys` continues to manage client authentication keys; the v8
 equivalent is `/v8/management/config/access/api-keys`.
 

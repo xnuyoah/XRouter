@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
 	log "github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 func setupTestLoggerHook(t *testing.T) *logtest.Hook {
@@ -62,7 +62,7 @@ func TestWarnLogUpstreamFailureIncludesStructuredStatusCodeAndSafeDiagnostic(t *
 		context.Background(),
 		nil,
 		"antigravity",
-		"gemini-3.7-flash-high",
+		"gpt-3.7-flash-high",
 		&Auth{ID: "auth-1", Provider: "antigravity"},
 		83*time.Millisecond,
 		statusErrorLogTestError{message: diagnostic, statusCode: http.StatusServiceUnavailable},
@@ -91,7 +91,7 @@ func TestWarnLogUpstreamFailureUsesMarkedHomeDiagnostic(t *testing.T) {
 		context.Background(),
 		nil,
 		"antigravity",
-		"gemini-3.7-flash-high",
+		"gpt-3.7-flash-high",
 		&Auth{ID: "auth-1", Provider: "antigravity"},
 		129*time.Millisecond,
 		errRefresh,

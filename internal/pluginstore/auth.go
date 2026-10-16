@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/githubauth"
+	"github.com/xnuyoah/XRouter/v8/internal/githubauth"
 )
 
 const (

@@ -1,14 +1,26 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executionregistry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executionregistry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
+
+type configurationUpdateHomeDispatcher struct {
+	payload []byte
+}
+
+func (d configurationUpdateHomeDispatcher) HeartbeatOK() bool       { return true }
+func (d configurationUpdateHomeDispatcher) AbortAmbiguousDispatch() {}
+func (d configurationUpdateHomeDispatcher) RPopAuth(context.Context, string, string, http.Header, int) ([]byte, error) {
+	return d.payload, nil
+}
 
 func TestHomeV8ModelCapabilitiesAndLegacyPayload(t *testing.T) {
 	for _, tc := range []struct {
@@ -27,7 +39,7 @@ func TestHomeV8ModelCapabilitiesAndLegacyPayload(t *testing.T) {
 			}
 			auth := &Auth{}
 			if tc.compat {
-				auth.Metadata = map[string]any{"credential_options": map[string]any{"models": []internalconfig.CodexModel{{Name: "upstream", Alias: "alias", IsCompat: true}}}}
+				auth.Metadata = map[string]any{"credential_options": map[string]any{"models": []internalconfig.NativeAPIModel{{Name: "upstream", Alias: "alias", IsCompat: true}}}}
 			}
 			req := attachResolvedHomeModelInfo(cliproxyexecutor.Request{Model: "alias"}, auth, "alias", wire.registryModelInfo(), wire.SupportConfigurationUpdate)
 			info, ok := ResolvedModelInfo(req)
@@ -38,24 +50,6 @@ func TestHomeV8ModelCapabilitiesAndLegacyPayload(t *testing.T) {
 				t.Fatalf("thinking=%+v", info.Thinking)
 			}
 		})
-	}
-}
-
-func TestHomeCodexCompatUsesSelectedCredentialOptions(t *testing.T) {
-	cfg := &internalconfig.Config{}
-	cfg.Home.Enabled = true
-	auth := &Auth{Provider: "codex", Metadata: map[string]any{"credential_options": map[string]any{"models": []any{map[string]any{"name": "upstream", "alias": "alias", "is-compat": true}}}}}
-	for _, model := range []string{"upstream", "alias", "upstream(high)"} {
-		if !CodexAPIKeyModelIsCompat(cfg, auth, model) {
-			t.Errorf("Home model %s lost compat flag", model)
-		}
-	}
-	if CodexAPIKeyModelIsCompat(cfg, &Auth{Provider: "codex"}, "upstream") {
-		t.Fatal("compat flag leaked to another credential")
-	}
-	cfg.Home.Enabled = false
-	if CodexAPIKeyModelIsCompat(cfg, auth, "upstream") {
-		t.Fatal("standalone began consuming Home options")
 	}
 }
 
@@ -106,7 +100,7 @@ func TestHomeCompatUsesCredentialModelOptions(t *testing.T) {
 }
 
 func TestHomeCompatCredentialOptionsExecutionPaths(t *testing.T) {
-	for _, provider := range []string{"codex", "claude", "gemini", "custom-compat"} {
+	for _, provider := range []string{"openai", "deepseek", "custom-compat"} {
 		for _, path := range []string{"execute", "stream", "count"} {
 			t.Run(provider+"/"+path, func(t *testing.T) {
 				manager := NewManager(nil, nil, nil)
@@ -118,7 +112,7 @@ func TestHomeCompatCredentialOptionsExecutionPaths(t *testing.T) {
 				auth := configuredCapabilityTestAuth("home-compat-"+provider, "fixture-key")
 				auth.Provider = provider
 				for _, enabled := range []bool{true, false} {
-					auth.Metadata = map[string]any{"credential_options": map[string]any{"models": []internalconfig.CodexModel{
+					auth.Metadata = map[string]any{"credential_options": map[string]any{"models": []internalconfig.NativeAPIModel{
 						{Name: "upstream", Alias: "other", IsCompat: !enabled},
 						{Name: "upstream", Alias: "alias", IsCompat: enabled},
 					}}}
@@ -158,77 +152,6 @@ func TestHomeCompatCredentialOptionsExecutionPaths(t *testing.T) {
 					if !ok || info.IsCompat != enabled {
 						t.Fatalf("resolved capabilities=%+v, want compat=%v", info, enabled)
 					}
-				}
-			})
-		}
-	}
-}
-
-func TestHomeCompatDoesNotInheritLocalModelExecutionPaths(t *testing.T) {
-	for _, tc := range []struct {
-		name, options string
-	}{
-		{name: "missing options"},
-		{name: "unrelated options", options: `{"weight":2}`},
-		{name: "invalid models", options: `{"models":"invalid"}`},
-	} {
-		for _, path := range []string{"execute", "stream", "count"} {
-			t.Run(tc.name+"/"+path, func(t *testing.T) {
-				manager := NewManager(nil, nil, nil)
-				manager.SetConfig(&internalconfig.Config{
-					Home: internalconfig.HomeConfig{Enabled: true},
-					CodexKey: []internalconfig.CodexKey{{APIKey: "fixture-key", Prefix: "tenant", Models: []internalconfig.CodexModel{
-						{Name: "upstream", Alias: "alias", IsCompat: true},
-					}}},
-				})
-				auth := configuredCapabilityTestAuth("home-no-local-compat", "fixture-key")
-				auth.Provider = "codex"
-				auth.Attributes[AttributeSource] = "config:codex[0]"
-				if tc.options != "" {
-					auth.Metadata = map[string]any{"credential_options": json.RawMessage(tc.options)}
-				}
-				payload, errMarshal := json.Marshal(homeAuthDispatchResponse{
-					Model: "upstream(high)", Auth: *auth, ModelInfo: &homeDispatchModelInfo{ID: "upstream"},
-				})
-				if errMarshal != nil {
-					t.Fatal(errMarshal)
-				}
-				manager.PublishHomeDispatch(configurationUpdateHomeDispatcher{payload: payload}, executionregistry.New(), 1)
-				executor := &selectedCapabilityCaptureExecutor{provider: "codex"}
-				manager.RegisterExecutor(executor)
-				req := cliproxyexecutor.Request{Model: "tenant/alias(high)"}
-				opts := cliproxyexecutor.Options{}
-				switch path {
-				case "execute":
-					if _, errExecute := manager.Execute(t.Context(), []string{"codex"}, req, opts); errExecute != nil {
-						t.Fatal(errExecute)
-					}
-				case "stream":
-					stream, errStream := manager.ExecuteStream(t.Context(), []string{"codex"}, req, opts)
-					if errStream != nil {
-						t.Fatal(errStream)
-					}
-					for chunk := range stream.Chunks {
-						if chunk.Err != nil {
-							t.Fatal(chunk.Err)
-						}
-					}
-				case "count":
-					if _, errCount := manager.ExecuteCount(t.Context(), []string{"codex"}, req, opts); errCount != nil {
-						t.Fatal(errCount)
-					}
-				}
-				if len(executor.requests) != 1 {
-					t.Fatalf("executor received %d requests, want 1", len(executor.requests))
-				}
-				received := executor.requests[0]
-				local, okLocal := ResolvedAPIKeyModelInfo(received)
-				if !okLocal || !local.IsCompat {
-					t.Fatal("fixture did not bind the conflicting local compatibility setting")
-				}
-				info, ok := ResolvedModelInfo(received)
-				if !ok || info.IsCompat {
-					t.Fatalf("Home capabilities must not inherit local is-compat: %+v", info)
 				}
 			})
 		}

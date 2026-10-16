@@ -76,11 +76,11 @@ static int plugin_call(const char* method, const uint8_t* request, size_t reques
 		return 1;
 	}
 	if (strcmp(method, "plugin.register") == 0) {
-		write_response(response, "{\"ok\":true,\"result\":{\"schema_version\":1,\"metadata\":{\"Name\":\"example-request-normalizer-c\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-request-normalizer-c.png\",\"ConfigFields\":[]},\"capabilities\":{\"request_normalizer\":true}}}");
+		write_response(response, "{\"ok\":true,\"result\":{\"schema_version\":1,\"metadata\":{\"Name\":\"example-request-normalizer-c\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-request-normalizer-c.png\",\"ConfigFields\":[]},\"capabilities\":{\"request_normalizer\":true}}}");
 		return 0;
 	}
 	if (strcmp(method, "plugin.reconfigure") == 0) {
-		write_response(response, "{\"ok\":true,\"result\":{\"schema_version\":1,\"metadata\":{\"Name\":\"example-request-normalizer-c\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-request-normalizer-c.png\",\"ConfigFields\":[]},\"capabilities\":{\"request_normalizer\":true}}}");
+		write_response(response, "{\"ok\":true,\"result\":{\"schema_version\":1,\"metadata\":{\"Name\":\"example-request-normalizer-c\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-request-normalizer-c.png\",\"ConfigFields\":[]},\"capabilities\":{\"request_normalizer\":true}}}");
 		return 0;
 	}
 	if (strcmp(method, "request.normalize") == 0) {

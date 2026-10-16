@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	defaultBaseURL      = "http://127.0.0.1:8317/v1"
+	defaultBaseURL      = "http://127.0.0.1:11016/v1"
 	defaultModel        = "gpt-realtime-2.1"
 	defaultInstructions = "Listen to the user's speech and reply with a short spoken response."
 	defaultOutputWAV    = "response.wav"

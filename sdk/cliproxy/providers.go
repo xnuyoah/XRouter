@@ -3,8 +3,8 @@ package cliproxy
 import (
 	"context"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 // NewFileTokenClientProvider returns the default token-backed client loader.
@@ -29,7 +29,7 @@ func NewAPIKeyClientProvider() APIKeyClientProvider {
 type apiKeyClientProvider struct{}
 
 func (p *apiKeyClientProvider) Load(ctx context.Context, cfg *config.Config) (*APIKeyClientResult, error) {
-	geminiCount, vertexCompatCount, claudeCount, codexCount, xaiCount, metaCount, openAICompat := watcher.BuildAPIKeyClients(cfg)
+	keyCounts := watcher.BuildAPIKeyClients(cfg)
 	if ctx != nil {
 		select {
 		case <-ctx.Done():
@@ -38,12 +38,10 @@ func (p *apiKeyClientProvider) Load(ctx context.Context, cfg *config.Config) (*A
 		}
 	}
 	return &APIKeyClientResult{
-		GeminiKeyCount:       geminiCount,
-		VertexCompatKeyCount: vertexCompatCount,
-		ClaudeKeyCount:       claudeCount,
-		CodexKeyCount:        codexCount,
-		XAIKeyCount:          xaiCount,
-		MetaKeyCount:         metaCount,
-		OpenAICompatCount:    openAICompat,
+		OpenAIKeyCount:    keyCounts.OpenAI,
+		DeepseekKeyCount:  keyCounts.Deepseek,
+		NvidiaKeyCount:    keyCounts.Nvidia,
+		AgnesKeyCount:     keyCounts.Agnes,
+		OpenAICompatCount: keyCounts.OpenAICompat,
 	}, nil
 }

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher/synthesizer"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher/synthesizer"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 const configAPIKeyDisablePattern = "*"
@@ -41,107 +41,30 @@ func toggleConfigAPIKeyExcludedAll(cfg *config.Config, auth *coreauth.Auth, disa
 
 	idGen := synthesizer.NewStableIDGenerator()
 
-	for i := range cfg.GeminiKey {
-		entry := &cfg.GeminiKey[i]
-		key := strings.TrimSpace(entry.APIKey)
-		base := strings.TrimSpace(entry.BaseURL)
-		proxyURL := strings.TrimSpace(entry.ProxyURL)
-		prefix := strings.TrimSpace(entry.Prefix)
-		if key == "" && base == "" {
-			continue
-		}
-		id, _ := idGen.Next("gemini:apikey", key, base, proxyURL, prefix, config.FormatSortedHeaders(entry.Headers))
-		if id == authID {
-			entry.ExcludedModels = setConfigAPIKeyExcludedAll(entry.ExcludedModels, disable)
-			return true, nil
-		}
-	}
-	for i := range cfg.InteractionsKey {
-		entry := &cfg.InteractionsKey[i]
-		key := strings.TrimSpace(entry.APIKey)
-		base := strings.TrimSpace(entry.BaseURL)
-		proxyURL := strings.TrimSpace(entry.ProxyURL)
-		prefix := strings.TrimSpace(entry.Prefix)
-		if key == "" && base == "" {
-			continue
-		}
-		id, _ := idGen.Next("gemini-interactions:apikey", key, base, proxyURL, prefix, config.FormatSortedHeaders(entry.Headers))
-		if id == authID {
-			entry.ExcludedModels = setConfigAPIKeyExcludedAll(entry.ExcludedModels, disable)
-			return true, nil
+	for _, fam := range []struct {
+		entries []config.NativeAPIKey
+		idKind  string
+	}{
+		{cfg.OpenAIKey, "openai:apikey"},
+		{cfg.DeepseekKey, "deepseek:apikey"},
+		{cfg.NvidiaKey, "nvidia:apikey"},
+		{cfg.AgnesKey, "agnes:apikey"},
+	} {
+		for i := range fam.entries {
+			entry := &fam.entries[i]
+			key := strings.TrimSpace(entry.APIKey)
+			base := strings.TrimSpace(entry.BaseURL)
+			proxyURL := strings.TrimSpace(entry.ProxyURL)
+			prefix := strings.TrimSpace(entry.Prefix)
+			if key == "" && base == "" {
+				continue
+			}
+			id, _ := idGen.Next(fam.idKind, key, base, proxyURL, prefix, config.FormatSortedHeaders(entry.Headers))
+			if id == authID {
+				entry.ExcludedModels = setConfigAPIKeyExcludedAll(entry.ExcludedModels, disable)
+				return true, nil
+			}
 		}
 	}
-	for i := range cfg.ClaudeKey {
-		entry := &cfg.ClaudeKey[i]
-		key := strings.TrimSpace(entry.APIKey)
-		base := strings.TrimSpace(entry.BaseURL)
-		proxyURL := strings.TrimSpace(entry.ProxyURL)
-		prefix := strings.TrimSpace(entry.Prefix)
-		if key == "" && base == "" {
-			continue
-		}
-		id, _ := idGen.Next("claude:apikey", key, base, proxyURL, prefix, config.FormatSortedHeaders(entry.Headers))
-		if id == authID {
-			entry.ExcludedModels = setConfigAPIKeyExcludedAll(entry.ExcludedModels, disable)
-			return true, nil
-		}
-	}
-	for i := range cfg.CodexKey {
-		entry := &cfg.CodexKey[i]
-		key := strings.TrimSpace(entry.APIKey)
-		base := strings.TrimSpace(entry.BaseURL)
-		proxyURL := strings.TrimSpace(entry.ProxyURL)
-		prefix := strings.TrimSpace(entry.Prefix)
-		if key == "" && base == "" {
-			continue
-		}
-		id, _ := idGen.Next("codex:apikey", key, base, proxyURL, prefix, config.FormatSortedHeaders(entry.Headers))
-		if id == authID {
-			entry.ExcludedModels = setConfigAPIKeyExcludedAll(entry.ExcludedModels, disable)
-			return true, nil
-		}
-	}
-	for i := range cfg.XAIKey {
-		entry := &cfg.XAIKey[i]
-		key := strings.TrimSpace(entry.APIKey)
-		base := strings.TrimSpace(entry.BaseURL)
-		proxyURL := strings.TrimSpace(entry.ProxyURL)
-		prefix := strings.TrimSpace(entry.Prefix)
-		if key == "" && base == "" {
-			continue
-		}
-		id, _ := idGen.Next("xai:apikey", key, base, proxyURL, prefix, config.FormatSortedHeaders(entry.Headers))
-		if id == authID {
-			entry.ExcludedModels = setConfigAPIKeyExcludedAll(entry.ExcludedModels, disable)
-			return true, nil
-		}
-	}
-	for i := range cfg.MetaKey {
-		entry := &cfg.MetaKey[i]
-		key := strings.TrimSpace(entry.APIKey)
-		base := strings.TrimSpace(entry.BaseURL)
-		proxyURL := strings.TrimSpace(entry.ProxyURL)
-		prefix := strings.TrimSpace(entry.Prefix)
-		if key == "" && base == "" {
-			continue
-		}
-		id, _ := idGen.Next("meta:apikey", key, base, proxyURL, prefix, config.FormatSortedHeaders(entry.Headers))
-		if id == authID {
-			entry.ExcludedModels = setConfigAPIKeyExcludedAll(entry.ExcludedModels, disable)
-			return true, nil
-		}
-	}
-	for i := range cfg.VertexCompatAPIKey {
-		entry := &cfg.VertexCompatAPIKey[i]
-		key := strings.TrimSpace(entry.APIKey)
-		base := strings.TrimSpace(entry.BaseURL)
-		proxy := strings.TrimSpace(entry.ProxyURL)
-		id, _ := idGen.Next("vertex:apikey", key, base, proxy)
-		if id == authID {
-			entry.ExcludedModels = setConfigAPIKeyExcludedAll(entry.ExcludedModels, disable)
-			return true, nil
-		}
-	}
-
 	return false, nil
 }

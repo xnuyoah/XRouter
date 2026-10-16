@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginabi"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginabi"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 func TestRPCCapabilitiesIncludeFrontendAuthProviderExclusive(t *testing.T) {
@@ -251,7 +251,7 @@ func TestRPCModelRouteUsesAdapter(t *testing.T) {
 				Name:             "router",
 				Version:          "1.0.0",
 				Author:           "test",
-				GitHubRepository: "https://github.com/router-for-me/CLIProxyAPI",
+				GitHubRepository: "https://github.com/xnuyoah/XRouter",
 			},
 			Capabilities: pluginapi.Capabilities{
 				ModelRouter: modelRouterFunc(func(ctx context.Context, req pluginapi.ModelRouteRequest) (pluginapi.ModelRouteResponse, error) {
@@ -321,7 +321,7 @@ func TestRPCSchedulerPickUsesAdapter(t *testing.T) {
 				Name:             "scheduler",
 				Version:          "1.0.0",
 				Author:           "test",
-				GitHubRepository: "https://github.com/router-for-me/CLIProxyAPI",
+				GitHubRepository: "https://github.com/xnuyoah/XRouter",
 			},
 			Capabilities: pluginapi.Capabilities{
 				Scheduler: schedulerFunc(func(ctx context.Context, req pluginapi.SchedulerPickRequest) (pluginapi.SchedulerPickResponse, error) {

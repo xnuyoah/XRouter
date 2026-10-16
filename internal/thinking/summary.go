@@ -3,9 +3,9 @@ package thinking
 import (
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
 // SummaryMode represents whether the client explicitly requested reasoning summaries.
@@ -66,47 +66,6 @@ func ExtractSummaryConfig(body []byte, format string) SummaryConfig {
 			return SummaryConfig{}
 		}
 		if config, ok := claudeSummaryConfig(body, "thinking.display"); ok {
-			return config
-		}
-	case "gemini":
-		if config, ok := firstSummaryBoolConfig(body, []string{
-			"generationConfig.thinkingConfig.includeThoughts",
-			"generationConfig.thinkingConfig.include_thoughts",
-			"generation_config.thinking_config.include_thoughts",
-			"generation_config.thinking_config.includeThoughts",
-		}); ok {
-			return config
-		}
-	case "antigravity":
-		if config, ok := firstSummaryBoolConfig(body, []string{
-			"request.generationConfig.thinkingConfig.includeThoughts",
-			"request.generationConfig.thinkingConfig.include_thoughts",
-			"request.generationConfig.thinking_config.includeThoughts",
-			"request.generationConfig.thinking_config.include_thoughts",
-		}); ok {
-			return config
-		}
-	case "interactions":
-		for _, path := range []string{
-			"generation_config.thinking_summaries",
-			"generation_config.thinkingSummaries",
-		} {
-			if config, ok := interactionsSummaryConfig(body, path); ok {
-				return config
-			}
-		}
-		// Existing Interactions translators accept the OpenAI-style top-level
-		// compatibility object. Keep the official generation_config selector
-		// authoritative when both are present.
-		if config, ok := interactionsSummaryConfig(body, "reasoning.summary"); ok {
-			return config
-		}
-		if config, ok := firstSummaryBoolConfig(body, []string{
-			"generation_config.thinking_config.include_thoughts",
-			"generation_config.thinking_config.includeThoughts",
-			"generation_config.thinkingConfig.include_thoughts",
-			"generation_config.thinkingConfig.includeThoughts",
-		}); ok {
 			return config
 		}
 	}
@@ -209,33 +168,6 @@ func applySummaryConfigForProvider(body []byte, format, model, provider string, 
 			value = "summarized"
 		}
 		body, _ = sjson.SetBytes(body, "thinking.display", value)
-	case "gemini":
-		body, _ = sjson.SetBytes(body, "generationConfig.thinkingConfig.includeThoughts", enabled)
-		for _, path := range []string{
-			"generationConfig.thinkingConfig.include_thoughts",
-			"generation_config.thinking_config.include_thoughts",
-			"generation_config.thinking_config.includeThoughts",
-		} {
-			body, _ = sjson.DeleteBytes(body, path)
-		}
-	case "antigravity":
-		body, _ = sjson.SetBytes(body, "request.generationConfig.thinkingConfig.includeThoughts", enabled)
-		for _, path := range []string{
-			"request.generationConfig.thinkingConfig.include_thoughts",
-			"request.generationConfig.thinking_config.include_thoughts",
-			"request.generationConfig.thinking_config.includeThoughts",
-		} {
-			body, _ = sjson.DeleteBytes(body, path)
-		}
-	case "interactions":
-		// Google Interactions only accepts auto or none. OpenAI's concise and
-		// detailed selectors therefore collapse to the supported enabled value.
-		value := "none"
-		if enabled {
-			value = "auto"
-		}
-		body, _ = sjson.SetBytes(body, "generation_config.thinking_summaries", value)
-		body, _ = sjson.DeleteBytes(body, "generation_config.thinkingSummaries")
 	case "openai-response", "codex":
 		if enabled {
 			body, _ = sjson.SetBytes(body, "reasoning.summary", normalizedSummaryDetail(config.Detail))
@@ -257,7 +189,7 @@ func applySummaryConfigForProvider(body []byte, format, model, provider string, 
 // intent that this package can read or write.
 func summaryFormatSupported(format string) bool {
 	switch format {
-	case "openai", "openai-response", "codex", "claude", "gemini", "antigravity", "interactions":
+	case "openai", "openai-response", "codex", "claude":
 		return true
 	default:
 		return false
@@ -288,8 +220,8 @@ func claudeThinkingAcceptsDisplay(body []byte) bool {
 // applyOpenAIChatSummaryConfig writes only documented Chat visibility controls.
 //
 // OpenAI Chat Completions exposes reasoning_effort but no reasoning summary or
-// visibility parameter. DeepSeek and Kimi Chat return reasoning_content while
-// thinking is active, but likewise document no independent hide/show switch.
+// visibility parameter. DeepSeek Chat returns reasoning_content while
+// thinking is active, but likewise documents no independent hide/show switch.
 // Summary intent must therefore never invent or overwrite thinking effort for
 // those dialects. OpenRouter is the exception: reasoning.exclude is its
 // documented "reason but hide" control, and include_reasoning is its deprecated
@@ -300,7 +232,6 @@ func claudeThinkingAcceptsDisplay(body []byte) bool {
 // https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create
 // https://openrouter.ai/docs/guides/best-practices/reasoning-tokens
 // https://api-docs.deepseek.com/guides/thinking_mode
-// https://platform.kimi.ai/docs/api/chat
 func applyOpenAIChatSummaryConfig(body []byte, provider string, enabled bool) []byte {
 	if isOpenRouterProvider(provider) || gjson.GetBytes(body, "reasoning.exclude").IsBool() {
 		body, _ = sjson.SetBytes(body, "reasoning.exclude", !enabled)
@@ -327,26 +258,13 @@ func isOpenRouterProvider(provider string) bool {
 }
 
 func extractOpenAIExplicitSummaryConfig(body []byte) (SummaryConfig, bool) {
-	// Google's documented Chat Completions extension is the authoritative
-	// explicit visibility control when present, ahead of CPA compatibility
-	// aliases and Chat's reasoning_effort fallback.
+	// Explicit visibility aliases take precedence over Chat's reasoning_effort
+	// fallback.
 	for _, path := range []string{
-		"extra_body.google.thinking_config.include_thoughts",
-		"extra_body.google.thinking_config.includeThoughts",
-		"extra_body.google.thinkingConfig.include_thoughts",
-		"extra_body.google.thinkingConfig.includeThoughts",
-		"extra_body.extra_body.google.thinking_config.include_thoughts",
-		"extra_body.extra_body.google.thinking_config.includeThoughts",
-		"google.thinking_config.include_thoughts",
-		"google.thinking_config.includeThoughts",
 		"thinking.includeThoughts",
 		"thinking.include_thoughts",
 		"reasoning.includeThoughts",
 		"reasoning.include_thoughts",
-		"generationConfig.thinkingConfig.includeThoughts",
-		"generationConfig.thinkingConfig.include_thoughts",
-		"generation_config.thinking_config.include_thoughts",
-		"generation_config.thinking_config.includeThoughts",
 	} {
 		if config, ok := summaryBoolConfig(body, path); ok {
 			return config, true
@@ -385,15 +303,6 @@ func extractOpenAIExplicitSummaryConfig(body []byte) (SummaryConfig, bool) {
 			return SummaryConfig{Mode: SummaryEnabled, Detail: "auto"}, true
 		}
 		return SummaryConfig{Mode: SummaryDisabled}, true
-	}
-	return SummaryConfig{}, false
-}
-
-func firstSummaryBoolConfig(body []byte, paths []string) (SummaryConfig, bool) {
-	for _, path := range paths {
-		if config, ok := summaryBoolConfig(body, path); ok {
-			return config, true
-		}
 	}
 	return SummaryConfig{}, false
 }
@@ -447,49 +356,6 @@ func claudeSummaryConfig(body []byte, path string) (SummaryConfig, bool) {
 	default:
 		return SummaryConfig{}, false
 	}
-}
-
-func interactionsSummaryConfig(body []byte, path string) (SummaryConfig, bool) {
-	value := gjson.GetBytes(body, path)
-	if value.Type != gjson.String {
-		return SummaryConfig{}, false
-	}
-	switch strings.ToLower(strings.TrimSpace(value.String())) {
-	case "auto":
-		return SummaryConfig{Mode: SummaryEnabled, Detail: "auto"}, true
-	case "none":
-		return SummaryConfig{Mode: SummaryDisabled}, true
-	default:
-		return SummaryConfig{}, false
-	}
-}
-
-// stripInferredClaudeSummaryActivation removes a globally inferred adaptive
-// mode when the selected API-key model supports only manual extended thinking.
-// The exact model-aware summary pass can then activate enabled thinking with a
-// valid budget, or leave thinking absent when max_tokens cannot accommodate it.
-func stripInferredClaudeSummaryActivation(body []byte, modelInfo *registry.ModelInfo) []byte {
-	if modelInfo == nil || modelInfo.Thinking == nil || len(modelInfo.Thinking.Levels) > 0 || modelInfo.Thinking.Min <= 0 {
-		return body
-	}
-	if !strings.EqualFold(strings.TrimSpace(gjson.GetBytes(body, "thinking.type").String()), "adaptive") {
-		return body
-	}
-
-	for _, path := range []string{
-		"thinking.type",
-		"thinking.budget_tokens",
-		"thinking.display",
-		"output_config.effort",
-	} {
-		body, _ = sjson.DeleteBytes(body, path)
-	}
-	for _, path := range []string{"thinking", "output_config"} {
-		if object := gjson.GetBytes(body, path); object.Exists() && object.IsObject() && len(object.Map()) == 0 {
-			body, _ = sjson.DeleteBytes(body, path)
-		}
-	}
-	return body
 }
 
 func enableClaudeThinkingForSummary(body []byte, model string, resolvedModelInfo *registry.ModelInfo) []byte {

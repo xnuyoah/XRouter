@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/interfaces"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	sdkconfig "github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/internal/interfaces"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	sdkconfig "github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 const speechOnlyRouteHint = "/v1/audio/speech"
@@ -76,7 +76,7 @@ func TestExecuteWithAuthManager_RejectsSpeechOnlyModelOnNonSpeechProtocols(t *te
 	registerSpeechOnlyTestModels(t)
 	handler := NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, coreauth.NewManager(nil, nil, nil))
 
-	protocols := []string{"openai", "openai-response", "claude", "gemini", "openai-image", "openai-video"}
+	protocols := []string{"openai", "openai-response", "claude", "openai-image", "openai-video"}
 	for _, protocol := range protocols {
 		for _, model := range speechOnlyModels {
 			t.Run(protocol+"/"+model, func(t *testing.T) {

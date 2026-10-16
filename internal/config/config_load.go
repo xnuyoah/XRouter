@@ -198,13 +198,11 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	cfg.SaveCooldownStatus = false
 	cfg.TransientErrorCooldownSeconds = 0
 	cfg.DisableImageGeneration = DisableImageGenerationOff
-	cfg.WebsocketAuth = true
 	cfg.Pprof.Enable = false
 	cfg.Pprof.Addr = DefaultPprofAddr
 	cfg.Discovery.Enabled = false
 	cfg.Discovery.ServiceType = DefaultDiscoveryServiceType
-	cfg.Discovery.Subtypes = []string{"_chat-completions", "_responses", "_messages", "_generate-content", "_interactions"}
-	cfg.RemoteManagement.PanelGitHubRepository = DefaultPanelGitHubRepository
+	cfg.Discovery.Subtypes = []string{"_chat-completions", "_responses", "_messages"}
 	cfg.CredentialInFlight = DefaultCredentialInFlightConfig()
 	if err = yaml.Unmarshal(data, &cfg); err != nil {
 		if optional {
@@ -227,10 +225,7 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 		cfg.Discovery.ServiceType = DefaultDiscoveryServiceType
 	}
 	if len(cfg.Discovery.Subtypes) == 0 {
-		cfg.Discovery.Subtypes = []string{"_chat-completions", "_responses", "_messages", "_generate-content", "_interactions"}
-	}
-	if errValidate := cfg.Codex.LiveMediaRelay.Validate(); errValidate != nil {
-		return nil, errValidate
+		cfg.Discovery.Subtypes = []string{"_chat-completions", "_responses", "_messages"}
 	}
 	if errValidate := cfg.ValidateCredentialWeights(); errValidate != nil {
 		return nil, errValidate
@@ -248,11 +243,6 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 		// Persist the hashed value back to the config file to avoid re-hashing on next startup.
 		// Preserve YAML comments and ordering; update only the nested key.
 		_ = SaveConfigPreserveCommentsUpdateNestedScalar(configFile, managementSecretKeyPath(data), hashed)
-	}
-
-	cfg.RemoteManagement.PanelGitHubRepository = strings.TrimSpace(cfg.RemoteManagement.PanelGitHubRepository)
-	if cfg.RemoteManagement.PanelGitHubRepository == "" {
-		cfg.RemoteManagement.PanelGitHubRepository = DefaultPanelGitHubRepository
 	}
 
 	cfg.Pprof.Addr = strings.TrimSpace(cfg.Pprof.Addr)
@@ -284,32 +274,8 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 		return nil, errResolvePluginsDir
 	}
 
-	// Sanitize Gemini API key configuration and migrate legacy entries.
-	cfg.SanitizeGeminiKeys()
-
-	// Sanitize native Interactions API key configuration.
-	cfg.SanitizeInteractionsKeys()
-
-	// Sanitize Vertex-compatible API keys.
-	cfg.SanitizeVertexCompatKeys()
-
-	// Sanitize Codex keys: drop entries without base-url
-	cfg.SanitizeCodexKeys()
-
-	// Sanitize xAI keys: drop entries without base-url
-	cfg.SanitizeXAIKeys()
-
-	// Sanitize Meta keys.
-	cfg.SanitizeMetaKeys()
-
-	// Sanitize Codex header defaults.
-	cfg.SanitizeCodexHeaderDefaults()
-
-	// Sanitize Claude header defaults.
-	cfg.SanitizeClaudeHeaderDefaults()
-
-	// Sanitize Claude key headers
-	cfg.SanitizeClaudeKeys()
+	// Sanitize native OpenAI-wire API-key providers (openai/deepseek/nvidia).
+	cfg.SanitizeNativeAPIKeys()
 
 	// Sanitize OpenAI compatibility providers: drop entries without base-url
 	cfg.SanitizeOpenAICompatibility()

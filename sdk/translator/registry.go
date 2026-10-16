@@ -4,10 +4,10 @@ import (
 	"context"
 	"sync"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
 )
 
 // Registry manages translation functions across schemas.

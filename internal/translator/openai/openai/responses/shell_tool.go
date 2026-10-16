@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	translatorcommon "github.com/router-for-me/CLIProxyAPI/v8/internal/translator/common"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	translatorcommon "github.com/xnuyoah/XRouter/v8/internal/translator/common"
 )
 
 var errInvalidShellAction = errors.New("invalid shell action: expected nonempty commands strings and optional positive integer limits")

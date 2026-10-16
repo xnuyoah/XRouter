@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/httptransport"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/sdk/httptransport"
 )
 
 type handlerTestTransport struct {

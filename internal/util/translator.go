@@ -1,4 +1,4 @@
-// Package util provides utility functions for the CLI Proxy API server.
+// Package util provides utility functions for the XRouter server.
 // It includes helper functions for JSON manipulation, proxy configuration,
 // and other common operations used across the application.
 package util

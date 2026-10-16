@@ -7,12 +7,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
-	"google.golang.org/protobuf/encoding/protowire"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 func TestPayloadFinalizerDefaultsUseOriginalAndNormalizeBeforeRules(t *testing.T) {
@@ -28,48 +26,6 @@ func TestPayloadFinalizerDefaultsUseOriginalAndNormalizeBeforeRules(t *testing.T
 	out := FinalizePayload(WithPayloadFinalizer(context.Background(), finalize), body)
 	if gjson.GetBytes(out, "missing").String() != "user default" || gjson.GetBytes(out, "present").String() != "caller" || gjson.GetBytes(out, "late").Exists() || gjson.GetBytes(out, "tools.0.function.parameters.properties.count.type").String() != "number" {
 		t.Fatalf("unexpected final payload: %s", out)
-	}
-}
-
-func TestPayloadFinalizerDevinBusinessFieldsAndCredentials(t *testing.T) {
-	wire := BuildDevinGetChatMessageRequest("secret-token", "device", "model", "system", []DevinPrompt{{MessageID: "id", Source: 1, Content: "hello"}}, []DevinTool{{Name: "f", Parameters: []byte(`{"type":"object"}`)}}, nil, 1024, "session", "cascade", nil)
-	unchanged, _, errUnchanged := FinalizeDevinPayload(wire, func(body []byte) []byte { return body })
-	if errUnchanged != nil || !bytes.Equal(unchanged, wire) {
-		t.Fatalf("no-op changed protobuf: %v", errUnchanged)
-	}
-	final, view, errFinalize := FinalizeDevinPayload(wire, func(body []byte) []byte {
-		body, _ = sjson.DeleteBytes(body, "system_prompt")
-		body, _ = sjson.DeleteBytes(body, "tools")
-		body, _ = sjson.SetBytes(body, "completion_config.max_tokens", 0)
-		body, _ = sjson.SetBytes(body, "prompts.0.content", "configured")
-		return body
-	})
-	if errFinalize != nil {
-		t.Fatal(errFinalize)
-	}
-	if gjson.GetBytes(view, "system_prompt").Exists() || gjson.GetBytes(view, "tools").Exists() {
-		t.Fatalf("filter undone: %s", view)
-	}
-	decoded, errDecode := decodeDevinPayload(final, devinPayloadFields)
-	if errDecode != nil {
-		t.Fatal(errDecode)
-	}
-	if decoded["completion_config"].(map[string]any)["max_tokens"] != uint64(0) {
-		t.Fatalf("default was re-injected: %v", decoded)
-	}
-	fieldOne := func(wire []byte) []byte {
-		for len(wire) > 0 {
-			num, kind, tagLen := protowire.ConsumeTag(wire)
-			n := protowire.ConsumeFieldValue(num, kind, wire[tagLen:])
-			if num == 1 {
-				return wire[:tagLen+n]
-			}
-			wire = wire[tagLen+n:]
-		}
-		return nil
-	}
-	if !bytes.Equal(fieldOne(wire), fieldOne(final)) {
-		t.Fatal("payload rules changed credentials")
 	}
 }
 

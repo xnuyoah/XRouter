@@ -409,8 +409,6 @@ func isKnownDefaultValue(path []string, node *yaml.Node) bool {
 		switch fullPath {
 		case "pprof.addr":
 			return node.Value == DefaultPprofAddr
-		case "remote-management.panel-github-repository":
-			return node.Value == DefaultPanelGitHubRepository
 		case "plugins.dir":
 			return node.Value == "plugins"
 		case "routing.strategy":
@@ -834,9 +832,7 @@ func shouldPruneNestedMappingKeys(path []string) bool {
 	parent := path[len(path)-2]
 	last := path[len(path)-1]
 	switch parent {
-	case "claude-api-key":
-		return last == "cloak" || last == "headers"
-	case "codex-api-key", "gemini-api-key", "interactions-api-key", "xai-api-key", "meta-api-key", "vertex-api-key", "openai-compatibility":
+	case "openai-api-key", "deepseek-api-key", "nvidia-api-key", "agnes-api-key", "openai-compatibility":
 		return last == "headers"
 	default:
 		return false

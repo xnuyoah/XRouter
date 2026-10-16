@@ -1,4 +1,4 @@
-// Package cmd provides command-line interface functionality for the CLI Proxy API server.
+// Package cmd provides command-line interface functionality for the XRouter server.
 // It includes authentication flows for various AI service providers, service startup,
 // and other command-line operations.
 package cmd
@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/api"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/pluginhost"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/api"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy"
 )
 
 // StartService builds and runs the proxy service using the exported SDK.

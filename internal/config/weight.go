@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/credentialweight"
+	"github.com/xnuyoah/XRouter/v8/internal/credentialweight"
 	"gopkg.in/yaml.v3"
 )
 
@@ -32,8 +32,7 @@ func validateCredentialWeightYAML(data []byte) error {
 		return err
 	}
 	families := map[string]struct{}{
-		"gemini-api-key": {}, "interactions-api-key": {}, "claude-api-key": {},
-		"vertex-api-key": {}, "codex-api-key": {}, "xai-api-key": {}, "meta-api-key": {},
+		"openai-api-key": {}, "deepseek-api-key": {}, "nvidia-api-key": {}, "agnes-api-key": {},
 	}
 	for index := 0; root != nil && root.Kind == yaml.MappingNode && index+1 < len(root.Content); index += 2 {
 		name := root.Content[index].Value
@@ -114,39 +113,24 @@ func (cfg *Config) ValidateCredentialWeights() error {
 	if cfg == nil {
 		return nil
 	}
-	for index := range cfg.GeminiKey {
-		if errValidate := ValidateCredentialWeight(cfg.GeminiKey[index].Weight); errValidate != nil {
-			return fmt.Errorf("gemini-api-key[%d].weight: %w", index, errValidate)
+	for index := range cfg.OpenAIKey {
+		if errValidate := ValidateCredentialWeight(cfg.OpenAIKey[index].Weight); errValidate != nil {
+			return fmt.Errorf("openai-api-key[%d].weight: %w", index, errValidate)
 		}
 	}
-	for index := range cfg.InteractionsKey {
-		if errValidate := ValidateCredentialWeight(cfg.InteractionsKey[index].Weight); errValidate != nil {
-			return fmt.Errorf("interactions-api-key[%d].weight: %w", index, errValidate)
+	for index := range cfg.DeepseekKey {
+		if errValidate := ValidateCredentialWeight(cfg.DeepseekKey[index].Weight); errValidate != nil {
+			return fmt.Errorf("deepseek-api-key[%d].weight: %w", index, errValidate)
 		}
 	}
-	for index := range cfg.ClaudeKey {
-		if errValidate := ValidateCredentialWeight(cfg.ClaudeKey[index].Weight); errValidate != nil {
-			return fmt.Errorf("claude-api-key[%d].weight: %w", index, errValidate)
+	for index := range cfg.NvidiaKey {
+		if errValidate := ValidateCredentialWeight(cfg.NvidiaKey[index].Weight); errValidate != nil {
+			return fmt.Errorf("nvidia-api-key[%d].weight: %w", index, errValidate)
 		}
 	}
-	for index := range cfg.VertexCompatAPIKey {
-		if errValidate := ValidateCredentialWeight(cfg.VertexCompatAPIKey[index].Weight); errValidate != nil {
-			return fmt.Errorf("vertex-api-key[%d].weight: %w", index, errValidate)
-		}
-	}
-	for index := range cfg.CodexKey {
-		if errValidate := ValidateCredentialWeight(cfg.CodexKey[index].Weight); errValidate != nil {
-			return fmt.Errorf("codex-api-key[%d].weight: %w", index, errValidate)
-		}
-	}
-	for index := range cfg.XAIKey {
-		if errValidate := ValidateCredentialWeight(cfg.XAIKey[index].Weight); errValidate != nil {
-			return fmt.Errorf("xai-api-key[%d].weight: %w", index, errValidate)
-		}
-	}
-	for index := range cfg.MetaKey {
-		if errValidate := ValidateCredentialWeight(cfg.MetaKey[index].Weight); errValidate != nil {
-			return fmt.Errorf("meta-api-key[%d].weight: %w", index, errValidate)
+	for index := range cfg.AgnesKey {
+		if errValidate := ValidateCredentialWeight(cfg.AgnesKey[index].Weight); errValidate != nil {
+			return fmt.Errorf("agnes-api-key[%d].weight: %w", index, errValidate)
 		}
 	}
 	for providerIndex := range cfg.OpenAICompatibility {

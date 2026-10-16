@@ -1,4 +1,4 @@
-// Package api exposes server option helpers for embedding CLIProxyAPI.
+// Package api exposes server option helpers for embedding XRouter.
 //
 // It wraps internal server option types so external projects can configure the embedded
 // HTTP server without importing internal packages.
@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	internalapi "github.com/router-for-me/CLIProxyAPI/v8/internal/api"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/logging"
+	internalapi "github.com/xnuyoah/XRouter/v8/internal/api"
+	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/sdk/logging"
 )
 
 // ServerOption customises HTTP server construction.

@@ -10,11 +10,11 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	coreexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	sdkconfig "github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/httptransport"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	coreexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	sdkconfig "github.com/xnuyoah/XRouter/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/sdk/httptransport"
 )
 
 type observingTransport struct {
@@ -22,7 +22,7 @@ type observingTransport struct {
 }
 
 func TestClientDecoratorsPreserveProtectedAndProxyTransports(t *testing.T) {
-	for _, factory := range []string{"plain", "devin", "utls"} {
+	for _, factory := range []string{"plain", "utls"} {
 		for _, proxy := range []string{"", "http://127.0.0.1:12345"} {
 			t.Run(factory+"_"+proxy, func(t *testing.T) {
 				calls := 0
@@ -48,12 +48,6 @@ func TestClientDecoratorsPreserveProtectedAndProxyTransports(t *testing.T) {
 					plainRT, ok := plain.Transport.(*fallbackRoundTripper)
 					if !ok || plainRT.anthropic != rt.anthropic {
 						t.Fatal("Anthropic cached transport identity changed under decoration")
-					}
-				case "devin":
-					c = NewDevinHTTPClient(ctx, cfg, auth, 0)
-					plain = NewDevinHTTPClient(context.Background(), cfg, auth, 0)
-					if plain.Transport != selected {
-						t.Fatal("Devin pooled transport identity changed under decoration")
 					}
 				default:
 					c = NewProxyAwareHTTPClient(ctx, cfg, auth, 0)

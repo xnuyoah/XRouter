@@ -1,4 +1,5 @@
 # Binaries
+xrouter
 cli-proxy-api
 *.exe
 
@@ -13,6 +14,7 @@ conv/*
 temp/*
 refs/*
 plugins/*
+data/*
 examples/plugin/bin/*
 
 # Storage backends
@@ -22,6 +24,7 @@ objectstore/*
 
 # Static assets
 static/*
+!static/management.html
 
 # Authentication data
 auths/*
@@ -43,6 +46,7 @@ AGENTS.override.md
 .claude/*
 .claude
 .gemini/*
+.zcode/*
 .serena/*
 .agent/*
 .agents

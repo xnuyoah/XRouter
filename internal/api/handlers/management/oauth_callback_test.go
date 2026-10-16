@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 func TestPostOAuthCallbackCreatesMissingAuthDir(t *testing.T) {
@@ -52,8 +52,8 @@ func TestPostOAuthCallbackCreatesMissingAuthDir(t *testing.T) {
 
 func TestGetOAuthCallbackWritesPluginProviderCallback(t *testing.T) {
 	authDir := filepath.Join(t.TempDir(), "missing-auth")
-	state := "test-geminicli-state"
-	if errRegister := RegisterPluginOAuthSession(state, "gemini-cli", nil); errRegister != nil {
+	state := "test-plugin-oauth-state"
+	if errRegister := RegisterPluginOAuthSession(state, "example-plugin", nil); errRegister != nil {
 		t.Fatalf("register plugin oauth session: %v", errRegister)
 	}
 	defer CompleteOAuthSession(state)
@@ -71,7 +71,7 @@ func TestGetOAuthCallbackWritesPluginProviderCallback(t *testing.T) {
 		t.Fatalf("expected status %d, got %d with body %s", http.StatusOK, w.Code, w.Body.String())
 	}
 
-	callbackPath := filepath.Join(authDir, ".oauth-gemini-cli-"+state+".oauth")
+	callbackPath := filepath.Join(authDir, ".oauth-example-plugin-"+state+".oauth")
 	data, errRead := os.ReadFile(callbackPath)
 	if errRead != nil {
 		t.Fatalf("expected callback file to be written: %v", errRead)
@@ -118,7 +118,7 @@ func TestGetOAuthCallbackDoesNotAliasPluginProvider(t *testing.T) {
 
 func TestWriteOAuthCallbackFileForPendingSessionCreatesMissingAuthDirForCallbackProviders(t *testing.T) {
 	// xAI uses device-code flow and no longer writes callback files.
-	providers := []string{"anthropic", "codex", "gemini", "antigravity"}
+	providers := []string{"anthropic", "codex", "antigravity"}
 	for _, provider := range providers {
 		t.Run(provider, func(t *testing.T) {
 			authDir := filepath.Join(t.TempDir(), "missing-auth")

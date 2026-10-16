@@ -144,7 +144,7 @@ func (r *StreamRewriter) RewriteChunk(chunk []byte) []byte {
 		return chunk
 	}
 
-	// Handle raw JSON chunks (Gemini/OpenAI format without SSE "data:" prefix)
+	// Handle raw JSON chunks (OpenAI format without SSE "data:" prefix)
 	trimmed := bytes.TrimSpace(chunk)
 	if len(trimmed) > 0 && trimmed[0] == '{' && gjson.ValidBytes(trimmed) {
 		rewritten := trimmed
@@ -267,7 +267,7 @@ func normalizeGluedSSEEvents(chunk []byte) []byte {
 	if len(chunk) == 0 {
 		return chunk
 	}
-	// Antigravity/Gemini translators emit event frames without trailing blank lines.
+	// Antigravity translators emit event frames without trailing blank lines.
 	// When multiple frames are buffered back-to-back they can glue as "...}event:...".
 	// Only split when the bytes before the glue close a valid SSE data JSON object.
 	chunk = safeReplaceGlued(chunk, []byte("}event:"), []byte("}\n\nevent:"))

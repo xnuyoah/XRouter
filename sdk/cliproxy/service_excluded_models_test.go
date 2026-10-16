@@ -2,90 +2,29 @@ package cliproxy
 
 import (
 	"context"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
-	internalregistry "github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	internalregistry "github.com/xnuyoah/XRouter/v8/internal/registry"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 func TestRegisterModelsForAuth_UsesPreMergedExcludedModelsAttribute(t *testing.T) {
 	service := &Service{
 		cfg: &config.Config{
 			OAuthExcludedModels: map[string][]string{
-				"gemini": {"gemini-2.5-pro"},
+				"nvidia": {"nemotron-3-ultra"},
 			},
 		},
 	}
 	auth := &coreauth.Auth{
-		ID:       "auth-gemini",
-		Provider: "gemini",
+		ID:       "auth-nvidia",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
 			"auth_kind":       "oauth",
-			"excluded_models": "gemini-2.5-flash",
-		},
-	}
-
-	registry := GlobalModelRegistry()
-	registry.UnregisterClient(auth.ID)
-	t.Cleanup(func() {
-		registry.UnregisterClient(auth.ID)
-	})
-
-	service.registerModelsForAuth(context.Background(), auth)
-
-	models := registry.GetAvailableModelsByProvider("gemini")
-	if len(models) == 0 {
-		t.Fatal("expected gemini models to be registered")
-	}
-
-	for _, model := range models {
-		if model == nil {
-			continue
-		}
-		modelID := strings.TrimSpace(model.ID)
-		if strings.EqualFold(modelID, "gemini-2.5-flash") {
-			t.Fatalf("expected model %q to be excluded by auth attribute", modelID)
-		}
-	}
-
-	seenGlobalExcluded := false
-	for _, model := range models {
-		if model == nil {
-			continue
-		}
-		if strings.EqualFold(strings.TrimSpace(model.ID), "gemini-2.5-pro") {
-			seenGlobalExcluded = true
-			break
-		}
-	}
-	if !seenGlobalExcluded {
-		t.Fatal("expected global excluded model to be present when attribute override is set")
-	}
-}
-
-func TestRegisterModelsForAuth_MetaOAuthAliasAndExcludedModels(t *testing.T) {
-	service := &Service{
-		cfg: &config.Config{
-			OAuthExcludedModels: map[string][]string{
-				"meta": {"muse-spark-1.1"},
-			},
-			OAuthModelAlias: map[string][]config.OAuthModelAlias{
-				"meta": {{Name: "muse-spark-1.3", Alias: "muse-latest"}},
-			},
-		},
-	}
-	auth := &coreauth.Auth{
-		ID:       "auth-meta-oauth",
-		Provider: "meta",
-		Status:   coreauth.StatusActive,
-		Attributes: map[string]string{
-			"auth_kind": "oauth",
-			"api_key":   "LLM|minted",
+			"excluded_models": "nemotron-3.5-lightning",
 		},
 	}
 
@@ -99,26 +38,31 @@ func TestRegisterModelsForAuth_MetaOAuthAliasAndExcludedModels(t *testing.T) {
 
 	models := registry.GetModelsForClient(auth.ID)
 	if len(models) == 0 {
-		t.Fatal("expected meta models to be registered")
+		t.Fatal("expected provider models to be registered")
 	}
 
-	seenLatest := false
 	for _, model := range models {
 		if model == nil {
 			continue
 		}
 		modelID := strings.TrimSpace(model.ID)
-		switch {
-		case strings.EqualFold(modelID, "muse-spark-1.1"):
-			t.Fatalf("expected model %q to be excluded by oauth-excluded-models", modelID)
-		case strings.EqualFold(modelID, "muse-spark-1.3"):
-			t.Fatalf("expected model %q to be renamed by oauth-model-alias", modelID)
-		case strings.EqualFold(modelID, "muse-latest"):
-			seenLatest = true
+		if strings.EqualFold(modelID, "nemotron-3.5-lightning") {
+			t.Fatalf("expected model %q to be excluded by auth attribute", modelID)
 		}
 	}
-	if !seenLatest {
-		t.Fatal("expected oauth-model-alias to expose muse-latest")
+
+	seenGlobalExcluded := false
+	for _, model := range models {
+		if model == nil {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(model.ID), "nemotron-3-ultra") {
+			seenGlobalExcluded = true
+			break
+		}
+	}
+	if !seenGlobalExcluded {
+		t.Fatal("expected global excluded model to be present when attribute override is set")
 	}
 }
 
@@ -263,138 +207,5 @@ func TestRegisterModelsForAuth_OpenAICompatibilityInputModalities(t *testing.T) 
 	}
 	if len(imageEndpointModel.SupportedInputModalities) != 0 {
 		t.Fatalf("image endpoint model should not inherit chat input modalities: %+v", imageEndpointModel.SupportedInputModalities)
-	}
-}
-
-func TestRegisterModelsForAuth_AntigravityFetchesWebSearchCapability(t *testing.T) {
-	var sawFetch bool
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != antigravityModelsPath {
-			t.Fatalf("path = %q, want %s", r.URL.Path, antigravityModelsPath)
-		}
-		if got := r.Header.Get("Authorization"); got != "Bearer token" {
-			t.Fatalf("Authorization = %q, want bearer token", got)
-		}
-		sawFetch = true
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{
-				"models": {
-					"gemini-3.1-flash-lite": {
-						"displayName": "Gemini 3.1 Flash Lite",
-						"maxTokens": 1,
-						"maxOutputTokens": 2
-					},
-					"fetched-only-search-model": {
-						"displayName": "Fetched Only Search Model"
-					}
-				},
-				"webSearchModelIds": ["gemini-3.1-flash-lite", "fetched-only-search-model"]
-			}`))
-	}))
-	defer server.Close()
-
-	service := &Service{cfg: &config.Config{}}
-	auth := &coreauth.Auth{
-		ID:       "auth-antigravity-fetch-models",
-		Provider: "antigravity",
-		Status:   coreauth.StatusActive,
-		Attributes: map[string]string{
-			"base_url": server.URL,
-		},
-		Metadata: map[string]any{
-			"access_token": "token",
-		},
-	}
-
-	registry := internalregistry.GetGlobalRegistry()
-	registry.UnregisterClient(auth.ID)
-	t.Cleanup(func() {
-		registry.UnregisterClient(auth.ID)
-	})
-
-	service.registerModelsForAuth(context.Background(), auth)
-	service.WaitAntigravityProbes()
-	if !sawFetch {
-		t.Fatal("expected fetchAvailableModels request")
-	}
-
-	models := registry.GetModelsForClient(auth.ID)
-	staticModels := internalregistry.GetAntigravityModels()
-	staticByID := make(map[string]*internalregistry.ModelInfo, len(staticModels))
-	for _, model := range staticModels {
-		if model != nil {
-			staticByID[model.ID] = model
-		}
-	}
-
-	var webSearchModel, agentModel, staticOnlyModel, fetchedOnlyModel *internalregistry.ModelInfo
-	for _, model := range models {
-		if model == nil {
-			continue
-		}
-		switch strings.TrimSpace(model.ID) {
-		case "gemini-3.1-flash-lite":
-			webSearchModel = model
-		case "gemini-pro-agent":
-			agentModel = model
-		case "gpt-oss-120b-medium":
-			staticOnlyModel = model
-		case "fetched-only-search-model":
-			fetchedOnlyModel = model
-		}
-	}
-	if webSearchModel == nil {
-		t.Fatal("expected gemini-3.1-flash-lite to be registered")
-	}
-	if !webSearchModel.SupportsWebSearch {
-		t.Fatal("expected gemini-3.1-flash-lite to support web search")
-	}
-	staticWebSearchModel := staticByID["gemini-3.1-flash-lite"]
-	if staticWebSearchModel == nil {
-		t.Fatal("expected static gemini-3.1-flash-lite definition")
-	}
-	if webSearchModel.ContextLength != staticWebSearchModel.ContextLength || webSearchModel.MaxCompletionTokens != staticWebSearchModel.MaxCompletionTokens {
-		t.Fatalf("static token limits should be preserved, got=%#v static=%#v", webSearchModel, staticWebSearchModel)
-	}
-	if agentModel != nil || staticOnlyModel != nil {
-		t.Fatal("models absent from the account catalog must not be registered")
-	}
-	if fetchedOnlyModel != nil {
-		t.Fatalf("fetched-only model should not be registered: %#v", fetchedOnlyModel)
-	}
-}
-
-func TestRegisterModelsForAuth_DevinSWE16SlowIncluded(t *testing.T) {
-	service := &Service{}
-	auth := &coreauth.Auth{
-		ID:       "auth-devin-test-swe16slow",
-		Provider: "devin",
-		Status:   coreauth.StatusActive,
-		Attributes: map[string]string{
-			"auth_kind": "oauth",
-		},
-	}
-
-	registry := GlobalModelRegistry()
-	registry.UnregisterClient(auth.ID)
-	t.Cleanup(func() {
-		registry.UnregisterClient(auth.ID)
-	})
-
-	service.registerModelsForAuth(context.Background(), auth)
-
-	models := registry.GetModelsForClient(auth.ID)
-	var foundSlow *internalregistry.ModelInfo
-	for _, m := range models {
-		if m != nil && m.ID == "devin/swe-1-6-slow" {
-			foundSlow = m
-			break
-		}
-	}
-	if foundSlow == nil {
-		t.Fatal("expected devin/swe-1-6-slow to be registered for devin auth")
-	}
-	if foundSlow.DisplayName != "SWE-1.6 Slow" {
-		t.Errorf("DisplayName = %q, want 'SWE-1.6 Slow'", foundSlow.DisplayName)
 	}
 }

@@ -3,16 +3,16 @@ package auth
 import (
 	"testing"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 func TestResolvedAPIKeyModelInfoPropagatesIsCompat(t *testing.T) {
 	manager := NewManager(nil, nil, nil)
-	manager.SetConfig(&internalconfig.Config{ClaudeKey: []internalconfig.ClaudeKey{{
+	manager.SetConfig(&internalconfig.Config{DeepseekKey: []internalconfig.DeepseekKey{{
 		APIKey: "compat-key",
 		Prefix: "tenant",
-		Models: []internalconfig.ClaudeModel{{
+		Models: []internalconfig.NativeAPIModel{{
 			Name:     "deepseek-upstream",
 			Alias:    "deepseek-alias",
 			IsCompat: true,

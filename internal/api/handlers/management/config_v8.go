@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/clienterror"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/clienterror"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -58,12 +58,6 @@ func (h *Handler) ConfigV8(c *gin.Context) {
 	if c.Request.Method == http.MethodGet {
 		config.ProjectV8ConfigAliases(root, strings.Join(parts, "."))
 		if !yamlRequest {
-			if servers := configV8Node(root, v8ICEServersPath); servers != nil && servers.Kind == yaml.SequenceNode {
-				for _, server := range servers.Content {
-					deleteConfigV8Path(server, []string{"username"})
-					deleteConfigV8Path(server, []string{"credential"})
-				}
-			}
 			h.injectV8APIKeyAuthIndexesLocked(root, data)
 		}
 		value := configV8Node(root, parts)
@@ -150,9 +144,6 @@ func (h *Handler) ConfigV8(c *gin.Context) {
 	if err = config.NormalizeV8ConfigAliases(root); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_config", "message": err.Error()})
 		return
-	}
-	if !yamlRequest && c.Request.Method != http.MethodDelete {
-		preserveV8TURNSecrets(root, before)
 	}
 	// Revisions are owned by Home and must not become ordinary editable settings.
 	for _, field := range []string{"credentials/concurrency/lifecycle-config-revision", "credentials/concurrency/observation-barrier-revision", "plugins/auth-revision"} {
@@ -258,50 +249,6 @@ func splitEntityTagList(field string) []string {
 		}
 	}
 	return append(parts, field[start:])
-}
-
-var v8ICEServersPath = []string{"oauth", "providers", "codex", "live-media-relay", "ice-servers"}
-
-// JSON reads redact TURN secrets. Preserve omitted credentials when a client
-// writes that JSON back, matching by endpoint rather than array position so a
-// changed URL cannot inherit credentials for a different server. Explicit empty
-// strings/null clear a secret; YAML writes retain full replacement semantics.
-func preserveV8TURNSecrets(root, before *yaml.Node) {
-	next := configV8Node(root, v8ICEServersPath)
-	previous := configV8Node(before, v8ICEServersPath)
-	if next == nil || previous == nil || next.Kind != yaml.SequenceNode || previous.Kind != yaml.SequenceNode {
-		return
-	}
-	matched := make([]bool, len(previous.Content))
-	for _, server := range next.Content {
-		urls := configV8Node(server, []string{"urls"})
-		if urls == nil {
-			continue
-		}
-		var newURLs []string
-		if urls.Decode(&newURLs) != nil {
-			continue
-		}
-		for i, old := range previous.Content {
-			if matched[i] {
-				continue
-			}
-			oldURLs := configV8Node(old, []string{"urls"})
-			var previousURLs []string
-			if oldURLs == nil || oldURLs.Decode(&previousURLs) != nil || !reflect.DeepEqual(newURLs, previousURLs) {
-				continue
-			}
-			matched[i] = true
-			for _, name := range []string{"username", "credential"} {
-				if configV8Node(server, []string{name}) == nil {
-					if secret := configV8Node(old, []string{name}); secret != nil {
-						server.Content = append(server.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: name}, cloneConfigV8Node(secret))
-					}
-				}
-			}
-			break
-		}
-	}
 }
 
 func configV8Node(root *yaml.Node, parts []string) *yaml.Node {

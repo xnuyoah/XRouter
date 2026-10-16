@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 	"github.com/tidwall/gjson"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 const (
@@ -84,7 +84,7 @@ func writeFingerprintField(hash interface{ Write([]byte) (int, error) }, value s
 	_, _ = hash.Write([]byte("\x00"))
 }
 
-// ExtractCanonicalTurns extracts all logical turns from the five supported inbound protocols.
+// ExtractCanonicalTurns extracts all logical turns from the supported inbound protocols.
 // Invalid or empty payloads return an empty slice.
 func ExtractCanonicalTurns(format sdktranslator.Format, payload []byte) []CanonicalTurn {
 	if len(payload) == 0 {
@@ -102,10 +102,6 @@ func ExtractCanonicalTurns(format sdktranslator.Format, payload []byte) []Canoni
 	switch {
 	case formatEqual(format, sdktranslator.FormatClaude):
 		appendMessagesTurns(&turns, root, true)
-	case formatEqual(format, sdktranslator.FormatGemini), formatEqual(format, sdktranslator.FormatAntigravity):
-		appendGeminiTurns(&turns, root)
-	case formatEqual(format, sdktranslator.FormatInteractions):
-		appendInteractionTurns(&turns, root)
 	case formatEqual(format, sdktranslator.FormatOpenAIResponse), formatEqual(format, sdktranslator.FormatCodex):
 		appendResponsesTurns(&turns, root)
 	default:
@@ -115,25 +111,10 @@ func ExtractCanonicalTurns(format sdktranslator.Format, payload []byte) []Canoni
 }
 
 func inferCanonicalFormat(root gjson.Result) sdktranslator.Format {
-	if req := root.Get("request"); req.Exists() && !root.Get("contents").Exists() {
-		root = req
-	}
-	if root.Get("contents").IsArray() || root.Get("systemInstruction").Exists() || root.Get("system_instruction").Exists() {
-		return sdktranslator.FormatGemini
-	}
 	if root.Get("instructions").Exists() {
 		return sdktranslator.FormatOpenAIResponse
 	}
-	if input := root.Get("input"); input.Exists() {
-		if input.Type == gjson.String {
-			return sdktranslator.FormatInteractions
-		}
-		for _, item := range input.Array() {
-			typ := strings.ToLower(strings.TrimSpace(item.Get("type").String()))
-			if strings.Contains(typ, "user_input") || strings.Contains(typ, "instruction") {
-				return sdktranslator.FormatInteractions
-			}
-		}
+	if root.Get("input").Exists() {
 		return sdktranslator.FormatOpenAIResponse
 	}
 	if root.Get("system").Exists() {
@@ -214,108 +195,6 @@ func appendResponsesTurns(turns *[]CanonicalTurn, root gjson.Result) {
 		appendTurn(turns, role, parts)
 		return true
 	})
-}
-
-func appendGeminiTurns(turns *[]CanonicalTurn, root gjson.Result) {
-	if req := root.Get("request"); req.Exists() && !root.Get("contents").Exists() {
-		root = req
-	}
-	cached := root.Get("cachedContent")
-	if !cached.Exists() {
-		cached = root.Get("cached_content")
-	}
-	if cached.Exists() {
-		appendTurn(turns, "system", []CanonicalPart{canonicalResourcePart(cached)})
-	}
-	if system := root.Get("systemInstruction"); system.Exists() {
-		appendTurn(turns, "system", canonicalPartsFromJSON(system))
-	} else if system := root.Get("system_instruction"); system.Exists() {
-		appendTurn(turns, "system", canonicalPartsFromJSON(system))
-	}
-	root.Get("contents").ForEach(func(_, content gjson.Result) bool {
-		if !hasCanonicalTurnCapacity(turns) {
-			return false
-		}
-		role := canonicalRole(content.Get("role").String())
-		if role == "" {
-			role = "unknown"
-		}
-		contentParts := content.Get("parts")
-		parts := canonicalPartsFromJSON(contentParts)
-		if len(parts) == 0 && !contentParts.Exists() {
-			parts = canonicalPartsFromJSON(content)
-		}
-		appendTurn(turns, role, parts)
-		return true
-	})
-}
-
-func appendInteractionTurns(turns *[]CanonicalTurn, root gjson.Result) {
-	if system := root.Get("system_instruction"); system.Exists() {
-		appendTurn(turns, "system", canonicalPartsFromJSON(system))
-	} else if system := root.Get("systemInstruction"); system.Exists() {
-		appendTurn(turns, "system", canonicalPartsFromJSON(system))
-	}
-	appendInteractionValue(turns, root.Get("input"), "")
-}
-
-func appendInteractionValue(turns *[]CanonicalTurn, value gjson.Result, inheritedRole string) bool {
-	if !value.Exists() {
-		return true
-	}
-	if !hasCanonicalTurnCapacity(turns) {
-		return false
-	}
-	if value.Type == gjson.JSON && value.IsArray() {
-		value.ForEach(func(_, child gjson.Result) bool {
-			return appendInteractionValue(turns, child, inheritedRole)
-		})
-		return hasCanonicalTurnCapacity(turns)
-	}
-	if value.Type != gjson.JSON {
-		appendTurn(turns, defaultInteractionRole(inheritedRole), canonicalPartsFromJSON(value))
-		return hasCanonicalTurnCapacity(turns)
-	}
-	if steps := value.Get("steps"); steps.IsArray() {
-		role := canonicalRole(value.Get("role").String())
-		if role == "" {
-			role = inheritedRole
-		}
-		steps.ForEach(func(_, child gjson.Result) bool {
-			return appendInteractionValue(turns, child, role)
-		})
-		return hasCanonicalTurnCapacity(turns)
-	}
-	typ := strings.ToLower(strings.TrimSpace(value.Get("type").String()))
-	role := canonicalRole(value.Get("role").String())
-	if role == "" {
-		switch {
-		case strings.Contains(typ, "system") || strings.Contains(typ, "developer"):
-			role = "system"
-		case strings.Contains(typ, "user"):
-			role = "user"
-		case strings.Contains(typ, "model") || strings.Contains(typ, "assistant"):
-			role = "assistant"
-		case strings.Contains(typ, "tool") || strings.Contains(typ, "function"):
-			role = "tool"
-		default:
-			role = defaultInteractionRole(inheritedRole)
-		}
-	}
-	content := value.Get("content")
-	parts := canonicalPartsFromJSON(content)
-	if len(parts) == 0 && !content.Exists() {
-		parts = canonicalPartsFromJSON(value)
-	}
-	appendTurn(turns, role, parts)
-	return hasCanonicalTurnCapacity(turns)
-}
-
-func defaultInteractionRole(inheritedRole string) string {
-	if role := canonicalRole(inheritedRole); role != "" {
-		return role
-	}
-	return "user"
 }
 
 func appendTurn(turns *[]CanonicalTurn, role string, parts []CanonicalPart) {
@@ -401,12 +280,6 @@ func canonicalTextPart(value gjson.Result) CanonicalPart {
 		}
 	}
 	return CanonicalPart{Kind: "text", Value: text, OriginalSize: len(text)}
-}
-
-func canonicalResourcePart(value gjson.Result) CanonicalPart {
-	part := canonicalTextPart(value)
-	part.Kind = "resource"
-	return part
 }
 
 func canonicalJSONPart(kind string, value gjson.Result) CanonicalPart {
@@ -1641,7 +1514,7 @@ func isCompactionOverlap(fullCandLen, candTailLen, candEnd int, fullParentLen, p
 }
 
 func newLCPCompactionSessionID(namespace, parentSessionID, seqKey string) string {
-	sum := sha256.Sum256([]byte("cli-proxy-api:lcp-compaction-session:v1\x00" + namespace + "\x00" + parentSessionID + "\x00" + seqKey))
+	sum := sha256.Sum256([]byte("xrouter:lcp-compaction-session:v1\x00" + namespace + "\x00" + parentSessionID + "\x00" + seqKey))
 	return "lcp:v1:" + hex.EncodeToString(sum[:])
 }
 
@@ -1724,7 +1597,7 @@ func sequenceKey(fingerprints []string) string {
 }
 
 func newLCPSessionID(namespace, firstPrefix string) string {
-	sum := sha256.Sum256([]byte("cli-proxy-api:lcp-session:v1\x00" + namespace + "\x00" + firstPrefix))
+	sum := sha256.Sum256([]byte("xrouter:lcp-session:v1\x00" + namespace + "\x00" + firstPrefix))
 	return "lcp:v1:" + hex.EncodeToString(sum[:])
 }
 

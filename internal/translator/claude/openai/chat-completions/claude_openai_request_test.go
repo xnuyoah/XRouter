@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tidwall/gjson"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
 func TestConvertOpenAIRequestToClaude_ThinkingSummaryVisibility(t *testing.T) {
@@ -791,6 +792,16 @@ func TestConvertOpenAIRequestToClaude_MaxTokensAndMaxCompletionTokens(t *testing
 }
 
 func TestConvertOpenAIRequestToClaude_OmittedMaxTokensUsesRegistryLimit(t *testing.T) {
+	reg := registry.GetGlobalRegistry()
+	const clientID = "claude-max-tokens-registry-limit"
+	reg.RegisterClient(clientID, "claude", []*registry.ModelInfo{
+		{ID: "claude-opus-5-5", Type: "claude", MaxCompletionTokens: 128000},
+		{ID: "claude-sonnet-4-6", Type: "claude", MaxCompletionTokens: 64000},
+		{ID: "claude-fable-5-1", Type: "claude", MaxCompletionTokens: 64000},
+		{ID: "claude-3-5-haiku-20241022", Type: "claude", MaxCompletionTokens: 8192},
+	})
+	t.Cleanup(func() { reg.UnregisterClient(clientID) })
+
 	tests := []struct {
 		name      string
 		model     string

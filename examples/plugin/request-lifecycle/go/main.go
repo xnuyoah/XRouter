@@ -41,8 +41,8 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginabi"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginabi"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 	"gopkg.in/yaml.v3"
 )
 
@@ -191,9 +191,9 @@ func pluginRegistration() registration {
 		Metadata: pluginapi.Metadata{
 			Name:             "request-lifecycle",
 			Version:          "0.1.0",
-			Author:           "router-for-me",
-			GitHubRepository: "https://github.com/router-for-me/CLIProxyAPI",
-			Logo:             "https://raw.githubusercontent.com/router-for-me/CLIProxyAPI/main/docs/logo.png",
+			Author:           "xnuyoah",
+			GitHubRepository: "https://github.com/xnuyoah/XRouter",
+			Logo:             "https://raw.githubusercontent.com/xnuyoah/XRouter/main/assets/brand/xrouter-icon.svg",
 			ConfigFields: []pluginapi.ConfigField{
 				{
 					Name:        "max_concurrency",

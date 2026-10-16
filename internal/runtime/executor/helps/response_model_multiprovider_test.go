@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
+	cliproxyauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
 )
 
 type multiProviderTestExecutor struct {
@@ -51,61 +51,26 @@ func TestExtractResponseModelMultiProvider(t *testing.T) {
 			wantModel:    "claude-3-5-haiku-20241022",
 			wantTerminal: true,
 		},
-		// Gemini format tests
+		// Wrapped candidate envelope (Google-style) handled by the generic fallback.
 		{
-			name:         "gemini sse chunk with modelVersion",
-			provider:     "gemini",
-			payload:      `data: {"candidates":[{"content":{"parts":[{"text":"hi"}]}}],"modelVersion":"gemini-2.5-flash"}`,
-			wantModel:    "gemini-2.5-flash",
+			name:         "wrapped sse chunk with response.modelVersion",
+			provider:     "custom",
+			payload:      `data: {"response":{"candidates":[{"content":{"parts":[{"text":"hi"}]}}],"modelVersion":"vendor-2.5-flash"}}`,
+			wantModel:    "vendor-2.5-flash",
 			wantTerminal: false,
 		},
 		{
-			name:         "gemini sse terminal chunk with finishReason",
-			provider:     "gemini",
-			payload:      `data: {"candidates":[{"content":{"parts":[{"text":""}]},"finishReason":"STOP"}],"modelVersion":"gemini-2.5-flash"}`,
-			wantModel:    "gemini-2.5-flash",
+			name:         "wrapped sse terminal chunk with finishReason",
+			provider:     "custom",
+			payload:      `data: {"response":{"candidates":[{"content":{"parts":[{"text":""}]},"finishReason":"STOP"}],"modelVersion":"vendor-2.5-flash"}}`,
+			wantModel:    "vendor-2.5-flash",
 			wantTerminal: true,
 		},
 		{
-			name:         "gemini raw json non-stream with modelVersion",
-			provider:     "gemini",
-			payload:      `{"candidates":[{"content":{"parts":[{"text":"hello"}]},"finishReason":"STOP"}],"modelVersion":"gemini-2.5-pro"}`,
-			wantModel:    "gemini-2.5-pro",
-			wantTerminal: true,
-		},
-		{
-			name:         "antigravity wrapped response.modelVersion",
-			provider:     "antigravity",
-			payload:      `data: {"response":{"candidates":[{"content":{"parts":[{"text":"hello"}]}}],"modelVersion":"gemini-3.7-flash"}}`,
-			wantModel:    "gemini-3.7-flash",
-			wantTerminal: false,
-		},
-		{
-			name:         "gemini interactions sse interaction.completed with model",
-			provider:     "gemini",
-			payload:      `data: {"event_type":"interaction.completed","interaction":{"id":"i1","status":"requires_action","usage":{"total_input_tokens":2,"total_output_tokens":3,"total_tokens":5},"service_tier":"standard","model":"gemini-3.1-flash-lite"}}`,
-			wantModel:    "gemini-3.1-flash-lite",
-			wantTerminal: true,
-		},
-		{
-			name:         "gemini interactions sse interaction.created with model",
-			provider:     "gemini",
-			payload:      `data: {"event_type":"interaction.created","interaction":{"id":"i1","model":"gemini-3.1-flash-lite"}}`,
-			wantModel:    "gemini-3.1-flash-lite",
-			wantTerminal: false,
-		},
-		{
-			name:         "gemini interactions sse interaction.completed without model",
-			provider:     "gemini",
-			payload:      `data: {"event_type":"interaction.completed","interaction":{"id":"i1","status":"completed"}}`,
-			wantModel:    "",
-			wantTerminal: true,
-		},
-		{
-			name:         "gemini-interactions provider sse interaction.completed with model",
-			provider:     "gemini-interactions",
-			payload:      `data: {"event_type":"interaction.completed","interaction":{"id":"i1","status":"completed","model":"gemini-3.1-flash-lite"}}`,
-			wantModel:    "gemini-3.1-flash-lite",
+			name:         "wrapped raw json non-stream with modelVersion",
+			provider:     "custom",
+			payload:      `{"response":{"candidates":[{"content":{"parts":[{"text":"hello"}]},"finishReason":"STOP"}],"modelVersion":"vendor-2.5-pro"}}`,
+			wantModel:    "vendor-2.5-pro",
 			wantTerminal: true,
 		},
 		// OpenAI / OpenAICompat format tests
@@ -129,14 +94,6 @@ func TestExtractResponseModelMultiProvider(t *testing.T) {
 			payload:      `{"id":"chatcmpl-1","object":"chat.completion","model":"gpt-4o-2024-08-06","choices":[{"index":0,"message":{"role":"assistant","content":"hello"}}]}`,
 			wantModel:    "gpt-4o-2024-08-06",
 			wantTerminal: true,
-		},
-		// xAI format tests
-		{
-			name:         "xai sse chat completion chunk",
-			provider:     "xai",
-			payload:      `data: {"id":"chatcmpl-x1","object":"chat.completion.chunk","model":"grok-beta","choices":[{"index":0,"delta":{"content":"hi"}}]}`,
-			wantModel:    "grok-beta",
-			wantTerminal: false,
 		},
 		// Generic fallback tests
 		{
@@ -181,19 +138,19 @@ func TestIsModelSubstitutedMultiProvider(t *testing.T) {
 		{name: "claude substitution opus to sonnet", requested: "claude-opus-5", served: "claude-sonnet-5", want: true},
 		{name: "claude thinking suffix match", requested: "claude-3-7-sonnet(high)", served: "claude-3-7-sonnet", want: false},
 
-		// Gemini models
-		{name: "gemini dated alias match", requested: "gemini-2.5-flash", served: "gemini-2.5-flash-2025-05-20", want: false},
-		{name: "gemini preview is substitution", requested: "gemini-2.5-flash", served: "gemini-2.5-flash-preview", want: true},
-		{name: "gemini numeric version alias match", requested: "gemini-1.5-pro", served: "gemini-1.5-pro-002", want: false},
-		{name: "gemini substitution pro to flash", requested: "gemini-2.5-pro", served: "gemini-2.5-flash", want: true},
+		// Google-style dated alias models
+		{name: "dated alias match", requested: "vendor-2.5-flash", served: "vendor-2.5-flash-2025-05-20", want: false},
+		{name: "preview is substitution", requested: "vendor-2.5-flash", served: "vendor-2.5-flash-preview", want: true},
+		{name: "numeric version alias match", requested: "vendor-1.5-pro", served: "vendor-1.5-pro-002", want: false},
+		{name: "substitution pro to flash", requested: "vendor-2.5-pro", served: "vendor-2.5-flash", want: true},
 
 		// OpenAI models
 		{name: "openai dated alias match", requested: "gpt-4o", served: "gpt-4o-2024-08-06", want: false},
 		{name: "openai substitution gpt-4o to gpt-4o-mini", requested: "gpt-4o", served: "gpt-4o-mini", want: true},
 		{name: "openai provider prefix match", requested: "openai/gpt-4o", served: "gpt-4o", want: false},
 
-		// Devin models
-		{name: "devin provider prefix match", requested: "devin/swe-2", served: "swe-2", want: false},
+		// Provider-prefixed model names
+		{name: "provider prefix match", requested: "vendor/swe-2", served: "swe-2", want: false},
 	}
 
 	for _, tt := range tests {
@@ -221,11 +178,11 @@ func TestUsageReporterMultiProviderSubstitutionWarning(t *testing.T) {
 			expectedLog: `claude executor: upstream served model "claude-sonnet-5" for requested model "claude-opus-5"`,
 		},
 		{
-			provider:    "gemini",
-			requested:   "gemini-2.5-pro",
-			served:      "gemini-2.5-flash",
-			streamChunk: `data: {"candidates":[{"content":{"parts":[{"text":"hi"}]}}],"modelVersion":"gemini-2.5-flash"}`,
-			expectedLog: `gemini executor: upstream served model "gemini-2.5-flash" for requested model "gemini-2.5-pro"`,
+			provider:    "custom",
+			requested:   "vendor-2.5-pro",
+			served:      "vendor-2.5-flash",
+			streamChunk: `data: {"response":{"candidates":[{"content":{"parts":[{"text":"hi"}]}}],"modelVersion":"vendor-2.5-flash"}}`,
+			expectedLog: `custom executor: upstream served model "vendor-2.5-flash" for requested model "vendor-2.5-pro"`,
 		},
 		{
 			provider:    "openai",
@@ -233,13 +190,6 @@ func TestUsageReporterMultiProviderSubstitutionWarning(t *testing.T) {
 			served:      "gpt-4o-mini",
 			streamChunk: `data: {"id":"chatcmpl-1","model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":"hi"}}]}`,
 			expectedLog: `openai executor: upstream served model "gpt-4o-mini" for requested model "gpt-4o"`,
-		},
-		{
-			provider:    "gemini-interactions",
-			requested:   "gemini-2.5-pro",
-			served:      "gemini-3.1-flash-lite",
-			streamChunk: `data: {"event_type":"interaction.completed","interaction":{"id":"i1","status":"completed","service_tier":"standard","model":"gemini-3.1-flash-lite"}}`,
-			expectedLog: `gemini-interactions executor: upstream served model "gemini-3.1-flash-lite" for requested model "gemini-2.5-pro"`,
 		},
 	}
 

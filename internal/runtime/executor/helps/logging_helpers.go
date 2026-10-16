@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/logging"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
 const (
@@ -398,13 +398,6 @@ func AppendAPIWebsocketResponse(ctx context.Context, cfg *config.Config, payload
 	builder.WriteString("\n")
 
 	appendAPIWebsocketTimeline(ginCtx, []byte(builder.String()))
-}
-
-// AppendCodexAPIWebsocketResponse stores a codex upstream websocket response frame and merges any
-// quota event headers carried by the frame into the request log.
-func AppendCodexAPIWebsocketResponse(ctx context.Context, cfg *config.Config, payload []byte) {
-	logging.MergeResponseHeaders(ctx, ParseCodexQuotaEventHeaders(payload))
-	AppendAPIWebsocketResponse(ctx, cfg, payload)
 }
 
 // RecordAPIWebsocketError stores an upstream websocket error event in Gin context.

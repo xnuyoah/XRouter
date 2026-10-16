@@ -1,5 +1,5 @@
 // Package main demonstrates how to create a custom AI provider executor
-// and integrate it with the CLI Proxy API server. This example shows how to:
+// and integrate it with the XRouter server. This example shows how to:
 // - Create a custom executor that implements the Executor interface
 // - Register custom translators for request/response transformation
 // - Integrate the custom provider with the SDK server
@@ -24,14 +24,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api"
-	sdkAuth "github.com/router-for-me/CLIProxyAPI/v8/sdk/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	clipexec "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/logging"
-	sdktr "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
+	"github.com/xnuyoah/XRouter/v8/sdk/api"
+	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	clipexec "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/sdk/logging"
+	sdktr "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 const (

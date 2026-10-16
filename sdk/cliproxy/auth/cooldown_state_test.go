@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 type recordingCooldownStateStore struct {
@@ -570,9 +570,9 @@ func TestManager_RestoreCooldownStatesCanonicalizesThinkingSuffixes(t *testing.T
 	store := &recordingCooldownStateStore{
 		load: []CooldownStateRecord{
 			{
-				Provider:       "gemini",
+				Provider:       "openai",
 				AuthID:         "auth-thinking",
-				Model:          "gemini-3.1-pro-preview(high)",
+				Model:          "gpt-3.1-pro-preview(high)",
 				NextRetryAfter: now.Add(time.Hour),
 				Quota: QuotaState{
 					Exceeded:      true,
@@ -582,9 +582,9 @@ func TestManager_RestoreCooldownStatesCanonicalizesThinkingSuffixes(t *testing.T
 				UpdatedAt: now,
 			},
 			{
-				Provider:       "gemini",
+				Provider:       "openai",
 				AuthID:         "auth-thinking",
-				Model:          "gemini-3.1-pro-preview(low)",
+				Model:          "gpt-3.1-pro-preview(low)",
 				NextRetryAfter: laterRetry,
 				Quota: QuotaState{
 					Exceeded:      true,
@@ -597,7 +597,7 @@ func TestManager_RestoreCooldownStatesCanonicalizesThinkingSuffixes(t *testing.T
 	}
 	manager := NewManager(nil, nil, nil)
 	manager.SetCooldownStateStore(store)
-	if _, errRegister := manager.Register(WithSkipPersist(context.Background()), &Auth{ID: "auth-thinking", Provider: "gemini"}); errRegister != nil {
+	if _, errRegister := manager.Register(WithSkipPersist(context.Background()), &Auth{ID: "auth-thinking", Provider: "openai"}); errRegister != nil {
 		t.Fatalf("Register() returned error: %v", errRegister)
 	}
 
@@ -612,7 +612,7 @@ func TestManager_RestoreCooldownStatesCanonicalizesThinkingSuffixes(t *testing.T
 	if len(auth.ModelStates) != 1 {
 		t.Fatalf("len(ModelStates) = %d, want 1: %+v", len(auth.ModelStates), auth.ModelStates)
 	}
-	state := auth.ModelStates["gemini-3.1-pro-preview"]
+	state := auth.ModelStates["gpt-3.1-pro-preview"]
 	if state == nil || !state.Unavailable || !state.NextRetryAfter.Equal(laterRetry) {
 		t.Fatalf("canonical model state = %+v, want unavailable until %v", state, laterRetry)
 	}
@@ -626,7 +626,7 @@ func TestManager_RestoreCooldownStatesCanonicalizesThinkingSuffixes(t *testing.T
 			modelRecords = append(modelRecords, record)
 		}
 	}
-	if len(modelRecords) != 1 || modelRecords[0].Model != "gemini-3.1-pro-preview" || !modelRecords[0].NextRetryAfter.Equal(laterRetry) {
+	if len(modelRecords) != 1 || modelRecords[0].Model != "gpt-3.1-pro-preview" || !modelRecords[0].NextRetryAfter.Equal(laterRetry) {
 		t.Fatalf("persisted model records = %+v, want one canonical record until %v", modelRecords, laterRetry)
 	}
 }

@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 func TestMarkResult_429SubSecondRetryAfter_EnforcesMinimumCooldownFloor(t *testing.T) {
@@ -17,11 +17,11 @@ func TestMarkResult_429SubSecondRetryAfter_EnforcesMinimumCooldownFloor(t *testi
 
 	manager := NewManager(nil, nil, nil)
 	auth := &Auth{
-		ID:       "auth-gemini-subsecond",
+		ID:       "auth-gpt-subsecond",
 		Provider: "google",
 	}
 
-	model := "gemini-3.1-flash-image"
+	model := "gpt-3.1-flash-image"
 	reg := registry.GetGlobalRegistry()
 	reg.RegisterClient(auth.ID, "google", []*registry.ModelInfo{{ID: model}})
 	t.Cleanup(func() { reg.UnregisterClient(auth.ID) })
@@ -74,11 +74,11 @@ func TestMarkResult_429LongerRetryAfter_PreservedAboveFloor(t *testing.T) {
 
 	manager := NewManager(nil, nil, nil)
 	auth := &Auth{
-		ID:       "auth-gemini-longer",
+		ID:       "auth-gpt-longer",
 		Provider: "google",
 	}
 
-	model := "gemini-3.1-flash-image"
+	model := "gpt-3.1-flash-image"
 	reg := registry.GetGlobalRegistry()
 	reg.RegisterClient(auth.ID, "google", []*registry.ModelInfo{{ID: model}})
 	t.Cleanup(func() { reg.UnregisterClient(auth.ID) })
@@ -166,7 +166,7 @@ func TestManager_Execute_429SubSecondRetryAfter_PreventsRetryStorm(t *testing.T)
 	manager.RegisterExecutor(executor)
 
 	reg := registry.GetGlobalRegistry()
-	model := "gemini-3.1-flash-image"
+	model := "gpt-3.1-flash-image"
 
 	for _, id := range []string{"auth-storm-1", "auth-storm-2"} {
 		auth := &Auth{
@@ -204,7 +204,7 @@ func TestClosestCooldownWaitWithAttempted_ExpiredCooldownDoesNotTriggerZeroWaitF
 	now := time.Now()
 	expired := now.Add(-5 * time.Second)
 
-	model := "gemini-3.1-flash-image"
+	model := "gpt-3.1-flash-image"
 	auth := &Auth{
 		ID:       "auth-attempted-expired",
 		Provider: "google",
@@ -301,7 +301,7 @@ func TestManager_Execute_SlowPoolExpiredCooldown_PreventsRetryStorm(t *testing.T
 	manager := NewManager(nil, nil, nil)
 	manager.SetRetryConfig(5, 5*time.Second, 6)
 
-	model := "gemini-3.1-flash-image"
+	model := "gpt-3.1-flash-image"
 	authIDs := []string{"auth-slow-1", "auth-slow-2"}
 
 	subSecond := 708 * time.Millisecond
@@ -364,7 +364,7 @@ func TestManager_ShouldRetryAfterError_429EnforcesCooldownWaitEvenWithLargeMaxWa
 	now := time.Now()
 	expired := now.Add(-5 * time.Second)
 
-	model := "gemini-3.1-flash-image"
+	model := "gpt-3.1-flash-image"
 	auth := &Auth{
 		ID:       "auth-large-maxwait",
 		Provider: "google",

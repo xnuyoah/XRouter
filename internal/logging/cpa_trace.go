@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/httpwire"
+	"github.com/xnuyoah/XRouter/v8/internal/httpwire"
 )
 
 // CPATraceIDHeader is the downstream response header used to correlate requests with selected credentials.

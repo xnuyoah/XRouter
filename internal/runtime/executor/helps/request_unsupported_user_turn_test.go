@@ -4,9 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 	"github.com/tidwall/gjson"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 const (
@@ -34,43 +33,11 @@ func TestTranslateRequestReturningErrorRefusesEmptiedAttachmentTurns(t *testing.
 			wantType: "file",
 		},
 		{
-			name:     "openai chat to interactions",
-			from:     sdktranslator.FormatOpenAI,
-			to:       sdktranslator.FormatInteractions,
-			refused:  `{"model":"m","messages":[` + chatHistory + `,{"role":"user","content":[{"type":"file","file":{"file_id":"file-1"}}]}]}`,
-			accepted: `{"model":"m","messages":[` + chatHistory + `,{"role":"user","content":[{"type":"file","file":{"file_data":"data:application/pdf;base64,JVBERi0xLjQK","filename":"a.pdf"}}]}]}`,
-			wantType: "file",
-		},
-		{
 			name:     "responses to openai chat",
 			from:     sdktranslator.FormatOpenAIResponse,
 			to:       sdktranslator.FormatOpenAI,
 			refused:  `{"model":"m","input":[` + responsesHistory + `,{"type":"message","role":"user","content":[{"type":"input_file","file_url":"https://example.test/a.pdf"}]}]}`,
 			accepted: `{"model":"m","input":[` + responsesHistory + `,{"type":"message","role":"user","content":[{"type":"input_file","file_id":"file-1"}]}]}`,
-			wantType: "input_file",
-		},
-		{
-			name:     "responses to gemini",
-			from:     sdktranslator.FormatOpenAIResponse,
-			to:       sdktranslator.FormatGemini,
-			refused:  `{"model":"m","input":[` + responsesHistory + `,{"type":"message","role":"user","content":[{"type":"input_file","file_id":"file-1"}]}]}`,
-			accepted: `{"model":"m","input":[` + responsesHistory + `,{"type":"message","role":"user","content":[{"type":"input_file","file_data":"data:application/pdf;base64,JVBERi0xLjQK"}]}]}`,
-			wantType: "input_file",
-		},
-		{
-			name:     "responses to antigravity",
-			from:     sdktranslator.FormatOpenAIResponse,
-			to:       sdktranslator.FormatAntigravity,
-			refused:  `{"model":"m","input":[` + responsesHistory + `,{"type":"message","role":"user","content":[{"type":"input_file","file_id":"file-1"}]}]}`,
-			accepted: `{"model":"m","input":[` + responsesHistory + `,{"type":"message","role":"user","content":[{"type":"input_file","file_data":"data:application/pdf;base64,JVBERi0xLjQK"}]}]}`,
-			wantType: "input_file",
-		},
-		{
-			name:     "responses to interactions",
-			from:     sdktranslator.FormatOpenAIResponse,
-			to:       sdktranslator.FormatInteractions,
-			refused:  `{"model":"m","input":[` + responsesHistory + `,{"type":"message","role":"user","content":[{"type":"input_file","file_id":"file-1"}]}]}`,
-			accepted: `{"model":"m","input":[` + responsesHistory + `,{"type":"message","role":"user","content":[{"type":"input_audio","input_audio":{"data":"UklGRg==","format":"wav"}}]}]}`,
 			wantType: "input_file",
 		},
 	}
@@ -81,16 +48,16 @@ func TestTranslateRequestReturningErrorRefusesEmptiedAttachmentTurns(t *testing.
 				name += " compat"
 			}
 			t.Run(name, func(t *testing.T) {
-				body, err := TranslateRequestReturningError(ctx, nil, &config.Config{}, route.from, route.to, "m", []byte(route.refused), false, compat)
+				body, err := TranslateRequestReturningError(ctx, route.from, route.to, "m", []byte(route.refused), false, compat)
 				requireUnsupportedPart(t, "single", err, route.wantType)
 				if !gjson.ValidBytes(body) {
 					t.Fatalf("single: body is not JSON: %q", body)
 				}
 
-				_, _, err = TranslateRequestPairReturningError(ctx, nil, &config.Config{}, route.from, route.to, "m", []byte(route.refused), []byte(route.refused), false, compat)
+				_, _, err = TranslateRequestPairReturningError(ctx, route.from, route.to, "m", []byte(route.refused), []byte(route.refused), false, compat)
 				requireUnsupportedPart(t, "pair", err, route.wantType)
 
-				if _, err = TranslateRequestReturningError(ctx, nil, &config.Config{}, route.from, route.to, "m", []byte(route.accepted), false, compat); err != nil {
+				if _, err = TranslateRequestReturningError(ctx, route.from, route.to, "m", []byte(route.accepted), false, compat); err != nil {
 					t.Fatalf("representable attachment was refused: %v", err)
 				}
 			})

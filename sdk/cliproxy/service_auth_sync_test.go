@@ -1,11 +1,9 @@
 package cliproxy
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -17,13 +15,12 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/api"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/pluginhost"
-	internalregistry "github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/internal/api"
+	internalregistry "github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.T) {
@@ -38,10 +35,10 @@ func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.
 	manager.RegisterExecutor(&syncTestExecutor{})
 	auth := &coreauth.Auth{
 		ID:       authID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
-			"plan_type": "pro",
+			"auth_kind": "apikey",
 			"path":      "/path/to/codex-sync.json",
 		},
 	}
@@ -82,7 +79,7 @@ func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.
 	}
 
 	// Verify scheduler selection works for enabled auth
-	resp, errExec := manager.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: "gpt-6-astra"}, cliproxyexecutor.Options{})
+	resp, errExec := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{})
 	if errExec != nil || string(resp.Payload) != authID {
 		t.Fatalf("expected scheduler to select active auth, got resp=%q, err=%v", string(resp.Payload), errExec)
 	}
@@ -109,7 +106,7 @@ func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.
 	}
 
 	// Verify scheduler selection fails for disabled auth
-	if _, errExecDisabled := manager.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: "gpt-6-astra"}, cliproxyexecutor.Options{}); errExecDisabled == nil {
+	if _, errExecDisabled := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{}); errExecDisabled == nil {
 		t.Fatal("expected scheduler execution to fail for disabled auth, but got nil error")
 	}
 
@@ -138,7 +135,7 @@ func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.
 
 	hasAstra := false
 	for _, m := range modelsAfterEnable {
-		if m != nil && m.ID == "gpt-6-astra" {
+		if m != nil && m.ID == "nemotron-3-ultra" {
 			hasAstra = true
 			break
 		}
@@ -148,7 +145,7 @@ func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.
 	}
 
 	// Verify scheduler selection is restored for the re-enabled auth
-	respAfterEnable, errExecEnable := manager.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: "gpt-6-astra"}, cliproxyexecutor.Options{})
+	respAfterEnable, errExecEnable := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{})
 	if errExecEnable != nil || string(respAfterEnable.Payload) != authID {
 		t.Fatalf("expected scheduler to select restored auth, got resp=%q, err=%v", string(respAfterEnable.Payload), errExecEnable)
 	}
@@ -174,7 +171,7 @@ func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.
 		t.Fatal("expected models to remain registered when auth is in quota cooldown")
 	}
 	// But scheduler blocks execution due to quota exhaustion
-	if _, errQuotaExec := manager.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: "gpt-6-astra"}, cliproxyexecutor.Options{}); errQuotaExec == nil {
+	if _, errQuotaExec := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{}); errQuotaExec == nil {
 		t.Fatal("expected scheduler to block execution when quota exceeded")
 	}
 
@@ -234,7 +231,7 @@ func TestHandleAuthUpdates_FileDeleteOrdering(t *testing.T) {
 				manager.RegisterExecutor(&syncTestExecutor{})
 				auth := &coreauth.Auth{
 					ID:       authID,
-					Provider: "codex",
+					Provider: "nvidia",
 					Status:   coreauth.StatusActive,
 					Attributes: map[string]string{
 						"plan_type":            "pro",
@@ -261,7 +258,7 @@ func TestHandleAuthUpdates_FileDeleteOrdering(t *testing.T) {
 				hook := service.runtimeAuthSyncHook()
 				save := func(syncHook bool) {
 					t.Helper()
-					if errWriteFile := os.WriteFile(path, []byte(`{"type":"codex"}`), 0o600); errWriteFile != nil {
+					if errWriteFile := os.WriteFile(path, []byte(`{"type":"nvidia"}`), 0o600); errWriteFile != nil {
 						t.Fatalf("write auth file: %v", errWriteFile)
 					}
 					if _, errRegister := manager.Register(ctx, auth.Clone()); errRegister != nil {
@@ -352,7 +349,7 @@ func TestHandleAuthUpdates_FileDeleteRecreatedSubset(t *testing.T) {
 	for index, id := range []string{"codex-recreated-subset-a", "codex-recreated-subset-b"} {
 		reg.UnregisterClient(id)
 		t.Cleanup(func() { reg.UnregisterClient(id) })
-		auth := &coreauth.Auth{ID: id, Provider: "codex", Status: coreauth.StatusActive, Attributes: map[string]string{coreauth.AttributePath: path}}
+		auth := &coreauth.Auth{ID: id, Provider: "nvidia", Status: coreauth.StatusActive, Attributes: map[string]string{coreauth.AttributePath: path}}
 		coreauth.MarkPluginVirtualAuth(auth, path, index)
 		auths = append(auths, auth)
 		deletion := watcher.AuthUpdate{Action: watcher.AuthUpdateActionDelete, ID: id}
@@ -418,7 +415,7 @@ func TestHandleAuthUpdates_FileDeleteSnapshotUncertain(t *testing.T) {
 			reg.UnregisterClient(authID)
 			t.Cleanup(func() { reg.UnregisterClient(authID) })
 			manager := coreauth.NewManager(nil, nil, nil)
-			auth := &coreauth.Auth{ID: authID, Provider: "codex", Status: coreauth.StatusActive, Attributes: map[string]string{coreauth.AttributePath: path}}
+			auth := &coreauth.Auth{ID: authID, Provider: "nvidia", Status: coreauth.StatusActive, Attributes: map[string]string{coreauth.AttributePath: path}}
 			service := &Service{cfg: &config.Config{}, coreManager: manager, watcher: tc.watcher}
 			service.handleAuthUpdate(ctx, watcher.AuthUpdate{Action: watcher.AuthUpdateActionAdd, ID: authID, Auth: auth})
 			deletion := watcher.AuthUpdate{Action: watcher.AuthUpdateActionDelete, ID: authID}
@@ -458,7 +455,7 @@ func TestHandleAuthUpdates_FileDeleteScope(t *testing.T) {
 				ctx := coreauth.WithSkipPersist(context.Background())
 				authID := "codex-file-delete-scope-" + tc.name
 				path := filepath.Join(t.TempDir(), "auth.json")
-				if errWriteFile := os.WriteFile(path, []byte(`{"type":"codex"}`), 0o600); errWriteFile != nil {
+				if errWriteFile := os.WriteFile(path, []byte(`{"type":"nvidia"}`), 0o600); errWriteFile != nil {
 					t.Fatalf("write auth file: %v", errWriteFile)
 				}
 				attributes := make(map[string]string, len(tc.attributes))
@@ -472,7 +469,7 @@ func TestHandleAuthUpdates_FileDeleteScope(t *testing.T) {
 				reg.UnregisterClient(authID)
 				t.Cleanup(func() { reg.UnregisterClient(authID) })
 				manager := coreauth.NewManager(nil, nil, nil)
-				auth := &coreauth.Auth{ID: authID, Provider: "codex", Status: coreauth.StatusActive, Attributes: attributes}
+				auth := &coreauth.Auth{ID: authID, Provider: "nvidia", Status: coreauth.StatusActive, Attributes: attributes}
 				service := &Service{
 					cfg:         &config.Config{},
 					coreManager: manager,
@@ -513,7 +510,7 @@ func TestHandleAuthUpdates_FileDeleteScope(t *testing.T) {
 
 type syncTestExecutor struct{}
 
-func (e *syncTestExecutor) Identifier() string { return "codex" }
+func (e *syncTestExecutor) Identifier() string { return "nvidia" }
 
 func (e *syncTestExecutor) Execute(ctx context.Context, a *coreauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 	if a != nil && a.Metadata != nil {
@@ -556,186 +553,6 @@ func TestRuntimeAuthSyncHook_NilAndEmptyAuth(t *testing.T) {
 	}
 }
 
-func TestRuntimeAuthSyncHook_DoesNotBlockOnUnrelatedAntigravityProbes(t *testing.T) {
-	reg := internalregistry.GetGlobalRegistry()
-	authID := "codex-probe-wait-auth"
-	reg.UnregisterClient(authID)
-	t.Cleanup(func() {
-		reg.UnregisterClient(authID)
-	})
-
-	manager := coreauth.NewManager(nil, nil, nil)
-	manager.RegisterExecutor(&syncTestExecutor{})
-	auth := &coreauth.Auth{
-		ID:       authID,
-		Provider: "codex",
-		Status:   coreauth.StatusActive,
-		Attributes: map[string]string{
-			"plan_type": "pro",
-			"path":      "/path/to/codex-probe-wait.json",
-		},
-	}
-	if _, errRegister := manager.Register(context.Background(), auth); errRegister != nil {
-		t.Fatalf("register auth: %v", errRegister)
-	}
-
-	service := &Service{
-		cfg:         &config.Config{},
-		coreManager: manager,
-		pluginHost:  pluginhost.New(),
-	}
-	service.antigravityProbeWg.Add(1)
-	done := make(chan error, 1)
-	finished := make(chan struct{})
-	t.Cleanup(func() {
-		service.antigravityProbeWg.Done()
-		select {
-		case <-finished:
-		case <-time.After(2 * time.Second):
-		}
-	})
-
-	hook := service.runtimeAuthSyncHook()
-	if hook == nil {
-		t.Fatal("runtimeAuthSyncHook() returned nil")
-	}
-
-	go func() {
-		defer close(finished)
-		done <- hook(context.Background(), auth)
-	}()
-
-	select {
-	case errHook := <-done:
-		if errHook != nil {
-			t.Fatalf("hook failed: %v", errHook)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("runtimeAuthSyncHook blocked waiting for unrelated antigravity probes")
-	}
-
-	models := reg.GetModelsForClient(authID)
-	if len(models) == 0 {
-		t.Fatal("expected models registered for enabled auth, got none")
-	}
-}
-
-func TestHandleAuthUpdates_DeleteDoesNotBlockOnUnrelatedAntigravityProbes(t *testing.T) {
-	reg := internalregistry.GetGlobalRegistry()
-	authID := "codex-probe-wait-delete-auth"
-	reg.UnregisterClient(authID)
-	t.Cleanup(func() {
-		reg.UnregisterClient(authID)
-	})
-
-	manager := coreauth.NewManager(nil, nil, nil)
-	manager.RegisterExecutor(&syncTestExecutor{})
-	auth := &coreauth.Auth{
-		ID:       authID,
-		Provider: "codex",
-		Status:   coreauth.StatusActive,
-		Attributes: map[string]string{
-			"plan_type": "pro",
-			"path":      "/path/to/codex-probe-wait-delete.json",
-		},
-	}
-	if _, errRegister := manager.Register(context.Background(), auth); errRegister != nil {
-		t.Fatalf("register auth: %v", errRegister)
-	}
-
-	service := &Service{
-		cfg:         &config.Config{},
-		coreManager: manager,
-		pluginHost:  pluginhost.New(),
-	}
-	service.registerModelsForAuth(context.Background(), auth)
-	if len(reg.GetModelsForClient(authID)) == 0 {
-		t.Fatal("expected models registered before delete")
-	}
-
-	runAuthUpdateWithoutProbeWait(t, service, func() {
-		service.handleAuthUpdate(context.Background(), watcher.AuthUpdate{
-			Action: watcher.AuthUpdateActionDelete,
-			ID:     authID,
-			Auth:   auth,
-		})
-	})
-
-	if _, ok := manager.GetByID(authID); ok {
-		t.Fatal("expected auth to be removed")
-	}
-	if len(reg.GetModelsForClient(authID)) != 0 {
-		t.Fatal("expected models unregistered after delete")
-	}
-}
-
-func TestHandleAuthUpdates_PluginVirtualModifyDoesNotBlockOnUnrelatedAntigravityProbes(t *testing.T) {
-	reg := internalregistry.GetGlobalRegistry()
-	authID := "plugin-virtual-probe-wait-auth"
-	reg.UnregisterClient(authID)
-	t.Cleanup(func() {
-		reg.UnregisterClient(authID)
-	})
-
-	manager := coreauth.NewManager(nil, nil, nil)
-	auth := &coreauth.Auth{
-		ID:       authID,
-		Provider: "codex",
-		Status:   coreauth.StatusActive,
-		Attributes: map[string]string{
-			"plan_type": "pro",
-			"path":      "/path/to/plugin-virtual-probe-wait.json",
-		},
-	}
-	coreauth.MarkPluginVirtualAuth(auth, "/path/to/plugin-source.json", 0)
-	if _, errRegister := manager.Register(context.Background(), auth); errRegister != nil {
-		t.Fatalf("register auth: %v", errRegister)
-	}
-
-	service := &Service{
-		cfg:         &config.Config{},
-		coreManager: manager,
-		pluginHost:  pluginhost.New(),
-	}
-
-	runAuthUpdateWithoutProbeWait(t, service, func() {
-		service.handleAuthUpdate(context.Background(), watcher.AuthUpdate{
-			Action: watcher.AuthUpdateActionModify,
-			ID:     authID,
-			Auth:   auth,
-		})
-	})
-}
-
-func runAuthUpdateWithoutProbeWait(t *testing.T, service *Service, run func()) {
-	t.Helper()
-	if service == nil {
-		t.Fatal("service is nil")
-	}
-	service.antigravityProbeWg.Add(1)
-	done := make(chan struct{})
-	finished := make(chan struct{})
-	t.Cleanup(func() {
-		service.antigravityProbeWg.Done()
-		select {
-		case <-finished:
-		case <-time.After(2 * time.Second):
-		}
-	})
-
-	go func() {
-		defer close(finished)
-		run()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-	case <-time.After(2 * time.Second):
-		t.Fatal("auth update blocked waiting for unrelated antigravity probes")
-	}
-}
-
 func TestHandleAuthUpdates_ModelRegistrationDoesNotHoldAuthUpdateLock(t *testing.T) {
 	reg := internalregistry.GetGlobalRegistry()
 	authAID := "codex-lock-a-auth"
@@ -751,19 +568,19 @@ func TestHandleAuthUpdates_ModelRegistrationDoesNotHoldAuthUpdateLock(t *testing
 	manager.RegisterExecutor(&syncTestExecutor{})
 	authA := &coreauth.Auth{
 		ID:       authAID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
-			"plan_type": "pro",
+			"auth_kind": "apikey",
 			"path":      "/path/to/codex-lock-a.json",
 		},
 	}
 	authB := &coreauth.Auth{
 		ID:       authBID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
-			"plan_type": "pro",
+			"auth_kind": "apikey",
 			"path":      "/path/to/codex-lock-b.json",
 		},
 	}
@@ -848,10 +665,10 @@ func TestHandleAuthUpdates_OlderGenerationDoesNotOverrideNewerPersist(t *testing
 	manager.RegisterExecutor(&syncTestExecutor{})
 	auth := &coreauth.Auth{
 		ID:       authID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
-			"plan_type": "pro",
+			"auth_kind": "apikey",
 			"path":      "/path/to/codex-generation-stale.json",
 		},
 	}
@@ -920,10 +737,10 @@ func TestHandleAuthUpdates_StaleDisableRegistrationDoesNotDropNewerEnable(t *tes
 	manager.RegisterExecutor(&syncTestExecutor{})
 	auth := &coreauth.Auth{
 		ID:       authID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
-			"plan_type": "pro",
+			"auth_kind": "apikey",
 			"path":      "/path/to/codex-stale-disable-task.json",
 		},
 	}
@@ -1028,13 +845,13 @@ func TestHandleAuthUpdates_SameRevisionWaitDoesNotWaitForOtherAuthInBatch(t *tes
 		ID:         authAID,
 		Provider:   "codex",
 		Status:     coreauth.StatusActive,
-		Attributes: map[string]string{"plan_type": "pro", "path": "/path/to/codex-batch-wait-a.json"},
+		Attributes: map[string]string{"auth_kind": "apikey", "path": "/path/to/codex-batch-wait-a.json"},
 	}
 	authB := &coreauth.Auth{
 		ID:         authBID,
 		Provider:   "codex",
 		Status:     coreauth.StatusActive,
-		Attributes: map[string]string{"plan_type": "pro", "path": "/path/to/codex-batch-wait-b.json"},
+		Attributes: map[string]string{"auth_kind": "apikey", "path": "/path/to/codex-batch-wait-b.json"},
 	}
 	for _, auth := range []*coreauth.Auth{authA, authB} {
 		if _, errRegister := manager.Register(context.Background(), auth); errRegister != nil {
@@ -1143,10 +960,10 @@ func TestEndToEndStatusPatch_RestoresModelsThroughServerPipeline(t *testing.T) {
 	auth := &coreauth.Auth{
 		ID:       authID,
 		FileName: fileName,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
-			"plan_type": "pro",
+			"auth_kind": "apikey",
 			"path":      filePath,
 		},
 	}
@@ -1251,10 +1068,10 @@ func TestRuntimeAuthSync_StaleAsyncEventDoesNotOverwriteSynchronousEnable(t *tes
 
 	auth := &coreauth.Auth{
 		ID:       authID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
-			"plan_type": "pro",
+			"auth_kind": "apikey",
 		},
 	}
 	registeredAuth, errRegister := manager.Register(context.Background(), auth)
@@ -1339,7 +1156,7 @@ func TestRuntimeAuthSync_StaleAsyncEventDoesNotOverwriteSynchronousEnable(t *tes
 	}
 
 	// Scheduler execution must still succeed and select the enabled auth
-	resp, errExec := manager.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: "gpt-6-astra"}, cliproxyexecutor.Options{})
+	resp, errExec := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{})
 	if errExec != nil || string(resp.Payload) != authID {
 		t.Fatalf("expected scheduler to select active auth, got resp=%q err=%v", string(resp.Payload), errExec)
 	}
@@ -1372,10 +1189,10 @@ func TestRuntimeAuthSync_StaleWatcherUnversionedEventDoesNotOverwriteSynchronous
 
 	auth := &coreauth.Auth{
 		ID:       authID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
-			"plan_type": "pro",
+			"auth_kind": "apikey",
 		},
 	}
 	registeredAuth, errRegister := manager.Register(context.Background(), auth)
@@ -1408,7 +1225,7 @@ func TestRuntimeAuthSync_StaleWatcherUnversionedEventDoesNotOverwriteSynchronous
 		RegistrationEpoch: 0, // Unversioned from file watcher synthesizer
 		Generation:        0, // Unversioned from file watcher synthesizer
 		Attributes: map[string]string{
-			"plan_type": "pro",
+			"auth_kind": "apikey",
 		},
 	}
 	delayedWatcherUpdate := watcher.AuthUpdate{
@@ -1445,7 +1262,7 @@ func TestRuntimeAuthSync_StaleWatcherUnversionedEventDoesNotOverwriteSynchronous
 	manager.RegisterExecutor(&syncTestExecutor{})
 
 	// Scheduler execution must still succeed and select the enabled auth
-	resp, errExec := manager.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: "gpt-6-astra"}, cliproxyexecutor.Options{})
+	resp, errExec := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{})
 	if errExec != nil || string(resp.Payload) != authID {
 		t.Fatalf("expected scheduler to select active auth, got resp=%q err=%v", string(resp.Payload), errExec)
 	}
@@ -1469,10 +1286,10 @@ func TestRuntimeAuthSync_FileSnapshotEnqueuedThenRequestExecutionThenConsume(t *
 
 	auth := &coreauth.Auth{
 		ID:       authID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
-			"plan_type": "pro",
+			"auth_kind": "apikey",
 		},
 	}
 	registeredAuth, errRegister := manager.Register(context.Background(), auth)
@@ -1513,8 +1330,8 @@ func TestRuntimeAuthSync_FileSnapshotEnqueuedThenRequestExecutionThenConsume(t *
 	// MarkResult updates the auth in coreManager: auth.Generation++ and auth.UpdatedAt = now.
 	manager.MarkResult(context.Background(), coreauth.Result{
 		AuthID:   authID,
-		Provider: "codex",
-		Model:    "gpt-6-astra",
+		Provider: "nvidia",
+		Model:    "nemotron-3-ultra",
 		Success:  true,
 	})
 
@@ -1556,10 +1373,10 @@ func TestRuntimeAuthSyncHook_ContextCancellationDoesNotAbortSync(t *testing.T) {
 
 	auth := &coreauth.Auth{
 		ID:       authID,
-		Provider: "codex",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 		Attributes: map[string]string{
-			"plan_type": "pro",
+			"auth_kind": "apikey",
 		},
 	}
 	registeredAuth, errRegister := manager.Register(context.Background(), auth)
@@ -1586,334 +1403,8 @@ func TestRuntimeAuthSyncHook_ContextCancellationDoesNotAbortSync(t *testing.T) {
 	}
 
 	// Verify scheduler can execute
-	resp, errExec := manager.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: "gpt-6-astra"}, cliproxyexecutor.Options{})
+	resp, errExec := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{})
 	if errExec != nil || string(resp.Payload) != authID {
 		t.Fatalf("expected scheduler execution to succeed, got resp=%q err=%v", string(resp.Payload), errExec)
-	}
-}
-
-func TestEndToEndAuthFileReplacement_RestoresModelsInV1ModelsWithoutRestart(t *testing.T) {
-	authDir := t.TempDir()
-	fileName := "codex-team.json"
-	filePath := filepath.Join(authDir, fileName)
-
-	// Synthetic JWT containing CodexAuthInfo claims with chatgpt_plan_type: team
-	teamIDToken := "eyJhbGciOiJub25lIn0.eyJlbWFpbCI6ICJ1c2VyQGV4YW1wbGUuY29tIiwgImh0dHBzOi8vYXBpLm9wZW5haS5jb20vYXV0aCI6IHsiY2hhdGdwdF9wbGFuX3R5cGUiOiAidGVhbSIsICJjaGF0Z3B0X2FjY291bnRfaWQiOiAiYWNjLTEyMyJ9fQ.sig"
-	initialContent := fmt.Sprintf(`{"type":"codex","email":"user@example.com","access_token":"token-old","id_token":%q}`, teamIDToken)
-	if errWrite := os.WriteFile(filePath, []byte(initialContent), 0o600); errWrite != nil {
-		t.Fatalf("write auth file: %v", errWrite)
-	}
-
-	reg := internalregistry.GetGlobalRegistry()
-	authID := fileName
-	reg.UnregisterClient(authID)
-	t.Cleanup(func() {
-		reg.UnregisterClient(authID)
-	})
-
-	secretKey := "test-secret"
-	hashedSecret, errHash := bcrypt.GenerateFromPassword([]byte(secretKey), bcrypt.DefaultCost)
-	if errHash != nil {
-		t.Fatalf("bcrypt hash failed: %v", errHash)
-	}
-
-	cfg := &config.Config{
-		AuthDir: authDir,
-		RemoteManagement: config.RemoteManagement{
-			SecretKey:   string(hashedSecret),
-			AllowRemote: true,
-		},
-	}
-
-	service, errBuild := NewBuilder().
-		WithConfig(cfg).
-		WithConfigPath(filepath.Join(authDir, "config.yaml")).
-		Build()
-	if errBuild != nil {
-		t.Fatalf("Build() failed: %v", errBuild)
-	}
-
-	server := api.NewServer(service.cfg, service.coreManager, service.accessManager, service.configPath, service.serverOptions...)
-	if server == nil {
-		t.Fatal("NewServer() returned nil")
-	}
-	handler := server.Handler()
-	service.coreManager.RegisterExecutor(&syncTestExecutor{})
-
-	auth := &coreauth.Auth{
-		ID:       authID,
-		FileName: fileName,
-		Provider: "codex",
-		Status:   coreauth.StatusActive,
-		Metadata: map[string]any{
-			"type":         "codex",
-			"email":        "user@example.com",
-			"access_token": "token-old",
-			"id_token":     teamIDToken,
-		},
-		Attributes: map[string]string{
-			"plan_type": "team",
-			"path":      filePath,
-		},
-	}
-	if _, errRegister := service.coreManager.Register(context.Background(), auth); errRegister != nil {
-		t.Fatalf("register auth: %v", errRegister)
-	}
-
-	// Initial model sync
-	syncHook := service.runtimeAuthSyncHook()
-	if err := syncHook(context.Background(), auth); err != nil {
-		t.Fatalf("initial sync failed: %v", err)
-	}
-
-	// 1. Confirm all team models are initially visible in GET /v1/models
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/v1/models", nil)
-	handler.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("GET /v1/models initial status = %d, body = %s", rec.Code, rec.Body.String())
-	}
-	var modelsResp struct {
-		Data []map[string]any `json:"data"`
-	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &modelsResp); err != nil {
-		t.Fatalf("failed to decode /v1/models response: %v", err)
-	}
-	hasModel := func(modelID string) bool {
-		for _, m := range modelsResp.Data {
-			if id, _ := m["id"].(string); id == modelID {
-				return true
-			}
-		}
-		return false
-	}
-	teamModels := []string{"gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra", "codex-auto-review"}
-	for _, m := range teamModels {
-		if !hasModel(m) {
-			t.Fatalf("expected %q to be in initial /v1/models list: %s", m, rec.Body.String())
-		}
-	}
-
-	// 2. Simulate terminal authentication error on all 4 models (invalidated token)
-	unauthErr := &coreauth.Error{
-		HTTPStatus: http.StatusUnauthorized,
-		Code:       "unauthorized",
-		Message:    "Encountered invalidated oauth token: test-token",
-	}
-	for _, m := range teamModels {
-		service.coreManager.MarkResult(context.Background(), coreauth.Result{
-			AuthID:     authID,
-			Provider:   "codex",
-			Model:      m,
-			RouteModel: m,
-			Success:    false,
-			Error:      unauthErr,
-		})
-	}
-
-	// Confirm all 4 models are now omitted from /v1/models due to active error/cooldown
-	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v1/models", nil)
-	handler.ServeHTTP(rec, req)
-	modelsResp.Data = nil
-	if err := json.Unmarshal(rec.Body.Bytes(), &modelsResp); err != nil {
-		t.Fatalf("failed to decode /v1/models response: %v", err)
-	}
-	for _, m := range teamModels {
-		if hasModel(m) {
-			t.Fatalf("expected %q to be absent after terminal auth failure", m)
-		}
-	}
-
-	// 3. Replace credential via management upload (POST /v0/management/auth-files)
-	newContent := fmt.Sprintf(`{"type":"codex","email":"user@example.com","access_token":"token-new","id_token":%q}`, teamIDToken)
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	part, err := writer.CreateFormFile("file", fileName)
-	if err != nil {
-		t.Fatalf("failed to create multipart file: %v", err)
-	}
-	if _, err = part.Write([]byte(newContent)); err != nil {
-		t.Fatalf("failed to write multipart content: %v", err)
-	}
-	if err = writer.Close(); err != nil {
-		t.Fatalf("failed to close multipart writer: %v", err)
-	}
-
-	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodPost, "/v0/management/auth-files", &body)
-	req.Header.Set("Authorization", "Bearer test-secret")
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	handler.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("upload failed: status=%d, body=%s", rec.Code, rec.Body.String())
-	}
-
-	// 4. Verify that GET /v1/models immediately includes all team models without restart
-	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v1/models", nil)
-	handler.ServeHTTP(rec, req)
-	modelsResp.Data = nil
-	if err := json.Unmarshal(rec.Body.Bytes(), &modelsResp); err != nil {
-		t.Fatalf("failed to decode /v1/models response: %v", err)
-	}
-	for _, m := range teamModels {
-		if !hasModel(m) {
-			t.Fatalf("expected %q to be restored in /v1/models after credential replacement: %s", m, rec.Body.String())
-		}
-	}
-
-	// 5. Verify direct inference request succeeds using the replacement credential token
-	service.coreManager.RegisterExecutor(&syncTestExecutor{})
-	resp, errExec := service.coreManager.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: "gpt-6-astra"}, cliproxyexecutor.Options{})
-	if errExec != nil || string(resp.Payload) != "token-new" {
-		t.Fatalf("expected inference execution to use replacement token, got resp=%q err=%v", string(resp.Payload), errExec)
-	}
-}
-
-func TestEndToEndAuthFilePatch_RestoresModelsInV1ModelsWithoutRestart(t *testing.T) {
-	authDir := t.TempDir()
-	fileName := "codex-patch.json"
-	filePath := filepath.Join(authDir, fileName)
-
-	teamIDToken := "eyJhbGciOiJub25lIn0.eyJlbWFpbCI6ICJ1c2VyQGV4YW1wbGUuY29tIiwgImh0dHBzOi8vYXBpLm9wZW5haS5jb20vYXV0aCI6IHsiY2hhdGdwdF9wbGFuX3R5cGUiOiAidGVhbSIsICJjaGF0Z3B0X2FjY291bnRfaWQiOiAiYWNjLTEyMyJ9fQ.sig"
-	initialContent := fmt.Sprintf(`{"type":"codex","email":"user@example.com","access_token":"token-old","id_token":%q}`, teamIDToken)
-	if errWrite := os.WriteFile(filePath, []byte(initialContent), 0o600); errWrite != nil {
-		t.Fatalf("write auth file: %v", errWrite)
-	}
-
-	reg := internalregistry.GetGlobalRegistry()
-	authID := fileName
-	reg.UnregisterClient(authID)
-	t.Cleanup(func() {
-		reg.UnregisterClient(authID)
-	})
-
-	secretKey := "test-secret"
-	hashedSecret, errHash := bcrypt.GenerateFromPassword([]byte(secretKey), bcrypt.DefaultCost)
-	if errHash != nil {
-		t.Fatalf("bcrypt hash failed: %v", errHash)
-	}
-
-	cfg := &config.Config{
-		AuthDir: authDir,
-		RemoteManagement: config.RemoteManagement{
-			SecretKey:   string(hashedSecret),
-			AllowRemote: true,
-		},
-	}
-
-	service, errBuild := NewBuilder().
-		WithConfig(cfg).
-		WithConfigPath(filepath.Join(authDir, "config.yaml")).
-		Build()
-	if errBuild != nil {
-		t.Fatalf("Build() failed: %v", errBuild)
-	}
-
-	server := api.NewServer(service.cfg, service.coreManager, service.accessManager, service.configPath, service.serverOptions...)
-	if server == nil {
-		t.Fatal("NewServer() returned nil")
-	}
-	handler := server.Handler()
-	service.coreManager.RegisterExecutor(&syncTestExecutor{})
-
-	auth := &coreauth.Auth{
-		ID:       authID,
-		FileName: fileName,
-		Provider: "codex",
-		Status:   coreauth.StatusActive,
-		Metadata: map[string]any{
-			"type":         "codex",
-			"email":        "user@example.com",
-			"access_token": "token-old",
-			"id_token":     teamIDToken,
-		},
-		Attributes: map[string]string{
-			"plan_type": "team",
-			"path":      filePath,
-		},
-	}
-	if _, errRegister := service.coreManager.Register(context.Background(), auth); errRegister != nil {
-		t.Fatalf("register auth: %v", errRegister)
-	}
-
-	syncHook := service.runtimeAuthSyncHook()
-	if err := syncHook(context.Background(), auth); err != nil {
-		t.Fatalf("initial sync failed: %v", err)
-	}
-
-	// 1. Simulate terminal auth failure on all 4 models
-	unauthErr := &coreauth.Error{
-		HTTPStatus: http.StatusUnauthorized,
-		Code:       "unauthorized",
-		Message:    "Encountered invalidated oauth token: test-token",
-	}
-	teamModels := []string{"gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra", "codex-auto-review"}
-	for _, m := range teamModels {
-		service.coreManager.MarkResult(context.Background(), coreauth.Result{
-			AuthID:     authID,
-			Provider:   "codex",
-			Model:      m,
-			RouteModel: m,
-			Success:    false,
-			Error:      unauthErr,
-		})
-	}
-
-	// Confirm all 4 models are now omitted from /v1/models due to active error/cooldown
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/v1/models", nil)
-	handler.ServeHTTP(rec, req)
-	var modelsResp struct {
-		Data []map[string]any `json:"data"`
-	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &modelsResp); err != nil {
-		t.Fatalf("failed to decode /v1/models response: %v", err)
-	}
-	hasModel := func(modelID string) bool {
-		for _, m := range modelsResp.Data {
-			if id, _ := m["id"].(string); id == modelID {
-				return true
-			}
-		}
-		return false
-	}
-	for _, m := range teamModels {
-		if hasModel(m) {
-			t.Fatalf("expected %q to be absent after terminal auth failure", m)
-		}
-	}
-
-	// 2. Patch auth file fields with fresh access token
-	patchBody := fmt.Sprintf(`{"name":%q,"access_token":"token-fresh","id_token":%q}`, fileName, teamIDToken)
-	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/fields", strings.NewReader(patchBody))
-	req.Header.Set("Authorization", "Bearer test-secret")
-	req.Header.Set("Content-Type", "application/json")
-	handler.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("PATCH fields failed: status=%d, body=%s", rec.Code, rec.Body.String())
-	}
-
-	// 3. Confirm all team models are restored in /v1/models
-	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v1/models", nil)
-	handler.ServeHTTP(rec, req)
-	modelsResp.Data = nil
-	if err := json.Unmarshal(rec.Body.Bytes(), &modelsResp); err != nil {
-		t.Fatalf("failed to decode /v1/models response: %v", err)
-	}
-	for _, m := range teamModels {
-		if !hasModel(m) {
-			t.Fatalf("expected %q to be restored in /v1/models after PATCH: %s", m, rec.Body.String())
-		}
-	}
-
-	// 4. Verify direct inference request succeeds using fresh token after PATCH
-	service.coreManager.RegisterExecutor(&syncTestExecutor{})
-	resp, errExec := service.coreManager.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: "gpt-6-astra"}, cliproxyexecutor.Options{})
-	if errExec != nil || string(resp.Payload) != "token-fresh" {
-		t.Fatalf("expected inference execution to use fresh token after PATCH, got resp=%q err=%v", string(resp.Payload), errExec)
 	}
 }

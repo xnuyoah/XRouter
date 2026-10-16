@@ -1,6 +1,6 @@
 # 标准动态库插件示例
 
-本目录包含 CLIProxyAPI C ABI 的标准动态库插件示例。
+本目录包含 XRouter C ABI 的标准动态库插件示例。
 
 ## 目录布局
 
@@ -13,7 +13,6 @@
 - `protocol-format/`：使用最小执行器重点演示输入和输出格式声明。
 - `request-translator/`：只演示请求转换能力。
 - `request-normalizer/`：只演示请求规整能力。
-- `codex-service-tier/`：仅 Go 实现的请求规整插件，启用后会将 Codex `gpt-5.5` 请求设置为 priority service tier。
 - `request-lifecycle/`：仅 Go 实现的请求生命周期插件，演示并发控制、主动终止 HTTP 请求和终态回调。
 - `scheduler/`：仅 Go 实现的调度插件，可选择指定 auth ID、委托内置调度器或拒绝调度。
 - `response-translator/`：只演示响应转换能力。
@@ -27,19 +26,6 @@
 - `host-model-callback/`：仅 Go 实现的插件资源，演示调用宿主模型执行回调。
 
 多数标准能力示例都包含 `go/`、`c/` 和 `rust/` 三个子目录。专用示例可能只提供所需的实现语言。
-
-## Codex Service Tier
-
-`codex-service-tier` 声明请求规整能力。当 `fast` 为 `true` 时，如果 `req.ToFormat` 为 `codex` 且 `req.Model` 为 `gpt-5.5`，它会将 `service_tier` 设置为 `priority`。
-
-```yaml
-plugins:
-  configs:
-    codex-service-tier:
-      enabled: true
-      priority: 1
-      fast: false
-```
 
 ## 请求生命周期
 
@@ -119,7 +105,7 @@ plugins:
 - **注意**：非流式执行（`executor.execute`）和流式执行（`executor.execute_stream`）两处报错路径均需要设置 `http_status`，以保证异常分类行为一致。
 - 原生动态库插件通过 C ABI 交换序列化的 JSON 缓冲区通信，因此状态码必须编码到序列化的 JSON 信封中（例如使用 `pluginabi.NewErrorEnvelope` 或自定义带 `http_status` 字段的信封结构体）。Go 语言原生的 error 对象无法跨越 C ABI 边界传递。
 
-Go 语言编写的插件可导入 `github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginabi` 并直接使用 `pluginabi.NewErrorEnvelope(code, message, httpStatus)`：
+Go 语言编写的插件可导入 `github.com/xnuyoah/XRouter/v8/sdk/pluginabi` 并直接使用 `pluginabi.NewErrorEnvelope(code, message, httpStatus)`：
 
 ```go
 // 推荐方式：直接使用 sdk/pluginabi 构造错误信封

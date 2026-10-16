@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 // TestConfigV8ETagIfMatch covers issue #6666: the v8 config endpoints must
@@ -18,7 +18,7 @@ import (
 func TestConfigV8ETagIfMatch(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	path := filepath.Join(t.TempDir(), "config.yaml")
-	raw := "config-version: 8\nserver: {port: 8317}\naccess: {api-keys: [revoked-key]}\n"
+	raw := "config-version: 8\nserver: {port: 11016}\naccess: {api-keys: [revoked-key]}\n"
 	if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func TestConfigV8ETagIfMatch(t *testing.T) {
 	// A quoted current hash with a trailing comma inside the quotes is a
 	// different (stale) tag, not the current one.
 	quotedComma := `"` + config.ComputeSourceHash(fileBytes()) + `,"`
-	recorder = do(http.MethodPut, "/v8/management/config/server/port", `8317`, quotedComma)
+	recorder = do(http.MethodPut, "/v8/management/config/server/port", `11016`, quotedComma)
 	wantStatus(recorder, http.StatusPreconditionFailed)
 
 	// An explicitly present but empty/blank If-Match carries no tag and fails;
@@ -151,7 +151,7 @@ func TestConfigV8ETagIfMatch(t *testing.T) {
 	// express an empty header, so add it directly.)
 	for _, blank := range []string{"", "  \t  "} {
 		recorder = httptest.NewRecorder()
-		blankReq := httptest.NewRequest(http.MethodPut, "/v8/management/config/server/port", strings.NewReader(`8317`))
+		blankReq := httptest.NewRequest(http.MethodPut, "/v8/management/config/server/port", strings.NewReader(`11016`))
 		blankReq.Header.Add("If-Match", blank)
 		router.ServeHTTP(recorder, blankReq)
 		wantStatus(recorder, http.StatusPreconditionFailed)

@@ -17,11 +17,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/credentialweight"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	cliproxysession "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/session"
+	"github.com/xnuyoah/XRouter/v8/internal/credentialweight"
+	"github.com/xnuyoah/XRouter/v8/internal/logging"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	cliproxysession "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/session"
 )
 
 // RoundRobinSelector provides a simple provider scoped round-robin selection strategy.
@@ -1095,7 +1095,7 @@ func (s *SessionAffinitySelector) Trees() *cliproxysession.InMemorySessionTreeSt
 // failover, so the fallback selector only ever receives the highest available priority tier.
 //
 // Note: The cache key includes provider, session ID, and model to handle cases where
-// a session uses multiple models (e.g., gemini-2.5-pro and gemini-3-flash-preview)
+// a session uses multiple models (e.g., gpt-4o and gpt-4o-mini)
 // that may be supported by different auth credentials, and to avoid cross-provider conflicts.
 func (s *SessionAffinitySelector) Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*Auth) (*Auth, error) {
 	entry := selectorLogEntry(ctx)
@@ -1400,14 +1400,10 @@ func (s *SessionAffinitySelector) pickLCP(ctx context.Context, provider, model s
 func canonicalLCPProvider(provider string) string {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	switch provider {
-	case "google", "gemini", "vertex", "aistudio":
-		return "google"
 	case "codex", "openai":
 		return "openai"
 	case "claude", "anthropic":
 		return "claude"
-	case "devin":
-		return "devin"
 	default:
 		return provider
 	}
@@ -1895,7 +1891,7 @@ func extractMessageHashIDs(payload []byte) (primaryID, fallbackID string) {
 		}
 	}
 
-	// Gemini format
+	// Google-style contents/parts payload format (systemInstruction + contents).
 	if systemPrompt == "" && firstUserMsg == "" {
 		sysInstr := gjson.GetBytes(payload, "systemInstruction.parts")
 		if sysInstr.Exists() && sysInstr.IsArray() {

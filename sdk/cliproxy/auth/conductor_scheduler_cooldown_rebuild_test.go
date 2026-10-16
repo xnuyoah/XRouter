@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 // TestScheduler_ModelCooldown_DoesNotTriggerRebuild verifies that when credentials
@@ -20,21 +20,21 @@ import (
 func TestScheduler_ModelCooldown_DoesNotTriggerRebuild(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "gemini"})
+	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "openai"})
 
 	model := "scheduler-cooldown-no-rebuild-model"
 	auth := &Auth{
 		ID:       "auth-cooldown-no-rebuild",
-		Provider: "gemini",
+		Provider: "openai",
 	}
 	if _, errRegister := manager.Register(ctx, auth); errRegister != nil {
 		t.Fatalf("register auth: %v", errRegister)
 	}
-	registerSchedulerModels(t, "gemini", model, auth.ID)
+	registerSchedulerModels(t, "openai", model, auth.ID)
 	manager.RefreshSchedulerEntry(auth.ID)
 
 	// Verify initial pick succeeds.
-	picked, errPick := manager.scheduler.pickSingle(ctx, "gemini", model, cliproxyexecutor.Options{}, nil)
+	picked, errPick := manager.scheduler.pickSingle(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPick != nil || picked == nil || picked.ID != auth.ID {
 		t.Fatalf("initial pickSingle failed: picked=%v, err=%v", picked, errPick)
 	}
@@ -42,14 +42,14 @@ func TestScheduler_ModelCooldown_DoesNotTriggerRebuild(t *testing.T) {
 	// Put credential into cooldown.
 	manager.MarkResult(ctx, Result{
 		AuthID:   auth.ID,
-		Provider: "gemini",
+		Provider: "openai",
 		Model:    model,
 		Success:  false,
 		Error:    &Error{HTTPStatus: http.StatusTooManyRequests, Message: "quota exceeded"},
 	})
 
 	// Directly verify shouldRetrySchedulerPick does NOT treat modelCooldownError as retryable.
-	_, errCooldown := manager.scheduler.pickSingle(ctx, "gemini", model, cliproxyexecutor.Options{}, nil)
+	_, errCooldown := manager.scheduler.pickSingle(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	var targetCooldownErr *modelCooldownError
 	if !errors.As(errCooldown, &targetCooldownErr) {
 		t.Fatalf("expected pickSingle to return *modelCooldownError, got: %v", errCooldown)
@@ -60,11 +60,11 @@ func TestScheduler_ModelCooldown_DoesNotTriggerRebuild(t *testing.T) {
 
 	// Capture scheduler provider pointer before pickNext.
 	manager.scheduler.mu.Lock()
-	providerSchedulerBefore := manager.scheduler.providers["gemini"]
+	providerSchedulerBefore := manager.scheduler.providers["openai"]
 	manager.scheduler.mu.Unlock()
 
 	// Calling pickNext on a cooled down model should return modelCooldownError without rebuilding.
-	_, _, errPickNext := manager.pickNext(ctx, "gemini", model, cliproxyexecutor.Options{}, nil)
+	_, _, errPickNext := manager.pickNext(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPickNext == nil {
 		t.Fatal("expected pickNext to fail with cooldown error, got nil")
 	}
@@ -73,7 +73,7 @@ func TestScheduler_ModelCooldown_DoesNotTriggerRebuild(t *testing.T) {
 	}
 
 	manager.scheduler.mu.Lock()
-	providerSchedulerAfter := manager.scheduler.providers["gemini"]
+	providerSchedulerAfter := manager.scheduler.providers["openai"]
 	manager.scheduler.mu.Unlock()
 
 	// In the buggy implementation, syncScheduler re-allocates providers map and providerScheduler during rebuild.
@@ -87,7 +87,7 @@ func TestScheduler_ModelCooldown_DoesNotTriggerRebuild(t *testing.T) {
 	}
 
 	// Subsequent pickNext call must take the fast path without scanning.
-	_, _, errSubsequent := manager.pickNext(ctx, "gemini", model, cliproxyexecutor.Options{}, nil)
+	_, _, errSubsequent := manager.pickNext(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if !errors.As(errSubsequent, &targetCooldownErr) {
 		t.Fatalf("expected subsequent pickNext error to be *modelCooldownError, got: %v", errSubsequent)
 	}
@@ -98,13 +98,13 @@ func TestScheduler_ModelCooldown_DoesNotTriggerRebuild(t *testing.T) {
 func TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "gemini"})
+	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "openai"})
 
 	cooledModel := "model-cooling"
 	healthyModel := "model-healthy"
 
-	authCool := &Auth{ID: "auth-cool", Provider: "gemini"}
-	authHealthy := &Auth{ID: "auth-healthy", Provider: "gemini"}
+	authCool := &Auth{ID: "auth-cool", Provider: "openai"}
+	authHealthy := &Auth{ID: "auth-healthy", Provider: "openai"}
 
 	if _, errRegisterCool := manager.Register(ctx, authCool); errRegisterCool != nil {
 		t.Fatalf("register authCool: %v", errRegisterCool)
@@ -113,22 +113,22 @@ func TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel(t *testing.T) 
 		t.Fatalf("register authHealthy: %v", errRegisterHealthy)
 	}
 
-	registerSchedulerModels(t, "gemini", cooledModel, authCool.ID)
-	registerSchedulerModels(t, "gemini", healthyModel, authHealthy.ID)
+	registerSchedulerModels(t, "openai", cooledModel, authCool.ID)
+	registerSchedulerModels(t, "openai", healthyModel, authHealthy.ID)
 	manager.RefreshSchedulerEntry(authCool.ID)
 	manager.RefreshSchedulerEntry(authHealthy.ID)
 
 	// Put authCool into cooldown.
 	manager.MarkResult(ctx, Result{
 		AuthID:   authCool.ID,
-		Provider: "gemini",
+		Provider: "openai",
 		Model:    cooledModel,
 		Success:  false,
 		Error:    &Error{HTTPStatus: http.StatusTooManyRequests, Message: "quota exceeded"},
 	})
 
 	manager.scheduler.mu.Lock()
-	providerBefore := manager.scheduler.providers["gemini"]
+	providerBefore := manager.scheduler.providers["openai"]
 	manager.scheduler.mu.Unlock()
 
 	// Launch concurrent picks for cooledModel.
@@ -141,7 +141,7 @@ func TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel(t *testing.T) 
 		go func() {
 			defer wg.Done()
 			<-startGate
-			_, _, _ = manager.pickNext(ctx, "gemini", cooledModel, cliproxyexecutor.Options{}, nil)
+			_, _, _ = manager.pickNext(ctx, "openai", cooledModel, cliproxyexecutor.Options{}, nil)
 		}()
 	}
 
@@ -149,7 +149,7 @@ func TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel(t *testing.T) 
 	healthyDone := make(chan struct{})
 	go func() {
 		<-startGate
-		picked, exec, errPick := manager.pickNext(ctx, "gemini", healthyModel, cliproxyexecutor.Options{}, nil)
+		picked, exec, errPick := manager.pickNext(ctx, "openai", healthyModel, cliproxyexecutor.Options{}, nil)
 		if errPick != nil || picked == nil || exec == nil {
 			t.Errorf("healthy pick failed: picked=%v, err=%v", picked, errPick)
 		}
@@ -180,7 +180,7 @@ func TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel(t *testing.T) 
 	}
 
 	manager.scheduler.mu.Lock()
-	providerAfter := manager.scheduler.providers["gemini"]
+	providerAfter := manager.scheduler.providers["openai"]
 	manager.scheduler.mu.Unlock()
 
 	if providerBefore != providerAfter {
@@ -194,13 +194,13 @@ func TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel(t *testing.T) 
 func TestScheduler_InterleavedMarkResult_DoesNotTriggerRebuild(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "gemini"})
+	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "openai"})
 
 	modelActive := "model-active"
 	modelCooldown := "model-in-cooldown"
 
-	authActive := &Auth{ID: "auth-active", Provider: "gemini"}
-	authCooled := &Auth{ID: "auth-cooled", Provider: "gemini"}
+	authActive := &Auth{ID: "auth-active", Provider: "openai"}
+	authCooled := &Auth{ID: "auth-cooled", Provider: "openai"}
 
 	if _, errRegisterActive := manager.Register(ctx, authActive); errRegisterActive != nil {
 		t.Fatalf("register authActive: %v", errRegisterActive)
@@ -209,22 +209,22 @@ func TestScheduler_InterleavedMarkResult_DoesNotTriggerRebuild(t *testing.T) {
 		t.Fatalf("register authCooled: %v", errRegisterCooled)
 	}
 
-	registerSchedulerModels(t, "gemini", modelActive, authActive.ID)
-	registerSchedulerModels(t, "gemini", modelCooldown, authCooled.ID)
+	registerSchedulerModels(t, "openai", modelActive, authActive.ID)
+	registerSchedulerModels(t, "openai", modelCooldown, authCooled.ID)
 	manager.RefreshSchedulerEntry(authActive.ID)
 	manager.RefreshSchedulerEntry(authCooled.ID)
 
 	// Put authCooled into cooldown.
 	manager.MarkResult(ctx, Result{
 		AuthID:   authCooled.ID,
-		Provider: "gemini",
+		Provider: "openai",
 		Model:    modelCooldown,
 		Success:  false,
 		Error:    &Error{HTTPStatus: http.StatusTooManyRequests, Message: "quota exceeded"},
 	})
 
 	manager.scheduler.mu.Lock()
-	providerBefore := manager.scheduler.providers["gemini"]
+	providerBefore := manager.scheduler.providers["openai"]
 	manager.scheduler.mu.Unlock()
 
 	var stopFlag atomic.Bool
@@ -239,7 +239,7 @@ func TestScheduler_InterleavedMarkResult_DoesNotTriggerRebuild(t *testing.T) {
 			for !stopFlag.Load() {
 				manager.MarkResult(ctx, Result{
 					AuthID:   authActive.ID,
-					Provider: "gemini",
+					Provider: "openai",
 					Model:    modelActive,
 					Success:  true,
 				})
@@ -257,7 +257,7 @@ func TestScheduler_InterleavedMarkResult_DoesNotTriggerRebuild(t *testing.T) {
 			go func() {
 				defer pickWg.Done()
 				for j := 0; j < 10; j++ {
-					_, _, errPick := manager.pickNext(ctx, "gemini", modelCooldown, cliproxyexecutor.Options{}, nil)
+					_, _, errPick := manager.pickNext(ctx, "openai", modelCooldown, cliproxyexecutor.Options{}, nil)
 					if errPick == nil {
 						t.Errorf("expected pickNext on cooldown model to fail")
 					}
@@ -279,7 +279,7 @@ func TestScheduler_InterleavedMarkResult_DoesNotTriggerRebuild(t *testing.T) {
 	wg.Wait()
 
 	manager.scheduler.mu.Lock()
-	providerAfter := manager.scheduler.providers["gemini"]
+	providerAfter := manager.scheduler.providers["openai"]
 	manager.scheduler.mu.Unlock()
 
 	if providerBefore != providerAfter {
@@ -415,17 +415,17 @@ func TestScheduler_LargeCredentialSet_CooldownDoesNotLockStarve(t *testing.T) {
 func TestScheduler_RebuildDuringConcurrentMarkResult_PreservesLatestState(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "gemini"})
+	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "openai"})
 
 	model := "model-concurrent-mark-rebuild"
 	auth := &Auth{
 		ID:       "auth-concurrent-mark",
-		Provider: "gemini",
+		Provider: "openai",
 	}
 	if _, errRegister := manager.Register(ctx, auth); errRegister != nil {
 		t.Fatalf("register auth: %v", errRegister)
 	}
-	registerSchedulerModels(t, "gemini", model, auth.ID)
+	registerSchedulerModels(t, "openai", model, auth.ID)
 	manager.RefreshSchedulerEntry(auth.ID)
 
 	// Case A: Snapshot G is healthy, concurrent MarkResult puts auth into cooldown (G+1).
@@ -435,7 +435,7 @@ func TestScheduler_RebuildDuringConcurrentMarkResult_PreservesLatestState(t *tes
 
 	manager.MarkResult(ctx, Result{
 		AuthID:   auth.ID,
-		Provider: "gemini",
+		Provider: "openai",
 		Model:    model,
 		Success:  false,
 		Error:    &Error{HTTPStatus: http.StatusTooManyRequests, Message: "quota exceeded"},
@@ -445,7 +445,7 @@ func TestScheduler_RebuildDuringConcurrentMarkResult_PreservesLatestState(t *tes
 	manager.scheduler.rebuild([]*Auth{healthySnapshot})
 
 	// Cooldown state must be preserved (must NOT revert to healthy).
-	_, errPickCooldown := manager.scheduler.pickSingle(ctx, "gemini", model, cliproxyexecutor.Options{}, nil)
+	_, errPickCooldown := manager.scheduler.pickSingle(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	var targetCooldownErr *modelCooldownError
 	if !errors.As(errPickCooldown, &targetCooldownErr) {
 		t.Fatalf("rebuild with stale snapshot reverted cooldown state; expected *modelCooldownError, got: %v", errPickCooldown)
@@ -465,7 +465,7 @@ func TestScheduler_RebuildDuringConcurrentMarkResult_PreservesLatestState(t *tes
 	manager.scheduler.rebuild([]*Auth{cooledSnapshot})
 
 	// Recovered state must be preserved (must NOT revert to cooldown).
-	pickedRecovered, errPickRecovered := manager.scheduler.pickSingle(ctx, "gemini", model, cliproxyexecutor.Options{}, nil)
+	pickedRecovered, errPickRecovered := manager.scheduler.pickSingle(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPickRecovered != nil || pickedRecovered == nil || pickedRecovered.ID != auth.ID {
 		t.Fatalf("rebuild with stale snapshot reverted recovered state: picked=%v, err=%v", pickedRecovered, errPickRecovered)
 	}
@@ -477,17 +477,17 @@ func TestScheduler_RebuildDuringConcurrentMarkResult_PreservesLatestState(t *tes
 func TestScheduler_ModelProjectionCooldown_DoesNotInvalidateFastPath(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "gemini"})
+	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "openai"})
 
 	model := "model-projection-fastpath"
 	auth := &Auth{
 		ID:       "auth-proj-fastpath",
-		Provider: "gemini",
+		Provider: "openai",
 	}
 	if _, errRegister := manager.Register(ctx, auth); errRegister != nil {
 		t.Fatalf("register auth: %v", errRegister)
 	}
-	registerSchedulerModels(t, "gemini", model, auth.ID)
+	registerSchedulerModels(t, "openai", model, auth.ID)
 	manager.RefreshSchedulerEntry(auth.ID)
 
 	manager.syncScheduler()
@@ -499,7 +499,7 @@ func TestScheduler_ModelProjectionCooldown_DoesNotInvalidateFastPath(t *testing.
 	// Apply cooldown via MarkResult (invokes ApplyClientModelProjections).
 	manager.MarkResult(ctx, Result{
 		AuthID:   auth.ID,
-		Provider: "gemini",
+		Provider: "openai",
 		Model:    model,
 		Success:  false,
 		Error:    &Error{HTTPStatus: http.StatusTooManyRequests, Message: "quota exceeded"},
@@ -511,7 +511,7 @@ func TestScheduler_ModelProjectionCooldown_DoesNotInvalidateFastPath(t *testing.
 	}
 
 	// Fast path is confirmed intact.
-	_, errPick := manager.scheduler.pickSingle(ctx, "gemini", model, cliproxyexecutor.Options{}, nil)
+	_, errPick := manager.scheduler.pickSingle(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if manager.shouldRetrySchedulerPick(errPick, initialVersion) {
 		t.Fatal("shouldRetrySchedulerPick unexpectedly returned true on cooldown error")
 	}
@@ -523,18 +523,18 @@ func TestScheduler_ModelProjectionCooldown_DoesNotInvalidateFastPath(t *testing.
 func TestScheduler_RebuildDuringConcurrentUpdate_DoesNotResurrectDisabledCredential(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "gemini"})
+	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "openai"})
 
 	model := "model-disabled-rebuild"
 	auth := &Auth{
 		ID:       "auth-disabled-rebuild",
-		Provider: "gemini",
+		Provider: "openai",
 		Status:   StatusActive,
 	}
 	if _, errRegister := manager.Register(ctx, auth); errRegister != nil {
 		t.Fatalf("register auth: %v", errRegister)
 	}
-	registerSchedulerModels(t, "gemini", model, auth.ID)
+	registerSchedulerModels(t, "openai", model, auth.ID)
 	manager.RefreshSchedulerEntry(auth.ID)
 
 	// Capture active snapshot at Generation 1.
@@ -554,7 +554,7 @@ func TestScheduler_RebuildDuringConcurrentUpdate_DoesNotResurrectDisabledCredent
 	manager.scheduler.rebuild([]*Auth{activeSnapshotG1})
 
 	// Verify the disabled credential is NOT resurrected in scheduler and cannot be picked.
-	picked, errPick := manager.scheduler.pickSingle(ctx, "gemini", model, cliproxyexecutor.Options{}, nil)
+	picked, errPick := manager.scheduler.pickSingle(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPick == nil || picked != nil {
 		t.Fatalf("rebuild with stale active snapshot resurrected disabled credential: %v", picked)
 	}
@@ -567,32 +567,32 @@ func TestScheduler_RebuildDuringConcurrentUpdate_DoesNotResurrectDisabledCredent
 func TestScheduler_IncrementalRefresh_AllowsFailedPickToRetryAndSucceed(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "gemini"})
+	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "openai"})
 
 	initialModel := "model-incremental-initial"
 	newModel := "model-incremental-new"
 
 	auth := &Auth{
 		ID:       "auth-incremental-test",
-		Provider: "gemini",
+		Provider: "openai",
 	}
 	if _, errRegister := manager.Register(ctx, auth); errRegister != nil {
 		t.Fatalf("register auth: %v", errRegister)
 	}
-	registerSchedulerModels(t, "gemini", initialModel, auth.ID)
+	registerSchedulerModels(t, "openai", initialModel, auth.ID)
 	manager.RefreshSchedulerEntry(auth.ID)
 	manager.syncScheduler()
 
 	// Initial pick on newModel fails because it is not registered yet.
 	beforeVer := manager.syncedVersion.Load()
-	_, errInitialPick := manager.scheduler.pickSingle(ctx, "gemini", newModel, cliproxyexecutor.Options{}, nil)
+	_, errInitialPick := manager.scheduler.pickSingle(ctx, "openai", newModel, cliproxyexecutor.Options{}, nil)
 	if errInitialPick == nil {
 		t.Fatal("expected pickSingle on newModel to fail initially")
 	}
 
 	// Register newModel in registry and execute incremental RefreshSchedulerEntry (no full rebuild).
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth.ID, "gemini", []*registry.ModelInfo{
+	reg.RegisterClient(auth.ID, "openai", []*registry.ModelInfo{
 		{ID: initialModel},
 		{ID: newModel},
 	})
@@ -607,7 +607,7 @@ func TestScheduler_IncrementalRefresh_AllowsFailedPickToRetryAndSucceed(t *testi
 	}
 
 	// Retrying pickSingle must now succeed.
-	picked, errRetry := manager.scheduler.pickSingle(ctx, "gemini", newModel, cliproxyexecutor.Options{}, nil)
+	picked, errRetry := manager.scheduler.pickSingle(ctx, "openai", newModel, cliproxyexecutor.Options{}, nil)
 	if errRetry != nil || picked == nil || picked.ID != auth.ID {
 		t.Fatalf("retry pickSingle failed: picked=%v, err=%v", picked, errRetry)
 	}
@@ -619,25 +619,25 @@ func TestScheduler_IncrementalRefresh_AllowsFailedPickToRetryAndSucceed(t *testi
 func TestScheduler_ConcurrentPicks_OneSyncAllowsOthersToRetry(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "gemini"})
+	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "openai"})
 
 	modelInitial := "model-concurrent-init"
 	modelNew := "model-concurrent-new"
 
 	auth := &Auth{
 		ID:       "auth-concurrent-retry",
-		Provider: "gemini",
+		Provider: "openai",
 	}
 	if _, errRegister := manager.Register(ctx, auth); errRegister != nil {
 		t.Fatalf("register auth: %v", errRegister)
 	}
-	registerSchedulerModels(t, "gemini", modelInitial, auth.ID)
+	registerSchedulerModels(t, "openai", modelInitial, auth.ID)
 	manager.RefreshSchedulerEntry(auth.ID)
 	manager.syncScheduler()
 
 	// Register modelNew directly into registry.
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth.ID, "gemini", []*registry.ModelInfo{
+	reg.RegisterClient(auth.ID, "openai", []*registry.ModelInfo{
 		{ID: modelInitial},
 		{ID: modelNew},
 	})
@@ -659,14 +659,14 @@ func TestScheduler_ConcurrentPicks_OneSyncAllowsOthersToRetry(t *testing.T) {
 			defer wg.Done()
 			// Phase 1: All requests attempt initial pick before sync and observe the failure.
 			beforeVer := manager.syncedVersion.Load()
-			selected, errPick := manager.scheduler.pickSingle(ctx, "gemini", modelNew, cliproxyexecutor.Options{}, nil)
+			selected, errPick := manager.scheduler.pickSingle(ctx, "openai", modelNew, cliproxyexecutor.Options{}, nil)
 			if errPick != nil && modelNew != "" {
 				if phase1Count.Add(1) == int32(numRequests) {
 					close(phase1Done)
 				}
 				<-phase2Start
 				if manager.shouldRetrySchedulerPick(errPick, beforeVer) {
-					selected, errPick = manager.scheduler.pickSingle(ctx, "gemini", modelNew, cliproxyexecutor.Options{}, nil)
+					selected, errPick = manager.scheduler.pickSingle(ctx, "openai", modelNew, cliproxyexecutor.Options{}, nil)
 				}
 			}
 			if errPick == nil && (selected == nil || selected.ID != auth.ID) {
@@ -700,19 +700,19 @@ func TestScheduler_ConcurrentPicks_OneSyncAllowsOthersToRetry(t *testing.T) {
 func TestScheduler_RegisterClient_InvalidatesFastPath(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "gemini"})
+	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "openai"})
 
 	initialModel := "model-init"
 	dynamicModel := "model-dynamic"
 
 	auth := &Auth{
 		ID:       "auth-dynamic-reg",
-		Provider: "gemini",
+		Provider: "openai",
 	}
 	if _, errRegister := manager.Register(ctx, auth); errRegister != nil {
 		t.Fatalf("register auth: %v", errRegister)
 	}
-	registerSchedulerModels(t, "gemini", initialModel, auth.ID)
+	registerSchedulerModels(t, "openai", initialModel, auth.ID)
 	manager.RefreshSchedulerEntry(auth.ID)
 
 	// Ensure manager and scheduler are completely synced (syncedVersion == currentVersion).
@@ -723,7 +723,7 @@ func TestScheduler_RegisterClient_InvalidatesFastPath(t *testing.T) {
 
 	// Register dynamicModel directly into global registry without calling RefreshSchedulerEntry.
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth.ID, "gemini", []*registry.ModelInfo{
+	reg.RegisterClient(auth.ID, "openai", []*registry.ModelInfo{
 		{ID: initialModel},
 		{ID: dynamicModel},
 	})
@@ -737,7 +737,7 @@ func TestScheduler_RegisterClient_InvalidatesFastPath(t *testing.T) {
 	}
 
 	// pickNext on dynamicModel must succeed by discovering the new model.
-	picked, exec, errPick := manager.pickNext(ctx, "gemini", dynamicModel, cliproxyexecutor.Options{}, nil)
+	picked, exec, errPick := manager.pickNext(ctx, "openai", dynamicModel, cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNext failed to discover dynamically registered model: %v", errPick)
 	}
@@ -752,19 +752,19 @@ func TestScheduler_RegisterClient_InvalidatesFastPath(t *testing.T) {
 func TestScheduler_UnschedulableAuth_DoesNotTriggerRebuildLoop(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "gemini"})
+	manager.RegisterExecutor(schedulerProviderTestExecutor{provider: "openai"})
 
 	model := "model-unschedulable-test"
 
 	// Register a valid auth that will cool down.
 	validAuth := &Auth{
 		ID:       "auth-valid-cooling",
-		Provider: "gemini",
+		Provider: "openai",
 	}
 	if _, errRegister := manager.Register(ctx, validAuth); errRegister != nil {
 		t.Fatalf("register valid auth: %v", errRegister)
 	}
-	registerSchedulerModels(t, "gemini", model, validAuth.ID)
+	registerSchedulerModels(t, "openai", model, validAuth.ID)
 	manager.RefreshSchedulerEntry(validAuth.ID)
 
 	// Register an unschedulable auth directly in manager (e.g. Empty provider).
@@ -779,14 +779,14 @@ func TestScheduler_UnschedulableAuth_DoesNotTriggerRebuildLoop(t *testing.T) {
 	// Put validAuth into cooldown.
 	manager.MarkResult(ctx, Result{
 		AuthID:   validAuth.ID,
-		Provider: "gemini",
+		Provider: "openai",
 		Model:    model,
 		Success:  false,
 		Error:    &Error{HTTPStatus: http.StatusTooManyRequests, Message: "quota exceeded"},
 	})
 
 	// Initial pick on model should sync once and converge.
-	_, _, errPickInitial := manager.pickNext(ctx, "gemini", model, cliproxyexecutor.Options{}, nil)
+	_, _, errPickInitial := manager.pickNext(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPickInitial == nil {
 		t.Fatal("expected pickNext to fail with cooldown error")
 	}
@@ -798,16 +798,16 @@ func TestScheduler_UnschedulableAuth_DoesNotTriggerRebuildLoop(t *testing.T) {
 	}
 
 	manager.scheduler.mu.Lock()
-	providersBefore := manager.scheduler.providers["gemini"]
+	providersBefore := manager.scheduler.providers["openai"]
 	manager.scheduler.mu.Unlock()
 
 	// Subsequent pick attempts on the cooling model MUST NOT trigger rebuilds.
 	for i := 0; i < 5; i++ {
-		_, _, _ = manager.pickNext(ctx, "gemini", model, cliproxyexecutor.Options{}, nil)
+		_, _, _ = manager.pickNext(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	}
 
 	manager.scheduler.mu.Lock()
-	providersAfter := manager.scheduler.providers["gemini"]
+	providersAfter := manager.scheduler.providers["openai"]
 	manager.scheduler.mu.Unlock()
 
 	if providersBefore != providersAfter {

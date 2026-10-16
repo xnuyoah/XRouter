@@ -1,5 +1,5 @@
 // Package discovery provides local network mDNS / DNS-SD service advertising
-// and discovery capabilities for CLIProxyAPI (CPA).
+// and discovery capabilities for XRouter (CPA).
 package discovery
 
 import (
@@ -18,12 +18,8 @@ const (
 	SubtypeResponses = "_responses"
 	// SubtypeMessages identifies the Anthropic Messages API protocol.
 	SubtypeMessages = "_messages"
-	// SubtypeGenerateContent identifies the Gemini GenerateContent API protocol.
-	SubtypeGenerateContent = "_generate-content"
-	// SubtypeInteractions identifies the Interactions API protocol.
-	SubtypeInteractions = "_interactions"
-	// ProductCPA is the product identifier for CLIProxyAPI.
-	ProductCPA = "cliproxyapi"
+	// ProductCPA is the product identifier for XRouter.
+	ProductCPA = "xrouter"
 )
 
 // ServiceSpec describes a service to be advertised on the local network.

@@ -13,13 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/redisqueue"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher/diff"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher/synthesizer"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/redisqueue"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher/diff"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher/synthesizer"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string, forceAuthRefresh bool) {
@@ -56,8 +56,8 @@ func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string
 		w.clientsMutex.Unlock()
 	}
 
-	geminiAPIKeyCount, vertexCompatAPIKeyCount, claudeAPIKeyCount, codexAPIKeyCount, xaiAPIKeyCount, metaAPIKeyCount, openAICompatCount := BuildAPIKeyClients(cfg)
-	totalAPIKeyClients := geminiAPIKeyCount + vertexCompatAPIKeyCount + claudeAPIKeyCount + codexAPIKeyCount + xaiAPIKeyCount + metaAPIKeyCount + openAICompatCount
+	keyCounts := BuildAPIKeyClients(cfg)
+	totalAPIKeyClients := keyCounts.Total()
 	log.Debugf("loaded %d API key clients", totalAPIKeyClients)
 
 	var authFileCount int
@@ -139,7 +139,7 @@ func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string
 		w.authRescanMu.Unlock()
 	}
 
-	totalNewClients := authFileCount + geminiAPIKeyCount + vertexCompatAPIKeyCount + claudeAPIKeyCount + codexAPIKeyCount + xaiAPIKeyCount + metaAPIKeyCount + openAICompatCount
+	totalNewClients := authFileCount + keyCounts.Total()
 
 	if w.reloadCallback != nil {
 		log.Debugf("triggering server update callback before auth refresh")
@@ -149,16 +149,14 @@ func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string
 	w.refreshAuthState(forceAuthRefresh)
 	redisqueue.NotifyUsageRefresh()
 
-	log.Infof("full client load complete - %d clients (%d auth files + %d Gemini API keys + %d Vertex API keys + %d Claude API keys + %d Codex keys + %d xAI keys + %d Meta API keys + %d OpenAI-compat)",
+	log.Infof("full client load complete - %d clients (%d auth files + %d OpenAI API keys + %d DeepSeek API keys + %d NVIDIA API keys + %d Agnes API keys + %d OpenAI-compat)",
 		totalNewClients,
 		authFileCount,
-		geminiAPIKeyCount,
-		vertexCompatAPIKeyCount,
-		claudeAPIKeyCount,
-		codexAPIKeyCount,
-		xaiAPIKeyCount,
-		metaAPIKeyCount,
-		openAICompatCount,
+		keyCounts.OpenAI,
+		keyCounts.Deepseek,
+		keyCounts.Nvidia,
+		keyCounts.Agnes,
+		keyCounts.OpenAICompat,
 	)
 }
 
@@ -394,45 +392,37 @@ func (w *Watcher) loadFileClients(cfg *config.Config) int {
 	return authFileCount
 }
 
-func BuildAPIKeyClients(cfg *config.Config) (int, int, int, int, int, int, int) {
-	geminiAPIKeyCount := 0
-	vertexCompatAPIKeyCount := 0
-	claudeAPIKeyCount := 0
-	codexAPIKeyCount := 0
-	xaiAPIKeyCount := 0
-	metaAPIKeyCount := 0
-	openAICompatCount := 0
+// APIKeyClientCounts summarizes configured API-key credentials per provider family.
+type APIKeyClientCounts struct {
+	OpenAI       int
+	Deepseek     int
+	Nvidia       int
+	Agnes        int
+	OpenAICompat int
+}
 
-	if len(cfg.GeminiKey) > 0 {
-		geminiAPIKeyCount += len(cfg.GeminiKey)
+// Total returns the summed credential count across every API-key family.
+func (c APIKeyClientCounts) Total() int {
+	return c.OpenAI + c.Deepseek + c.Nvidia + c.Agnes + c.OpenAICompat
+}
+
+// BuildAPIKeyClients counts configured API-key credentials per provider family.
+func BuildAPIKeyClients(cfg *config.Config) APIKeyClientCounts {
+	var counts APIKeyClientCounts
+	if cfg == nil {
+		return counts
 	}
-	if len(cfg.InteractionsKey) > 0 {
-		geminiAPIKeyCount += len(cfg.InteractionsKey)
-	}
-	if len(cfg.VertexCompatAPIKey) > 0 {
-		vertexCompatAPIKeyCount += len(cfg.VertexCompatAPIKey)
-	}
-	if len(cfg.ClaudeKey) > 0 {
-		claudeAPIKeyCount += len(cfg.ClaudeKey)
-	}
-	if len(cfg.CodexKey) > 0 {
-		codexAPIKeyCount += len(cfg.CodexKey)
-	}
-	if len(cfg.XAIKey) > 0 {
-		xaiAPIKeyCount += len(cfg.XAIKey)
-	}
-	if len(cfg.MetaKey) > 0 {
-		metaAPIKeyCount += len(cfg.MetaKey)
-	}
-	if len(cfg.OpenAICompatibility) > 0 {
-		for _, compatConfig := range cfg.OpenAICompatibility {
-			if compatConfig.Disabled {
-				continue
-			}
-			openAICompatCount += len(compatConfig.APIKeyEntries)
+	counts.OpenAI = len(cfg.OpenAIKey)
+	counts.Deepseek = len(cfg.DeepseekKey)
+	counts.Nvidia = len(cfg.NvidiaKey)
+	counts.Agnes = len(cfg.AgnesKey)
+	for _, compatConfig := range cfg.OpenAICompatibility {
+		if compatConfig.Disabled {
+			continue
 		}
+		counts.OpenAICompat += len(compatConfig.APIKeyEntries)
 	}
-	return geminiAPIKeyCount, vertexCompatAPIKeyCount, claudeAPIKeyCount, codexAPIKeyCount, xaiAPIKeyCount, metaAPIKeyCount, openAICompatCount
+	return counts
 }
 
 func (w *Watcher) persistConfigAsync() {

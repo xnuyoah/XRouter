@@ -5,13 +5,42 @@ import (
 	"context"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
+	"github.com/tidwall/sjson"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
+
+type pairRequestPluginHooks struct {
+	calls       int64
+	onNormalize func(body []byte)
+}
+
+func (h *pairRequestPluginHooks) NormalizeRequest(_ context.Context, _, _ sdktranslator.Format, _ string, body []byte, _ bool) []byte {
+	h.calls++
+	if h.onNormalize != nil {
+		h.onNormalize(body)
+	}
+	updated, _ := sjson.SetBytes(body, "plugin_call", h.calls)
+	return updated
+}
+
+func (*pairRequestPluginHooks) TranslateRequest(context.Context, sdktranslator.Format, sdktranslator.Format, string, []byte, bool) ([]byte, bool) {
+	return nil, false
+}
+
+func (*pairRequestPluginHooks) NormalizeResponseBefore(context.Context, sdktranslator.Format, sdktranslator.Format, string, []byte, []byte, []byte, bool) []byte {
+	return nil
+}
+
+func (*pairRequestPluginHooks) TranslateResponse(context.Context, sdktranslator.Format, sdktranslator.Format, string, []byte, []byte, []byte, bool) ([]byte, bool) {
+	return nil, false
+}
+
+func (*pairRequestPluginHooks) NormalizeResponseAfter(context.Context, sdktranslator.Format, sdktranslator.Format, string, []byte, []byte, []byte, bool) []byte {
+	return nil
+}
 
 func TestCompatibilityRequestPair(t *testing.T) {
 	ctx := context.Background()
-	cfg := &config.Config{}
 	from, to := sdktranslator.FormatOpenAIResponse, sdktranslator.FormatOpenAI
 	for _, compat := range []bool{false, true} {
 		for _, stream := range []bool{false, true} {
@@ -21,9 +50,18 @@ func TestCompatibilityRequestPair(t *testing.T) {
 				if distinct {
 					request = []byte(`{"model":"test","input":"changed"}`)
 				}
-				wantOriginal := TranslateRequestWithAPIKeyModelCompatibility(ctx, nil, cfg, from, to, "test", original, stream, compat)
-				wantWorking := TranslateRequestWithAPIKeyModelCompatibility(ctx, nil, cfg, from, to, "test", request, stream, compat)
-				base, work := TranslateRequestPairWithAPIKeyModelCompatibility(ctx, nil, cfg, from, to, "test", original, request, stream, compat)
+				wantOriginal, _, errOriginal := TranslateRequestWithAPIKeyModelCompatibilityAndUpdateIntent(ctx, from, to, "test", original, stream, compat)
+				if errOriginal != nil {
+					t.Fatalf("baseline translation error: %v", errOriginal)
+				}
+				wantWorking, _, errWorking := TranslateRequestWithAPIKeyModelCompatibilityAndUpdateIntent(ctx, from, to, "test", request, stream, compat)
+				if errWorking != nil {
+					t.Fatalf("working translation error: %v", errWorking)
+				}
+				base, work, _, errPair := TranslateRequestPairWithAPIKeyModelCompatibilityAndUpdateIntent(ctx, from, to, "test", original, request, stream, compat)
+				if errPair != nil {
+					t.Fatalf("pair translation error: %v", errPair)
+				}
 				if !bytes.Equal(base, wantOriginal) || !bytes.Equal(work, wantWorking) {
 					t.Fatalf("pair changed translation: compat=%v stream=%v distinct=%v", compat, stream, distinct)
 				}
@@ -37,8 +75,8 @@ func TestCompatibilityRequestPair(t *testing.T) {
 }
 
 // TestTranslateRequestPairWithAPIKeyModelCompatibilityCountsTranslations counts
-// translator calls. Claude and Gemini Execute share this helper, and byte equality
-// stays green when the same deterministic translator runs twice.
+// translator calls. Executors share this helper, and byte equality stays green
+// when the same deterministic translator runs twice.
 func TestTranslateRequestPairWithAPIKeyModelCompatibilityCountsTranslations(t *testing.T) {
 	from := sdktranslator.Format("api-key-compat-count-from")
 	to := sdktranslator.Format("api-key-compat-count-to")
@@ -62,13 +100,15 @@ func TestTranslateRequestPairWithAPIKeyModelCompatibilityCountsTranslations(t *t
 	t.Cleanup(func() { sdktranslator.Unregister(from, to) })
 
 	ctx := context.Background()
-	cfg := &config.Config{}
 	payload := []byte(`{"model":"compat-count-model","input":"hello"}`)
 	for _, stream := range []bool{false, true} {
 		for _, compat := range []bool{false, true} {
 			wantStream = stream
 			calls = 0
-			base, work := TranslateRequestPairWithAPIKeyModelCompatibility(ctx, nil, cfg, from, to, model, payload, payload, stream, compat)
+			base, work, _, errPair := TranslateRequestPairWithAPIKeyModelCompatibilityAndUpdateIntent(ctx, from, to, model, payload, payload, stream, compat)
+			if errPair != nil {
+				t.Fatalf("stream=%v compat=%v: pair translation error: %v", stream, compat, errPair)
+			}
 			if calls != 1 {
 				t.Fatalf("stream=%v compat=%v: same slice translations = %d, want 1", stream, compat, calls)
 			}
@@ -86,9 +126,12 @@ func TestTranslateRequestPairWithAPIKeyModelCompatibilityCountsTranslations(t *t
 
 			calls = 0
 			detached := bytes.Clone(payload)
-			base, work = TranslateRequestPairWithAPIKeyModelCompatibility(ctx, nil, cfg, from, to, model, payload, detached, stream, compat)
-			if calls != 2 {
-				t.Fatalf("stream=%v compat=%v: equal content with a different backing array translations = %d, want 2", stream, compat, calls)
+			base, work, _, errPair = TranslateRequestPairWithAPIKeyModelCompatibilityAndUpdateIntent(ctx, from, to, model, payload, detached, stream, compat)
+			if errPair != nil {
+				t.Fatalf("stream=%v compat=%v: pair translation error: %v", stream, compat, errPair)
+			}
+			if calls != 1 {
+				t.Fatalf("stream=%v compat=%v: equal content with a different backing array translations = %d, want 1", stream, compat, calls)
 			}
 			if !bytes.Equal(base, payload) || !bytes.Equal(work, payload) {
 				t.Fatalf("stream=%v compat=%v: distinct backing translation changed the payload", stream, compat)
@@ -115,7 +158,10 @@ func TestCompatibilityRequestPairInvokesPluginOncePerInput(t *testing.T) {
 					request = []byte(`{"model":"test","input":"changed"}`)
 					wantCalls = 2
 				}
-				base, work := TranslateRequestPairWithAPIKeyModelCompatibility(context.Background(), nil, &config.Config{}, sdktranslator.FormatOpenAIResponse, sdktranslator.FormatOpenAI, "test", payload, request, stream, compat)
+				base, work, _, errPair := TranslateRequestPairWithAPIKeyModelCompatibilityAndUpdateIntent(context.Background(), sdktranslator.FormatOpenAIResponse, sdktranslator.FormatOpenAI, "test", payload, request, stream, compat)
+				if errPair != nil {
+					t.Fatalf("stream=%v compat=%v distinct=%v: pair translation error: %v", stream, compat, distinct, errPair)
+				}
 				if hooks.calls != wantCalls {
 					t.Fatalf("stream=%v compat=%v distinct=%v: plugin calls = %d, want %d", stream, compat, distinct, hooks.calls, wantCalls)
 				}

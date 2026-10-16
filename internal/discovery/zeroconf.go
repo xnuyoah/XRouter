@@ -532,11 +532,6 @@ func entryToDiscovered(e *zeroconf.ServiceEntry) DiscoveredService {
 			svc.Endpoints["anthropic"] = clean
 		}
 	}
-	if v, ok := parsed["api_gemini"]; ok {
-		if clean := sanitizeEndpointPath(v); clean != "" {
-			svc.Endpoints["gemini"] = clean
-		}
-	}
 
 	return svc
 }

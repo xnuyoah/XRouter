@@ -2,7 +2,7 @@
 // This package implements Claude-compatible streaming chat completions with sophisticated
 // client rotation and quota management systems to ensure high availability and optimal
 // resource utilization across multiple backend clients. It handles request translation
-// between Claude API format and the underlying Gemini backend, providing seamless
+// between the Claude API format and the upstream provider, providing seamless
 // API compatibility while maintaining robust error handling and connection management.
 package claude
 
@@ -19,16 +19,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	claudemodels "github.com/router-for-me/CLIProxyAPI/v8/internal/client/claude/models"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/clienterror"
-	. "github.com/router-for-me/CLIProxyAPI/v8/internal/constant"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/interfaces"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	claudemodels "github.com/xnuyoah/XRouter/v8/internal/client/claude/models"
+	"github.com/xnuyoah/XRouter/v8/internal/clienterror"
+	. "github.com/xnuyoah/XRouter/v8/internal/constant"
+	"github.com/xnuyoah/XRouter/v8/internal/interfaces"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 // ClaudeCodeAPIHandler contains the handlers for Claude API endpoints.
@@ -169,7 +169,7 @@ func (h *ClaudeCodeAPIHandler) ClaudeModels(c *gin.Context) {
 //
 // Parameters:
 //   - c: The Gin context for the request
-//   - modelName: The name of the Gemini model to use for content generation
+//   - modelName: The name of the model to use for content generation
 //   - rawJSON: The raw JSON request body containing generation parameters and content
 func (h *ClaudeCodeAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSON []byte) {
 	c.Header("Content-Type", "application/json")
@@ -213,7 +213,7 @@ func (h *ClaudeCodeAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSO
 	cliCancel()
 }
 
-// handleStreamingResponse streams Claude-compatible responses backed by Gemini.
+// handleStreamingResponse streams Claude-compatible responses.
 // It sets up SSE, selects a backend client with rotation/quota logic,
 // forwards chunks, and translates them to Claude CLI format.
 //

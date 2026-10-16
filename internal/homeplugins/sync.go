@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	sdkconfig "github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
-	sdkpluginstore "github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginstore"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	sdkconfig "github.com/xnuyoah/XRouter/v8/sdk/config"
+	sdkpluginstore "github.com/xnuyoah/XRouter/v8/sdk/pluginstore"
 	"gopkg.in/yaml.v3"
 )
 

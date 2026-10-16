@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/router-for-me/CLIProxyAPI/v8/internal/translator"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/translator/common"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
+	_ "github.com/xnuyoah/XRouter/v8/internal/translator"
+	"github.com/xnuyoah/XRouter/v8/internal/translator/common"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 func TestApplyPatchTranslationError(t *testing.T) {
@@ -28,7 +28,7 @@ func TestApplyPatchTranslationError(t *testing.T) {
 
 func TestApplyPatchFinalizeOptionalCanonicalState(t *testing.T) {
 	original := []byte(`{"tools":[{"type":"custom","name":"apply_patch"}]}`)
-	for _, source := range []sdktranslator.Format{sdktranslator.FormatOpenAI, sdktranslator.FormatClaude, sdktranslator.FormatGemini, sdktranslator.FormatInteractions} {
+	for _, source := range []sdktranslator.Format{sdktranslator.FormatOpenAI, sdktranslator.FormatClaude} {
 		t.Run(source.String(), func(t *testing.T) {
 			var param any
 			InitializeApplyPatchStream(context.Background(), source, sdktranslator.FormatOpenAIResponse, "model", original, original, &param)
@@ -75,24 +75,6 @@ func TestApplyPatchTokenUsageHelperRetainsFailureState(t *testing.T) {
 	}
 }
 
-func TestApplyPatchInteractionsOnlyValidSourceDoneClosesTransport(t *testing.T) {
-	var param any
-	translate := func(payload string) [][]byte {
-		return sdktranslator.TranslateStream(context.Background(), sdktranslator.FormatInteractions, sdktranslator.FormatOpenAIResponse, "model", nil, nil, []byte(payload), &param)
-	}
-	_ = translate(`{"event_type":"interaction.completed","interaction":{"id":"r"}}`)
-	if chunks := translate(`{"event_type":"done",`); len(chunks) != 0 {
-		t.Fatalf("malformed post-terminal event was accepted as a sentinel: %s", chunks)
-	}
-	chunks := translate("[DONE]")
-	if len(chunks) != 1 || !bytes.Equal(chunks[0], []byte("data: [DONE]")) {
-		t.Fatalf("first real source sentinel was swallowed: %s", chunks)
-	}
-	if len(translate("[DONE]")) != 0 || len(translate(`{"event_type":"done"}`)) != 0 {
-		t.Fatal("duplicate source sentinel was forwarded")
-	}
-}
-
 type patchCanceledEOFCapture struct{ records chan usage.Record }
 
 func (p *patchCanceledEOFCapture) HandleUsage(_ context.Context, record usage.Record) {
@@ -106,7 +88,7 @@ func TestApplyPatchCanceledEOFStillRecordsFailure(t *testing.T) {
 	usage.RegisterNamedPlugin("task6-canceled-eof", capture)
 	var param any
 	original := []byte(`{"tools":[{"type":"custom","name":"apply_patch"}]}`)
-	InitializeApplyPatchStream(context.Background(), sdktranslator.FormatGemini, sdktranslator.FormatOpenAIResponse, "m", original, original, &param)
+	InitializeApplyPatchStream(context.Background(), sdktranslator.FormatOpenAI, sdktranslator.FormatOpenAIResponse, "m", original, original, &param)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	reporter := NewUsageReporter(ctx, "task6-canceled-eof", "m", nil)

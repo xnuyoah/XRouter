@@ -5,20 +5,42 @@ import (
 	"context"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	helps "github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor/helps"
-	_ "github.com/router-for-me/CLIProxyAPI/v8/internal/thinking/provider/claude"
-	_ "github.com/router-for-me/CLIProxyAPI/v8/internal/thinking/provider/codex"
-	_ "github.com/router-for-me/CLIProxyAPI/v8/internal/translator"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	helps "github.com/xnuyoah/XRouter/v8/internal/runtime/executor/helps"
+	_ "github.com/xnuyoah/XRouter/v8/internal/thinking/provider/codex"
+	_ "github.com/xnuyoah/XRouter/v8/internal/translator"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
+// noopPluginHooks supplies the request/response hooks that plugin tests embed
+// when only one side of the pipeline needs custom behavior.
+type noopPluginHooks struct{}
+
+func (noopPluginHooks) NormalizeRequest(_ context.Context, _, _ sdktranslator.Format, _ string, body []byte, _ bool) []byte {
+	return body
+}
+
+func (noopPluginHooks) TranslateRequest(context.Context, sdktranslator.Format, sdktranslator.Format, string, []byte, bool) ([]byte, bool) {
+	return nil, false
+}
+
+func (noopPluginHooks) NormalizeResponseBefore(context.Context, sdktranslator.Format, sdktranslator.Format, string, []byte, []byte, []byte, bool) []byte {
+	return nil
+}
+
+func (noopPluginHooks) TranslateResponse(context.Context, sdktranslator.Format, sdktranslator.Format, string, []byte, []byte, []byte, bool) ([]byte, bool) {
+	return nil, false
+}
+
+func (noopPluginHooks) NormalizeResponseAfter(context.Context, sdktranslator.Format, sdktranslator.Format, string, []byte, []byte, []byte, bool) []byte {
+	return nil
+}
+
 type editUpdatePluginHooks struct {
-	summaryRemovingPluginHooks
+	noopPluginHooks
 	effort string
 	calls  int
 }
@@ -76,7 +98,7 @@ func TestRequestPairPreservesPluginConfigurationUpdateIntent(t *testing.T) {
 					wantCalls = 2
 				}
 				inputBefore := bytes.Clone(request)
-				base, work, updatesChanged, _ := helps.TranslateRequestPairWithAPIKeyModelCompatibilityAndUpdateIntent(t.Context(), nil, &config.Config{}, sdktranslator.FormatOpenAIResponse, sdktranslator.FormatCodex, "opaque-route", original, request, stream, compat)
+				base, work, updatesChanged, _ := helps.TranslateRequestPairWithAPIKeyModelCompatibilityAndUpdateIntent(t.Context(), sdktranslator.FormatOpenAIResponse, sdktranslator.FormatCodex, "opaque-route", original, request, stream, compat)
 				if hooks.calls != wantCalls {
 					t.Fatalf("stream=%v compat=%v distinct=%v: plugin calls = %d, want %d", stream, compat, distinct, hooks.calls, wantCalls)
 				}

@@ -135,9 +135,9 @@ func handleMethod(method string) ([]byte, error) {
 	_ = time.Second
 	switch method {
 	case "plugin.register":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-executor-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-executor-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"executor\":true,\"executor_model_scope\":\"both\",\"executor_input_formats\":[\"chat-completions\"],\"executor_output_formats\":[\"chat-completions\"]}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-executor-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-executor-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"executor\":true,\"executor_model_scope\":\"both\",\"executor_input_formats\":[\"chat-completions\"],\"executor_output_formats\":[\"chat-completions\"]}}")
 	case "plugin.reconfigure":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-executor-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-executor-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"executor\":true,\"executor_model_scope\":\"both\",\"executor_input_formats\":[\"chat-completions\"],\"executor_output_formats\":[\"chat-completions\"]}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-executor-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-executor-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"executor\":true,\"executor_model_scope\":\"both\",\"executor_input_formats\":[\"chat-completions\"],\"executor_output_formats\":[\"chat-completions\"]}}")
 	case "executor.identifier":
 		return okEnvelopeJSON("{\"identifier\":\"example-executor-go\"}")
 	case "executor.execute":

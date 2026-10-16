@@ -29,7 +29,7 @@ const (
 	ErrBudgetOutOfRange ErrorCode = "BUDGET_OUT_OF_RANGE"
 
 	// ErrProviderMismatch indicates the provider does not match the model.
-	// Example: applying Claude format to a Gemini model
+	// Example: applying an OpenAI format to a Claude model
 	ErrProviderMismatch ErrorCode = "PROVIDER_MISMATCH"
 )
 

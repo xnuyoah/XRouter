@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	internallogging "github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
+	internallogging "github.com/xnuyoah/XRouter/v8/internal/logging"
 )
 
 func TestQuotaStateObserveResponseHeadersKeepsProviderScopedSignals(t *testing.T) {
@@ -132,8 +132,8 @@ func TestQuotaStateObserveResponseHeadersRetainsMeasuredClaudeAndCodexWatermarks
 	}
 }
 
-func TestQuotaStateObserveResponseHeadersDropsKimiGrokAndAntigravitySignals(t *testing.T) {
-	for _, provider := range []string{"kimi", "xai", "grok", "antigravity", "gemini", "vertex", "aistudio"} {
+func TestQuotaStateObserveResponseHeadersDropsUnobservedProviderSignals(t *testing.T) {
+	for _, provider := range []string{"openai", "nvidia", "deepseek", "openai-compatibility"} {
 		quota := QuotaState{
 			ObservedAt: time.Unix(1786082736, 0),
 			Signals:    map[string]string{"old": "value"},
@@ -376,15 +376,13 @@ func TestObserveResponseHeadersTruncatesDeterministically(t *testing.T) {
 
 func TestProviderSupportsQuotaObservation(t *testing.T) {
 	for _, provider := range []string{
-		"", "kimi", "xai", "grok", "antigravity", "gemini", "gemini-interactions",
-		"vertex", "aistudio", "openai", "openai-compatibility", "third-party-plugin",
-		"XAI", " Grok ", " Gemini ",
+		"", "openai", "openai-compatibility", "third-party-plugin",
 	} {
 		if ProviderSupportsQuotaObservation(provider) {
 			t.Fatalf("provider %q unexpectedly supports quota observation", provider)
 		}
 	}
-	for _, provider := range []string{"codex", "claude", "devin", "CODEX", " Claude ", " Devin "} {
+	for _, provider := range []string{"codex", "claude", "CODEX", " Claude "} {
 		if !ProviderSupportsQuotaObservation(provider) {
 			t.Fatalf("provider %q unexpectedly excluded from quota observation", provider)
 		}

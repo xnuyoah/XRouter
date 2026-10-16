@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
 func TestHasExplicitSessionDoesNotRescanLargePayload(t *testing.T) {
