@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	translatorapi "github.com/router-for-me/CLIProxyAPI/v8/internal/translator/translator"
 	"github.com/tidwall/gjson"
+	translatorapi "github.com/xnuyoah/XRouter/v8/internal/translator/translator"
 )
 
 const benchmarkHistorySentinel = "benchmark-final-history-turn"

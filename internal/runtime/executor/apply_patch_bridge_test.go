@@ -14,17 +14,16 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers/openai"
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	sdkconfig "github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
+	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers/openai"
+	cliproxyauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	sdkconfig "github.com/xnuyoah/XRouter/v8/sdk/config"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 	"google.golang.org/protobuf/encoding/protowire"
 )
 
@@ -70,14 +69,9 @@ func applyPatchTestFrames(protocol, name string) (string, string) {
 		first := fmt.Sprintf("data: {\"type\":\"response.created\",\"response\":{\"id\":\"r1\"}}\n\ndata: {\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{\"type\":\"function_call\",\"id\":\"a1\",\"call_id\":\"c1\",\"name\":%q,\"arguments\":\"\"}}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"output_index\":0,\"item_id\":\"a1\",\"delta\":%q}\n\n", name, applyPatchTestPartial)
 		last := fmt.Sprintf("data: {\"type\":\"response.function_call_arguments.delta\",\"output_index\":0,\"item_id\":\"a1\",\"delta\":%q}\n\ndata: {\"type\":\"response.function_call_arguments.done\",\"output_index\":0,\"item_id\":\"a1\",\"arguments\":%q}\n\ndata: {\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":%s}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"id\":\"r1\",\"status\":\"completed\",\"output\":[%s]}}\n\n", applyPatchTestRemainder, args, item, item)
 		return first, last
-	case "devin":
-		return string(task6DevinFrames(applyPatchTestPartial, false, "", name)), string(task6DevinFrames(applyPatchTestRemainder, false, `{}`, name))
-	case "gemini", "antigravity":
+	case "gemini":
 		first := `{"responseId":"r1","candidates":[{"content":{"parts":[{"text":"preparing"}]}}]}`
 		last := fmt.Sprintf(`{"responseId":"r1","candidates":[{"content":{"parts":[{"functionCall":{"name":%q,"args":%s}}]},"finishReason":"STOP"}]}`, name, args)
-		if protocol == "antigravity" {
-			first, last = `{"response":`+first+`}`, `{"response":`+last+`}`
-		}
 		return "data: " + first + "\n\n", "data: " + last + "\n\n"
 	default:
 		first := fmt.Sprintf("data: {\"id\":\"r1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"c1\",\"type\":\"function\",\"function\":{\"name\":%q,\"arguments\":%q}}]}}]}\n\n", name, applyPatchTestPartial)
@@ -172,11 +166,7 @@ func newApplyPatchTestGateway(t *testing.T, exec cliproxyauth.ProviderExecutor, 
 	}
 	registry.GetGlobalRegistry().RegisterClient(auth.ID, exec.Identifier(), []*registry.ModelInfo{{ID: "test"}})
 	t.Cleanup(func() { registry.GetGlobalRegistry().UnregisterClient(auth.ID) })
-	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{
-		Client: sdkconfig.ClientConfig{
-			Codex: sdkconfig.CodexClientConfig{EnableApplyPatch: true},
-		},
-	}, manager)
+	base := handlers.NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 	router := gin.New()
 	router.POST("/v1/responses", openai.NewOpenAIResponsesAPIHandler(base).Responses)
 	router.GET("/v1/models", openai.NewOpenAIAPIHandler(base).OpenAIModels)
@@ -192,10 +182,7 @@ func TestApplyPatchBridgeLiveHTTPPreviewMatrix(t *testing.T) {
 		provider, protocol string
 		snapshot           bool
 	}{
-		{"custom-compat", "chat", false}, {"claude", "claude", false}, {"claude-oauth", "claude", false},
-		{"gemini-interactions", "interactions", false}, {"devin", "devin", false},
-		{"xai", "responses", false}, {"meta", "responses", false}, {"kimi", "responses", false},
-		{"gemini", "gemini", true}, {"vertex", "gemini", true}, {"antigravity", "antigravity", true},
+		{"custom-compat", "chat", false}, {"nvidia", "chat", false},
 	} {
 		t.Run(tc.provider, func(t *testing.T) {
 			release := make(chan struct{})
@@ -231,22 +218,9 @@ func TestApplyPatchBridgeLiveHTTPPreviewMatrix(t *testing.T) {
 			exec := task6Executor(tc.provider)
 			if tc.protocol == "responses" {
 				exec = task6RepairExecutor(tc.provider)
-			} else if tc.provider == "devin" {
-				exec = NewDevinExecutor(&config.Config{})
 			}
 			auth := &cliproxyauth.Auth{ID: t.Name(), Provider: exec.Identifier(), Attributes: map[string]string{"api_key": "test", "base_url": upstream.URL}}
-			if tc.provider == "claude-oauth" {
-				auth.Attributes["api_key"] = "sk-ant-oat-test"
-				auth.Metadata = map[string]any{"account_uuid": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}
-			}
-			if tc.provider == "antigravity" {
-				auth.Metadata = map[string]any{"access_token": "test", "expires_in": 3600, "timestamp": "2099-01-01T00:00:00Z", "project_id": "test"}
-			}
 			gateway := newApplyPatchTestGateway(t, exec, auth)
-			// Catalog claims must be backed by the executor used by the POST below.
-			for _, version := range []string{"0.137.0", "0.153.4", "cpa"} {
-				applyPatchTestCatalog(t, gateway, version)
-			}
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			payload, errSetBytes := sjson.SetBytes(applyPatchTestRequest(), "stream", true)
@@ -304,34 +278,6 @@ func TestApplyPatchBridgeLiveHTTPPreviewMatrix(t *testing.T) {
 			lifecycle.assert(t)
 			applyPatchTestDeclaration(t, tc.protocol, <-requestBody)
 		})
-	}
-}
-
-func applyPatchTestCatalog(t *testing.T, server *httptest.Server, version string) {
-	t.Helper()
-	request, errNewRequestWithContext := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+"/v1/models?client_version="+version, nil)
-	if errNewRequestWithContext != nil {
-		t.Fatal(errNewRequestWithContext)
-	}
-	response, errDo := server.Client().Do(request)
-	if errDo != nil {
-		t.Fatal(errDo)
-	}
-	defer func() {
-		if errClose := response.Body.Close(); errClose != nil {
-			t.Error(errClose)
-		}
-	}()
-	body, errReadAll := io.ReadAll(response.Body)
-	if errReadAll != nil {
-		t.Fatal(errReadAll)
-	}
-	entry := gjson.GetBytes(body, `models.#(slug=="test")`)
-	if response.StatusCode != http.StatusOK || entry.Get("apply_patch_tool_type").String() != "freeform" {
-		t.Fatalf("catalog not backed by the registered route: %d %s", response.StatusCode, body)
-	}
-	if entry.Get("prefer_websockets").Bool() || len(entry.Get("service_tiers").Array()) != 0 {
-		t.Fatalf("patch support enabled unrelated capabilities: %s", entry.Raw)
 	}
 }
 
@@ -497,43 +443,6 @@ func TestApplyPatchBridgeOrdinaryFunctionControl(t *testing.T) {
 
 // Kimi selects its reused Chat and Claude executors for these ordinary clients.
 // Custom Responses clients select Kimi's Responses branch, covered by the HTTP matrix.
-func TestApplyPatchBridgeKimiReusedClientControls(t *testing.T) {
-	for _, source := range []sdktranslator.Format{sdktranslator.FormatOpenAI, sdktranslator.FormatClaude} {
-		t.Run(source.String(), func(t *testing.T) {
-			args := `{"input":"RAW_SECRET","extra":7}`
-			reply := applyPatchTestChatReply(args)
-			payload := []byte(`{"messages":[{"role":"user","content":"edit"}],"tools":[{"type":"function","function":{"name":"apply_patch","parameters":{"type":"object","properties":{"input":{"type":"string"},"extra":{"type":"integer"}}}}}]}`)
-			if source == sdktranslator.FormatClaude {
-				payload = []byte(`{"messages":[{"role":"user","content":"edit"}],"tools":[{"name":"apply_patch","input_schema":{"type":"object","properties":{"input":{"type":"string"},"extra":{"type":"integer"}}}}]}`)
-				reply = fmt.Sprintf(`{"id":"r1","type":"message","role":"assistant","content":[{"type":"tool_use","id":"c1","name":"apply_patch","input":%s}],"stop_reason":"tool_use"}`, args)
-			}
-			_, auth, bodies := newApplyPatchCompatTestExecutor(t, reply)
-			auth.Provider = "kimi"
-			exec := NewKimiExecutor(&config.Config{}).ForAPIKey()
-			response, errExecute := exec.Execute(t.Context(), auth, cliproxyexecutor.Request{Model: "kimi-k2.5", Payload: payload}, cliproxyexecutor.Options{SourceFormat: source, OriginalRequest: payload})
-			if errExecute != nil {
-				t.Fatal(errExecute)
-			}
-			body := <-bodies
-			tool := gjson.GetBytes(body, "tools.0.function")
-			parameters := "parameters"
-			if source == sdktranslator.FormatClaude {
-				tool, parameters = gjson.GetBytes(body, "tools.0"), "input_schema"
-			}
-			if !tool.Get(parameters+".properties.extra").Exists() || strings.Contains(tool.Get("description").String(), "*** Begin Patch") || bytes.Contains(response.Payload, []byte("custom_tool_call")) || !bytes.Contains(response.Payload, []byte("RAW_SECRET")) {
-				t.Fatalf("ordinary reused client was promoted or restricted: request=%s response=%s", body, response.Payload)
-			}
-			arguments := gjson.GetBytes(response.Payload, "choices.0.message.tool_calls.0.function.arguments").String()
-			if source == sdktranslator.FormatClaude {
-				arguments = gjson.GetBytes(response.Payload, "content.0.input").Raw
-			}
-			if !gjson.Valid(arguments) || gjson.Get(arguments, "extra").Int() != 7 {
-				t.Fatalf("ordinary function lost valid JSON: %s", response.Payload)
-			}
-		})
-	}
-}
-
 func applyPatchTestPreviewChunks(t *testing.T, chunks <-chan cliproxyexecutor.StreamChunk, unblock func()) []byte {
 	t.Helper()
 	var lifecycle applyPatchTestLifecycle
@@ -560,95 +469,6 @@ func applyPatchTestPreviewChunks(t *testing.T, chunks <-chan cliproxyexecutor.St
 	}
 	lifecycle.assert(t)
 	return output
-}
-
-func TestApplyPatchBridgeLiveWebsocketPreview(t *testing.T) {
-	for _, native := range []bool{false, true} {
-		t.Run(fmt.Sprintf("native-codex=%v", native), func(t *testing.T) {
-			release := make(chan struct{})
-			var releaseOnce sync.Once
-			unblock := func() { releaseOnce.Do(func() { close(release) }) }
-			bodies := make(chan []byte, 1)
-			first, last := applyPatchTestFrames("responses", "apply_patch")
-			if native {
-				first = "data: { \"type\":\"response.output_item.added\", \"output_index\":0,\"item\":{\"type\":\"custom_tool_call\",\"id\":\"a1\",\"call_id\":\"c1\",\"name\":\"apply_patch\",\"input\":\"\"}}\n\ndata: { \"type\":\"response.custom_tool_call_input.delta\", \"output_index\":0,\"item_id\":\"a1\",\"call_id\":\"c1\",\"delta\":\"*** Begin Patch\\n*** Add File: a.txt\\n+hello\\n\"}\n\n"
-				item := fmt.Sprintf(`{ "type":"custom_tool_call", "id":"a1","call_id":"c1","name":"apply_patch","input":%q}`, applyPatchTestInput)
-				last = fmt.Sprintf("data: { \"type\":\"response.custom_tool_call_input.delta\", \"output_index\":0,\"item_id\":\"a1\",\"call_id\":\"c1\",\"delta\":\"*** End Patch\\n\"}\n\ndata: { \"type\":\"response.custom_tool_call_input.done\", \"item_id\":\"a1\",\"call_id\":\"c1\",\"input\":%q}\n\ndata: { \"type\":\"response.output_item.done\", \"output_index\":0,\"item\":%s}\n\ndata: { \"type\":\"response.completed\", \"response\":{\"id\":\"r1\",\"status\":\"completed\",\"output\":[%s]}}\n\n", applyPatchTestInput, item, item)
-			}
-			upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				conn, errUpgrade := upgrader.Upgrade(w, r, nil)
-				if errUpgrade != nil {
-					t.Error(errUpgrade)
-					return
-				}
-				defer func() {
-					if errClose := conn.Close(); errClose != nil {
-						t.Error(errClose)
-					}
-				}()
-				_, body, errReadMessage := conn.ReadMessage()
-				if errReadMessage != nil {
-					t.Error(errReadMessage)
-					return
-				}
-				bodies <- body
-				for _, raw := range applyPatchTestPayloads([]byte(first)) {
-					if errWriteMessage := conn.WriteMessage(websocket.TextMessage, raw); errWriteMessage != nil {
-						return
-					}
-				}
-				select {
-				case <-release:
-				case <-r.Context().Done():
-					return
-				}
-				for _, raw := range applyPatchTestPayloads([]byte(last)) {
-					if errWriteMessage := conn.WriteMessage(websocket.TextMessage, raw); errWriteMessage != nil {
-						return
-					}
-				}
-			}))
-			defer server.Close()
-			defer unblock()
-			var exec cliproxyauth.ProviderExecutor
-			if native {
-				codex := NewCodexWebsocketsExecutor(&config.Config{Codex: config.CodexConfig{DisableCodexCloaking: true}})
-				codex.store = &codexWebsocketSessionStore{sessions: make(map[string]*codexWebsocketSession)}
-				exec = codex
-			} else {
-				xai := NewXAIWebsocketsExecutor(&config.Config{})
-				xai.store = &codexWebsocketSessionStore{sessions: make(map[string]*codexWebsocketSession)}
-				exec = xai
-			}
-			ctx, cancel := context.WithCancel(cliproxyexecutor.WithDownstreamWebsocket(t.Context()))
-			defer cancel()
-			payload := applyPatchTestRequest()
-			auth := &cliproxyauth.Auth{ID: t.Name(), Provider: exec.Identifier(), Attributes: map[string]string{"api_key": "test", "base_url": server.URL, "websockets": "true"}}
-			model := "grok-4"
-			if native {
-				model = "gpt-5.6-sol"
-			}
-			result, errExecuteStream := exec.ExecuteStream(ctx, auth, cliproxyexecutor.Request{Model: model, Payload: payload}, cliproxyexecutor.Options{SourceFormat: sdktranslator.FormatOpenAIResponse, OriginalRequest: payload, Stream: true, Headers: http.Header{codexResponsesLiteHeader: {"true"}}})
-			if errExecuteStream != nil {
-				t.Fatal(errExecuteStream)
-			}
-			output := applyPatchTestPreviewChunks(t, result.Chunks, unblock)
-			body := <-bodies
-			if native {
-				if gjson.GetBytes(body, "tools.0").Raw != gjson.GetBytes(payload, "tools.0").Raw {
-					t.Fatalf("native grammar declaration altered: %s", body)
-				}
-				for _, raw := range applyPatchTestPayloads([]byte(first + last)) {
-					if !bytes.Contains(output, raw) {
-						t.Fatalf("native event bytes altered: %s", raw)
-					}
-				}
-			} else {
-				applyPatchTestDeclaration(t, "responses", body)
-			}
-		})
-	}
 }
 
 func TestApplyPatchBridgeOrdinaryFunctionStreamControl(t *testing.T) {

@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	coreexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	coreusage "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
-	sdkconfig "github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	coreexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	coreusage "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
+	sdkconfig "github.com/xnuyoah/XRouter/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 func TestIssue6332LifecycleDeliveryReadyBoundary(t *testing.T) {

@@ -1,4 +1,4 @@
-// Package util provides utility functions for the CLI Proxy API server.
+// Package util provides utility functions for the XRouter server.
 // It includes helper functions for proxy configuration, HTTP client setup,
 // log level management, and other common operations used across the application.
 package util
@@ -6,9 +6,9 @@ package util
 import (
 	"net/http"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/proxyutil"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/sdk/proxyutil"
 )
 
 // SetProxy configures the provided HTTP client with proxy settings from the configuration.

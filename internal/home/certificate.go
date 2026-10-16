@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 const homeCertificateRequestTimeout = 30 * time.Second
@@ -121,7 +121,7 @@ func defaultCertificatePaths() (certificatePaths, error) {
 	if errHome != nil {
 		return certificatePaths{}, errHome
 	}
-	dir := filepath.Join(homeDir, ".cli-proxy-api")
+	dir := filepath.Join(homeDir, ".xrouter")
 	return certificatePaths{
 		Dir:        dir,
 		ClientCert: filepath.Join(dir, "client-crt.pem"),

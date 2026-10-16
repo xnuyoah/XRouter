@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/pluginhost"
-	runtimeexecutor "github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
+	runtimeexecutor "github.com/xnuyoah/XRouter/v8/internal/runtime/executor"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 type serviceTestPluginExecutor struct{}
@@ -67,7 +67,6 @@ func TestRegisterAvailableExecutors(t *testing.T) {
 	}
 	expectedPluginHost = service.pluginHost
 	expectedManager = service.coreManager
-	service.ensureWebsocketGateway()
 
 	service.registerAvailableExecutors(nil, executorRegistrationOptions{
 		includeBaseline: true,
@@ -79,17 +78,9 @@ func TestRegisterAvailableExecutors(t *testing.T) {
 	}
 
 	providers := []string{
-		"codex",
-		"claude",
-		"gemini",
-		"gemini-interactions",
-		"vertex",
-		"aistudio",
-		"antigravity",
-		"kimi",
-		"kimi-ai",
-		"kimi.ai",
-		"xai",
+		"openai",
+		"deepseek",
+		"nvidia",
 		"openai-compatibility",
 		"plugin-provider",
 	}
@@ -140,15 +131,15 @@ func TestRegisterExecutorForAuth_OpenAICompatUsesNamespacedProviderKey(t *testin
 		{
 			name: "native first",
 			auths: []*coreauth.Auth{
-				{ID: "native-kimi", Provider: "kimi"},
-				openAICompatKimiAuth(),
+				{ID: "native-deepseek", Provider: "deepseek"},
+				openAICompatDeepseekAuth(),
 			},
 		},
 		{
 			name: "compat first",
 			auths: []*coreauth.Auth{
-				openAICompatKimiAuth(),
-				{ID: "native-kimi", Provider: "kimi"},
+				openAICompatDeepseekAuth(),
+				{ID: "native-deepseek", Provider: "deepseek"},
 			},
 		},
 	}
@@ -162,15 +153,15 @@ func TestRegisterExecutorForAuth_OpenAICompatUsesNamespacedProviderKey(t *testin
 
 			service.registerExecutorsForAuths(tt.auths, true)
 
-			nativeExecutor, okNative := service.coreManager.Executor("kimi")
+			nativeExecutor, okNative := service.coreManager.Executor("deepseek")
 			if !okNative {
-				t.Fatal("expected native kimi executor")
+				t.Fatal("expected native deepseek executor")
 			}
-			if _, okKimi := nativeExecutor.(*runtimeexecutor.KimiExecutor); !okKimi {
-				t.Fatalf("native executor type = %T, want *executor.KimiExecutor", nativeExecutor)
+			if _, okNative := nativeExecutor.(*runtimeexecutor.NativeAPIExecutor); !okNative {
+				t.Fatalf("native executor type = %T, want *executor.NativeAPIExecutor", nativeExecutor)
 			}
 
-			compatExecutor, okCompat := service.coreManager.Executor("openai-compatible-kimi")
+			compatExecutor, okCompat := service.coreManager.Executor("openai-compatible-deepseek")
 			if !okCompat {
 				t.Fatal("expected namespaced OpenAI-compatible executor")
 			}
@@ -181,14 +172,14 @@ func TestRegisterExecutorForAuth_OpenAICompatUsesNamespacedProviderKey(t *testin
 	}
 }
 
-func openAICompatKimiAuth() *coreauth.Auth {
+func openAICompatDeepseekAuth() *coreauth.Auth {
 	return &coreauth.Auth{
-		ID:       "compat-kimi",
+		ID:       "compat-deepseek",
 		Provider: "openai-compatibility",
-		Label:    "kimi",
+		Label:    "deepseek",
 		Attributes: map[string]string{
-			"compat_name":  "kimi",
-			"provider_key": "kimi",
+			"compat_name":  "deepseek",
+			"provider_key": "deepseek",
 		},
 	}
 }

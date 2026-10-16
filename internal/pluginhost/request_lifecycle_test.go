@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginabi"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginabi"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 func TestRequestInterceptorTerminationStopsChain(t *testing.T) {

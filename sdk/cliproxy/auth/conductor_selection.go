@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 func (m *Manager) SetPluginScheduler(scheduler PluginScheduler) {
@@ -1645,15 +1645,7 @@ func (m *Manager) GetExecutionSessionAuthByID(sessionID string, authID string) (
 }
 
 func canonicalSchedulingProvider(key string) string {
-	lower := strings.ToLower(strings.TrimSpace(key))
-	switch lower {
-	case "kimi.com":
-		return "kimi"
-	case "kimi.ai":
-		return "kimi-ai"
-	default:
-		return lower
-	}
+	return strings.ToLower(strings.TrimSpace(key))
 }
 
 func (m *Manager) executorLocked(provider string) (ProviderExecutor, bool) {
@@ -1667,12 +1659,6 @@ func (m *Manager) executorLocked(provider string) (ProviderExecutor, bool) {
 		lowerProvider := strings.ToLower(provider)
 		if lowerProvider != provider {
 			executor, okExecutor = m.executors[lowerProvider]
-		}
-	}
-	if !okExecutor {
-		switch strings.ToLower(provider) {
-		case "kimi-ai", "kimi.ai", "kimi.com":
-			executor, okExecutor = m.executors["kimi"]
 		}
 	}
 	if !okExecutor || executor == nil {

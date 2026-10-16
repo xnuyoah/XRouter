@@ -22,8 +22,8 @@ import (
 	"github.com/go-git/go-git/v6/plumbing/transport"
 	"github.com/go-git/go-git/v6/plumbing/transport/http"
 	"github.com/go-git/go-git/v6/storage/filesystem/dotgit"
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
+	cliproxyauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 const (
@@ -462,11 +462,7 @@ func (s *GitTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (stri
 		return "", fmt.Errorf("auth filestore: create dir failed: %w", err)
 	}
 
-	if handled, errCodex := cliproxyauth.PersistCodexAuthFile(ctx, path, auth); handled {
-		if errCodex != nil {
-			return "", errCodex
-		}
-	} else {
+	{
 		switch {
 		case auth.Storage != nil:
 			if auth.Metadata == nil {
@@ -1770,8 +1766,8 @@ func (s *GitTokenStore) commitAndPushWithOptionsLocked(ctx context.Context, mess
 		message = "Update auth store"
 	}
 	signature := &object.Signature{
-		Name:  "CLIProxyAPI",
-		Email: "cliproxy@local",
+		Name:  "XRouter",
+		Email: "xrouter@local",
 		When:  time.Now(),
 	}
 	commitHash, err := worktree.Commit(message, &git.CommitOptions{

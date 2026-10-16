@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 type mockCustomErrorExecutor struct {
@@ -97,7 +97,7 @@ func TestRequestScopedErrors_ActionStop(t *testing.T) {
 
 	auth1 := &Auth{
 		ID:         "auth-claude-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -118,13 +118,13 @@ func TestRequestScopedErrors_ActionStop(t *testing.T) {
 		},
 	}
 	auth2 := &Auth{
-		ID:       "auth-claude-2",
-		Provider: "claude",
+		ID:       "auth-deepseek-2",
+		Provider: "deepseek",
 		Status:   StatusActive,
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
-	reg.RegisterClient(auth2.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
+	reg.RegisterClient(auth2.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 		reg.UnregisterClient(auth2.ID)
@@ -139,7 +139,7 @@ func TestRequestScopedErrors_ActionStop(t *testing.T) {
 
 	execCount := 0
 	exec := &mockCustomErrorExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		executeFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			execCount++
 			cliproxyexecutor.MarkUpstreamAttempt(ctx)
@@ -151,7 +151,7 @@ func TestRequestScopedErrors_ActionStop(t *testing.T) {
 	}
 	m.RegisterExecutor(exec)
 
-	resp, errExec := m.Execute(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	resp, errExec := m.Execute(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errExec == nil {
 		t.Fatalf("expected error, got resp: %+v", resp)
 	}
@@ -179,7 +179,7 @@ func TestRequestScopedErrors_ActionStopAndCooldown(t *testing.T) {
 
 	auth1 := &Auth{
 		ID:         "auth-claude-stop-cool",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -196,12 +196,12 @@ func TestRequestScopedErrors_ActionStopAndCooldown(t *testing.T) {
 	}
 	auth2 := &Auth{
 		ID:       "auth-claude-second",
-		Provider: "claude",
+		Provider: "deepseek",
 		Status:   StatusActive,
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
-	reg.RegisterClient(auth2.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
+	reg.RegisterClient(auth2.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 		reg.UnregisterClient(auth2.ID)
@@ -216,7 +216,7 @@ func TestRequestScopedErrors_ActionStopAndCooldown(t *testing.T) {
 
 	execCount := 0
 	exec := &mockCustomErrorExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		executeFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			execCount++
 			return cliproxyexecutor.Response{}, customStatusError{
@@ -227,7 +227,7 @@ func TestRequestScopedErrors_ActionStopAndCooldown(t *testing.T) {
 	}
 	m.RegisterExecutor(exec)
 
-	_, errExec := m.Execute(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	_, errExec := m.Execute(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errExec == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -252,7 +252,7 @@ func TestRequestScopedErrors_ActionContinue(t *testing.T) {
 
 	auth1 := &Auth{
 		ID:         "auth-claude-continue-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -269,12 +269,12 @@ func TestRequestScopedErrors_ActionContinue(t *testing.T) {
 	}
 	auth2 := &Auth{
 		ID:       "auth-claude-continue-2",
-		Provider: "claude",
+		Provider: "deepseek",
 		Status:   StatusActive,
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
-	reg.RegisterClient(auth2.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
+	reg.RegisterClient(auth2.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 		reg.UnregisterClient(auth2.ID)
@@ -289,7 +289,7 @@ func TestRequestScopedErrors_ActionContinue(t *testing.T) {
 
 	execCount := 0
 	exec := &mockCustomErrorExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		executeFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			execCount++
 			if auth.ID == "auth-claude-continue-1" {
@@ -303,7 +303,7 @@ func TestRequestScopedErrors_ActionContinue(t *testing.T) {
 	}
 	m.RegisterExecutor(exec)
 
-	resp, errExec := m.Execute(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	resp, errExec := m.Execute(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errExec != nil {
 		t.Fatalf("unexpected error: %v", errExec)
 	}
@@ -331,7 +331,7 @@ func TestRequestScopedErrors_ActionContinueAndCooldown(t *testing.T) {
 
 	auth1 := &Auth{
 		ID:         "auth-claude-continue-cool-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -348,12 +348,12 @@ func TestRequestScopedErrors_ActionContinueAndCooldown(t *testing.T) {
 	}
 	auth2 := &Auth{
 		ID:       "auth-claude-continue-cool-2",
-		Provider: "claude",
+		Provider: "deepseek",
 		Status:   StatusActive,
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
-	reg.RegisterClient(auth2.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
+	reg.RegisterClient(auth2.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 		reg.UnregisterClient(auth2.ID)
@@ -368,7 +368,7 @@ func TestRequestScopedErrors_ActionContinueAndCooldown(t *testing.T) {
 
 	execCount := 0
 	exec := &mockCustomErrorExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		executeFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			execCount++
 			if auth.ID == "auth-claude-continue-cool-1" {
@@ -382,7 +382,7 @@ func TestRequestScopedErrors_ActionContinueAndCooldown(t *testing.T) {
 	}
 	m.RegisterExecutor(exec)
 
-	resp, errExec := m.Execute(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	resp, errExec := m.Execute(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errExec != nil {
 		t.Fatalf("unexpected error: %v", errExec)
 	}
@@ -410,7 +410,7 @@ func TestRequestScopedErrors_MatchRegexr(t *testing.T) {
 
 	auth1 := &Auth{
 		ID:         "auth-regex-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -427,12 +427,12 @@ func TestRequestScopedErrors_MatchRegexr(t *testing.T) {
 	}
 	auth2 := &Auth{
 		ID:       "auth-regex-2",
-		Provider: "claude",
+		Provider: "deepseek",
 		Status:   StatusActive,
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
-	reg.RegisterClient(auth2.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
+	reg.RegisterClient(auth2.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 		reg.UnregisterClient(auth2.ID)
@@ -447,7 +447,7 @@ func TestRequestScopedErrors_MatchRegexr(t *testing.T) {
 
 	execCount := 0
 	exec := &mockCustomErrorExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		executeFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			execCount++
 			return cliproxyexecutor.Response{}, customStatusError{
@@ -458,7 +458,7 @@ func TestRequestScopedErrors_MatchRegexr(t *testing.T) {
 	}
 	m.RegisterExecutor(exec)
 
-	_, errExec := m.Execute(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	_, errExec := m.Execute(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errExec == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -500,7 +500,7 @@ func TestRequestScopedErrors_Stream_ActionStop(t *testing.T) {
 
 	auth1 := &Auth{
 		ID:         "auth-stream-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -515,12 +515,12 @@ func TestRequestScopedErrors_Stream_ActionStop(t *testing.T) {
 	}
 	auth2 := &Auth{
 		ID:       "auth-stream-2",
-		Provider: "claude",
+		Provider: "deepseek",
 		Status:   StatusActive,
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
-	reg.RegisterClient(auth2.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
+	reg.RegisterClient(auth2.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 		reg.UnregisterClient(auth2.ID)
@@ -535,7 +535,7 @@ func TestRequestScopedErrors_Stream_ActionStop(t *testing.T) {
 
 	execCount := 0
 	streamExecutor := &customStreamMockExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		streamFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (*cliproxyexecutor.StreamResult, error) {
 			execCount++
 			cliproxyexecutor.MarkUpstreamAttempt(ctx)
@@ -544,7 +544,7 @@ func TestRequestScopedErrors_Stream_ActionStop(t *testing.T) {
 	}
 	m.RegisterExecutor(streamExecutor)
 
-	_, errStream := m.ExecuteStream(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	_, errStream := m.ExecuteStream(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errStream == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -570,7 +570,7 @@ func TestRequestScopedErrors_StreamBootstrap_StopAndCooldown(t *testing.T) {
 
 	auth1 := &Auth{
 		ID:         "auth-stream-boot-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -585,12 +585,12 @@ func TestRequestScopedErrors_StreamBootstrap_StopAndCooldown(t *testing.T) {
 	}
 	auth2 := &Auth{
 		ID:       "auth-stream-boot-2",
-		Provider: "claude",
+		Provider: "deepseek",
 		Status:   StatusActive,
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
-	reg.RegisterClient(auth2.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
+	reg.RegisterClient(auth2.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 		reg.UnregisterClient(auth2.ID)
@@ -605,7 +605,7 @@ func TestRequestScopedErrors_StreamBootstrap_StopAndCooldown(t *testing.T) {
 
 	execCount := 0
 	streamExecutor := &customStreamMockExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		streamFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (*cliproxyexecutor.StreamResult, error) {
 			execCount++
 			ch := make(chan cliproxyexecutor.StreamChunk, 1)
@@ -619,7 +619,7 @@ func TestRequestScopedErrors_StreamBootstrap_StopAndCooldown(t *testing.T) {
 	}
 	m.RegisterExecutor(streamExecutor)
 
-	_, errStream := m.ExecuteStream(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	_, errStream := m.ExecuteStream(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errStream == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -644,7 +644,7 @@ func TestRequestScopedErrors_Stop_StopsOuterRetryOn429(t *testing.T) {
 
 	auth1 := &Auth{
 		ID:         "auth-retry-stop-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -658,7 +658,7 @@ func TestRequestScopedErrors_Stop_StopsOuterRetryOn429(t *testing.T) {
 		},
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 	})
@@ -669,7 +669,7 @@ func TestRequestScopedErrors_Stop_StopsOuterRetryOn429(t *testing.T) {
 
 	execCount := 0
 	exec := &mockCustomErrorExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		executeFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			execCount++
 			return cliproxyexecutor.Response{}, customStatusError{
@@ -681,7 +681,7 @@ func TestRequestScopedErrors_Stop_StopsOuterRetryOn429(t *testing.T) {
 	}
 	m.RegisterExecutor(exec)
 
-	_, errExec := m.Execute(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	_, errExec := m.Execute(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errExec == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -700,7 +700,7 @@ func TestRequestScopedErrors_Cooldown_OverridesDisableCooling(t *testing.T) {
 
 	auth1 := &Auth{
 		ID:         "auth-disable-cooling-override",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -715,7 +715,7 @@ func TestRequestScopedErrors_Cooldown_OverridesDisableCooling(t *testing.T) {
 		},
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 	})
@@ -725,7 +725,7 @@ func TestRequestScopedErrors_Cooldown_OverridesDisableCooling(t *testing.T) {
 	}
 
 	exec := &mockCustomErrorExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		executeFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			return cliproxyexecutor.Response{}, customStatusError{
 				code: 400,
@@ -735,7 +735,7 @@ func TestRequestScopedErrors_Cooldown_OverridesDisableCooling(t *testing.T) {
 	}
 	m.RegisterExecutor(exec)
 
-	_, errExec := m.Execute(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	_, errExec := m.Execute(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errExec == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -755,7 +755,7 @@ func TestRequestScopedErrors_CountTokens_StopAndCooldown(t *testing.T) {
 
 	auth1 := &Auth{
 		ID:         "auth-count-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -769,7 +769,7 @@ func TestRequestScopedErrors_CountTokens_StopAndCooldown(t *testing.T) {
 		},
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 	})
@@ -779,7 +779,7 @@ func TestRequestScopedErrors_CountTokens_StopAndCooldown(t *testing.T) {
 	}
 
 	exec := &mockCustomErrorExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		countFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			cliproxyexecutor.MarkUpstreamAttempt(ctx)
 			return cliproxyexecutor.Response{}, customStatusError{
@@ -790,7 +790,7 @@ func TestRequestScopedErrors_CountTokens_StopAndCooldown(t *testing.T) {
 	}
 	m.RegisterExecutor(exec)
 
-	_, errCount := m.ExecuteCount(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	_, errCount := m.ExecuteCount(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errCount == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -810,9 +810,9 @@ func TestRequestScopedErrors_ResolvedFromManagerConfig(t *testing.T) {
 	t.Cleanup(func() { quotaCooldownDisabled.Store(previous) })
 
 	cfg := &internalconfig.Config{
-		ClaudeKey: []internalconfig.ClaudeKey{
+		DeepseekKey: []internalconfig.DeepseekKey{
 			{
-				APIKey: "sk-ant-test",
+				APIKey: "sk-ds-test",
 				RequestScopedErrors: []internalconfig.RequestScopedErrorRule{
 					{
 						Status: 400,
@@ -841,7 +841,7 @@ func TestRequestScopedErrors_ResolvedFromManagerConfig(t *testing.T) {
 
 	auth1 := &Auth{
 		ID:         "auth-config-resolve-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{AttributeConfigIndex: "0", "priority": "10"},
 	}
@@ -857,7 +857,7 @@ func TestRequestScopedErrors_ResolvedFromManagerConfig(t *testing.T) {
 	}
 
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	reg.RegisterClient(authCompat.ID, "openai-compatible-my-compat", []*registry.ModelInfo{{ID: "compat-model"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
@@ -872,7 +872,7 @@ func TestRequestScopedErrors_ResolvedFromManagerConfig(t *testing.T) {
 	}
 
 	execClaude := &mockCustomErrorExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		executeFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			return cliproxyexecutor.Response{}, customStatusError{code: 400, msg: "from_config_rule occurred"}
 		},
@@ -886,7 +886,7 @@ func TestRequestScopedErrors_ResolvedFromManagerConfig(t *testing.T) {
 	m.RegisterExecutor(execClaude)
 	m.RegisterExecutor(execCompat)
 
-	_, errExec1 := m.Execute(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	_, errExec1 := m.Execute(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errExec1 == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -914,7 +914,7 @@ func TestRequestScopedErrors_NonMatching_FallsBackToDefault(t *testing.T) {
 
 	auth1 := &Auth{
 		ID:         "auth-nomatch-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -928,7 +928,7 @@ func TestRequestScopedErrors_NonMatching_FallsBackToDefault(t *testing.T) {
 		},
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 	})
@@ -938,7 +938,7 @@ func TestRequestScopedErrors_NonMatching_FallsBackToDefault(t *testing.T) {
 	}
 
 	exec := &mockCustomErrorExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		executeFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			// Status 400 with standard request-fault message (unmatched by rule)
 			return cliproxyexecutor.Response{}, customStatusError{
@@ -949,7 +949,7 @@ func TestRequestScopedErrors_NonMatching_FallsBackToDefault(t *testing.T) {
 	}
 	m.RegisterExecutor(exec)
 
-	_, errExec := m.Execute(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	_, errExec := m.Execute(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errExec == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -970,7 +970,7 @@ func TestRequestScopedErrors_StreamSubsequentChunkError(t *testing.T) {
 
 	auth1 := &Auth{
 		ID:         "auth-stream-subsequent-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -984,7 +984,7 @@ func TestRequestScopedErrors_StreamSubsequentChunkError(t *testing.T) {
 		},
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 	})
@@ -994,7 +994,7 @@ func TestRequestScopedErrors_StreamSubsequentChunkError(t *testing.T) {
 	}
 
 	streamExecutor := &customStreamMockExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		streamFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (*cliproxyexecutor.StreamResult, error) {
 			ch := make(chan cliproxyexecutor.StreamChunk, 2)
 			ch <- cliproxyexecutor.StreamChunk{Payload: []byte(`data: {"type":"message_start"}\n\n`)}
@@ -1008,7 +1008,7 @@ func TestRequestScopedErrors_StreamSubsequentChunkError(t *testing.T) {
 	}
 	m.RegisterExecutor(streamExecutor)
 
-	streamResult, errStream := m.ExecuteStream(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	streamResult, errStream := m.ExecuteStream(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errStream != nil {
 		t.Fatalf("unexpected stream start error: %v", errStream)
 	}
@@ -1035,7 +1035,7 @@ func TestRequestScopedErrors_UnmatchedBootstrapError_PreservesDefault(t *testing
 
 	auth1 := &Auth{
 		ID:         "auth-unmatched-boot-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -1049,7 +1049,7 @@ func TestRequestScopedErrors_UnmatchedBootstrapError_PreservesDefault(t *testing
 		},
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 	})
@@ -1059,7 +1059,7 @@ func TestRequestScopedErrors_UnmatchedBootstrapError_PreservesDefault(t *testing
 	}
 
 	streamExecutor := &customStreamMockExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		streamFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (*cliproxyexecutor.StreamResult, error) {
 			ch := make(chan cliproxyexecutor.StreamChunk, 1)
 			ch <- cliproxyexecutor.StreamChunk{Err: customStatusError{code: 400, msg: `{"error":{"type":"invalid_request_error","message":"Unmatched bad request"}}`}}
@@ -1072,7 +1072,7 @@ func TestRequestScopedErrors_UnmatchedBootstrapError_PreservesDefault(t *testing
 	}
 	m.RegisterExecutor(streamExecutor)
 
-	_, errStream := m.ExecuteStream(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	_, errStream := m.ExecuteStream(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errStream == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -1097,7 +1097,7 @@ func TestRequestScopedErrors_TransientCooldownDisabled_ForceCooldownStillApplies
 
 	auth1 := &Auth{
 		ID:         "auth-transient-disabled-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -1111,7 +1111,7 @@ func TestRequestScopedErrors_TransientCooldownDisabled_ForceCooldownStillApplies
 		},
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 	})
@@ -1121,14 +1121,14 @@ func TestRequestScopedErrors_TransientCooldownDisabled_ForceCooldownStillApplies
 	}
 
 	exec := &mockCustomErrorExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		executeFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			return cliproxyexecutor.Response{}, customStatusError{code: 500, msg: "cooldown_on_500"}
 		},
 	}
 	m.RegisterExecutor(exec)
 
-	_, errExec := m.Execute(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	_, errExec := m.Execute(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errExec == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -1240,7 +1240,7 @@ func TestRequestScopedErrors_ResponseBodyProvider_MatchesUnderlyingPayload(t *te
 
 	auth1 := &Auth{
 		ID:         "auth-fast-wrapped-1",
-		Provider:   "claude",
+		Provider:   "deepseek",
 		Status:     StatusActive,
 		Attributes: map[string]string{"priority": "10"},
 		Metadata: map[string]any{
@@ -1254,7 +1254,7 @@ func TestRequestScopedErrors_ResponseBodyProvider_MatchesUnderlyingPayload(t *te
 		},
 	}
 	reg := registry.GetGlobalRegistry()
-	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "claude-3"}})
+	reg.RegisterClient(auth1.ID, "deepseek", []*registry.ModelInfo{{ID: "deepseek-chat"}})
 	t.Cleanup(func() {
 		reg.UnregisterClient(auth1.ID)
 	})
@@ -1264,7 +1264,7 @@ func TestRequestScopedErrors_ResponseBodyProvider_MatchesUnderlyingPayload(t *te
 	}
 
 	exec := &mockCustomErrorExecutor{
-		identifier: "claude",
+		identifier: "deepseek",
 		executeFn: func(ctx context.Context, auth *Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 			// Error() returns a generic wrapper text, while ResponseBody() provides the underlying json payload
 			return cliproxyexecutor.Response{}, wrappedResponseBodyError{
@@ -1276,7 +1276,7 @@ func TestRequestScopedErrors_ResponseBodyProvider_MatchesUnderlyingPayload(t *te
 	}
 	m.RegisterExecutor(exec)
 
-	_, errExec := m.Execute(context.Background(), []string{"claude"}, cliproxyexecutor.Request{Model: "claude-3"}, cliproxyexecutor.Options{})
+	_, errExec := m.Execute(context.Background(), []string{"deepseek"}, cliproxyexecutor.Request{Model: "deepseek-chat"}, cliproxyexecutor.Options{})
 	if errExec == nil {
 		t.Fatal("expected error, got nil")
 	}

@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executionregistry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	cliproxysession "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/session"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executionregistry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	cliproxysession "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/session"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 type sessionAliasCaptureDispatcher struct {
@@ -585,18 +585,6 @@ func TestHomeDispatchSessionIDsExtractsParentFromHeaderPlusBody(t *testing.T) {
 	if agyParentID != "agy:agy-parent-100" {
 		t.Fatalf("agyParentID = %q, want agy:agy-parent-100", agyParentID)
 	}
-
-	// 5. Gemini cachedContent hierarchy
-	geminiOpts := cliproxyexecutor.Options{
-		OriginalRequest: []byte(`{"cachedContent":"cache-child-201","parent_session_id":"cache-parent-200"}`),
-	}
-	geminiSessionID, geminiParentID := manager.homeDispatchSessionIDs(geminiOpts)
-	if geminiSessionID != "geminicache:cache-child-201" {
-		t.Fatalf("geminiSessionID = %q, want geminicache:cache-child-201", geminiSessionID)
-	}
-	if geminiParentID != "geminicache:cache-parent-200" {
-		t.Fatalf("geminiParentID = %q, want geminicache:cache-parent-200", geminiParentID)
-	}
 }
 
 func TestHomeDispatchSessionIDsNestedRequestSubagent(t *testing.T) {
@@ -651,21 +639,16 @@ func TestHomeDispatchSessionIDsMatchesLCPCompaction(t *testing.T) {
 	manager := NewManager(nil, selector, nil)
 
 	compactedOpts := cliproxyexecutor.Options{
-		SourceFormat: sdktranslator.FormatGemini,
-		OriginalRequest: []byte(`{"contents":[
-			{"role":"user","parts":[{"text":"summary of turns 1-2"}]},
-			{"role":"model","parts":[{"text":"ack 2"}]},
-			{"role":"user","parts":[{"text":"turn 3"}]},
-			{"role":"user","parts":[{"text":"turn 4"}]}
-		]}`),
+		SourceFormat:    sdktranslator.FormatOpenAI,
+		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"summary of turns 1-2"},{"role":"assistant","content":"ack 2"},{"role":"user","content":"turn 3"},{"role":"user","content":"turn 4"}]}`),
 		Metadata: map[string]any{
 			cliproxyexecutor.CallerScopeMetadataKey:             "caller-home-1",
-			cliproxyexecutor.SessionAffinityProviderMetadataKey: "google",
-			cliproxyexecutor.SessionAffinityModelMetadataKey:    "gemini-2.5-pro",
+			cliproxyexecutor.SessionAffinityProviderMetadataKey: "openai",
+			cliproxyexecutor.SessionAffinityModelMetadataKey:    "gpt-5.5",
 		},
 	}
 
-	namespace := lcpAffinityNamespace("google", "gemini-2.5-pro", compactedOpts.Metadata)
+	namespace := lcpAffinityNamespace("openai", "gpt-5.5", compactedOpts.Metadata)
 	initialTurns := []cliproxysession.CanonicalTurn{
 		{Role: "user", Parts: []cliproxysession.CanonicalPart{{Kind: "text", Value: "turn 1"}}},
 		{Role: "assistant", Parts: []cliproxysession.CanonicalPart{{Kind: "text", Value: "ack 1"}}},
@@ -697,18 +680,12 @@ func TestHomeDispatchSessionIDsMatchesLCPCompactionViaReportHomeResult(t *testin
 
 	// 1. Initial request in Home mode (without explicit session IDs).
 	initialOpts := cliproxyexecutor.Options{
-		SourceFormat: sdktranslator.FormatGemini,
-		OriginalRequest: []byte(`{"contents":[
-			{"role":"user","parts":[{"text":"step 1"}]},
-			{"role":"model","parts":[{"text":"ack 1"}]},
-			{"role":"user","parts":[{"text":"step 2"}]},
-			{"role":"model","parts":[{"text":"ack 2"}]},
-			{"role":"user","parts":[{"text":"step 3"}]}
-		]}`),
+		SourceFormat:    sdktranslator.FormatOpenAI,
+		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"step 1"},{"role":"assistant","content":"ack 1"},{"role":"user","content":"step 2"},{"role":"assistant","content":"ack 2"},{"role":"user","content":"step 3"}]}`),
 		Metadata: map[string]any{
 			cliproxyexecutor.CallerScopeMetadataKey:             "caller-home-live",
-			cliproxyexecutor.SessionAffinityProviderMetadataKey: "google",
-			cliproxyexecutor.SessionAffinityModelMetadataKey:    "gemini-2.5-pro",
+			cliproxyexecutor.SessionAffinityProviderMetadataKey: "openai",
+			cliproxyexecutor.SessionAffinityModelMetadataKey:    "gpt-5.5",
 		},
 	}
 	initialAuth := &Auth{ID: "auth-home-live-1"}
@@ -717,25 +694,20 @@ func TestHomeDispatchSessionIDsMatchesLCPCompactionViaReportHomeResult(t *testin
 	// 2. Report execution result via reportHomeResult (ephemeral Home dispatch result, not manual BindWithResult).
 	manager.reportHomeResult(context.Background(), Result{
 		AuthID:   initialAuth.ID,
-		Provider: "google",
-		Model:    "gemini-2.5-pro",
+		Provider: "openai",
+		Model:    "gpt-5.5",
 		Options:  initialOpts,
 		Success:  true,
 	}, initialAuth)
 
 	// 3. Post-compaction request in Home mode.
 	compactedOpts := cliproxyexecutor.Options{
-		SourceFormat: sdktranslator.FormatGemini,
-		OriginalRequest: []byte(`{"contents":[
-			{"role":"user","parts":[{"text":"<summary>Steps 1-2 compacted</summary>"}]},
-			{"role":"model","parts":[{"text":"ack 2"}]},
-			{"role":"user","parts":[{"text":"step 3"}]},
-			{"role":"user","parts":[{"text":"step 4"}]}
-		]}`),
+		SourceFormat:    sdktranslator.FormatOpenAI,
+		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"<summary>Steps 1-2 compacted</summary>"},{"role":"assistant","content":"ack 2"},{"role":"user","content":"step 3"},{"role":"user","content":"step 4"}]}`),
 		Metadata: map[string]any{
 			cliproxyexecutor.CallerScopeMetadataKey:             "caller-home-live",
-			cliproxyexecutor.SessionAffinityProviderMetadataKey: "google",
-			cliproxyexecutor.SessionAffinityModelMetadataKey:    "gemini-2.5-pro",
+			cliproxyexecutor.SessionAffinityProviderMetadataKey: "openai",
+			cliproxyexecutor.SessionAffinityModelMetadataKey:    "gpt-5.5",
 		},
 	}
 
@@ -767,43 +739,32 @@ func TestHomeDispatchSessionIDsWithoutPresetProviderMetadata(t *testing.T) {
 
 	// 1. Initial request in Home mode without preset SessionAffinityProviderMetadataKey
 	initialOpts := cliproxyexecutor.Options{
-		SourceFormat: sdktranslator.FormatGemini,
-		OriginalRequest: []byte(`{"contents":[
-			{"role":"user","parts":[{"text":"step A"}]},
-			{"role":"model","parts":[{"text":"ack A"}]},
-			{"role":"user","parts":[{"text":"step B"}]},
-			{"role":"model","parts":[{"text":"ack B"}]},
-			{"role":"user","parts":[{"text":"step C"}]}
-		]}`),
+		SourceFormat:    sdktranslator.FormatOpenAI,
+		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"step A"},{"role":"assistant","content":"ack A"},{"role":"user","content":"step B"},{"role":"assistant","content":"ack B"},{"role":"user","content":"step C"}]}`),
 		Metadata: map[string]any{
 			cliproxyexecutor.CallerScopeMetadataKey:    "caller-home-inferred",
-			cliproxyexecutor.RequestedModelMetadataKey: "gemini-2.5-pro",
+			cliproxyexecutor.RequestedModelMetadataKey: "gpt-5.5",
 		},
 	}
-	initialAuth := &Auth{ID: "auth-gemini-inferred-1"}
+	initialAuth := &Auth{ID: "auth-inferred-1"}
 	initialSessionID, _ := manager.homeDispatchSessionIDs(initialOpts)
 
-	// 2. Report result using the actual execution provider "gemini" (which canonicalizes to "google")
+	// 2. Report result using the actual execution provider "openai"
 	manager.reportHomeResult(context.Background(), Result{
 		AuthID:   initialAuth.ID,
-		Provider: "gemini",
-		Model:    "gemini-2.5-pro",
+		Provider: "openai",
+		Model:    "gpt-5.5",
 		Options:  initialOpts,
 		Success:  true,
 	}, initialAuth)
 
 	// 3. Compacted continuation request without preset provider metadata
 	compactedOpts := cliproxyexecutor.Options{
-		SourceFormat: sdktranslator.FormatGemini,
-		OriginalRequest: []byte(`{"contents":[
-			{"role":"user","parts":[{"text":"<summary>Steps A-B compacted</summary>"}]},
-			{"role":"model","parts":[{"text":"ack B"}]},
-			{"role":"user","parts":[{"text":"step C"}]},
-			{"role":"user","parts":[{"text":"step D"}]}
-		]}`),
+		SourceFormat:    sdktranslator.FormatOpenAI,
+		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"<summary>Steps A-B compacted</summary>"},{"role":"assistant","content":"ack B"},{"role":"user","content":"step C"},{"role":"user","content":"step D"}]}`),
 		Metadata: map[string]any{
 			cliproxyexecutor.CallerScopeMetadataKey:    "caller-home-inferred",
-			cliproxyexecutor.RequestedModelMetadataKey: "gemini-2.5-pro",
+			cliproxyexecutor.RequestedModelMetadataKey: "gpt-5.5",
 		},
 	}
 

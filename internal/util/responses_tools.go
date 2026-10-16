@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	applypatch "github.com/router-for-me/CLIProxyAPI/v8/internal/client/codex/apply-patch"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	applypatch "github.com/xnuyoah/XRouter/v8/internal/client/codex/apply-patch"
 )
 
 // ResponsesToolIdentity represents the resolved identity of a tool in OpenAI Responses format.
@@ -533,87 +533,6 @@ func ResponsesToolReverseIdentityMap(rawJSON []byte) map[string]ResponsesToolIde
 	}
 	_, _, reverseMap := BuildGeminiFunctionDeclarations(root)
 	return reverseMap
-}
-
-// MapResponsesToolName returns the mapped Gemini function name if present in forwardMap, else sanitized name.
-func MapResponsesToolName(forwardMap map[string]string, name string) string {
-	if mapped, ok := forwardMap[name]; ok && mapped != "" {
-		return mapped
-	}
-	return SanitizeFunctionName(name)
-}
-
-// MapResponsesClientToolSearchName returns the mapped Gemini function name for
-// the client-executed tool_search shim.
-func MapResponsesClientToolSearchName(forwardMap map[string]string) string {
-	if mapped, ok := forwardMap[ResponsesClientToolSearchKey]; ok && mapped != "" {
-		return mapped
-	}
-	return ResponsesToolSearchFunctionName
-}
-
-// ConvertResponsesToolChoiceToGemini translates Responses tool_choice into Gemini functionCallingConfig JSON.
-func ConvertResponsesToolChoiceToGemini(toolChoice gjson.Result, forwardMap map[string]string) ([]byte, bool) {
-	if !toolChoice.Exists() {
-		return nil, false
-	}
-	mode := ""
-	var allowedNames []string
-	if toolChoice.Type == gjson.String {
-		switch strings.ToLower(strings.TrimSpace(toolChoice.String())) {
-		case "none":
-			mode = "NONE"
-		case "auto":
-			mode = "AUTO"
-		case "required", "any":
-			mode = "ANY"
-		}
-	} else if toolChoice.IsObject() {
-		toolType := strings.ToLower(strings.TrimSpace(toolChoice.Get("type").String()))
-		switch toolType {
-		case "none":
-			mode = "NONE"
-		case "auto":
-			mode = "AUTO"
-		case "required", "any":
-			mode = "ANY"
-		case ResponsesToolSearchType:
-			mode = "ANY"
-			allowedNames = append(allowedNames, MapResponsesClientToolSearchName(forwardMap))
-		case "function", "custom", "tool", "":
-			mode = "ANY"
-			name := strings.TrimSpace(toolChoice.Get("name").String())
-			if name == "" {
-				name = strings.TrimSpace(toolChoice.Get("function.name").String())
-			}
-			if name == "" {
-				name = strings.TrimSpace(toolChoice.Get("custom.name").String())
-			}
-			namespace := strings.TrimSpace(toolChoice.Get("namespace").String())
-			if namespace == "" {
-				namespace = strings.TrimSpace(toolChoice.Get("function.namespace").String())
-			}
-			if namespace == "" {
-				namespace = strings.TrimSpace(toolChoice.Get("custom.namespace").String())
-			}
-			if namespace != "" {
-				name = QualifyResponsesNamespaceToolName(namespace, name)
-			}
-			if name != "" {
-				geminiName := MapResponsesToolName(forwardMap, name)
-				allowedNames = append(allowedNames, geminiName)
-			}
-		}
-	}
-	if mode == "" {
-		return nil, false
-	}
-	cfg := []byte(`{"mode":""}`)
-	cfg, _ = sjson.SetBytes(cfg, "mode", mode)
-	if len(allowedNames) > 0 {
-		cfg, _ = sjson.SetBytes(cfg, "allowedFunctionNames", allowedNames)
-	}
-	return cfg, true
 }
 
 // UnwrapResponsesCustomToolInput extracts the raw input string from custom tool arguments JSON or plain string.

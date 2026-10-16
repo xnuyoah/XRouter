@@ -10,9 +10,9 @@ import (
 	"mime/multipart"
 	"net/textproto"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
 	"github.com/tidwall/gjson"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 // ApplyMediaPayloadConfig exposes multipart fields as JSON business values. File

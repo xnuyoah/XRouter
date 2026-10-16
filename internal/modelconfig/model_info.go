@@ -3,20 +3,14 @@ package modelconfig
 import (
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
 // ResolveModelInfo returns a private capability snapshot for a configured model.
-// Static capabilities come from the suffix-free upstream name, while explicit
-// configuration takes precedence.
+// Explicit configuration takes precedence over the empty baseline.
 func ResolveModelInfo(name, modelType string, support *registry.ThinkingSupport) *registry.ModelInfo {
 	trimmedName := strings.TrimSpace(name)
-	baseName := strings.TrimSpace(thinking.ParseSuffix(trimmedName).ModelName)
-	info := registry.LookupStaticModelInfo(baseName)
-	if info == nil {
-		info = &registry.ModelInfo{}
-	}
+	info := &registry.ModelInfo{}
 	info.ID = trimmedName
 	info.Type = strings.TrimSpace(modelType)
 	if support != nil {

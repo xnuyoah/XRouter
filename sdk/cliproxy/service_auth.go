@@ -7,29 +7,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/wsrelay"
-	sdkAuth "github.com/router-for-me/CLIProxyAPI/v8/sdk/auth"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher"
+	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 // newDefaultAuthManager creates a default authentication manager with supported OAuth providers.
 func newDefaultAuthManager() *sdkAuth.Manager {
 	return sdkAuth.NewManager(
 		sdkAuth.GetTokenStore(),
-		sdkAuth.NewCodexAuthenticator(),
-		sdkAuth.NewClaudeAuthenticator(),
-		sdkAuth.NewAntigravityAuthenticator(),
-		sdkAuth.NewKimiAuthenticator(),
-		sdkAuth.NewKimiAIAuthenticator(),
-		sdkAuth.NewKimiAIDotAuthenticator(),
-		sdkAuth.NewXAIAuthenticator(),
-		sdkAuth.NewDevinAuthenticator(),
-		sdkAuth.NewMetaAuthenticator(),
 	)
 }
 
@@ -103,7 +92,7 @@ func (s *Service) handleAuthUpdates(ctx context.Context, updates []watcher.AuthU
 		return
 	}
 	// Keep this path limited to the targeted auths. Global plugin rebuilds and
-	// in-flight Antigravity probes can hold authUpdateMu for minutes and stall
+	// in-flight credential probes can hold authUpdateMu for minutes and stall
 	// Management API PATCH responses.
 	s.authUpdateMu.Lock()
 	locked := true
@@ -333,77 +322,6 @@ func authUpdateID(update watcher.AuthUpdate) string {
 	return ""
 }
 
-func (s *Service) ensureWebsocketGateway() {
-	if s == nil {
-		return
-	}
-	if s.wsGateway != nil {
-		return
-	}
-	opts := wsrelay.Options{
-		Path:           "/v1/ws",
-		OnConnected:    s.wsOnConnected,
-		OnDisconnected: s.wsOnDisconnected,
-		LogDebugf:      log.Debugf,
-		LogInfof:       log.Infof,
-		LogWarnf:       log.Warnf,
-	}
-	s.wsGateway = wsrelay.NewManager(opts)
-}
-
-func (s *Service) wsOnConnected(channelID string) {
-	if s == nil || channelID == "" {
-		return
-	}
-	if !strings.HasPrefix(strings.ToLower(channelID), "aistudio-") {
-		return
-	}
-	if s.coreManager != nil {
-		if existing, ok := s.coreManager.GetByID(channelID); ok && existing != nil {
-			if !existing.Disabled && existing.Status == coreauth.StatusActive {
-				return
-			}
-		}
-	}
-	now := time.Now().UTC()
-	auth := &coreauth.Auth{
-		ID:         channelID,  // keep channel identifier as ID
-		Provider:   "aistudio", // logical provider for switch routing
-		Label:      channelID,  // display original channel id
-		Status:     coreauth.StatusActive,
-		CreatedAt:  now,
-		UpdatedAt:  now,
-		Attributes: map[string]string{"runtime_only": "true"},
-		Metadata:   map[string]any{"email": channelID}, // metadata drives logging and usage tracking
-	}
-	log.Infof("websocket provider connected: %s", channelID)
-	s.emitAuthUpdate(context.Background(), watcher.AuthUpdate{
-		Action: watcher.AuthUpdateActionAdd,
-		ID:     auth.ID,
-		Auth:   auth,
-	})
-}
-
-func (s *Service) wsOnDisconnected(channelID string, reason error) {
-	if s == nil || channelID == "" {
-		return
-	}
-	if reason != nil {
-		if strings.Contains(reason.Error(), "replaced by new connection") {
-			log.Infof("websocket provider replaced: %s", channelID)
-			return
-		}
-		log.Warnf("websocket provider disconnected: %s (%v)", channelID, reason)
-	} else {
-		log.Infof("websocket provider disconnected: %s", channelID)
-	}
-	ctx := context.Background()
-	s.emitAuthUpdate(ctx, watcher.AuthUpdate{
-		Action: watcher.AuthUpdateActionDelete,
-		ID:     channelID,
-	})
-}
-
 func (s *Service) applyCoreAuthAddOrUpdate(ctx context.Context, auth *coreauth.Auth) {
 	auth = s.prepareCoreAuthForModelRegistration(ctx, auth)
 	if auth == nil {
@@ -430,14 +348,6 @@ func (s *Service) prepareCoreAuthForModelRegistration(ctx context.Context, auth 
 			return existing
 		}
 		auth.CreatedAt = existing.CreatedAt
-		if existing.Metadata != nil {
-			if persistedHints, hasHints := existing.Metadata[antigravityPersistedHintsMetaKey]; hasHints {
-				if auth.Metadata == nil {
-					auth.Metadata = make(map[string]any)
-				}
-				auth.Metadata[antigravityPersistedHintsMetaKey] = persistedHints
-			}
-		}
 		if !existing.Disabled && existing.Status != coreauth.StatusDisabled && !auth.Disabled && auth.Status != coreauth.StatusDisabled {
 			auth.LastRefreshedAt = existing.LastRefreshedAt
 			auth.NextRefreshAfter = existing.NextRefreshAfter
@@ -459,7 +369,6 @@ func (s *Service) prepareCoreAuthForModelRegistration(ctx context.Context, auth 
 		}
 		auth = current
 	}
-	s.cancelStaleAntigravityProbes(auth.ID)
 	return auth
 }
 
@@ -601,22 +510,11 @@ func (s *Service) applyCoreAuthRemoval(ctx context.Context, id string) {
 		return
 	}
 	id = strings.TrimSpace(id)
-	var provider string
-	if existing, ok := s.coreManager.GetByID(id); ok && existing != nil {
-		provider = strings.TrimSpace(existing.Provider)
-	}
 	// Invalidate the auth before advancing the registry epoch. Otherwise a
 	// refresh can adopt the tombstone epoch while the auth still exists and
 	// republish its cached models after the registry has been cleared.
 	s.coreManager.Remove(ctx, id)
 	GlobalModelRegistry().UnregisterClient(id)
-	s.cancelStaleAntigravityProbes(id)
-	if strings.EqualFold(provider, "codex") {
-		executor.CloseCodexWebsocketSessionsForAuthID(id, "auth_removed")
-	}
-	if strings.EqualFold(provider, "xai") {
-		executor.CloseXAIWebsocketSessionsForAuthID(id, "auth_removed")
-	}
 }
 
 func (s *Service) applyRetryConfig(cfg *config.Config) {

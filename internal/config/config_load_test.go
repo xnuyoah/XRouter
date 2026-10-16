@@ -69,7 +69,7 @@ func TestPrepareConfigFileForUploadHashesPlaintextSecret(t *testing.T) {
 		{name: "v8 layout", section: "management", other: "remote-management"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			path := writeUploadTestConfig(t, "# operator note\nport: 8317\n"+tc.section+":\n  secret-key: "+uploadTestPlaintextSecret+"\n")
+			path := writeUploadTestConfig(t, "# operator note\nport: 11016\n"+tc.section+":\n  secret-key: "+uploadTestPlaintextSecret+"\n")
 
 			if errPrepare := PrepareConfigFileForUpload(path); errPrepare != nil {
 				t.Fatalf("PrepareConfigFileForUpload() error = %v", errPrepare)
@@ -79,7 +79,7 @@ func TestPrepareConfigFileForUploadHashesPlaintextSecret(t *testing.T) {
 			if strings.Contains(saved, uploadTestPlaintextSecret) {
 				t.Fatalf("config still holds the plaintext secret:\n%s", saved)
 			}
-			if !strings.Contains(saved, "# operator note") || !strings.Contains(saved, "port: 8317") {
+			if !strings.Contains(saved, "# operator note") || !strings.Contains(saved, "port: 11016") {
 				t.Fatalf("hashing dropped unrelated content:\n%s", saved)
 			}
 			assertUploadTestHashed(t, saved, tc.section)
@@ -187,7 +187,7 @@ func TestPrepareConfigFileForUploadLeavesSettledConfigUntouched(t *testing.T) {
 	for name, content := range map[string]string{
 		"hashed legacy secret": "# operator note\nremote-management:\n  secret-key: '" + hashed + "'\n",
 		"hashed v8 secret":     "# operator note\nmanagement:\n  secret-key: '" + hashed + "'\n",
-		"no secret":            "# operator note\nport: 8317\n",
+		"no secret":            "# operator note\nport: 11016\n",
 		"null v8 secret":       "# operator note\nmanagement:\n  secret-key: null\n",
 		"tilde legacy secret":  "# operator note\nremote-management:\n  secret-key: ~\n",
 		"empty file":           "",
@@ -215,7 +215,7 @@ func TestPrepareConfigFileForUploadReportsSecretItCannotHash(t *testing.T) {
 		content  string
 		readOnly bool
 	}{
-		{name: "unparsable", content: "remote-management:\n  secret-key: " + uploadTestPlaintextSecret + "\nport: [8317\n"},
+		{name: "unparsable", content: "remote-management:\n  secret-key: " + uploadTestPlaintextSecret + "\nport: [11016\n"},
 		{name: "secret too long for bcrypt", content: "remote-management:\n  secret-key: " + strings.Repeat("s", 73) + "\n"},
 		{name: "read-only file", content: "remote-management:\n  secret-key: " + uploadTestPlaintextSecret + "\n", readOnly: true},
 	} {

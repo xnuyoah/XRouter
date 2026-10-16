@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	translatorcommon "github.com/router-for-me/CLIProxyAPI/v8/internal/translator/common"
 	"github.com/tidwall/gjson"
+	translatorcommon "github.com/xnuyoah/XRouter/v8/internal/translator/common"
 )
 
 func TestConvertCodexResponseToOpenAIResponses_CreatedIncludesOriginalRequestModel(t *testing.T) {

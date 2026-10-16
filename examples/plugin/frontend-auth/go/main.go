@@ -127,9 +127,9 @@ func handleMethod(method string) ([]byte, error) {
 	_ = time.Second
 	switch method {
 	case "plugin.register":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-frontend-auth-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-frontend-auth-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"frontend_auth_provider\":true}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-frontend-auth-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-frontend-auth-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"frontend_auth_provider\":true}}")
 	case "plugin.reconfigure":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-frontend-auth-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-frontend-auth-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"frontend_auth_provider\":true}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-frontend-auth-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-frontend-auth-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"frontend_auth_provider\":true}}")
 	case "frontend_auth.identifier":
 		return okEnvelopeJSON("{\"identifier\":\"example-frontend-auth-go\"}")
 	case "frontend_auth.authenticate":

@@ -8,15 +8,15 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	applypatch "github.com/router-for-me/CLIProxyAPI/v8/internal/client/codex/apply-patch"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	sigcompat "github.com/router-for-me/CLIProxyAPI/v8/internal/signature"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/translator/common"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	applypatch "github.com/xnuyoah/XRouter/v8/internal/client/codex/apply-patch"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	sigcompat "github.com/xnuyoah/XRouter/v8/internal/signature"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
+	"github.com/xnuyoah/XRouter/v8/internal/translator/common"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 const (

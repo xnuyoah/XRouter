@@ -92,11 +92,11 @@ func TestToolPrefixDisabled(t *testing.T) {
 func TestEnsureIndexUsesCredentialIdentity(t *testing.T) {
 	t.Parallel()
 
-	geminiAuth := &Auth{
-		Provider: "gemini",
+	openaiAuth := &Auth{
+		Provider: "openai",
 		Attributes: map[string]string{
 			"api_key": "shared-key",
-			"source":  "config:gemini[abc123]",
+			"source":  "config:openai[abc123]",
 		},
 	}
 	compatAuth := &Auth{
@@ -108,29 +108,29 @@ func TestEnsureIndexUsesCredentialIdentity(t *testing.T) {
 			"source":       "config:bohe[def456]",
 		},
 	}
-	geminiAltBase := &Auth{
-		Provider: "gemini",
+	openaiAltBase := &Auth{
+		Provider: "openai",
 		Attributes: map[string]string{
 			"api_key":  "shared-key",
 			"base_url": "https://alt.example.com",
-			"source":   "config:gemini[ghi789]",
+			"source":   "config:openai[ghi789]",
 		},
 	}
-	geminiDuplicate := &Auth{
-		Provider: "gemini",
+	openaiDuplicate := &Auth{
+		Provider: "openai",
 		Attributes: map[string]string{
 			"api_key": "shared-key",
-			"source":  "config:gemini[abc123-1]",
+			"source":  "config:openai[abc123-1]",
 		},
 	}
 
-	geminiIndex := geminiAuth.EnsureIndex()
+	openaiIndex := openaiAuth.EnsureIndex()
 	compatIndex := compatAuth.EnsureIndex()
-	altBaseIndex := geminiAltBase.EnsureIndex()
-	duplicateIndex := geminiDuplicate.EnsureIndex()
+	altBaseIndex := openaiAltBase.EnsureIndex()
+	duplicateIndex := openaiDuplicate.EnsureIndex()
 
-	if geminiIndex == "" {
-		t.Fatal("gemini index should not be empty")
+	if openaiIndex == "" {
+		t.Fatal("openai index should not be empty")
 	}
 	if compatIndex == "" {
 		t.Fatal("compat index should not be empty")
@@ -141,45 +141,45 @@ func TestEnsureIndexUsesCredentialIdentity(t *testing.T) {
 	if duplicateIndex == "" {
 		t.Fatal("duplicate index should not be empty")
 	}
-	if geminiIndex == compatIndex {
-		t.Fatalf("shared api key produced duplicate auth_index %q", geminiIndex)
+	if openaiIndex == compatIndex {
+		t.Fatalf("shared api key produced duplicate auth_index %q", openaiIndex)
 	}
-	if geminiIndex == altBaseIndex {
-		t.Fatalf("same provider/key with different base_url produced duplicate auth_index %q", geminiIndex)
+	if openaiIndex == altBaseIndex {
+		t.Fatalf("same provider/key with different base_url produced duplicate auth_index %q", openaiIndex)
 	}
-	if geminiIndex != duplicateIndex {
-		t.Fatalf("same provider/key with different source should share auth_index, got %q vs %q", geminiIndex, duplicateIndex)
+	if openaiIndex != duplicateIndex {
+		t.Fatalf("same provider/key with different source should share auth_index, got %q vs %q", openaiIndex, duplicateIndex)
 	}
 
-	metaAuth1 := &Auth{
-		Provider: "meta",
-		ID:       "meta:apikey:token1",
+	nvidiaAuth1 := &Auth{
+		Provider: "nvidia",
+		ID:       "nvidia:apikey:token1",
 		Attributes: map[string]string{
-			"api_key":   "meta-secret",
-			"base_url":  "https://api.meta.ai/v1",
+			"api_key":   "nvidia-secret",
+			"base_url":  "https://integrate.api.nvidia.com/v1",
 			"proxy_url": "socks5://127.0.0.1:1080",
 			"prefix":    "fast-",
-			"source":    "config:meta[token1]",
+			"source":    "config:nvidia[token1]",
 		},
 	}
-	metaAuth2 := &Auth{
-		Provider: "meta",
-		ID:       "meta:apikey:token2",
+	nvidiaAuth2 := &Auth{
+		Provider: "nvidia",
+		ID:       "nvidia:apikey:token2",
 		Attributes: map[string]string{
-			"api_key":   "meta-secret",
-			"base_url":  "https://api.meta.ai/v1",
+			"api_key":   "nvidia-secret",
+			"base_url":  "https://integrate.api.nvidia.com/v1",
 			"proxy_url": "",
 			"prefix":    "",
-			"source":    "config:meta[token2]",
+			"source":    "config:nvidia[token2]",
 		},
 	}
-	metaIndex1 := metaAuth1.EnsureIndex()
-	metaIndex2 := metaAuth2.EnsureIndex()
-	if metaIndex1 == "" {
-		t.Fatal("meta index should not be empty")
+	nvidiaIndex1 := nvidiaAuth1.EnsureIndex()
+	nvidiaIndex2 := nvidiaAuth2.EnsureIndex()
+	if nvidiaIndex1 == "" {
+		t.Fatal("nvidia index should not be empty")
 	}
-	if metaIndex1 != metaIndex2 {
-		t.Fatalf("meta auth index should remain stable across proxy/prefix changes, got %q vs %q", metaIndex1, metaIndex2)
+	if nvidiaIndex1 != nvidiaIndex2 {
+		t.Fatalf("nvidia auth index should remain stable across proxy/prefix changes, got %q vs %q", nvidiaIndex1, nvidiaIndex2)
 	}
 }
 

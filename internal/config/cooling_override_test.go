@@ -5,22 +5,17 @@ import "testing"
 func TestParseConfigBytesPreservesCoolingOverridePresence(t *testing.T) {
 	cfg, errParse := ParseConfigBytes([]byte(`
 disable-cooling: true
-gemini-api-key:
-  - api-key: gemini-key
+openai-api-key:
+  - api-key: openai-key
+    base-url: https://api.openai.com/v1
     disable-cooling: false
-interactions-api-key:
-  - api-key: interactions-key
+deepseek-api-key:
+  - api-key: deepseek-key
+    base-url: https://api.deepseek.com/v1
     disable-cooling: false
-claude-api-key:
-  - api-key: claude-key
-    disable-cooling: false
-codex-api-key:
-  - api-key: codex-key
-    base-url: https://codex.example.com
-    disable-cooling: false
-xai-api-key:
-  - api-key: xai-key
-    base-url: https://api.x.ai/v1
+nvidia-api-key:
+  - api-key: nvidia-key
+    base-url: https://integrate.api.nvidia.com/v1
     disable-cooling: false
 openai-compatibility:
   - name: compat
@@ -28,23 +23,16 @@ openai-compatibility:
     disable-cooling: false
     api-key-entries:
       - api-key: compat-key
-vertex-api-key:
-  - api-key: vertex-key
-    base-url: https://vertex.example.com
-    disable-cooling: false
 `))
 	if errParse != nil {
 		t.Fatalf("ParseConfigBytes() error = %v", errParse)
 	}
 
 	overrides := map[string]*bool{
-		"gemini":               cfg.GeminiKey[0].DisableCooling,
-		"interactions":         cfg.InteractionsKey[0].DisableCooling,
-		"claude":               cfg.ClaudeKey[0].DisableCooling,
-		"codex":                cfg.CodexKey[0].DisableCooling,
-		"xai":                  cfg.XAIKey[0].DisableCooling,
+		"openai":               cfg.OpenAIKey[0].DisableCooling,
+		"deepseek":             cfg.DeepseekKey[0].DisableCooling,
+		"nvidia":               cfg.NvidiaKey[0].DisableCooling,
 		"openai compatibility": cfg.OpenAICompatibility[0].DisableCooling,
-		"vertex":               cfg.VertexCompatAPIKey[0].DisableCooling,
 	}
 	for name, override := range overrides {
 		if override == nil || *override {

@@ -11,16 +11,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	sdkconfig "github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	sdkconfig "github.com/xnuyoah/XRouter/v8/sdk/config"
 	"gopkg.in/yaml.v3"
 )
 
 const (
 	latestReleaseURL       = "https://api.github.com/repos/router-for-me/CLIProxyAPI/releases/latest"
-	latestReleaseUserAgent = "CLIProxyAPI"
+	latestReleaseUserAgent = "XRouter"
 )
 
 func (h *Handler) GetConfig(c *gin.Context) {
@@ -267,14 +267,6 @@ func (h *Handler) PutErrorLogsMaxFiles(c *gin.Context) {
 func (h *Handler) GetRequestLog(c *gin.Context) { c.JSON(200, gin.H{"request-log": h.cfg.RequestLog}) }
 func (h *Handler) PutRequestLog(c *gin.Context) {
 	h.updateBoolField(c, func(v bool) { h.cfg.RequestLog = v })
-}
-
-// Websocket auth
-func (h *Handler) GetWebsocketAuth(c *gin.Context) {
-	c.JSON(200, gin.H{"ws-auth": h.cfg.WebsocketAuth})
-}
-func (h *Handler) PutWebsocketAuth(c *gin.Context) {
-	h.updateBoolField(c, func(v bool) { h.cfg.WebsocketAuth = v })
 }
 
 // Request retry

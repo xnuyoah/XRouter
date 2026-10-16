@@ -6,7 +6,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 func TestExtractSessionInfoAllClients(t *testing.T) {
@@ -139,13 +139,13 @@ func TestExtractSessionInfoAllClients(t *testing.T) {
 		t.Errorf("Codex fork with Session-Id header and body thread_id mismatch: %+v", info)
 	}
 
-	// 5. Antigravity X-Http-Session-Id
+	// 5. X-Http-Session-Id client header
 	agyHeaders := http.Header{
 		"X-Http-Session-Id": []string{"agy-sess-888"},
 	}
 	info, ok = ExtractSessionInfo(agyHeaders, nil, nil)
 	if !ok || info.ClientType != "agy" || info.SessionID != "agy:agy-sess-888" {
-		t.Errorf("Antigravity mismatch: %+v", info)
+		t.Errorf("X-Http-Session-Id mismatch: %+v", info)
 	}
 
 	// 6. Payload with metadata.agent_id and parent_session_id
@@ -283,13 +283,13 @@ func TestExtractSessionInfoGeminiAndAntigravityHierarchy(t *testing.T) {
 		t.Fatalf("expected subagent, got %q", info.AgentName)
 	}
 
-	// Antigravity headers with parent
+	// X-Http-Session-Id headers with parent
 	headers := http.Header{}
 	headers.Set("X-Http-Session-Id", "agy-child-2")
 	headers.Set("X-Parent-Session-ID", "agy-parent-2")
 	info2, ok := ExtractSessionInfo(headers, nil, nil)
 	if !ok {
-		t.Fatal("ExtractSessionInfo failed on Antigravity headers")
+		t.Fatal("ExtractSessionInfo failed on X-Http-Session-Id headers")
 	}
 	if info2.SessionID != "agy:agy-child-2" {
 		t.Fatalf("expected session agy:agy-child-2, got %q", info2.SessionID)
@@ -302,7 +302,7 @@ func TestExtractSessionInfoGeminiAndAntigravityHierarchy(t *testing.T) {
 	}
 }
 
-func TestExtractSessionInfoNestedAntigravityRequest(t *testing.T) {
+func TestExtractSessionInfoNestedRequestEnvelope(t *testing.T) {
 	t.Parallel()
 
 	payload := []byte(`{
@@ -314,7 +314,7 @@ func TestExtractSessionInfoNestedAntigravityRequest(t *testing.T) {
 	}`)
 	info, ok := ExtractSessionInfo(nil, payload, nil)
 	if !ok {
-		t.Fatal("ExtractSessionInfo failed on nested Antigravity payload")
+		t.Fatal("ExtractSessionInfo failed on nested request payload")
 	}
 	if info.SessionID != "session:child-sess-789" {
 		t.Fatalf("SessionID = %q, want session:child-sess-789", info.SessionID)

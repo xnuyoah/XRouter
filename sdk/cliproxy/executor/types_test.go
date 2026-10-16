@@ -3,7 +3,7 @@ package executor
 import (
 	"testing"
 
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 func TestResponseFormatOrSourceUsesExplicitResponseFormat(t *testing.T) {

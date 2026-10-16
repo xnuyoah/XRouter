@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 // issue6643Result records one client-visible outcome of the concurrent test.
@@ -132,7 +132,7 @@ func issue6643ModelState(t *testing.T, manager *Manager, authID, model string) *
 func TestManager_Issue6643_SuccessDispatchedAfterCooldownClearsIt(t *testing.T) {
 	const (
 		authID = "issue6643-after-auth"
-		model  = "gemini-4-argon-high"
+		model  = "gpt-4-argon-high"
 	)
 	manager := issue6643SeqTestAuth(t, authID)
 
@@ -166,7 +166,7 @@ func TestManager_Issue6643_SuccessDispatchedAfterCooldownClearsIt(t *testing.T) 
 func TestManager_Issue6643_UnstampedSuccessKeepsLegacyClearBehavior(t *testing.T) {
 	const (
 		authID = "issue6643-unstamped-auth"
-		model  = "gemini-4-argon-high"
+		model  = "gpt-4-argon-high"
 	)
 	manager := issue6643SeqTestAuth(t, authID)
 
@@ -223,7 +223,7 @@ func TestManager_Issue6643_StaleAuthLevelSuccessKeepsCooldown(t *testing.T) {
 func TestManager_Issue6643_RestoreKeepsCooldownWatermark(t *testing.T) {
 	const (
 		authID = "issue6643-restore-auth"
-		model  = "gemini-4-argon-high"
+		model  = "gpt-4-argon-high"
 	)
 	manager := issue6643SeqTestAuth(t, authID)
 	store := &recordingCooldownStateStore{}
@@ -261,7 +261,7 @@ func TestManager_Issue6643_InFlightSuccessesKeepFreshQuotaCooldown(t *testing.T)
 
 	const (
 		authID = "issue6643-auth"
-		model  = "gemini-4-argon-high"
+		model  = "gpt-4-argon-high"
 	)
 	registry.GetGlobalRegistry().RegisterClient(authID, "antigravity", []*registry.ModelInfo{{ID: model}})
 	t.Cleanup(func() { registry.GetGlobalRegistry().UnregisterClient(authID) })

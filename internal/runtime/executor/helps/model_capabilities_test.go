@@ -5,18 +5,16 @@ import (
 	"net/http"
 	"testing"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	helps "github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor/helps"
-	_ "github.com/router-for-me/CLIProxyAPI/v8/internal/thinking/provider/claude"
-	_ "github.com/router-for-me/CLIProxyAPI/v8/internal/thinking/provider/codex"
-	_ "github.com/router-for-me/CLIProxyAPI/v8/internal/thinking/provider/gemini"
-	_ "github.com/router-for-me/CLIProxyAPI/v8/internal/thinking/provider/openai"
-	_ "github.com/router-for-me/CLIProxyAPI/v8/internal/translator"
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 	"github.com/tidwall/gjson"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	helps "github.com/xnuyoah/XRouter/v8/internal/runtime/executor/helps"
+	_ "github.com/xnuyoah/XRouter/v8/internal/thinking/provider/codex"
+	_ "github.com/xnuyoah/XRouter/v8/internal/thinking/provider/openai"
+	_ "github.com/xnuyoah/XRouter/v8/internal/translator"
+	cliproxyauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 type configuredThinkingExecutor struct {
@@ -81,89 +79,6 @@ func (*configuredThinkingExecutor) HttpRequest(context.Context, *cliproxyauth.Au
 	return nil, nil
 }
 
-func TestApplyRequestThinkingConfigurationUpdateSelectedCodexModel(t *testing.T) {
-	const current = `{"reasoning":{"effort":"xhigh"},"input":[{"type":"configuration_update","reasoning":{"effort":"low"}},{"type":"configuration_update","reasoning":{"effort":"high"}},{"role":"user","content":"ok"}]}`
-	const original = `{"reasoning":{"effort":"xhigh"},"input":[{"type":"configuration_update","reasoning":{"effort":"low"}},{"role":"user","content":"ok"}]}`
-	const translated = `{"reasoning":{"effort":"xhigh"},"input":[{"role":"user","content":"ok"}]}`
-
-	for _, tc := range []struct {
-		name       string
-		supported  bool
-		model      string
-		body       string
-		wantTop    string
-		wantUpdate int
-	}{
-		{name: "supported native updates pass through", supported: true, model: "tenant/public", body: current, wantTop: "xhigh", wantUpdate: 2},
-		{name: "supported translated target without updates stays unchanged", supported: true, model: "tenant/public", body: translated, wantTop: "xhigh"},
-		{name: "unsupported translated target promotes current update", model: "tenant/public", body: translated, wantTop: "high"},
-		{name: "unsupported target removes stale update", model: "tenant/public", body: original, wantTop: "high"},
-		{name: "unsupported suffix overrides current update", model: "tenant/public(medium)", body: translated, wantTop: "medium"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			manager := cliproxyauth.NewManager(nil, nil, nil)
-			manager.SetConfig(&internalconfig.Config{
-				SDKConfig: internalconfig.SDKConfig{ForceModelPrefix: true},
-				CodexKey: []internalconfig.CodexKey{{
-					APIKey: "selected-update-key", Prefix: "tenant",
-					Models: []internalconfig.CodexModel{{
-						Name: "opaque-route", Alias: "public", SupportConfigurationUpdate: tc.supported,
-						Thinking: &registry.ThinkingSupport{Levels: []string{"low", "medium", "high", "xhigh"}},
-					}},
-				}},
-			})
-			executor := &configuredThinkingExecutor{provider: "codex", targetFormat: "codex", body: []byte(tc.body)}
-			manager.RegisterExecutor(executor)
-			auth := &cliproxyauth.Auth{
-				ID: "selected-update-auth", Provider: "codex", Prefix: "tenant",
-				Attributes: map[string]string{
-					cliproxyauth.AttributeAuthKind: cliproxyauth.AuthKindAPIKey,
-					cliproxyauth.AttributeAPIKey:   "selected-update-key",
-					cliproxyauth.AttributeSource:   "config:codex[0]",
-				},
-			}
-			modelRegistry := registry.GetGlobalRegistry()
-			modelRegistry.RegisterClient(auth.ID, auth.Provider, []*registry.ModelInfo{{ID: "tenant/public", Type: "codex"}})
-			t.Cleanup(func() { modelRegistry.UnregisterClient(auth.ID) })
-			if registered, errRegister := manager.Register(t.Context(), auth); errRegister != nil || registered == nil {
-				t.Fatalf("Register() = (%+v, %v), want auth", registered, errRegister)
-			}
-
-			response, errExecute := manager.Execute(t.Context(), []string{"codex"}, cliproxyexecutor.Request{
-				Model: tc.model, Payload: []byte(current), Format: sdktranslator.FormatOpenAIResponse,
-			}, cliproxyexecutor.Options{SourceFormat: sdktranslator.FormatOpenAIResponse, OriginalRequest: []byte(original)})
-			if errExecute != nil {
-				t.Fatalf("Execute() error = %v", errExecute)
-			}
-			if executor.selectedInfo == nil || executor.selectedInfo.SupportConfigurationUpdate != tc.supported {
-				t.Fatalf("selected model capability = %+v, want update support %t", executor.selectedInfo, tc.supported)
-			}
-			wantModel := "opaque-route"
-			if tc.model == "tenant/public(medium)" {
-				wantModel += "(medium)"
-			}
-			if executor.seenModel != wantModel {
-				t.Fatalf("executor model = %q, want %q", executor.seenModel, wantModel)
-			}
-			if got := gjson.GetBytes(response.Payload, "reasoning.effort").String(); got != tc.wantTop {
-				t.Fatalf("reasoning.effort = %q, want %q; body=%s", got, tc.wantTop, response.Payload)
-			}
-			updates := 0
-			for _, item := range gjson.GetBytes(response.Payload, "input").Array() {
-				if item.Get("type").String() == "configuration_update" {
-					updates++
-				}
-			}
-			if updates != tc.wantUpdate {
-				t.Fatalf("updates = %d, want %d; body=%s", updates, tc.wantUpdate, response.Payload)
-			}
-			if tc.supported && string(response.Payload) != tc.body {
-				t.Fatalf("supported native body changed: got %s, want %s", response.Payload, tc.body)
-			}
-		})
-	}
-}
-
 func TestApplyRequestThinkingConfigurationUpdateCrossProtocol(t *testing.T) {
 	const current = `{"reasoning":{"effort":"xhigh"},"input":[{"type":"configuration_update","reasoning":{"effort":"low"}},{"type":"configuration_update","reasoning":{"effort":"high"}}]}`
 	const original = `{"reasoning":{"effort":"xhigh"},"input":[{"type":"configuration_update","reasoning":{"effort":"low"}}]}`
@@ -177,8 +92,6 @@ func TestApplyRequestThinkingConfigurationUpdateCrossProtocol(t *testing.T) {
 	}{
 		{name: "Codex uses current update without bound model", format: "codex", body: `{"reasoning":{"effort":"xhigh"},"input":[{"role":"user","content":"ok"}]}`, path: "reasoning.effort", want: "high"},
 		{name: "OpenAI Chat uses current update", format: "openai", body: `{"reasoning_effort":"medium","messages":[]}`, path: "reasoning_effort", want: "high"},
-		{name: "Claude uses current update", format: "claude", body: `{"thinking":{"type":"adaptive"},"output_config":{"effort":"medium"},"max_tokens":4096}`, path: "output_config.effort", want: "high"},
-		{name: "Gemini uses current update", format: "gemini", body: `{"generationConfig":{"thinkingConfig":{"thinkingBudget":8192}}}`, path: "generationConfig.thinkingConfig.thinkingBudget", want: "24576"},
 		{name: "empty current payload falls back to original", format: "openai", body: `{"reasoning_effort":"medium","messages":[]}`, path: "reasoning_effort", want: "low", noSource: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -197,113 +110,36 @@ func TestApplyRequestThinkingConfigurationUpdateCrossProtocol(t *testing.T) {
 	}
 }
 
-func TestApplyRequestThinkingUsesExactClaudeModeForSummaryOnlyRequest(t *testing.T) {
-	manager := cliproxyauth.NewManager(nil, nil, nil)
-	manager.SetConfig(&internalconfig.Config{
-		SDKConfig: internalconfig.SDKConfig{ForceModelPrefix: true},
-		ClaudeKey: []internalconfig.ClaudeKey{{
-			APIKey: "summary-selected-key",
-			Prefix: "summary-tenant",
-			Models: []internalconfig.ClaudeModel{{
-				Name:  "summary-shared-upstream",
-				Alias: "summary-public-model",
-				Thinking: &registry.ThinkingSupport{
-					Min: 1024,
-					Max: 16000,
-				},
-			}},
-		}},
-	})
-	executor := &configuredThinkingExecutor{translateRequest: true}
-	manager.RegisterExecutor(executor)
-	auth := &cliproxyauth.Auth{
-		ID:       "summary-selected-auth",
-		Provider: "claude",
-		Prefix:   "summary-tenant",
-		Attributes: map[string]string{
-			cliproxyauth.AttributeAuthKind: cliproxyauth.AuthKindAPIKey,
-			cliproxyauth.AttributeAPIKey:   "summary-selected-key",
-			cliproxyauth.AttributeSource:   "config:claude[0]",
-		},
-	}
-
-	modelRegistry := registry.GetGlobalRegistry()
-	modelRegistry.RegisterClient(auth.ID, auth.Provider, []*registry.ModelInfo{{
-		ID: "summary-tenant/summary-public-model", Type: "claude",
-	}})
-	modelRegistry.RegisterClient("summary-unrelated-auth", auth.Provider, []*registry.ModelInfo{{
-		ID: "summary-shared-upstream", Type: "claude",
-		Thinking: &registry.ThinkingSupport{Levels: []string{"high"}},
-	}})
-	t.Cleanup(func() {
-		modelRegistry.UnregisterClient(auth.ID)
-		modelRegistry.UnregisterClient("summary-unrelated-auth")
-	})
-	if registered, errRegister := manager.Register(t.Context(), auth); errRegister != nil {
-		t.Fatalf("Register() error = %v", errRegister)
-	} else if registered == nil {
-		t.Fatal("Register() returned nil auth")
-	}
-
-	original := []byte(`{"model":"summary-tenant/summary-public-model","reasoning":{"summary":"auto"},"input":"hi"}`)
-	response, errExecute := manager.Execute(t.Context(), []string{"claude"}, cliproxyexecutor.Request{
-		Model:   "summary-tenant/summary-public-model",
-		Payload: original,
-		Format:  sdktranslator.FormatOpenAIResponse,
-	}, cliproxyexecutor.Options{
-		SourceFormat:    sdktranslator.FormatOpenAIResponse,
-		OriginalRequest: original,
-	})
-	if errExecute != nil {
-		t.Fatalf("Execute() error = %v", errExecute)
-	}
-	if got := gjson.GetBytes(executor.translatedBody, "thinking.type").String(); got != "adaptive" {
-		t.Fatalf("pre-executor thinking.type = %q, want global adaptive trigger; body=%s", got, executor.translatedBody)
-	}
-	if got := gjson.GetBytes(response.Payload, "thinking.type").String(); got != "enabled" {
-		t.Fatalf("thinking.type = %q, want exact manual mode; body=%s", got, response.Payload)
-	}
-	if got := gjson.GetBytes(response.Payload, "thinking.budget_tokens").Int(); got != 1024 {
-		t.Fatalf("thinking.budget_tokens = %d, want exact minimum 1024; body=%s", got, response.Payload)
-	}
-	if got := gjson.GetBytes(response.Payload, "thinking.display").String(); got != "summarized" {
-		t.Fatalf("thinking.display = %q, want summarized; body=%s", got, response.Payload)
-	}
-	if gjson.GetBytes(response.Payload, "output_config.effort").Exists() {
-		t.Fatalf("manual thinking retained adaptive effort: %s", response.Payload)
-	}
-}
-
 func TestApplyRequestThinkingUsesSelectedPrefixedAPIKeyModel(t *testing.T) {
 	manager := cliproxyauth.NewManager(nil, nil, nil)
 	manager.SetConfig(&internalconfig.Config{
 		SDKConfig: internalconfig.SDKConfig{ForceModelPrefix: true},
-		ClaudeKey: []internalconfig.ClaudeKey{{
+		OpenAIKey: []internalconfig.OpenAIKey{{
 			APIKey: "selected-key",
 			Prefix: "tenant",
-			Models: []internalconfig.ClaudeModel{{
+			Models: []internalconfig.NativeAPIModel{{
 				Name: "shared-upstream", Alias: "public-model",
 				Thinking: &registry.ThinkingSupport{Levels: []string{"high"}},
 			}},
 		}},
 	})
-	executor := &configuredThinkingExecutor{}
+	executor := &configuredThinkingExecutor{provider: "openai", targetFormat: "openai"}
 	manager.RegisterExecutor(executor)
 	auth := &cliproxyauth.Auth{
 		ID:       "selected-auth",
-		Provider: "claude",
+		Provider: "openai",
 		Prefix:   "tenant",
 		Attributes: map[string]string{
 			cliproxyauth.AttributeAuthKind: cliproxyauth.AuthKindAPIKey,
 			cliproxyauth.AttributeAPIKey:   "selected-key",
-			cliproxyauth.AttributeSource:   "config:claude[0]",
+			cliproxyauth.AttributeSource:   "config:openai[0]",
 		},
 	}
 
 	modelRegistry := registry.GetGlobalRegistry()
-	modelRegistry.RegisterClient(auth.ID, auth.Provider, []*registry.ModelInfo{{ID: "tenant/public-model", Type: "claude"}})
+	modelRegistry.RegisterClient(auth.ID, auth.Provider, []*registry.ModelInfo{{ID: "tenant/public-model", Type: "openai"}})
 	modelRegistry.RegisterClient("unrelated-auth", auth.Provider, []*registry.ModelInfo{{
-		ID: "shared-upstream", Type: "claude",
+		ID: "shared-upstream", Type: "openai",
 		Thinking: &registry.ThinkingSupport{Levels: []string{"max"}},
 	}})
 	t.Cleanup(func() {
@@ -319,7 +155,7 @@ func TestApplyRequestThinkingUsesSelectedPrefixedAPIKeyModel(t *testing.T) {
 		t.Fatal("Register() returned nil auth")
 	}
 
-	original := []byte(`{"model":"tenant/public-model","reasoning_effort":"max","messages":[{"role":"user","content":"hello"}]}`)
+	original := []byte(`{"model":"tenant/public-model","reasoning_effort":"high","messages":[{"role":"user","content":"hello"}]}`)
 	req := cliproxyexecutor.Request{
 		Model:   "tenant/public-model",
 		Payload: original,
@@ -337,24 +173,24 @@ func TestApplyRequestThinkingUsesSelectedPrefixedAPIKeyModel(t *testing.T) {
 		if !executor.resolved {
 			t.Fatalf("%s request did not receive selected model capabilities", path)
 		}
-		if got := gjson.GetBytes(payload, "output_config.effort").String(); got != "high" {
-			t.Fatalf("%s output effort = %q, want selected credential capability high; body=%s", path, got, payload)
+		if got := gjson.GetBytes(payload, "reasoning_effort").String(); got != "high" {
+			t.Fatalf("%s reasoning_effort = %q, want selected credential capability high; body=%s", path, got, payload)
 		}
 	}
 
-	response, errExecute := manager.Execute(ctx, []string{"claude"}, req, opts)
+	response, errExecute := manager.Execute(ctx, []string{"openai"}, req, opts)
 	if errExecute != nil {
 		t.Fatalf("Execute() error = %v", errExecute)
 	}
 	assertResponse("execute", response.Payload)
 
-	countResponse, errCount := manager.ExecuteCount(ctx, []string{"claude"}, req, opts)
+	countResponse, errCount := manager.ExecuteCount(ctx, []string{"openai"}, req, opts)
 	if errCount != nil {
 		t.Fatalf("ExecuteCount() error = %v", errCount)
 	}
 	assertResponse("count", countResponse.Payload)
 
-	streamResult, errStream := manager.ExecuteStream(ctx, []string{"claude"}, req, opts)
+	streamResult, errStream := manager.ExecuteStream(ctx, []string{"openai"}, req, opts)
 	if errStream != nil {
 		t.Fatalf("ExecuteStream() error = %v", errStream)
 	}

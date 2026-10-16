@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	sdkAuth "github.com/router-for-me/CLIProxyAPI/v8/sdk/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
 	log "github.com/sirupsen/logrus"
+	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 type commandLineFlagRecord struct {

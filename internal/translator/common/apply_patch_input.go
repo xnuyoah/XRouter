@@ -8,7 +8,7 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	applypatch "github.com/router-for-me/CLIProxyAPI/v8/internal/client/codex/apply-patch"
+	applypatch "github.com/xnuyoah/XRouter/v8/internal/client/codex/apply-patch"
 )
 
 type applyPatchJSONPhase uint8

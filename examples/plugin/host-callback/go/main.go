@@ -127,9 +127,9 @@ func handleMethod(method string) ([]byte, error) {
 	_ = time.Second
 	switch method {
 	case "plugin.register":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-host-callback-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-host-callback-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"management_api\":true}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-host-callback-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-host-callback-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"management_api\":true}}")
 	case "plugin.reconfigure":
-		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-host-callback-go\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-host-callback-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"management_api\":true}}")
+		return okEnvelopeJSON("{\"schema_version\":1,\"metadata\":{\"Name\":\"example-host-callback-go\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-host-callback-go.png\",\"ConfigFields\":[]},\"capabilities\":{\"management_api\":true}}")
 	case "management.register":
 		return okEnvelopeJSON("{\"resources\":[{\"Path\":\"/status\",\"Menu\":\"Host Callback\",\"Description\":\"CPA exposes this menu resource under /v0/resource/plugins/example-host-callback-go/status.\"}]}")
 	case "management.handle":

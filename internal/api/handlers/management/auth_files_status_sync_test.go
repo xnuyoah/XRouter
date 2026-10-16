@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 func TestPatchAuthFileStatusInvokesPostAuthPersistHook(t *testing.T) {
@@ -318,7 +318,7 @@ func TestPatchPluginVirtualSourceStatusInvokesPostAuthPersistHook(t *testing.T) 
 	authDir := t.TempDir()
 	fileName := "source-sync.json"
 	filePath := filepath.Join(authDir, fileName)
-	if errWrite := os.WriteFile(filePath, []byte(`{"type":"gemini-cli","disabled":false}`), 0o600); errWrite != nil {
+	if errWrite := os.WriteFile(filePath, []byte(`{"type":"example-plugin","disabled":false}`), 0o600); errWrite != nil {
 		t.Fatalf("write source auth file: %v", errWrite)
 	}
 
@@ -434,7 +434,7 @@ func TestPatchPluginVirtualSourceStatusHookErrorReturnsError(t *testing.T) {
 	authDir := t.TempDir()
 	fileName := "source-hook-err.json"
 	filePath := filepath.Join(authDir, fileName)
-	if errWrite := os.WriteFile(filePath, []byte(`{"type":"gemini-cli","disabled":false}`), 0o600); errWrite != nil {
+	if errWrite := os.WriteFile(filePath, []byte(`{"type":"example-plugin","disabled":false}`), 0o600); errWrite != nil {
 		t.Fatalf("write source auth file: %v", errWrite)
 	}
 

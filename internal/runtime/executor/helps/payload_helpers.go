@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 // ApplyPayloadConfigWithRoot behaves like applyPayloadConfig but treats all parameter
@@ -36,11 +36,6 @@ func ApplyPayloadConfigWithRequestForExecutor(cfg *config.Config, targetExecutor
 	return out
 }
 
-func isCodexTargetExecutor(targetExecutor string) bool {
-	te := strings.ToLower(strings.TrimSpace(targetExecutor))
-	return te == "codex" || te == "codex-websockets" || te == "codex_websockets"
-}
-
 // ApplyPayloadConfigWithTrackedPaths applies payload config and reports which
 // tracked paths (or their descendants) were targeted by an applied rule.
 func ApplyPayloadConfigWithTrackedPaths(cfg *config.Config, model, protocol, fromProtocol, root string, payload, original []byte, requestedModel string, requestPath string, headers http.Header, trackedPaths ...string) ([]byte, map[string]bool) {
@@ -55,9 +50,6 @@ func ApplyPayloadConfigWithTrackedPathsForExecutor(cfg *config.Config, targetExe
 	touched := make(map[string]bool)
 	if len(payload) == 0 {
 		return payload, touched
-	}
-	if IsCodexUserAgent(headers) && !isCodexTargetExecutor(targetExecutor) {
-		payload = NormalizeCodexToolIntegerTypes(payload, headers)
 	}
 	if cfg == nil {
 		return payload, touched
@@ -1002,7 +994,7 @@ func PayloadRequestPath(opts cliproxyexecutor.Options) string {
 //
 //	"*-5" matches "gpt-5"
 //	"gpt-*" matches "gpt-5" and "gpt-4"
-//	"gemini-*-pro" matches "gemini-2.5-pro" and "gemini-3-pro".
+//	"claude-*-sonnet" matches "claude-3-7-sonnet".
 func matchModelPattern(pattern, model string) bool {
 	pattern = strings.TrimSpace(pattern)
 	model = strings.TrimSpace(model)

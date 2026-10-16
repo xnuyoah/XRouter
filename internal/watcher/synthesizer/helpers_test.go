@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher/diff"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher/diff"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 func TestNewStableIDGenerator(t *testing.T) {
@@ -28,10 +28,10 @@ func TestStableIDGenerator_Next(t *testing.T) {
 		wantPrefix string
 	}{
 		{
-			name:       "basic gemini apikey",
-			kind:       "gemini:apikey",
+			name:       "basic openai apikey",
+			kind:       "openai:apikey",
 			parts:      []string{"test-key", ""},
-			wantPrefix: "gemini:apikey:",
+			wantPrefix: "openai:apikey:",
 		},
 		{
 			name:       "claude with base url",
@@ -69,8 +69,8 @@ func TestStableIDGenerator_Stability(t *testing.T) {
 	gen1 := NewStableIDGenerator()
 	gen2 := NewStableIDGenerator()
 
-	id1, _ := gen1.Next("gemini:apikey", "test-key", "https://api.example.com")
-	id2, _ := gen2.Next("gemini:apikey", "test-key", "https://api.example.com")
+	id1, _ := gen1.Next("openai:apikey", "test-key", "https://api.example.com")
+	id2, _ := gen2.Next("openai:apikey", "test-key", "https://api.example.com")
 
 	if id1 != id2 {
 		t.Errorf("same inputs should produce same ID: got %q and %q", id1, id2)
@@ -80,8 +80,8 @@ func TestStableIDGenerator_Stability(t *testing.T) {
 func TestStableIDGenerator_CollisionHandling(t *testing.T) {
 	gen := NewStableIDGenerator()
 
-	id1, short1 := gen.Next("gemini:apikey", "same-key")
-	id2, short2 := gen.Next("gemini:apikey", "same-key")
+	id1, short1 := gen.Next("openai:apikey", "same-key")
+	id2, short2 := gen.Next("openai:apikey", "same-key")
 
 	if id1 == id2 {
 		t.Error("collision should be handled with suffix")
@@ -119,7 +119,7 @@ func TestApplyAuthExcludedModelsMeta(t *testing.T) {
 		{
 			name: "apikey with excluded models",
 			auth: &coreauth.Auth{
-				Provider:   "gemini",
+				Provider:   "openai",
 				Attributes: make(map[string]string),
 			},
 			cfg:      &config.Config{},
@@ -158,7 +158,7 @@ func TestApplyAuthExcludedModelsMeta(t *testing.T) {
 		{
 			name: "nil attributes initialized",
 			auth: &coreauth.Auth{
-				Provider:   "gemini",
+				Provider:   "openai",
 				Attributes: nil,
 			},
 			cfg:      &config.Config{},
@@ -170,7 +170,7 @@ func TestApplyAuthExcludedModelsMeta(t *testing.T) {
 		{
 			name: "apikey with duplicate excluded models",
 			auth: &coreauth.Auth{
-				Provider:   "gemini",
+				Provider:   "openai",
 				Attributes: make(map[string]string),
 			},
 			cfg:      &config.Config{},

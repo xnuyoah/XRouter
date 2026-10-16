@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executionregistry"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executionregistry"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 func TestServiceApplyCoreAuthAddOrUpdate_DeleteReAddDoesNotInheritStaleRuntimeState(t *testing.T) {
@@ -29,7 +29,7 @@ func TestServiceApplyCoreAuthAddOrUpdate_DeleteReAddDoesNotInheritStaleRuntimeSt
 
 	service.applyCoreAuthAddOrUpdate(context.Background(), &coreauth.Auth{
 		ID:               authID,
-		Provider:         "claude",
+		Provider:         "nvidia",
 		Status:           coreauth.StatusActive,
 		LastRefreshedAt:  lastRefreshedAt,
 		NextRefreshAfter: nextRefreshAfter,
@@ -48,7 +48,7 @@ func TestServiceApplyCoreAuthAddOrUpdate_DeleteReAddDoesNotInheritStaleRuntimeSt
 
 	service.applyCoreAuthAddOrUpdate(context.Background(), &coreauth.Auth{
 		ID:       authID,
-		Provider: "claude",
+		Provider: "nvidia",
 		Status:   coreauth.StatusActive,
 	})
 

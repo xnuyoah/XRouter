@@ -1,3 +1,3 @@
-module github.com/router-for-me/CLIProxyAPI/v7/examples/plugin/request-normalizer/go
+module github.com/xnuyoah/XRouter/v8/examples/plugin/request-normalizer/go
 
 go 1.26

@@ -13,7 +13,7 @@ import (
 
 // kimiSignatureCorpusPath locates the harvested Kimi signature corpus. The
 // corpus lives with the collection skill that produced it and is not tracked in
-// this repository, matching how the Grok and Gemini native corpora are handled:
+// this repository, matching how the Grok native corpus is handled:
 // tests that need real traffic skip when it is absent rather than committing
 // captured payloads.
 func kimiSignatureCorpusPath() (string, bool) {
@@ -239,61 +239,9 @@ func TestDetectSignatureProvider_KimiRunsAfterEnvelopeProbes(t *testing.T) {
 func TestInspectGrokEncryptedContent_RejectsKimiLengths(t *testing.T) {
 	for _, decodedLen := range []int{9709, 3255} {
 		sig := synthesizeKimiSignature(t, decodedLen, 11)
-		if IsValidGrokEncryptedContent(sig) {
+		if _, err := InspectGrokEncryptedContent(sig); err == nil {
 			t.Errorf("Kimi-length payload (%d bytes) accepted as Grok encrypted_content", decodedLen)
 		}
-	}
-}
-
-func TestSignatureProviderFromModelName_Kimi(t *testing.T) {
-	tests := []struct {
-		model string
-		want  SignatureProvider
-	}{
-		{"kimi-k3", SignatureProviderKimi},
-		{"kimi-k3-256k", SignatureProviderKimi},
-		{"kimi-k2.7-code-highspeed", SignatureProviderKimi},
-		{"k3", SignatureProviderKimi},
-		{"k2-thinking", SignatureProviderKimi},
-		{"moonshot-v1-128k", SignatureProviderKimi},
-		{"claude-opus-5", SignatureProviderClaude},
-		{"gemini-3.6-flash", SignatureProviderGemini},
-		{"gpt-5.6-sol", SignatureProviderGPT},
-	}
-	for _, tc := range tests {
-		t.Run(tc.model, func(t *testing.T) {
-			if got := SignatureProviderFromModelName(tc.model); got != tc.want {
-				t.Errorf("SignatureProviderFromModelName(%q) = %q, want %q", tc.model, got, tc.want)
-			}
-		})
-	}
-}
-
-// TestDecideSignatureCompatibility_KimiDropsSignatureNotBlock encodes the
-// measured upstream behaviour: Kimi returns 200 for a mutated, truncated,
-// non-base64 or entirely absent thinking signature, so a foreign signature costs
-// the field rather than the reasoning text.
-func TestDecideSignatureCompatibility_KimiDropsSignatureNotBlock(t *testing.T) {
-	decision := DecideSignatureCompatibility(SignatureProviderKimi, observedFable5Sample, SignatureBlockKindClaudeThinking)
-	if decision.Compatible {
-		t.Fatalf("Claude signature reported compatible with a Kimi target")
-	}
-	if decision.Action != SignatureActionDropSignature {
-		t.Errorf("Action = %q, want %q", decision.Action, SignatureActionDropSignature)
-	}
-}
-
-func TestDecideSignatureCompatibility_KimiPreservesNativeSignature(t *testing.T) {
-	native := synthesizeKimiSignature(t, 9709, 13)
-	decision := DecideSignatureCompatibility(SignatureProviderKimi, native, SignatureBlockKindClaudeThinking)
-	if !decision.Compatible {
-		t.Fatalf("Kimi-shaped signature reported incompatible with a Kimi target: %s", decision.Reason)
-	}
-	if decision.Action != SignatureActionPreserve {
-		t.Errorf("Action = %q, want %q", decision.Action, SignatureActionPreserve)
-	}
-	if decision.NormalizedSignature != native {
-		t.Errorf("NormalizedSignature was rewritten for a Kimi signature")
 	}
 }
 

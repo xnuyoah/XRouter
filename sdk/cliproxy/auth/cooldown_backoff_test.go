@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 func withQuotaCooldownEnabled(t *testing.T) {
@@ -219,7 +219,7 @@ func TestSchedulerPromotesUnknownFailureAfterRetryDeadline(t *testing.T) {
 	t.Cleanup(func() { transientErrorCooldownSeconds.Store(previousTransient) })
 
 	const (
-		provider = "gemini"
+		provider = "openai"
 		model    = "scheduler-unknown-recovery-model"
 		authID   = "scheduler-unknown-recovery-auth"
 	)

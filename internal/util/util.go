@@ -1,4 +1,4 @@
-// Package util provides utility functions for the CLI Proxy API server.
+// Package util provides utility functions for the XRouter server.
 // It includes helper functions for logging configuration, file system operations,
 // and other common utilities used throughout the application.
 package util
@@ -11,13 +11,14 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 var functionNameSanitizer = regexp.MustCompile(`[^a-zA-Z0-9_.:-]`)
 
-// SanitizeFunctionName ensures a function name matches the requirements for Gemini/Vertex AI.
+// SanitizeFunctionName ensures a function name matches the character-set and length
+// requirements of the providers that expose tools through the OpenAI Responses tool shim.
 // It replaces invalid characters with underscores, ensures it starts with a letter or underscore,
 // and truncates it to 64 characters if necessary.
 // Regex Rule: [^a-zA-Z0-9_.:-] replaced with _.
@@ -73,17 +74,28 @@ func SetLogLevel(cfg *config.Config) {
 
 // ResolveAuthDir normalizes the auth directory path for consistent reuse throughout the app.
 // It expands a leading tilde (~) to the user's home directory and returns a cleaned path.
-// If authDir is empty, it defaults to ~/.cli-proxy-api.
+// If authDir is empty, it defaults to ~/.xrouter; a legacy ~/.cli-proxy-api directory,
+// when present, only triggers a migration hint.
 func ResolveAuthDir(authDir string) (string, error) {
 	if authDir == "" {
 		authDir = config.DefaultAuthDir
 	}
-	if strings.HasPrefix(authDir, "~") {
+	resolved, err := expandTilde(authDir)
+	if err != nil {
+		return "", err
+	}
+	warnLegacyAuthDir(resolved)
+	return resolved, nil
+}
+
+// expandTilde expands a leading tilde (~) to the user's home directory and cleans the path.
+func expandTilde(path string) (string, error) {
+	if strings.HasPrefix(path, "~") {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return "", fmt.Errorf("resolve auth dir: %w", err)
 		}
-		remainder := strings.TrimPrefix(authDir, "~")
+		remainder := strings.TrimPrefix(path, "~")
 		remainder = strings.TrimLeft(remainder, "/\\")
 		if remainder == "" {
 			return filepath.Clean(home), nil
@@ -91,7 +103,27 @@ func ResolveAuthDir(authDir string) (string, error) {
 		normalized := strings.ReplaceAll(remainder, "\\", "/")
 		return filepath.Clean(filepath.Join(home, filepath.FromSlash(normalized))), nil
 	}
-	return filepath.Clean(authDir), nil
+	return filepath.Clean(path), nil
+}
+
+// warnLegacyAuthDir logs a migration hint when the resolved directory is the new default
+// and the previous default ~/.cli-proxy-api still exists without the new one.
+func warnLegacyAuthDir(resolved string) {
+	defaultPath, err := expandTilde(config.DefaultAuthDir)
+	if err != nil || resolved != defaultPath {
+		return
+	}
+	legacyPath, err := expandTilde("~/.cli-proxy-api")
+	if err != nil {
+		return
+	}
+	if _, errStat := os.Stat(legacyPath); errStat != nil {
+		return
+	}
+	if _, errStat := os.Stat(resolved); errStat == nil {
+		return
+	}
+	log.Warnf("legacy data directory %s found; XRouter now stores auth files in %s. Move existing files or set auth-dir explicitly to keep using the old path.", legacyPath, resolved)
 }
 
 // CountAuthFiles returns the number of auth records available through the provided Store.

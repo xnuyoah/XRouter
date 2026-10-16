@@ -4,18 +4,18 @@ import (
 	"context"
 	"testing"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 func TestLookupAPIKeyUpstreamModel(t *testing.T) {
 	cfg := &internalconfig.Config{
-		GeminiKey: []internalconfig.GeminiKey{
+		OpenAIKey: []internalconfig.OpenAIKey{
 			{
 				APIKey:  "k",
 				BaseURL: "https://example.com",
-				Models: []internalconfig.GeminiModel{
-					{Name: "gemini-2.5-pro-exp-03-25", Alias: "g25p"},
-					{Name: "gemini-2.5-flash(low)", Alias: "g25f"},
+				Models: []internalconfig.NativeAPIModel{
+					{Name: "gpt-5.5", Alias: "g5p"},
+					{Name: "gpt-5-mini(low)", Alias: "g5m"},
 				},
 			},
 		},
@@ -25,7 +25,7 @@ func TestLookupAPIKeyUpstreamModel(t *testing.T) {
 	mgr.SetConfig(cfg)
 
 	ctx := context.Background()
-	_, _ = mgr.Register(ctx, &Auth{ID: "a1", Provider: "gemini", Attributes: map[string]string{"api_key": "k", "base_url": "https://example.com"}})
+	_, _ = mgr.Register(ctx, &Auth{ID: "a1", Provider: "openai", Attributes: map[string]string{"api_key": "k", "base_url": "https://example.com"}})
 
 	tests := []struct {
 		name   string
@@ -34,25 +34,25 @@ func TestLookupAPIKeyUpstreamModel(t *testing.T) {
 		want   string
 	}{
 		// Fast path + suffix preservation
-		{"alias with suffix", "a1", "g25p(8192)", "gemini-2.5-pro-exp-03-25(8192)"},
-		{"alias without suffix", "a1", "g25p", "gemini-2.5-pro-exp-03-25"},
+		{"alias with suffix", "a1", "g5p(8192)", "gpt-5.5(8192)"},
+		{"alias without suffix", "a1", "g5p", "gpt-5.5"},
 
 		// Config suffix takes priority
-		{"config suffix priority", "a1", "g25f(high)", "gemini-2.5-flash(low)"},
-		{"config suffix no user suffix", "a1", "g25f", "gemini-2.5-flash(low)"},
+		{"config suffix priority", "a1", "g5m(high)", "gpt-5-mini(low)"},
+		{"config suffix no user suffix", "a1", "g5m", "gpt-5-mini(low)"},
 
 		// Case insensitive
-		{"uppercase alias", "a1", "G25P", "gemini-2.5-pro-exp-03-25"},
-		{"mixed case with suffix", "a1", "G25p(4096)", "gemini-2.5-pro-exp-03-25(4096)"},
+		{"uppercase alias", "a1", "G5P", "gpt-5.5"},
+		{"mixed case with suffix", "a1", "G5p(4096)", "gpt-5.5(4096)"},
 
 		// Direct name lookup
-		{"upstream name direct", "a1", "gemini-2.5-pro-exp-03-25", "gemini-2.5-pro-exp-03-25"},
-		{"upstream name with suffix", "a1", "gemini-2.5-pro-exp-03-25(8192)", "gemini-2.5-pro-exp-03-25(8192)"},
+		{"upstream name direct", "a1", "gpt-5.5", "gpt-5.5"},
+		{"upstream name with suffix", "a1", "gpt-5.5(8192)", "gpt-5.5(8192)"},
 
 		// Cache miss scenarios
-		{"non-existent auth", "non-existent", "g25p", ""},
+		{"non-existent auth", "non-existent", "g5p", ""},
 		{"unknown alias", "a1", "unknown-alias", ""},
-		{"empty auth ID", "", "g25p", ""},
+		{"empty auth ID", "", "g5p", ""},
 		{"empty model", "a1", "", ""},
 	}
 
@@ -66,33 +66,12 @@ func TestLookupAPIKeyUpstreamModel(t *testing.T) {
 	}
 }
 
-func TestLookupAPIKeyUpstreamModel_InteractionsKey(t *testing.T) {
-	cfg := &internalconfig.Config{
-		InteractionsKey: []internalconfig.GeminiKey{{
-			APIKey:  "interactions-key",
-			BaseURL: "https://interactions.example.com",
-			Models:  []internalconfig.GeminiModel{{Name: "gemini-2.5-flash", Alias: "native-flash"}},
-		}},
-	}
-
-	mgr := NewManager(nil, nil, nil)
-	mgr.SetConfig(cfg)
-
-	ctx := context.Background()
-	_, _ = mgr.Register(ctx, &Auth{ID: "interactions-auth", Provider: "gemini-interactions", Attributes: map[string]string{"api_key": "interactions-key", "base_url": "https://interactions.example.com"}})
-
-	resolved := mgr.lookupAPIKeyUpstreamModel("interactions-auth", "native-flash")
-	if resolved != "gemini-2.5-flash" {
-		t.Fatalf("lookupAPIKeyUpstreamModel() = %q, want gemini-2.5-flash", resolved)
-	}
-}
-
 func TestAPIKeyModelAlias_ConfigHotReload(t *testing.T) {
 	cfg := &internalconfig.Config{
-		GeminiKey: []internalconfig.GeminiKey{
+		OpenAIKey: []internalconfig.OpenAIKey{
 			{
 				APIKey: "k",
-				Models: []internalconfig.GeminiModel{{Name: "gemini-2.5-pro-exp-03-25", Alias: "g25p"}},
+				Models: []internalconfig.NativeAPIModel{{Name: "gpt-5.5", Alias: "g5p"}},
 			},
 		},
 	}
@@ -101,53 +80,50 @@ func TestAPIKeyModelAlias_ConfigHotReload(t *testing.T) {
 	mgr.SetConfig(cfg)
 
 	ctx := context.Background()
-	_, _ = mgr.Register(ctx, &Auth{ID: "a1", Provider: "gemini", Attributes: map[string]string{"api_key": "k"}})
+	_, _ = mgr.Register(ctx, &Auth{ID: "a1", Provider: "openai", Attributes: map[string]string{"api_key": "k"}})
 
 	// Initial alias
-	if resolved := mgr.lookupAPIKeyUpstreamModel("a1", "g25p"); resolved != "gemini-2.5-pro-exp-03-25" {
-		t.Fatalf("before reload: got %q, want %q", resolved, "gemini-2.5-pro-exp-03-25")
+	if resolved := mgr.lookupAPIKeyUpstreamModel("a1", "g5p"); resolved != "gpt-5.5" {
+		t.Fatalf("before reload: got %q, want %q", resolved, "gpt-5.5")
 	}
 
 	// Hot reload with new alias
 	mgr.SetConfig(&internalconfig.Config{
-		GeminiKey: []internalconfig.GeminiKey{
+		OpenAIKey: []internalconfig.OpenAIKey{
 			{
 				APIKey: "k",
-				Models: []internalconfig.GeminiModel{{Name: "gemini-2.5-flash", Alias: "g25p"}},
+				Models: []internalconfig.NativeAPIModel{{Name: "gpt-5-mini", Alias: "g5p"}},
 			},
 		},
 	})
 
 	// New alias should take effect
-	if resolved := mgr.lookupAPIKeyUpstreamModel("a1", "g25p"); resolved != "gemini-2.5-flash" {
-		t.Fatalf("after reload: got %q, want %q", resolved, "gemini-2.5-flash")
+	if resolved := mgr.lookupAPIKeyUpstreamModel("a1", "g5p"); resolved != "gpt-5-mini" {
+		t.Fatalf("after reload: got %q, want %q", resolved, "gpt-5-mini")
 	}
 }
 
 func TestAPIKeyModelAlias_MultipleProviders(t *testing.T) {
 	cfg := &internalconfig.Config{
-		GeminiKey: []internalconfig.GeminiKey{{APIKey: "gemini-key", Models: []internalconfig.GeminiModel{{Name: "gemini-2.5-pro", Alias: "gp"}}}},
-		ClaudeKey: []internalconfig.ClaudeKey{{APIKey: "claude-key", Models: []internalconfig.ClaudeModel{{Name: "claude-sonnet-4", Alias: "cs4"}}}},
-		CodexKey:  []internalconfig.CodexKey{{APIKey: "codex-key", Models: []internalconfig.CodexModel{{Name: "o3", Alias: "o"}}}},
-		XAIKey:    []internalconfig.XAIKey{{APIKey: "xai-key", Models: []internalconfig.XAIModel{{Name: "grok-4.5", Alias: "grok-latest"}}}},
+		DeepseekKey: []internalconfig.DeepseekKey{{APIKey: "deepseek-key", Models: []internalconfig.NativeAPIModel{{Name: "deepseek-chat", Alias: "ds-chat"}}}},
+		OpenAIKey:   []internalconfig.OpenAIKey{{APIKey: "openai-key", Models: []internalconfig.NativeAPIModel{{Name: "gpt-5.5", Alias: "gpt-latest"}}}},
+		NvidiaKey:   []internalconfig.NvidiaKey{{APIKey: "nvidia-key", Models: []internalconfig.NativeAPIModel{{Name: "llama-3.3", Alias: "llama-latest"}}}},
 	}
 
 	mgr := NewManager(nil, nil, nil)
 	mgr.SetConfig(cfg)
 
 	ctx := context.Background()
-	_, _ = mgr.Register(ctx, &Auth{ID: "gemini-auth", Provider: "gemini", Attributes: map[string]string{"api_key": "gemini-key"}})
-	_, _ = mgr.Register(ctx, &Auth{ID: "claude-auth", Provider: "claude", Attributes: map[string]string{"api_key": "claude-key"}})
-	_, _ = mgr.Register(ctx, &Auth{ID: "codex-auth", Provider: "codex", Attributes: map[string]string{"api_key": "codex-key"}})
-	_, _ = mgr.Register(ctx, &Auth{ID: "xai-auth", Provider: "xai", Attributes: map[string]string{"api_key": "xai-key"}})
+	_, _ = mgr.Register(ctx, &Auth{ID: "deepseek-auth", Provider: "deepseek", Attributes: map[string]string{"api_key": "deepseek-key"}})
+	_, _ = mgr.Register(ctx, &Auth{ID: "openai-auth", Provider: "openai", Attributes: map[string]string{"api_key": "openai-key"}})
+	_, _ = mgr.Register(ctx, &Auth{ID: "nvidia-auth", Provider: "nvidia", Attributes: map[string]string{"api_key": "nvidia-key"}})
 
 	tests := []struct {
 		authID, input, want string
 	}{
-		{"gemini-auth", "gp", "gemini-2.5-pro"},
-		{"claude-auth", "cs4", "claude-sonnet-4"},
-		{"codex-auth", "o", "o3"},
-		{"xai-auth", "grok-latest", "grok-4.5"},
+		{"deepseek-auth", "ds-chat", "deepseek-chat"},
+		{"openai-auth", "gpt-latest", "gpt-5.5"},
+		{"nvidia-auth", "llama-latest", "llama-3.3"},
 	}
 
 	for _, tt := range tests {
@@ -159,8 +135,8 @@ func TestAPIKeyModelAlias_MultipleProviders(t *testing.T) {
 
 func TestApplyAPIKeyModelAlias(t *testing.T) {
 	cfg := &internalconfig.Config{
-		GeminiKey: []internalconfig.GeminiKey{
-			{APIKey: "k", Models: []internalconfig.GeminiModel{{Name: "gemini-2.5-pro-exp-03-25", Alias: "g25p"}}},
+		OpenAIKey: []internalconfig.OpenAIKey{
+			{APIKey: "k", Models: []internalconfig.NativeAPIModel{{Name: "gpt-5.5", Alias: "g5p"}}},
 		},
 	}
 
@@ -168,7 +144,7 @@ func TestApplyAPIKeyModelAlias(t *testing.T) {
 	mgr.SetConfig(cfg)
 
 	ctx := context.Background()
-	apiKeyAuth := &Auth{ID: "a1", Provider: "gemini", Attributes: map[string]string{"api_key": "k"}}
+	apiKeyAuth := &Auth{ID: "a1", Provider: "openai", Attributes: map[string]string{"api_key": "k"}}
 	oauthAuth := &Auth{ID: "oauth-auth", Provider: "claude", Attributes: map[string]string{"auth_kind": "oauth"}}
 	_, _ = mgr.Register(ctx, apiKeyAuth)
 
@@ -181,8 +157,8 @@ func TestApplyAPIKeyModelAlias(t *testing.T) {
 		{
 			name:       "api_key auth with alias",
 			auth:       apiKeyAuth,
-			inputModel: "g25p(8192)",
-			wantModel:  "gemini-2.5-pro-exp-03-25(8192)",
+			inputModel: "g5p(8192)",
+			wantModel:  "gpt-5.5(8192)",
 		},
 		{
 			name:       "oauth auth passthrough",
@@ -205,11 +181,11 @@ func TestApplyAPIKeyModelAlias(t *testing.T) {
 
 func TestResolveAPIKeyModelAliasWithResult_ForceMapping(t *testing.T) {
 	cfg := &internalconfig.Config{
-		ClaudeKey: []internalconfig.ClaudeKey{{
-			APIKey: "claude-key",
-			Models: []internalconfig.ClaudeModel{{
+		DeepseekKey: []internalconfig.DeepseekKey{{
+			APIKey: "deepseek-key",
+			Models: []internalconfig.NativeAPIModel{{
 				Name:         "glm-5.2",
-				Alias:        "claude-sonnet-latest",
+				Alias:        "df-chat-latest",
 				ForceMapping: true,
 			}},
 		}},
@@ -219,13 +195,13 @@ func TestResolveAPIKeyModelAliasWithResult_ForceMapping(t *testing.T) {
 	mgr.SetConfig(cfg)
 
 	ctx := context.Background()
-	auth := &Auth{ID: "claude-auth", Provider: "claude", Attributes: map[string]string{"api_key": "claude-key"}}
+	auth := &Auth{ID: "deepseek-auth", Provider: "deepseek", Attributes: map[string]string{"api_key": "deepseek-key"}}
 	if _, err := mgr.Register(ctx, auth); err != nil {
 		t.Fatalf("register auth: %v", err)
 	}
 
-	result := mgr.resolveAPIKeyModelAliasWithResult(auth, "claude-sonnet-latest")
-	if result.UpstreamModel != "glm-5.2" || !result.ForceMapping || result.OriginalAlias != "claude-sonnet-latest" {
+	result := mgr.resolveAPIKeyModelAliasWithResult(auth, "df-chat-latest")
+	if result.UpstreamModel != "glm-5.2" || !result.ForceMapping || result.OriginalAlias != "df-chat-latest" {
 		t.Fatalf("resolveAPIKeyModelAliasWithResult() = %+v, want upstream glm-5.2 with force mapping", result)
 	}
 
@@ -237,11 +213,11 @@ func TestResolveAPIKeyModelAliasWithResult_ForceMapping(t *testing.T) {
 
 func TestResolveAPIKeyModelAliasWithResult_SameBasePreservesSuffix(t *testing.T) {
 	cfg := &internalconfig.Config{
-		GeminiKey: []internalconfig.GeminiKey{{
+		OpenAIKey: []internalconfig.OpenAIKey{{
 			APIKey: "k",
-			Models: []internalconfig.GeminiModel{{
-				Name:         "gemini-2.5-pro",
-				Alias:        "gemini-2.5-pro(8192)",
+			Models: []internalconfig.NativeAPIModel{{
+				Name:         "gpt-5.5",
+				Alias:        "gpt-5.5(8192)",
 				ForceMapping: true,
 			}},
 		}},
@@ -251,24 +227,24 @@ func TestResolveAPIKeyModelAliasWithResult_SameBasePreservesSuffix(t *testing.T)
 	mgr.SetConfig(cfg)
 
 	ctx := context.Background()
-	auth := &Auth{ID: "gemini-auth", Provider: "gemini", Attributes: map[string]string{"api_key": "k"}}
+	auth := &Auth{ID: "openai-auth", Provider: "openai", Attributes: map[string]string{"api_key": "k"}}
 	if _, err := mgr.Register(ctx, auth); err != nil {
 		t.Fatalf("register auth: %v", err)
 	}
 
-	result := mgr.resolveAPIKeyModelAliasWithResult(auth, "gemini-2.5-pro(8192)")
-	if result.UpstreamModel != "gemini-2.5-pro(8192)" || !result.ForceMapping || result.OriginalAlias != "gemini-2.5-pro(8192)" {
+	result := mgr.resolveAPIKeyModelAliasWithResult(auth, "gpt-5.5(8192)")
+	if result.UpstreamModel != "gpt-5.5(8192)" || !result.ForceMapping || result.OriginalAlias != "gpt-5.5(8192)" {
 		t.Fatalf("resolveAPIKeyModelAliasWithResult() = %+v, want same-base suffix preserved", result)
 	}
 }
 
 func TestResolveAPIKeyModelAliasWithResult_ForceMappingUsesConfigAliasNotRequestSuffix(t *testing.T) {
 	cfg := &internalconfig.Config{
-		CodexKey: []internalconfig.CodexKey{{
-			APIKey: "codex-key",
-			Models: []internalconfig.CodexModel{{
+		OpenAIKey: []internalconfig.OpenAIKey{{
+			APIKey: "openai-key",
+			Models: []internalconfig.NativeAPIModel{{
 				Name:         "gpt-5.5",
-				Alias:        "claude-sonnet-4-5",
+				Alias:        "df-chat-latest",
 				ForceMapping: true,
 			}},
 		}},
@@ -278,82 +254,16 @@ func TestResolveAPIKeyModelAliasWithResult_ForceMappingUsesConfigAliasNotRequest
 	mgr.SetConfig(cfg)
 
 	ctx := context.Background()
-	auth := &Auth{ID: "codex-auth", Provider: "codex", Attributes: map[string]string{"api_key": "codex-key"}}
+	auth := &Auth{ID: "openai-auth", Provider: "openai", Attributes: map[string]string{"api_key": "openai-key"}}
 	if _, err := mgr.Register(ctx, auth); err != nil {
 		t.Fatalf("register auth: %v", err)
 	}
 
-	result := mgr.resolveAPIKeyModelAliasWithResult(auth, "claude-sonnet-4-5(high)")
+	result := mgr.resolveAPIKeyModelAliasWithResult(auth, "df-chat-latest(high)")
 	if result.UpstreamModel != "gpt-5.5(high)" {
 		t.Fatalf("upstream = %q want gpt-5.5(high)", result.UpstreamModel)
 	}
-	if result.OriginalAlias != "claude-sonnet-4-5" {
-		t.Fatalf("OriginalAlias = %q want claude-sonnet-4-5", result.OriginalAlias)
-	}
-}
-
-func TestLookupAPIKeyUpstreamModel_MetaKey(t *testing.T) {
-	cfg := &internalconfig.Config{
-		MetaKey: []internalconfig.MetaKey{
-			{
-				APIKey:  "meta-key",
-				BaseURL: "https://api.meta.ai/v1",
-				Models: []internalconfig.CodexModel{
-					{Name: "muse-spark-1.3", Alias: "muse-latest"},
-				},
-			},
-		},
-	}
-
-	mgr := NewManager(nil, nil, nil)
-	mgr.SetConfig(cfg)
-
-	ctx := context.Background()
-	auth := &Auth{
-		ID:       "meta-auth-1",
-		Provider: "meta",
-		Attributes: map[string]string{
-			"api_key":   "meta-key",
-			"base_url":  "https://api.meta.ai/v1",
-			"auth_kind": "apikey",
-		},
-	}
-	if _, err := mgr.Register(ctx, auth); err != nil {
-		t.Fatalf("register auth: %v", err)
-	}
-
-	// 1. Fast path: lookup per-auth mapping table compiled during register.
-	resolved := mgr.lookupAPIKeyUpstreamModel("meta-auth-1", "muse-latest")
-	if resolved != "muse-spark-1.3" {
-		t.Fatalf("lookupAPIKeyUpstreamModel() = %q, want muse-spark-1.3", resolved)
-	}
-
-	// 2. Slow path: directly call mgr.applyAPIKeyModelAliasWithRouting with an empty alias table to exercise config resolution fallback.
-	slowRouting := &apiKeyModelRoutingSnapshot{
-		config:  cfg,
-		aliases: make(apiKeyModelAliasTable),
-	}
-	slowResolved := mgr.applyAPIKeyModelAliasWithRouting(slowRouting, auth, "muse-latest")
-	if slowResolved != "muse-spark-1.3" {
-		t.Fatalf("applyAPIKeyModelAliasWithRouting(slow) = %q, want muse-spark-1.3", slowResolved)
-	}
-
-	// 3. Model alias result with force mapping / alias metadata
-	aliasResult := mgr.resolveAPIKeyModelAliasWithResult(auth, "muse-latest")
-	if aliasResult.UpstreamModel != "muse-spark-1.3" {
-		t.Fatalf("resolveAPIKeyModelAliasWithResult() upstream = %q, want muse-spark-1.3", aliasResult.UpstreamModel)
-	}
-
-	// 4. Configured alias entries helper
-	entries := configuredModelAliasEntries(cfg, auth)
-	found := false
-	for _, e := range entries {
-		if e.GetAlias() == "muse-latest" && e.GetName() == "muse-spark-1.3" {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("configuredModelAliasEntries did not contain muse-latest -> muse-spark-1.3: %+v", entries)
+	if result.OriginalAlias != "df-chat-latest" {
+		t.Fatalf("OriginalAlias = %q want df-chat-latest", result.OriginalAlias)
 	}
 }

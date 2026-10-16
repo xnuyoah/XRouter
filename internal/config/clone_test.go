@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
 	"gopkg.in/yaml.v3"
 )
 
@@ -12,42 +12,6 @@ func TestCloneForRuntimeNil(t *testing.T) {
 	var cfg *Config
 	if got := cfg.CloneForRuntime(); got != nil {
 		t.Fatalf("CloneForRuntime() = %#v, want nil", got)
-	}
-}
-
-func TestParseConfigBytes_AntigravitySensitiveWords(t *testing.T) {
-	cfg, errParse := ParseConfigBytes([]byte(`antigravity:
-  sensitive-words:
-    - "API"
-    - "proxy"
-`))
-	if errParse != nil {
-		t.Fatalf("ParseConfigBytes() error = %v", errParse)
-	}
-	want := []string{"API", "proxy"}
-	if !reflect.DeepEqual(cfg.Antigravity.SensitiveWords, want) {
-		t.Fatalf("Antigravity.SensitiveWords = %#v, want %#v", cfg.Antigravity.SensitiveWords, want)
-	}
-}
-
-func TestParseConfigBytes_AntigravityConnectionPool(t *testing.T) {
-	cfg, errParse := ParseConfigBytes([]byte(`antigravity:
-  connection-pool:
-    enabled: false
-    idle-conn-timeout: "15s"
-    max-idle-conns-per-host: 4
-`))
-	if errParse != nil {
-		t.Fatalf("ParseConfigBytes() error = %v", errParse)
-	}
-	if cfg.Antigravity.ConnectionPool.Enabled == nil || *cfg.Antigravity.ConnectionPool.Enabled != false {
-		t.Fatalf("Enabled = %v, want false", cfg.Antigravity.ConnectionPool.Enabled)
-	}
-	if cfg.Antigravity.ConnectionPool.IdleConnTimeout != "15s" {
-		t.Fatalf("IdleConnTimeout = %q, want 15s", cfg.Antigravity.ConnectionPool.IdleConnTimeout)
-	}
-	if cfg.Antigravity.ConnectionPool.MaxIdleConnsPerHost == nil || *cfg.Antigravity.ConnectionPool.MaxIdleConnsPerHost != 4 {
-		t.Fatalf("MaxIdleConnsPerHost = %v, want 4", cfg.Antigravity.ConnectionPool.MaxIdleConnsPerHost)
 	}
 }
 
@@ -123,10 +87,7 @@ func TestCloneForRuntimeDoesNotShareReferenceFields(t *testing.T) {
 }
 
 func sampleCloneRuntimeConfig() *Config {
-	cacheStrict := true
-	bypassStrict := false
 	pluginEnabled := false
-	cacheUserID := true
 
 	return &Config{
 		SDKConfig: SDKConfig{
@@ -162,29 +123,17 @@ func sampleCloneRuntimeConfig() *Config {
 				},
 			},
 		},
-		AntigravitySignatureCacheEnabled: &cacheStrict,
-		AntigravitySignatureBypassStrict: &bypassStrict,
-		GeminiKey: []GeminiKey{{
-			APIKey:         "gemini-key",
-			Models:         []GeminiModel{{Name: "gemini-upstream", Alias: "gemini-upstream-alias"}},
-			Headers:        map[string]string{"X-Gemini": "one"},
-			ExcludedModels: []string{"gemini-hidden"},
+		OpenAIKey: []OpenAIKey{{
+			APIKey:         "openai-key",
+			Models:         []NativeAPIModel{{Name: "openai-upstream", Alias: "openai-client"}},
+			Headers:        map[string]string{"X-OpenAI": "one"},
+			ExcludedModels: []string{"openai-hidden-key"},
 		}},
-		CodexKey: []CodexKey{{
-			APIKey:         "codex-key",
-			Models:         []CodexModel{{Name: "codex-upstream", Alias: "codex-client"}},
-			Headers:        map[string]string{"X-Codex": "one"},
-			ExcludedModels: []string{"codex-hidden-key"},
-		}},
-		ClaudeKey: []ClaudeKey{{
-			APIKey:         "claude-key",
-			Models:         []ClaudeModel{{Name: "claude-upstream", Alias: "claude-client"}},
-			Headers:        map[string]string{"X-Claude": "one"},
-			ExcludedModels: []string{"claude-hidden"},
-			Cloak: &CloakConfig{
-				SensitiveWords: []string{"secret"},
-				CacheUserID:    &cacheUserID,
-			},
+		DeepseekKey: []DeepseekKey{{
+			APIKey:         "deepseek-key",
+			Models:         []NativeAPIModel{{Name: "deepseek-upstream", Alias: "deepseek-client"}},
+			Headers:        map[string]string{"X-Deepseek": "one"},
+			ExcludedModels: []string{"deepseek-hidden"},
 		}},
 		OpenAICompatibility: []OpenAICompatibility{{
 			Name:          "compat",
@@ -195,12 +144,6 @@ func sampleCloneRuntimeConfig() *Config {
 				Thinking: &registry.ThinkingSupport{Levels: []string{"low", "high"}},
 			}},
 			Headers: map[string]string{"X-Compat": "one"},
-		}},
-		VertexCompatAPIKey: []VertexCompatKey{{
-			APIKey:         "vertex-key",
-			Headers:        map[string]string{"X-Vertex": "one"},
-			Models:         []VertexCompatModel{{Name: "vertex-upstream", Alias: "vertex-client"}},
-			ExcludedModels: []string{"vertex-hidden"},
 		}},
 		OAuthExcludedModels: map[string][]string{
 			"codex": {"hidden-model"},

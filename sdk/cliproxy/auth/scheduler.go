@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 // schedulerStrategy identifies which built-in routing semantics the scheduler should apply.
@@ -430,7 +430,7 @@ func (s *authScheduler) pickSingleWithStrategy(ctx context.Context, provider, mo
 
 func providerPrefersWebsocketTransport(providerKey string) bool {
 	switch strings.ToLower(strings.TrimSpace(providerKey)) {
-	case "codex", "xai":
+	case "codex":
 		return true
 	default:
 		return false

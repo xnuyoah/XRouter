@@ -3,9 +3,9 @@ package helps
 import (
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 // ShouldUseMaxCompletionTokensForModel reports whether the resolved model under an

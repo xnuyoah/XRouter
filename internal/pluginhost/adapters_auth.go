@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	sdkaccess "github.com/router-for-me/CLIProxyAPI/v8/sdk/access"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	sdkaccess "github.com/xnuyoah/XRouter/v8/sdk/access"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 func (h *Host) RegisterFrontendAuthProviders() {

@@ -9,31 +9,31 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/redisqueue"
-	runtimeexecutor "github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor"
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/redisqueue"
+	runtimeexecutor "github.com/xnuyoah/XRouter/v8/internal/runtime/executor"
+	cliproxyauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
-func TestGeminiExecutorRecordsSuccessfulZeroUsageInQueue(t *testing.T) {
-	model := fmt.Sprintf("gemini-2.5-flash-zero-usage-%d", time.Now().UnixNano())
+func TestNativeAPIExecutorRecordsSuccessfulZeroUsageInQueue(t *testing.T) {
+	model := fmt.Sprintf("gpt-5.6-luna-zero-usage-%d", time.Now().UnixNano())
 	source := fmt.Sprintf("zero-usage-%d@example.com", time.Now().UnixNano())
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		wantPath := "/v1beta/models/" + model + ":generateContent"
+		wantPath := "/chat/completions"
 		if r.URL.Path != wantPath {
 			t.Fatalf("path = %q, want %q", r.URL.Path, wantPath)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"candidates":[{"content":{"role":"model","parts":[{"text":"ok"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":0,"candidatesTokenCount":0,"totalTokenCount":0}}`))
+		_, _ = w.Write([]byte(`{"id":"chatcmpl-1","object":"chat.completion","model":"` + model + `","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}`))
 	}))
 	defer server.Close()
 
-	executor := runtimeexecutor.NewGeminiExecutor(&config.Config{})
+	executor := runtimeexecutor.NewOpenAIExecutor(&config.Config{})
 	auth := &cliproxyauth.Auth{
-		Provider: "gemini",
+		Provider: "openai",
 		Attributes: map[string]string{
 			"api_key":  "test-upstream-key",
 			"base_url": server.URL,
@@ -56,16 +56,16 @@ func TestGeminiExecutorRecordsSuccessfulZeroUsageInQueue(t *testing.T) {
 
 	_, err := executor.Execute(context.Background(), auth, cliproxyexecutor.Request{
 		Model:   model,
-		Payload: []byte(`{"contents":[{"role":"user","parts":[{"text":"hi"}]}]}`),
+		Payload: []byte(`{"messages":[{"role":"user","content":"hi"}]}`),
 	}, cliproxyexecutor.Options{
-		SourceFormat:    sdktranslator.FormatGemini,
-		OriginalRequest: []byte(`{"contents":[{"role":"user","parts":[{"text":"hi"}]}]}`),
+		SourceFormat:    sdktranslator.FormatOpenAI,
+		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"hi"}]}`),
 	})
 	if err != nil {
 		t.Fatalf("Execute error: %v", err)
 	}
 
-	waitForQueuedUsageModelTotalTokens(t, "gemini", model, 0)
+	waitForQueuedUsageModelTotalTokens(t, "openai", model, 0)
 }
 
 func waitForQueuedUsageModelTotalTokens(t *testing.T, wantProvider, wantModel string, wantTokens int64) {

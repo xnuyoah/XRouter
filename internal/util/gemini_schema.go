@@ -1,4 +1,4 @@
-// Package util provides utility functions for the CLI Proxy API server.
+// Package util provides utility functions for the XRouter server.
 package util
 
 import (
@@ -43,75 +43,6 @@ type jsonSchemaCleanOptions struct {
 	preserveAdditionalPropertiesFalse bool
 	preserveAllAdditionalProperties   bool
 	preserveStandardConstraints       bool
-}
-
-// CleanJSONSchemaForAntigravity transforms a tool schema to be compatible with Antigravity API.
-// It handles unsupported keywords, type flattening, and schema simplification while preserving
-// semantic information as description hints and adding placeholders required by VALIDATED mode.
-func CleanJSONSchemaForAntigravity(jsonStr string) string {
-	return CleanJSONSchemaForAntigravityTool(jsonStr, true)
-}
-
-// CleanJSONSchemaForAntigravityTool transforms an Antigravity function schema. The private
-// backend accepts enum members only as strings, but the declared type still controls the JSON
-// type of generated function arguments, so numeric and boolean types must not be rewritten.
-// requirePlaceholder is used only for Claude VALIDATED mode.
-func CleanJSONSchemaForAntigravityTool(jsonStr string, requirePlaceholder bool) string {
-	return cleanJSONSchemaForAntigravityTool(jsonStr, requirePlaceholder, false)
-}
-
-// CleanJSONSchemaForAntigravityClaudeTool is the Antigravity tool cleaner for Claude
-// models. It applies the same Antigravity schema cleanup, but flattens multi-branch
-// anyOf/oneOf unions to a single strongest branch: the Antigravity Claude backend
-// converts Gemini function declarations into Claude custom.input_schema and rejects
-// nested multi-branch unions with "JSON schema is invalid", while the Gemini
-// backends accept preserved unions (see Issue 3662 and its regression follow-up).
-func CleanJSONSchemaForAntigravityClaudeTool(jsonStr string, requirePlaceholder bool) string {
-	return cleanJSONSchemaForAntigravityTool(jsonStr, requirePlaceholder, true)
-}
-
-func cleanJSONSchemaForAntigravityTool(jsonStr string, requirePlaceholder, flattenMultiBranchUnions bool) string {
-	return cleanJSONSchema(jsonStr, jsonSchemaCleanOptions{
-		addPlaceholder:           requirePlaceholder,
-		addMissingArrayItems:     true,
-		antigravitySemantics:     true,
-		removeToolTitle:          !requirePlaceholder,
-		flattenUnions:            true,
-		flattenMultiBranchUnions: flattenMultiBranchUnions,
-		dropAllEnums:             true,
-	})
-}
-
-// CleanJSONSchemaForAntigravityResponse transforms a response schema without applying tool-only
-// compatibility rewrites that would alter the client's structured output contract.
-//
-// Sanitization policy:
-//   - Passthrough: type, properties, items, required, description, enum, nullable, and
-//     additionalProperties: false (which Antigravity natively enforces for response schemas).
-//   - Description hints + deletion: unsupported or accepted-but-ignored constraints.
-//   - Flattened: allOf merged into properties/required.
-//   - Unions: multi-branch anyOf/oneOf unions are preserved; single-type nullable unions ([T, null]) project to T with nullable:true.
-//   - Resolved: local $ref targets are inlined before $defs/definitions are removed.
-//   - Dropped: unresolved $ref (after a hint), metadata, unsupported object-key constraints,
-//     conditional keywords (after non-conflicting properties are retained), and x-* extensions.
-func CleanJSONSchemaForAntigravityResponse(jsonStr string) string {
-	return cleanJSONSchema(jsonStr, jsonSchemaCleanOptions{
-		antigravitySemantics:              true,
-		flattenUnions:                     true,
-		dropBooleanEnums:                  true,
-		preserveAdditionalPropertiesFalse: true,
-	})
-}
-
-// CleanJSONSchemaForGemini transforms a JSON schema to be compatible with Gemini tool calling.
-// It removes unsupported keywords and simplifies schemas, without adding empty-schema placeholders.
-func CleanJSONSchemaForGemini(jsonStr string) string {
-	return cleanJSONSchema(jsonStr, jsonSchemaCleanOptions{
-		addMissingArrayItems: true,
-		removeGeminiMetadata: true,
-		flattenUnions:        true,
-		forceEnumStringType:  true,
-	})
 }
 
 // CleanJSONSchemaForGeminiJSONSchema transforms a JSON schema for Gemini tool calling
@@ -732,13 +663,6 @@ func mergeStringSlices(existing, promoted []string) []string {
 		}
 	}
 	return res
-}
-
-// InlineLocalRefs resolves JSON Pointer references against the original schema before definition
-// containers are stripped. Each expansion receives its own copy, sibling keywords override the
-// referenced definition, and cycles terminate as a typed hint instead of recursing forever.
-func InlineLocalRefs(jsonStr string) string {
-	return inlineLocalRefs(jsonStr)
 }
 
 // inlineLocalRefs resolves JSON Pointer references against the original schema before definition

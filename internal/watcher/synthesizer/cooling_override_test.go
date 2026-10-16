@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 func boolPointer(value bool) *bool {
@@ -18,39 +18,25 @@ func TestConfigSynthesizerPreservesExplicitFalseCoolingOverrides(t *testing.T) {
 		cfg  *config.Config
 	}{
 		{
-			name: "gemini",
-			cfg: &config.Config{GeminiKey: []config.GeminiKey{{
-				APIKey:         "gemini-key",
+			name: "deepseek",
+			cfg: &config.Config{DeepseekKey: []config.DeepseekKey{{
+				APIKey:         "deepseek-key",
 				DisableCooling: &disableCooling,
 			}}},
 		},
 		{
-			name: "interactions",
-			cfg: &config.Config{InteractionsKey: []config.GeminiKey{{
-				APIKey:         "interactions-key",
+			name: "openai",
+			cfg: &config.Config{OpenAIKey: []config.OpenAIKey{{
+				APIKey:         "openai-key",
+				BaseURL:        "https://api.openai.com/v1",
 				DisableCooling: &disableCooling,
 			}}},
 		},
 		{
-			name: "claude",
-			cfg: &config.Config{ClaudeKey: []config.ClaudeKey{{
-				APIKey:         "claude-key",
-				DisableCooling: &disableCooling,
-			}}},
-		},
-		{
-			name: "codex",
-			cfg: &config.Config{CodexKey: []config.CodexKey{{
-				APIKey:         "codex-key",
-				BaseURL:        "https://codex.example.com",
-				DisableCooling: &disableCooling,
-			}}},
-		},
-		{
-			name: "xai",
-			cfg: &config.Config{XAIKey: []config.XAIKey{{
-				APIKey:         "xai-key",
-				BaseURL:        "https://api.x.ai/v1",
+			name: "nvidia",
+			cfg: &config.Config{NvidiaKey: []config.NvidiaKey{{
+				APIKey:         "nvidia-key",
+				BaseURL:        "https://integrate.api.nvidia.com/v1",
 				DisableCooling: &disableCooling,
 			}}},
 		},
@@ -61,14 +47,6 @@ func TestConfigSynthesizerPreservesExplicitFalseCoolingOverrides(t *testing.T) {
 				BaseURL:        "https://compat.example.com",
 				DisableCooling: &disableCooling,
 				APIKeyEntries:  []config.OpenAICompatibilityAPIKey{{APIKey: "compat-key"}},
-			}}},
-		},
-		{
-			name: "vertex",
-			cfg: &config.Config{VertexCompatAPIKey: []config.VertexCompatKey{{
-				APIKey:         "vertex-key",
-				BaseURL:        "https://vertex.example.com",
-				DisableCooling: &disableCooling,
 			}}},
 		},
 	}

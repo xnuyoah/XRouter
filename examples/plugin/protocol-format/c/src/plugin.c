@@ -76,11 +76,11 @@ static int plugin_call(const char* method, const uint8_t* request, size_t reques
 		return 1;
 	}
 	if (strcmp(method, "plugin.register") == 0) {
-		write_response(response, "{\"ok\":true,\"result\":{\"schema_version\":1,\"metadata\":{\"Name\":\"example-protocol-format-c\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-protocol-format-c.png\",\"ConfigFields\":[]},\"capabilities\":{\"executor\":true,\"executor_model_scope\":\"both\",\"executor_input_formats\":[\"chat-completions\"],\"executor_output_formats\":[\"responses\"]}}}");
+		write_response(response, "{\"ok\":true,\"result\":{\"schema_version\":1,\"metadata\":{\"Name\":\"example-protocol-format-c\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-protocol-format-c.png\",\"ConfigFields\":[]},\"capabilities\":{\"executor\":true,\"executor_model_scope\":\"both\",\"executor_input_formats\":[\"chat-completions\"],\"executor_output_formats\":[\"responses\"]}}}");
 		return 0;
 	}
 	if (strcmp(method, "plugin.reconfigure") == 0) {
-		write_response(response, "{\"ok\":true,\"result\":{\"schema_version\":1,\"metadata\":{\"Name\":\"example-protocol-format-c\",\"Version\":\"0.1.0\",\"Author\":\"router-for-me\",\"GitHubRepository\":\"https://github.com/router-for-me/CLIProxyAPI\",\"Logo\":\"https://example.invalid/example-protocol-format-c.png\",\"ConfigFields\":[]},\"capabilities\":{\"executor\":true,\"executor_model_scope\":\"both\",\"executor_input_formats\":[\"chat-completions\"],\"executor_output_formats\":[\"responses\"]}}}");
+		write_response(response, "{\"ok\":true,\"result\":{\"schema_version\":1,\"metadata\":{\"Name\":\"example-protocol-format-c\",\"Version\":\"0.1.0\",\"Author\":\"xnuyoah\",\"GitHubRepository\":\"https://github.com/xnuyoah/XRouter\",\"Logo\":\"https://example.invalid/example-protocol-format-c.png\",\"ConfigFields\":[]},\"capabilities\":{\"executor\":true,\"executor_model_scope\":\"both\",\"executor_input_formats\":[\"chat-completions\"],\"executor_output_formats\":[\"responses\"]}}}");
 		return 0;
 	}
 	if (strcmp(method, "executor.identifier") == 0) {

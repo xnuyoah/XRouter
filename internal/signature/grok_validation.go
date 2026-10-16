@@ -34,8 +34,8 @@ type GrokEncryptedContentInfo struct {
 // InspectGrokEncryptedContent validates the transport shape of xAI/Grok
 // reasoning or compaction encrypted_content. This does not prove decryptability.
 //
-// This is NOT a provider classifier and must not be used as one. Unlike Claude,
-// Gemini and GPT, xAI emits no self-describing envelope: observed payloads are
+// This is NOT a provider classifier and must not be used as one. Unlike Claude
+// and GPT, xAI emits no self-describing envelope: observed payloads are
 // indistinguishable from uniform random bytes (no magic prefix, no version byte,
 // no fixed suffix, and decoded lengths spread evenly modulo the AES block size).
 // Every high-entropy unpadded standard-base64 blob therefore satisfies the checks
@@ -80,9 +80,6 @@ func InspectGrokEncryptedContent(raw string) (*GrokEncryptedContentInfo, error) 
 		if IsValidClaudeCAISSignature(sig) {
 			return nil, fmt.Errorf("Grok encrypted_content looks like Claude CAIS thinking signature")
 		}
-		if _, err := InspectGeminiThoughtSignature(sig, GeminiThoughtSignatureValidationOptions{RequireKnownEnvelope: true}); err == nil {
-			return nil, fmt.Errorf("Grok encrypted_content looks like Gemini thoughtSignature")
-		}
 	}
 	// Kimi emits no envelope either, so the pre-filter above cannot narrow it and
 	// this check has to run unconditionally. Length is the only separator the two
@@ -108,11 +105,6 @@ func InspectGrokEncryptedContent(raw string) (*GrokEncryptedContentInfo, error) 
 		RawLen:     len(sig),
 		DecodedLen: len(decoded),
 	}, nil
-}
-
-func IsValidGrokEncryptedContent(raw string) bool {
-	_, err := InspectGrokEncryptedContent(raw)
-	return err == nil
 }
 
 func decodeGrokEncryptedContent(sig string) ([]byte, error) {

@@ -3,16 +3,19 @@ package modelconfig
 import (
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
-func TestResolveModelInfoUsesSuffixFreeStaticCapabilities(t *testing.T) {
-	info := ResolveModelInfo("claude-opus-4-6(high)", "claude", nil)
-	if info == nil || info.Thinking == nil {
-		t.Fatalf("ResolveModelInfo() = %+v, want inherited thinking support", info)
+func TestResolveModelInfoKeepsConfiguredUpstreamName(t *testing.T) {
+	info := ResolveModelInfo("gpt-5.6-luna(high)", "openai", nil)
+	if info == nil {
+		t.Fatal("ResolveModelInfo() = nil")
 	}
-	if info.ID != "claude-opus-4-6(high)" {
+	if info.ID != "gpt-5.6-luna(high)" {
 		t.Fatalf("model ID = %q, want configured upstream name", info.ID)
+	}
+	if info.Thinking != nil {
+		t.Fatalf("thinking = %+v, want nil without explicit configuration", info.Thinking)
 	}
 	if info.UserDefined {
 		t.Fatal("resolved capability snapshot must not be user-defined")

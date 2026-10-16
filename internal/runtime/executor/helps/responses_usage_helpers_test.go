@@ -5,9 +5,9 @@ import (
 	"context"
 	"testing"
 
-	_ "github.com/router-for-me/CLIProxyAPI/v8/internal/translator"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 	"github.com/tidwall/gjson"
+	_ "github.com/xnuyoah/XRouter/v8/internal/translator"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 func TestEnsureResponsesUsageDetails_NonStreamJSON(t *testing.T) {

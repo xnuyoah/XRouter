@@ -9,8 +9,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 func TestSessionAffinitySelectorLCPPreservesBindingAcrossConversationGrowth(t *testing.T) {
@@ -346,27 +346,27 @@ func TestSessionAffinitySelectorLCPUsesCanonicalFormatWhenSourceFormatMissing(t 
 
 	auths := []*Auth{{ID: "auth-a"}, {ID: "auth-b"}}
 	first := cliproxyexecutor.Options{
-		OriginalRequest: []byte(`{"contents":[{"role":"user","parts":[{"text":"hello"}]}]}`),
+		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"hello"}]}`),
 		Metadata: map[string]any{
-			cliproxyexecutor.CallerScopeMetadataKey: "caller-gemini",
+			cliproxyexecutor.CallerScopeMetadataKey: "caller-openai",
 		},
 	}
 	second := cliproxyexecutor.Options{
-		OriginalRequest: []byte(`{"contents":[{"role":"user","parts":[{"text":"hello"}]},{"role":"model","parts":[{"text":"hi"}]}]}`),
+		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"hello"},{"role":"assistant","content":"hi"}]}`),
 		Metadata: map[string]any{
-			cliproxyexecutor.CallerScopeMetadataKey: "caller-gemini",
+			cliproxyexecutor.CallerScopeMetadataKey: "caller-openai",
 		},
 	}
-	firstAuth, errFirst := selector.Pick(context.Background(), "gemini", "model", first, auths)
+	firstAuth, errFirst := selector.Pick(context.Background(), "openai", "model", first, auths)
 	if errFirst != nil {
 		t.Fatalf("first Pick() error = %v", errFirst)
 	}
-	secondAuth, errSecond := selector.Pick(context.Background(), "gemini", "model", second, auths)
+	secondAuth, errSecond := selector.Pick(context.Background(), "openai", "model", second, auths)
 	if errSecond != nil {
 		t.Fatalf("second Pick() error = %v", errSecond)
 	}
 	if secondAuth.ID != firstAuth.ID {
-		t.Fatalf("inferred Gemini format changed auth from %q to %q", firstAuth.ID, secondAuth.ID)
+		t.Fatalf("inferred contents format changed auth from %q to %q", firstAuth.ID, secondAuth.ID)
 	}
 }
 
@@ -504,7 +504,7 @@ func TestSessionAffinityCodexSubagentInheritsParentThread(t *testing.T) {
 	}
 }
 
-func TestSessionAffinityCodexForkInheritsParentOnGeminiModel(t *testing.T) {
+func TestSessionAffinityCodexForkInheritsParentOnContentsModel(t *testing.T) {
 	t.Parallel()
 
 	selector := NewSessionAffinitySelectorWithConfig(SessionAffinityConfig{
@@ -517,39 +517,39 @@ func TestSessionAffinityCodexForkInheritsParentOnGeminiModel(t *testing.T) {
 
 	// 1. Parent thread binds to an antigravity auth
 	parentOpts := cliproxyexecutor.Options{
-		Headers:         http.Header{"Session-Id": []string{"parent-gemini-thread"}},
+		Headers:         http.Header{"Session-Id": []string{"parent-gpt-thread"}},
 		OriginalRequest: []byte(`{"input":[{"role":"user","content":"parent query"}]}`),
 		Metadata:        map[string]any{},
 	}
-	parentAuth, errParent := selector.Pick(context.Background(), "mixed", "gemini-3.8-flash-high", parentOpts, auths)
+	parentAuth, errParent := selector.Pick(context.Background(), "mixed", "gpt-3.8-flash-high", parentOpts, auths)
 	if errParent != nil {
 		t.Fatalf("parent Pick() error = %v", errParent)
 	}
 
 	// 2. Forked thread carries X-Codex-Turn-Metadata with forked_from_thread_id
-	// Even on Gemini/Antigravity where subagents are non-inheriting, conversational FORKS must inherit parent auth!
+	// Even on providers where subagents are non-inheriting, conversational FORKS must inherit parent auth!
 	forkOpts := cliproxyexecutor.Options{
 		Headers: http.Header{
-			"Session-Id": []string{"fork-gemini-thread"},
+			"Session-Id": []string{"fork-gpt-thread"},
 			"X-Codex-Turn-Metadata": []string{
-				`{"session_id":"fork-gemini-thread","forked_from_thread_id":"parent-gemini-thread","request_kind":"turn"}`,
+				`{"session_id":"fork-gpt-thread","forked_from_thread_id":"parent-gpt-thread","request_kind":"turn"}`,
 			},
 		},
 		OriginalRequest: []byte(`{"input":[{"role":"user","content":"fork query"}]}`),
 		Metadata:        map[string]any{},
 	}
-	forkAuth, errFork := selector.Pick(context.Background(), "mixed", "gemini-3.8-flash-high", forkOpts, auths)
+	forkAuth, errFork := selector.Pick(context.Background(), "mixed", "gpt-3.8-flash-high", forkOpts, auths)
 	if errFork != nil {
 		t.Fatalf("fork Pick() error = %v", errFork)
 	}
 	if forkAuth.ID != parentAuth.ID {
-		t.Fatalf("conversational fork did not inherit parent auth on Gemini: got %q, want %q", forkAuth.ID, parentAuth.ID)
+		t.Fatalf("conversational fork did not inherit parent auth: got %q, want %q", forkAuth.ID, parentAuth.ID)
 	}
-	if got := forkOpts.Metadata[cliproxyexecutor.CanonicalSessionIDMetadataKey]; got != "codex:fork-gemini-thread" {
-		t.Fatalf("fork canonical session ID = %v, want codex:fork-gemini-thread", got)
+	if got := forkOpts.Metadata[cliproxyexecutor.CanonicalSessionIDMetadataKey]; got != "codex:fork-gpt-thread" {
+		t.Fatalf("fork canonical session ID = %v, want codex:fork-gpt-thread", got)
 	}
-	if got := forkOpts.Metadata[cliproxyexecutor.ParentSessionIDMetadataKey]; got != "codex:parent-gemini-thread" {
-		t.Fatalf("fork parent session ID = %v, want codex:parent-gemini-thread", got)
+	if got := forkOpts.Metadata[cliproxyexecutor.ParentSessionIDMetadataKey]; got != "codex:parent-gpt-thread" {
+		t.Fatalf("fork parent session ID = %v, want codex:parent-gpt-thread", got)
 	}
 	if isFork, ok := forkOpts.Metadata[cliproxyexecutor.IsForkMetadataKey].(bool); !ok || !isFork {
 		t.Fatalf("expected is_fork=true in metadata, got %v", forkOpts.Metadata[cliproxyexecutor.IsForkMetadataKey])
@@ -655,7 +655,7 @@ func TestSessionAffinityBodyOnlyCodexFork(t *testing.T) {
 		OriginalRequest: []byte(`{"thread_id":"body-parent-100","messages":[{"role":"user","content":"parent"}]}`),
 		Metadata:        map[string]any{},
 	}
-	parentAuth, errParent := selector.Pick(context.Background(), "mixed", "gemini-3.8-flash-high", parentOpts, auths)
+	parentAuth, errParent := selector.Pick(context.Background(), "mixed", "gpt-3.8-flash-high", parentOpts, auths)
 	if errParent != nil {
 		t.Fatalf("parent Pick() error = %v", errParent)
 	}
@@ -665,12 +665,12 @@ func TestSessionAffinityBodyOnlyCodexFork(t *testing.T) {
 		OriginalRequest: []byte(`{"thread_id":"body-fork-200","forked_from_thread_id":"body-parent-100","messages":[{"role":"user","content":"fork"}]}`),
 		Metadata:        map[string]any{},
 	}
-	forkAuth, errFork := selector.Pick(context.Background(), "mixed", "gemini-3.8-flash-high", forkOpts, auths)
+	forkAuth, errFork := selector.Pick(context.Background(), "mixed", "gpt-3.8-flash-high", forkOpts, auths)
 	if errFork != nil {
 		t.Fatalf("fork Pick() error = %v", errFork)
 	}
 	if forkAuth.ID != parentAuth.ID {
-		t.Fatalf("body-only fork did not inherit parent auth on Gemini: got %q, want %q", forkAuth.ID, parentAuth.ID)
+		t.Fatalf("body-only fork did not inherit parent auth: got %q, want %q", forkAuth.ID, parentAuth.ID)
 	}
 	if isFork, ok := forkOpts.Metadata[cliproxyexecutor.IsForkMetadataKey].(bool); !ok || !isFork {
 		t.Fatalf("expected is_fork=true for body-only fork, got %v", forkOpts.Metadata[cliproxyexecutor.IsForkMetadataKey])
@@ -850,10 +850,10 @@ func TestSessionAffinityExtendedHeadersAndPayloadIdentities(t *testing.T) {
 	// 1. Antigravity X-Http-Session-Id
 	agyOpts := cliproxyexecutor.Options{
 		Headers:         http.Header{"X-Http-Session-Id": []string{"agy-sess-456"}},
-		OriginalRequest: []byte(`{"contents":[{"role":"user","parts":[{"text":"hello"}]}]}`),
+		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"hello"}]}`),
 		Metadata:        map[string]any{},
 	}
-	_, errAgy := selector.Pick(context.Background(), "gemini", "model", agyOpts, auths)
+	_, errAgy := selector.Pick(context.Background(), "antigravity", "model", agyOpts, auths)
 	if errAgy != nil {
 		t.Fatalf("agy Pick() error = %v", errAgy)
 	}
@@ -875,20 +875,7 @@ func TestSessionAffinityExtendedHeadersAndPayloadIdentities(t *testing.T) {
 		t.Fatalf("slot canonical session ID = %v, want slot:pi-slot-789", got)
 	}
 
-	// 3. Google Gemini Context Caching
-	geminiCacheOpts := cliproxyexecutor.Options{
-		OriginalRequest: []byte(`{"cachedContent":"projects/123/locations/us-central1/cachedContents/456","contents":[{"role":"user","parts":[{"text":"query"}]}]}`),
-		Metadata:        map[string]any{},
-	}
-	_, errGemini := selector.Pick(context.Background(), "gemini", "model", geminiCacheOpts, auths)
-	if errGemini != nil {
-		t.Fatalf("gemini cache Pick() error = %v", errGemini)
-	}
-	if got := geminiCacheOpts.Metadata[cliproxyexecutor.CanonicalSessionIDMetadataKey]; got != "geminicache:projects/123/locations/us-central1/cachedContents/456" {
-		t.Fatalf("gemini cache canonical session ID = %v, want geminicache:...", got)
-	}
-
-	// 4. OpenAI Assistants Thread ID Header & Body
+	// 3. OpenAI Assistants Thread ID Header & Body
 	threadOpts := cliproxyexecutor.Options{
 		Headers:         http.Header{"X-Thread-Id": []string{"thread_abc123"}},
 		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"run thread"}]}`),
@@ -1104,7 +1091,9 @@ func TestSessionCacheTinyTTLNoPanic(t *testing.T) {
 	cache.Stop()
 }
 
-func TestSessionAffinityClaudeMetadataSubagentNonInheritingGeminiModel(t *testing.T) {
+func boolPointer(value bool) *bool { return &value }
+
+func TestSessionAffinityClaudeMetadataSubagentNonInheritingProviderModel(t *testing.T) {
 	t.Parallel()
 
 	selector := NewSessionAffinitySelectorWithConfig(SessionAffinityConfig{
@@ -1121,10 +1110,10 @@ func TestSessionAffinityClaudeMetadataSubagentNonInheritingGeminiModel(t *testin
 
 	// 1. Parent request binds to auth-a
 	parentOpts := cliproxyexecutor.Options{
-		OriginalRequest: []byte(`{"model":"gemini-3.7-flash-high","metadata":{"user_id":"{\"device_id\":\"dev-1\",\"session_id\":\"sess-main-1\"}"},"messages":[{"role":"user","content":"parent task"}]}`),
+		OriginalRequest: []byte(`{"model":"gpt-3.7-flash-high","metadata":{"user_id":"{\"device_id\":\"dev-1\",\"session_id\":\"sess-main-1\"}"},"messages":[{"role":"user","content":"parent task"}]}`),
 		Metadata:        map[string]any{},
 	}
-	parentAuth, errParent := selector.Pick(context.Background(), "mixed", "gemini-3.7-flash-high", parentOpts, auths)
+	parentAuth, errParent := selector.Pick(context.Background(), "mixed", "gpt-3.7-flash-high", parentOpts, auths)
 	if errParent != nil {
 		t.Fatalf("parent Pick() error = %v", errParent)
 	}
@@ -1140,10 +1129,10 @@ func TestSessionAffinityClaudeMetadataSubagentNonInheritingGeminiModel(t *testin
 		Headers: http.Header{
 			"X-Claude-Code-Agent-Id": []string{"subagent-001"},
 		},
-		OriginalRequest: []byte(`{"model":"gemini-3.7-flash-high","metadata":{"user_id":"{\"device_id\":\"dev-1\",\"session_id\":\"sess-main-1\"}"},"messages":[{"role":"user","content":"subagent 1 task"}]}`),
+		OriginalRequest: []byte(`{"model":"gpt-3.7-flash-high","metadata":{"user_id":"{\"device_id\":\"dev-1\",\"session_id\":\"sess-main-1\"}"},"messages":[{"role":"user","content":"subagent 1 task"}]}`),
 		Metadata:        map[string]any{},
 	}
-	subagent1Auth, errSub1 := selector.Pick(context.Background(), "mixed", "gemini-3.7-flash-high", subagent1Opts, auths)
+	subagent1Auth, errSub1 := selector.Pick(context.Background(), "mixed", "gpt-3.7-flash-high", subagent1Opts, auths)
 	if errSub1 != nil {
 		t.Fatalf("subagent 1 Pick() error = %v", errSub1)
 	}
@@ -1160,10 +1149,10 @@ func TestSessionAffinityClaudeMetadataSubagentNonInheritingGeminiModel(t *testin
 		Headers: http.Header{
 			"X-Claude-Code-Agent-Id": []string{"subagent-001"},
 		},
-		OriginalRequest: []byte(`{"model":"gemini-3.7-flash-high","metadata":{"user_id":"{\"device_id\":\"dev-1\",\"session_id\":\"sess-main-1\"}"},"messages":[{"role":"user","content":"subagent 1 turn 2"}]}`),
+		OriginalRequest: []byte(`{"model":"gpt-3.7-flash-high","metadata":{"user_id":"{\"device_id\":\"dev-1\",\"session_id\":\"sess-main-1\"}"},"messages":[{"role":"user","content":"subagent 1 turn 2"}]}`),
 		Metadata:        map[string]any{},
 	}
-	subagent1Turn2Auth, errSub1Turn2 := selector.Pick(context.Background(), "mixed", "gemini-3.7-flash-high", subagent1Turn2Opts, auths)
+	subagent1Turn2Auth, errSub1Turn2 := selector.Pick(context.Background(), "mixed", "gpt-3.7-flash-high", subagent1Turn2Opts, auths)
 	if errSub1Turn2 != nil {
 		t.Fatalf("subagent 1 turn 2 Pick() error = %v", errSub1Turn2)
 	}
@@ -1449,7 +1438,7 @@ func TestSessionAffinityCodexForkWithSessionIdHeaderAndBodyThreadId(t *testing.T
 		Headers:  http.Header{"Session-Id": []string{"parent-sess-uuid"}},
 		Metadata: map[string]any{},
 	}
-	parentAuth, _ := selector.Pick(context.Background(), "mixed", "gemini-3.8-flash-high", parentOpts, auths)
+	parentAuth, _ := selector.Pick(context.Background(), "mixed", "gpt-3.8-flash-high", parentOpts, auths)
 
 	// Fork carries Session-Id header (parent-sess-uuid), but body contains thread_id (child-thread-uuid) and metadata.forked_from_thread_id
 	forkOpts := cliproxyexecutor.Options{
@@ -1462,12 +1451,12 @@ func TestSessionAffinityCodexForkWithSessionIdHeaderAndBodyThreadId(t *testing.T
 		}`),
 		Metadata: map[string]any{},
 	}
-	forkAuth, errFork := selector.Pick(context.Background(), "mixed", "gemini-3.8-flash-high", forkOpts, auths)
+	forkAuth, errFork := selector.Pick(context.Background(), "mixed", "gpt-3.8-flash-high", forkOpts, auths)
 	if errFork != nil {
 		t.Fatalf("fork Pick() error = %v", errFork)
 	}
 	if forkAuth.ID != parentAuth.ID {
-		t.Fatalf("fork did not inherit parent auth on Gemini: got %q, want %q", forkAuth.ID, parentAuth.ID)
+		t.Fatalf("fork did not inherit parent auth: got %q, want %q", forkAuth.ID, parentAuth.ID)
 	}
 	if got := forkOpts.Metadata[cliproxyexecutor.CanonicalSessionIDMetadataKey]; got != "codex:child-thread-uuid" {
 		t.Fatalf("child fork collapsed onto parent: got %v, want codex:child-thread-uuid", got)
@@ -1494,22 +1483,16 @@ func TestSessionAffinitySelectorLCPCompactionPreservesAffinityAndLineage(t *test
 	}
 
 	// 1. Initial 5-turn conversation without explicit session headers (relies on LCP)
-	firstPayload := []byte(`{"contents":[
-		{"role":"user","parts":[{"text":"step 1"}]},
-		{"role":"model","parts":[{"text":"ack 1"}]},
-		{"role":"user","parts":[{"text":"step 2"}]},
-		{"role":"model","parts":[{"text":"ack 2"}]},
-		{"role":"user","parts":[{"text":"step 3"}]}
-	]}`)
+	firstPayload := []byte(`{"messages":[{"role":"user","content":"step 1"},{"role":"assistant","content":"ack 1"},{"role":"user","content":"step 2"},{"role":"assistant","content":"ack 2"},{"role":"user","content":"step 3"}]}`)
 	firstOpts := cliproxyexecutor.Options{
-		SourceFormat:    sdktranslator.FormatGemini,
+		SourceFormat:    sdktranslator.FormatOpenAI,
 		OriginalRequest: firstPayload,
 		Metadata: map[string]any{
 			cliproxyexecutor.CallerScopeMetadataKey: "caller-harness-1",
 		},
 	}
 	ctx := context.Background()
-	firstAuth, errFirst := selector.Pick(ctx, "google", "gemini-2.5-pro", firstOpts, auths)
+	firstAuth, errFirst := selector.Pick(ctx, "openai", "gpt-2.5-pro", firstOpts, auths)
 	if errFirst != nil {
 		t.Fatalf("first Pick() error = %v", errFirst)
 	}
@@ -1521,29 +1504,24 @@ func TestSessionAffinitySelectorLCPCompactionPreservesAffinityAndLineage(t *test
 	// Complete initial request
 	selector.OnResult(Result{
 		AuthID:   firstAuth.ID,
-		Provider: "google",
-		Model:    "gemini-2.5-pro",
+		Provider: "openai",
+		Model:    "gpt-2.5-pro",
 		Options:  firstOpts,
 		Success:  true,
 	})
 
 	// 2. Downstream harness compacts context:
 	// Early steps (1..2) summarized into a single turn, preserving step 3 and appending step 4
-	compactedPayload := []byte(`{"contents":[
-		{"role":"user","parts":[{"text":"<summary>Steps 1 and 2 completed</summary>"}]},
-		{"role":"model","parts":[{"text":"ack 2"}]},
-		{"role":"user","parts":[{"text":"step 3"}]},
-		{"role":"user","parts":[{"text":"step 4"}]}
-	]}`)
+	compactedPayload := []byte(`{"messages":[{"role":"user","content":"<summary>Steps 1 and 2 completed</summary>"},{"role":"assistant","content":"ack 2"},{"role":"user","content":"step 3"},{"role":"user","content":"step 4"}]}`)
 	compactedOpts := cliproxyexecutor.Options{
-		SourceFormat:    sdktranslator.FormatGemini,
+		SourceFormat:    sdktranslator.FormatOpenAI,
 		OriginalRequest: compactedPayload,
 		Metadata: map[string]any{
 			cliproxyexecutor.CallerScopeMetadataKey: "caller-harness-1",
 		},
 	}
 
-	compactedAuth, errCompacted := selector.Pick(ctx, "google", "gemini-2.5-pro", compactedOpts, auths)
+	compactedAuth, errCompacted := selector.Pick(ctx, "openai", "gpt-2.5-pro", compactedOpts, auths)
 	if errCompacted != nil {
 		t.Fatalf("compacted Pick() error = %v", errCompacted)
 	}
@@ -1573,28 +1551,22 @@ func TestSessionAffinitySelectorLCPCompactionPreservesAffinityAndLineage(t *test
 	// Complete compacted request
 	selector.OnResult(Result{
 		AuthID:   compactedAuth.ID,
-		Provider: "google",
-		Model:    "gemini-2.5-pro",
+		Provider: "openai",
+		Model:    "gpt-2.5-pro",
 		Options:  compactedOpts,
 		Success:  true,
 	})
 
 	// 3. Subsequent turn grows linearly from compaction boundary
-	nextPayload := []byte(`{"contents":[
-		{"role":"user","parts":[{"text":"<summary>Steps 1 and 2 completed</summary>"}]},
-		{"role":"model","parts":[{"text":"ack 2"}]},
-		{"role":"user","parts":[{"text":"step 3"}]},
-		{"role":"user","parts":[{"text":"step 4"}]},
-		{"role":"model","parts":[{"text":"ack 4"}]}
-	]}`)
+	nextPayload := []byte(`{"messages":[{"role":"user","content":"<summary>Steps 1 and 2 completed</summary>"},{"role":"assistant","content":"ack 2"},{"role":"user","content":"step 3"},{"role":"user","content":"step 4"},{"role":"assistant","content":"ack 4"}]}`)
 	nextOpts := cliproxyexecutor.Options{
-		SourceFormat:    sdktranslator.FormatGemini,
+		SourceFormat:    sdktranslator.FormatOpenAI,
 		OriginalRequest: nextPayload,
 		Metadata: map[string]any{
 			cliproxyexecutor.CallerScopeMetadataKey: "caller-harness-1",
 		},
 	}
-	nextAuth, errNext := selector.Pick(ctx, "google", "gemini-2.5-pro", nextOpts, auths)
+	nextAuth, errNext := selector.Pick(ctx, "openai", "gpt-2.5-pro", nextOpts, auths)
 	if errNext != nil {
 		t.Fatalf("next Pick() error = %v", errNext)
 	}
@@ -1608,47 +1580,6 @@ func TestSessionAffinitySelectorLCPCompactionPreservesAffinityAndLineage(t *test
 	}
 	if isFork, ok := nextOpts.Metadata[cliproxyexecutor.IsForkMetadataKey].(bool); ok && isFork {
 		t.Fatal("linear continuation must not be marked as fork")
-	}
-}
-
-func TestSessionAffinitySelectorLookupAffinityProviderAlias(t *testing.T) {
-	t.Parallel()
-
-	selector := NewSessionAffinitySelectorWithConfig(SessionAffinityConfig{
-		TTL: time.Hour,
-	})
-	defer selector.Stop()
-
-	auths := []*Auth{{ID: "auth-gemini-1", Status: StatusActive}}
-	opts := cliproxyexecutor.Options{
-		SourceFormat:    sdktranslator.FormatGemini,
-		OriginalRequest: []byte(`{"contents":[{"role":"user","parts":[{"text":"hello lookup"}]}]}`),
-		Metadata: map[string]any{
-			cliproxyexecutor.CallerScopeMetadataKey:             "caller-lookup",
-			cliproxyexecutor.SessionAffinityProviderMetadataKey: "google",
-		},
-	}
-	ctx := context.Background()
-	picked, errPick := selector.Pick(ctx, "google", "gemini-2.5-pro", opts, auths)
-	if errPick != nil || picked == nil {
-		t.Fatalf("Pick() failed: %v", errPick)
-	}
-
-	lcpID, ok := opts.Metadata[cliproxyexecutor.LCPAffinitySessionIDMetadataKey].(string)
-	if !ok || lcpID == "" {
-		t.Fatal("expected LCPAffinitySessionIDMetadataKey to be set")
-	}
-
-	// Query with alias "gemini" instead of "google"
-	boundAuth, status := selector.LookupAffinity("gemini", "gemini-2.5-pro", lcpID)
-	if status != "bound" || boundAuth != "auth-gemini-1" {
-		t.Fatalf("LookupAffinity(gemini) = (%q, %q), want (auth-gemini-1, bound)", boundAuth, status)
-	}
-
-	// Query with "google"
-	boundAuthGoogle, statusGoogle := selector.LookupAffinity("google", "gemini-2.5-pro", lcpID)
-	if statusGoogle != "bound" || boundAuthGoogle != "auth-gemini-1" {
-		t.Fatalf("LookupAffinity(google) = (%q, %q), want (auth-gemini-1, bound)", boundAuthGoogle, statusGoogle)
 	}
 }
 

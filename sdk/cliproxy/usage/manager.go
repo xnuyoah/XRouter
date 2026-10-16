@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	internallogging "github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
 	log "github.com/sirupsen/logrus"
+	internallogging "github.com/xnuyoah/XRouter/v8/internal/logging"
 )
 
 // DefaultServiceTier is retained for direct SDK and non-OpenAI usage callers.

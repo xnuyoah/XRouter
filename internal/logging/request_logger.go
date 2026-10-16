@@ -1,4 +1,4 @@
-// Package logging provides request logging functionality for the CLI Proxy API server.
+// Package logging provides request logging functionality for the XRouter server.
 // It handles capturing and storing detailed HTTP request and response data when enabled
 // through configuration, supporting both regular and streaming responses.
 package logging
@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/interfaces"
+	"github.com/xnuyoah/XRouter/v8/internal/interfaces"
 )
 
 const (

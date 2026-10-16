@@ -15,9 +15,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/api"
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/internal/api"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 const issue6631ManagementKey = "issue-6631-management-key"
@@ -64,7 +64,7 @@ func newIssue6631Harness(t *testing.T) *issue6631Harness {
 		t.Fatal(errHash)
 	}
 	configPath := filepath.Join(dir, "config.yaml")
-	raw := fmt.Sprintf("port: 8317\nauth-dir: %q\ndebug: false\nrequest-retry: 3\nmax-retry-credentials: 0\nremote-management:\n  allow-remote: true\n  secret-key: %q\n", filepath.ToSlash(authDir), string(hashedKey))
+	raw := fmt.Sprintf("port: 11016\nauth-dir: %q\ndebug: false\nrequest-retry: 3\nmax-retry-credentials: 0\nremote-management:\n  allow-remote: true\n  secret-key: %q\n", filepath.ToSlash(authDir), string(hashedKey))
 	if errWrite := os.WriteFile(configPath, []byte(raw), 0o600); errWrite != nil {
 		t.Fatal(errWrite)
 	}

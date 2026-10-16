@@ -12,14 +12,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 	"gopkg.in/yaml.v3"
 )
 
 func TestConfigV8MigrationAndLegacyAPI(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	path := filepath.Join(t.TempDir(), "config.yaml")
-	raw := "# Keep this configuration\nport: 8317\nrequest-retry: 3\napi-keys: [client]\nws-auth: true\ntls: {}\npayload: null\ncodex: {live-media-relay: {}}\n"
+	raw := "# Keep this configuration\nport: 11016\nrequest-retry: 3\napi-keys: [client]\nws-auth: true\ntls: {}\npayload: null\n"
 	if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestConfigV8MigrationAndLegacyAPI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	request(http.MethodPatch, "/v8/management/config", `{"routing":{"retry":{"request-retry":0}},"oauth":{"providers":{"aistudio":{"ws-auth":false}}}}`, 200)
+	request(http.MethodPatch, "/v8/management/config", `{"routing":{"retry":{"request-retry":0}},"observability":{"logs":{"debug":true}}}`, 200)
 	updatedFile, err := os.Stat(path)
 	if err != nil {
 		t.Fatal(err)
@@ -83,7 +83,7 @@ func TestConfigV8MigrationAndLegacyAPI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if loaded.RequestRetry != 0 || loaded.WebsocketAuth || len(loaded.APIKeys) != 1 {
+	if loaded.RequestRetry != 0 || !loaded.Debug || len(loaded.APIKeys) != 1 {
 		t.Fatal("v8 patch lost effective values")
 	}
 	request(http.MethodPut, "/v0/management/request-retry", `{"value":5}`, 200)
@@ -115,7 +115,7 @@ func TestConfigV8MigrationAndLegacyAPI(t *testing.T) {
 func TestConfigV8CommentsUnknownLegacySectionsOnWrite(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	path := filepath.Join(t.TempDir(), "config.yaml")
-	raw := "home: {enabled: true, host: ignored.example}\nenable-gemini-cli-endpoint: false\nformer-feature: {mode: old}\nserver: {port: 8317}\nproxy-url: \"\"\n"
+	raw := "home: {enabled: true, host: ignored.example}\nretired-feature-flag: false\nformer-feature: {mode: old}\nserver: {port: 11016}\nproxy-url: \"\"\n"
 	if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestConfigV8CommentsUnknownLegacySectionsOnWrite(t *testing.T) {
 	if err = yaml.Unmarshal(saved, &doc); err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range []string{"home", "enable-gemini-cli-endpoint", "former-feature"} {
+	for _, key := range []string{"home", "retired-feature-flag", "former-feature"} {
 		if configV8Node(doc.Content[0], []string{key}) != nil || !strings.Contains(string(saved), "# "+key+":") {
 			t.Fatalf("unknown legacy section %s was not commented on disk", key)
 		}
@@ -175,7 +175,7 @@ func TestConfigV8CommentsUnknownLegacySectionsOnWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range []string{"home", "enable-gemini-cli-endpoint", "former-feature"} {
+	for _, key := range []string{"home", "retired-feature-flag", "former-feature"} {
 		if strings.Count(string(saved), "# "+key+":") != 1 {
 			t.Fatalf("subsequent write or deletion lost or duplicated %s comments", key)
 		}
@@ -185,7 +185,7 @@ func TestConfigV8CommentsUnknownLegacySectionsOnWrite(t *testing.T) {
 func TestConfigV8CommentsUnknownNestedFieldsOnWrite(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	path := filepath.Join(t.TempDir(), "config.yaml")
-	raw := "server: {port: 8317}\noauth: {providers: {codex: {disable-codex-cloaking: true, retired-setting: false}}}\n"
+	raw := "server: {port: 11016}\nrouting: {retry: {request-retry: 3, retired-setting: false}}\n"
 	if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -219,21 +219,21 @@ func TestConfigV8CommentsUnknownNestedFieldsOnWrite(t *testing.T) {
 	if err = config.ValidateV8Config(saved); err != nil {
 		t.Fatalf("saved config is invalid: %v\n%s", err, saved)
 	}
-	if strings.Count(string(saved), "# oauth.providers.codex.retired-setting: false") != 1 {
+	if strings.Count(string(saved), "# routing.retry.retired-setting: false") != 1 {
 		t.Fatalf("existing unknown field was not preserved as a comment: %s", saved)
 	}
 	loaded, err := config.LoadConfig(path)
-	if err != nil || loaded.Port != 8318 || !loaded.Codex.DisableCodexCloaking {
+	if err != nil || loaded.Port != 8318 || loaded.RequestRetry != 3 {
 		t.Fatalf("unrelated write changed known settings: cfg=%+v error=%v", loaded, err)
 	}
-	request(http.MethodPut, "/v8/management/config/oauth/providers/codex/new-setting", `true`, http.StatusBadRequest)
+	request(http.MethodPut, "/v8/management/config/routing/retry/new-setting", `true`, http.StatusBadRequest)
 	unchanged, err := os.ReadFile(path)
 	if err != nil || string(unchanged) != string(saved) {
 		t.Fatalf("invalid new setting changed the config: %v", err)
 	}
-	request(http.MethodDelete, "/v8/management/config/upstream/codex/disable-codex-cloaking", "", http.StatusOK)
+	request(http.MethodDelete, "/v8/management/config/routing/retry/request-retry", "", http.StatusOK)
 	saved, err = os.ReadFile(path)
-	if err != nil || strings.Count(string(saved), "# oauth.providers.codex.retired-setting: false") != 1 {
+	if err != nil || strings.Count(string(saved), "# routing.retry.retired-setting: false") != 1 {
 		t.Fatalf("deleting the neighboring setting lost the archived comment: %v\n%s", err, saved)
 	}
 }
@@ -286,7 +286,7 @@ func TestV8MigrationReloadSnapshotMatchesDisk(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "config.yaml")
-			if err := os.WriteFile(path, []byte("codex: {disable-codex-cloaking: true}\nxai: {inject-x-search: true}\n"), 0600); err != nil {
+			if err := os.WriteFile(path, []byte("request-retry: 3\nrouting: {strategy: fill-first}\n"), 0600); err != nil {
 				t.Fatal(err)
 			}
 			cfg, err := config.LoadConfig(path)
@@ -313,7 +313,7 @@ func TestV8MigrationReloadSnapshotMatchesDisk(t *testing.T) {
 					t.Fatal("reload snapshot has different OAuth scope from the saved file")
 				}
 				api := snapshot.ForAPIKey()
-				if !api.Codex.DisableCodexCloaking || !api.XAI.InjectXSearch {
+				if api.RequestRetry != 3 || api.Routing.Strategy != "fill-first" {
 					t.Fatal("reload snapshot applied the wrong API-key configuration")
 				}
 				if tc.migrated {
@@ -332,54 +332,6 @@ func TestV8MigrationReloadSnapshotMatchesDisk(t *testing.T) {
 	}
 }
 
-func TestV8GroupedCredentialsSurviveLegacyWrites(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "config.yaml")
-	raw := `api-keys:
-  codex:
-    - name: production
-      base-url: https://example.invalid
-      headers: {X-Shared: value}
-      request-retry: 2
-      keys:
-        - api-key: first
-          request-retry: null
-        - api-key: second
-          request-retry: 0
-`
-	if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
-		t.Fatal(err)
-	}
-	cfg, err := config.LoadConfig(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	h := &Handler{cfg: cfg, configFilePath: path}
-	router := gin.New()
-	router.PUT("/v0/management/debug", h.PutDebug)
-	router.PUT("/v0/management/codex-api-key", h.PutCodexKeys)
-	for _, tc := range []struct{ url, body string }{
-		{"/v0/management/debug", `{"value":true}`},
-		{"/v0/management/codex-api-key", `[{"api-key":"first","base-url":"https://example.invalid","request-retry":0}]`},
-	} {
-		recorder := httptest.NewRecorder()
-		router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPut, tc.url, strings.NewReader(tc.body)))
-		if recorder.Code != 200 {
-			t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
-		}
-		data, _ := os.ReadFile(path)
-		if tc.url == "/v0/management/debug" && !strings.Contains(string(data), "production") {
-			t.Fatal("unrelated legacy write lost group identity")
-		}
-	}
-	loaded, err := config.LoadConfig(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(loaded.CodexKey) != 1 || loaded.CodexKey[0].RequestRetry == nil || *loaded.CodexKey[0].RequestRetry != 0 {
-		t.Fatal("legacy credential replacement was not applied")
-	}
-}
-
 func TestConfigV8DeleteLastField(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
@@ -388,15 +340,14 @@ func TestConfigV8DeleteLastField(t *testing.T) {
 		check func(*config.Config) bool
 	}{
 		{"retry", "request-retry: 3\n", "routing/retry/request-retry", func(cfg *config.Config) bool { return cfg.RequestRetry == 0 }},
-		{"websocket", "ws-auth: false\n", "oauth/providers/aistudio/ws-auth", func(cfg *config.Config) bool { return cfg.WebsocketAuth }},
+		{"force model prefix", "force-model-prefix: true\n", "routing/force-model-prefix", func(cfg *config.Config) bool { return !cfg.ForceModelPrefix }},
 		{"debug", "debug: true\n", "observability/logs/debug", func(cfg *config.Config) bool { return !cfg.Debug }},
 		{"sibling", "routing: {strategy: fill-first, retry: {request-retry: 3}}\n", "routing/retry/request-retry", func(cfg *config.Config) bool { return cfg.RequestRetry == 0 && cfg.Routing.Strategy == "fill-first" }},
-		{"provider", "oauth: {providers: {codex: {disable-codex-cloaking: true}}}\n", "upstream/codex/disable-codex-cloaking", func(cfg *config.Config) bool { return !cfg.Codex.DisableCodexCloaking }},
 		{"excluded models", "oauth: {excluded-models: {codex: [blocked-model]}}\n", "oauth/excluded-models", func(cfg *config.Config) bool { return len(cfg.OAuthExcludedModels) == 0 }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			file := filepath.Join(t.TempDir(), "config.yaml")
-			raw := tc.raw + "port: 8317\napi-keys: [client]\nplugins: {configs: {sample: {enabled: false, options: {}}}}\n"
+			raw := tc.raw + "port: 11016\napi-keys: [client]\nplugins: {configs: {sample: {enabled: false, options: {}}}}\n"
 			if err := os.WriteFile(file, []byte(raw), 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -418,7 +369,7 @@ func TestConfigV8DeleteLastField(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !tc.check(cfg) || cfg.Port != 8317 || len(cfg.APIKeys) != 1 || cfg.APIKeys[0] != "client" {
+			if !tc.check(cfg) || cfg.Port != 11016 || len(cfg.APIKeys) != 1 || cfg.APIKeys[0] != "client" {
 				t.Fatal("delete did not restore defaults or changed unrelated settings")
 			}
 			if !reflect.DeepEqual(h.cfg.OAuthOnlyFields, cfg.OAuthOnlyFields) {
@@ -452,7 +403,6 @@ func TestConfigV8DeleteLastField(t *testing.T) {
 func TestConfigV8ReplaceEmptyGroup(t *testing.T) {
 	for _, tc := range []struct{ path, raw string }{
 		{"routing/retry", "routing: {retry: {request-retry: 3}}\n"},
-		{"oauth/providers/aistudio", "oauth: {providers: {aistudio: {ws-auth: false}}}\n"},
 		{"observability/logs", "observability: {logs: {debug: true}}\n"},
 	} {
 		t.Run(tc.path, func(t *testing.T) {
@@ -476,7 +426,7 @@ func TestConfigV8ReplaceEmptyGroup(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if loaded.RequestRetry != 0 || !loaded.WebsocketAuth || loaded.Debug {
+			if loaded.RequestRetry != 0 || loaded.Debug {
 				t.Fatal("empty replacement did not restore defaults")
 			}
 		})
@@ -494,7 +444,7 @@ func TestConfigV8EmptyExcludedModelsSurvivesSave(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "config.yaml")
-			raw := "port: 8317\noauth:\n  excluded-models: " + tc.rules + "\n"
+			raw := "port: 11016\noauth:\n  excluded-models: " + tc.rules + "\n"
 			if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -549,87 +499,12 @@ func TestConfigV8EmptyExcludedModelsSurvivesSave(t *testing.T) {
 	}
 }
 
-func TestConfigV8JSONTURNSecrets(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "config.yaml")
-	raw := []byte(`oauth:
-  providers:
-    codex:
-      live-media-relay:
-        ice-servers:
-          - {urls: ['turn:example.invalid:3478'], username: test-relay-user, credential: test-relay-password}
-          - {urls: ['turn:example.invalid:3478'], username: test-relay-user-2, credential: test-relay-password-2}
-`)
-	if err := os.WriteFile(path, raw, 0600); err != nil {
-		t.Fatal(err)
-	}
-	cfg, err := config.LoadConfig(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	h := &Handler{cfg: cfg, configFilePath: path}
-	r := gin.New()
-	r.GET("/v8/management/config", h.ConfigV8)
-	r.PUT("/v8/management/config", h.ConfigV8)
-	r.GET("/v8/management/config.yaml", h.ConfigV8)
-	r.GET("/v8/management/config/*path", h.ConfigV8)
-	r.PUT("/v8/management/config/*path", h.ConfigV8)
-	for _, url := range []string{"/v8/management/config", "/v8/management/config/oauth/providers/codex/live-media-relay/ice-servers"} {
-		w := httptest.NewRecorder()
-		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, url, nil))
-		if w.Code != http.StatusOK {
-			t.Fatalf("GET status=%d body=%s", w.Code, w.Body.String())
-		}
-		if strings.Contains(w.Body.String(), "test-relay-user") || strings.Contains(w.Body.String(), "test-relay-password") {
-			t.Fatal("JSON exposed TURN credentials")
-		}
-		body := w.Body.String()
-		w = httptest.NewRecorder()
-		r.ServeHTTP(w, httptest.NewRequest(http.MethodPut, url, strings.NewReader(body)))
-		if w.Code != http.StatusOK {
-			t.Fatalf("PUT status=%d body=%s", w.Code, w.Body.String())
-		}
-		loaded, err := config.LoadConfig(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		servers := loaded.Codex.LiveMediaRelay.ICEServers
-		if len(servers) != 2 || servers[0].Username != "test-relay-user" || servers[0].Credential != "test-relay-password" || servers[1].Username != "test-relay-user-2" || servers[1].Credential != "test-relay-password-2" {
-			t.Fatal("JSON round trip changed redacted credentials")
-		}
-	}
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/v8/management/config.yaml", nil))
-	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "test-relay-password") {
-		t.Fatal("YAML export lost TURN credentials")
-	}
-	for _, body := range []string{
-		`[{"urls":["turn:replacement.invalid:3478"]}]`,
-		`[{"urls":["turn:example.invalid:3478"],"username":"","credential":null}]`,
-	} {
-		if err := os.WriteFile(path, raw, 0600); err != nil {
-			t.Fatal(err)
-		}
-		w = httptest.NewRecorder()
-		r.ServeHTTP(w, httptest.NewRequest(http.MethodPut, "/v8/management/config/oauth/providers/codex/live-media-relay/ice-servers", strings.NewReader(body)))
-		if w.Code != http.StatusOK {
-			t.Fatalf("PUT status=%d body=%s", w.Code, w.Body.String())
-		}
-		loaded, err := config.LoadConfig(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if server := loaded.Codex.LiveMediaRelay.ICEServers[0]; server.Username != "" || server.Credential != "" {
-			t.Fatal("unexpected inherited TURN credentials")
-		}
-	}
-}
-
 func TestConfigV8DeletePreservesDocumentPresence(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	file := filepath.Join(t.TempDir(), "config.yaml")
 	raw := `# Keep document comment
 config-version: 8
-server: {port: 8317}
+server: {port: 11016}
 routing:
   retry:
     request-retry: 3
@@ -764,7 +639,7 @@ func TestConfigV8SaveNormalizesCollectionStylesToBlockYAML(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "config.yaml")
 	raw := `config-version: 8
 server:
-  port: 8317
+  port: 11016
 api-keys:
   openai-compatibility:
     - name: compat-provider
@@ -857,7 +732,7 @@ api-keys:
 	}
 
 	// Also test root PUT with entire JSON document
-	rootPutJSON := `{"config-version":8,"server":{"port":8317},"api-keys":{"openai-compatibility":[{"name":"compat-provider-root","base-url":"https://api.example3.com","headers":{"User-Agent":"$User-Agent-3"},"models":[{"alias":"coding-3","name":"gpt-4o"}],"keys":[{"api-key":"sk-compat-3"}]}]}}`
+	rootPutJSON := `{"config-version":8,"server":{"port":11016},"api-keys":{"openai-compatibility":[{"name":"compat-provider-root","base-url":"https://api.example3.com","headers":{"User-Agent":"$User-Agent-3"},"models":[{"alias":"coding-3","name":"gpt-4o"}],"keys":[{"api-key":"sk-compat-3"}]}]}}`
 	w = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPut, "/v8/management/config", strings.NewReader(rootPutJSON))
 	req.Header.Set("Content-Type", "application/json")

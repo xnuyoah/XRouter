@@ -3,6 +3,7 @@ package executor
 import (
 	"context"
 	"encoding/base64"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -10,6 +11,10 @@ import (
 )
 
 var benchmarkSanitizeOpenAIResponsesReasoningOutput []byte
+
+// claudeCAISSignatureSample is a Claude CAIS-shaped encrypted reasoning payload
+// that the OpenAI Responses sanitizer must classify as a foreign signature.
+const claudeCAISSignatureSample = "CAISqwIKiAEIEBgCKkBHRlRBsNiptQUWfPoOhuQKwi5LnncZVO9bB5jqOs76D7uBtgktML0zqJtNmLHXHHcgD6lk4MQu4QBXzFd1lbC3Mg5jbGF1ZGUtZmFibGUtNTgBQgh0aGlua2luZ1okZDk3NDM5NzUtNGJiMC00OTM2LTllMjgtZDViMGQyMWJkYzQ4EgxCGh+XVFFFeySAjtAaDL/A1LltGu6MMJ+eXSIwsN0oBpDrqLv22UBfkMnTotnIbkvkOyb9xZHgigG6OZVHaI3gThm+maLKmgO5PrFLKlDFYp+YZksy/wKwszJlnLTPzAK+NUlfzagOE1ymtZTXhAYK260XyFYmg/te/C231+Fr/hoX+EJoUBnrn0gD7hqMISOT+TaFEuOXYsN517GfaxgB"
 
 func assertEmptyReasoningContent(t *testing.T, body []byte, path string) {
 	t.Helper()
@@ -164,99 +169,31 @@ func TestSanitizeOpenAIResponsesReasoningEncryptedContent_NoopReturnsOriginalBod
 	}
 }
 
-func TestSanitizeOpenAIResponsesReasoningEncryptedContentWithCompat_PreservesReasoningContentAndID(t *testing.T) {
+// TestSanitizeOpenAIResponsesReasoningEncryptedContent_SignatureValidity
+// pins how the sanitizer treats reasoning encrypted_content by shape: a valid
+// GPT/Codex signature is replayed, while a malformed one and a well-formed but
+// foreign (non-GPT) signature are both dropped.
+func TestSanitizeOpenAIResponsesReasoningEncryptedContent_SignatureValidity(t *testing.T) {
+	valid := validOpenAIResponsesReasoningEncryptedContentForTest()
 	body := []byte(`{"store":false,"input":[` +
-		`{"id":"rs_compat","type":"reasoning","summary":[],"content":[{"type":"reasoning_text","text":"keep cleartext thinking"}],"encrypted_content":null},` +
-		`{"id":"msg_1","type":"message","role":"user","content":[{"type":"input_text","text":"hi"}]}` +
+		`{"id":"rs_valid","type":"reasoning","encrypted_content":"` + valid + `","summary":[]},` +
+		`{"id":"rs_invalid","type":"reasoning","encrypted_content":"not-a-signature","summary":[]},` +
+		`{"id":"rs_foreign","type":"reasoning","encrypted_content":"` + claudeCAISSignatureSample + `","summary":[]}` +
 		`]}`)
 
-	got := sanitizeOpenAIResponsesReasoningEncryptedContentWithCompat(context.Background(), "test", body, true)
+	got := sanitizeOpenAIResponsesReasoningEncryptedContent(context.Background(), "test", body)
 
-	reasoningItem := gjson.GetBytes(got, "input.0")
-	if gotID := reasoningItem.Get("id").String(); gotID != "rs_compat" {
-		t.Fatalf("reasoning id = %q, want rs_compat; body=%s", gotID, got)
+	if gotSig := gjson.GetBytes(got, "input.0.encrypted_content").String(); gotSig != valid {
+		t.Fatalf("valid encrypted_content = %q, want preserved %q; body=%s", gotSig, valid, got)
 	}
-	content := reasoningItem.Get("content")
-	if !content.Exists() || !content.IsArray() || len(content.Array()) != 1 {
-		t.Fatalf("content should have 1 item, got %s body=%s", content.Raw, got)
-	}
-	if gotType := reasoningItem.Get("content.0.type").String(); gotType != "reasoning_text" {
-		t.Fatalf("content.0.type = %q, want reasoning_text; body=%s", gotType, got)
-	}
-	if gotText := reasoningItem.Get("content.0.text").String(); gotText != "keep cleartext thinking" {
-		t.Fatalf("content.0.text = %q, want keep cleartext thinking; body=%s", gotText, got)
-	}
-	if gotLen := len(reasoningItem.Get("summary").Array()); gotLen != 0 {
-		t.Fatalf("summary should remain empty for compat, got %d items; body=%s", gotLen, got)
-	}
-	if reasoningItem.Get("encrypted_content").Exists() {
-		t.Fatalf("null encrypted_content should still be stripped: %s", got)
-	}
-}
-
-func TestSanitizeOpenAIResponsesReasoningEncryptedContentWithCompat_PreservesUnknownFormatEncryptedContent(t *testing.T) {
-	const unknownSig = "opaque-encrypted-reasoning-token-xyz"
-	body := []byte(`{"store":false,"input":[{"type":"reasoning","summary":[],"content":null,"encrypted_content":"` + unknownSig + `"},{"type":"reasoning","summary":[],"content":null,"encrypted_content":""},{"type":"reasoning","summary":[],"content":null,"encrypted_content":"` + testClaudeCAISSample + `"}]}`)
-
-	got := sanitizeOpenAIResponsesReasoningEncryptedContentWithCompat(context.Background(), "test", body, true)
-	if gotSig := gjson.GetBytes(got, "input.0.encrypted_content").String(); gotSig != unknownSig {
-		t.Fatalf("compat encrypted_content = %q, want %q; body=%s", gotSig, unknownSig, got)
-	}
-	if gjson.GetBytes(got, "input.1.encrypted_content").Exists() {
-		t.Fatalf("empty encrypted_content should still be stripped: %s", got)
-	}
-	if gjson.GetBytes(got, "input.2.encrypted_content").Exists() {
-		t.Fatalf("Claude signature should still be stripped: %s", got)
-	}
-
-	got = sanitizeOpenAIResponsesReasoningEncryptedContent(context.Background(), "test", body)
-	if gjson.GetBytes(got, "input.0.encrypted_content").Exists() {
-		t.Fatalf("non-compat sanitization unexpectedly preserved unknown-format encrypted_content: %s", got)
-	}
-}
-
-func TestSanitizeOpenAIResponsesReasoningEncryptedContentKeepForeign_Issue6450(t *testing.T) {
-	const museSig = "Q-PaDg-mock-muse-spark-encrypted-reasoning-payload"
-	body := []byte(`{"store":false,"input":[` +
-		`{"id":"rs_muse","type":"reasoning","summary":[],"content":[{"type":"reasoning_text","text":"cleartext thinking"}],"encrypted_content":"` + museSig + `"},` +
-		`{"id":"rs_claude","type":"reasoning","summary":[],"content":null,"encrypted_content":"` + testClaudeCAISSample + `"},` +
-		`{"id":"rs_empty","type":"reasoning","summary":[],"content":null,"encrypted_content":""},` +
-		`{"id":"rs_orphan","type":"reasoning","summary":[]}` +
-		`]}`)
-
-	got := sanitizeOpenAIResponsesReasoningEncryptedContentKeepForeign(context.Background(), "test", body)
-
-	// rs_muse: unknown format signature preserved, cleartext content moved to summary, id kept
-	assertEmptyReasoningContent(t, got, "input.0.content")
-	if gotSig := gjson.GetBytes(got, "input.0.encrypted_content").String(); gotSig != museSig {
-		t.Fatalf("keepForeign encrypted_content = %q, want %q; body=%s", gotSig, museSig, got)
-	}
-	if gotID := gjson.GetBytes(got, "input.0.id").String(); gotID != "rs_muse" {
-		t.Fatalf("keepForeign reasoning id = %q, want rs_muse; body=%s", gotID, got)
-	}
-	if gotSummary := gjson.GetBytes(got, "input.0.summary.0.text").String(); gotSummary != "cleartext thinking" {
-		t.Fatalf("keepForeign summary = %q, want 'cleartext thinking'; body=%s", gotSummary, got)
-	}
-
-	// rs_claude: known foreign signature stripped, id dropped when store=false
-	if gjson.GetBytes(got, "input.1.encrypted_content").Exists() {
-		t.Fatalf("Claude signature should be stripped: %s", got)
-	}
-	if gjson.GetBytes(got, "input.1.id").Exists() {
-		t.Fatalf("Claude reasoning id should be dropped: %s", got)
-	}
-
-	// rs_empty: empty signature stripped, id dropped
-	if gjson.GetBytes(got, "input.2.encrypted_content").Exists() {
-		t.Fatalf("empty signature should be stripped: %s", got)
-	}
-	if gjson.GetBytes(got, "input.2.id").Exists() {
-		t.Fatalf("empty reasoning id should be dropped: %s", got)
-	}
-
-	// rs_orphan: missing signature, id dropped when store=false
-	if gjson.GetBytes(got, "input.3.id").Exists() {
-		t.Fatalf("orphan reasoning id should be dropped: %s", got)
+	for _, index := range []int{1, 2} {
+		item := gjson.GetBytes(got, "input."+strconv.Itoa(index))
+		if item.Get("encrypted_content").Exists() {
+			t.Fatalf("input.%d.encrypted_content should be dropped: %s", index, got)
+		}
+		if item.Get("id").Exists() {
+			t.Fatalf("input.%d.id should be dropped with its invalid encrypted_content: %s", index, got)
+		}
 	}
 }
 

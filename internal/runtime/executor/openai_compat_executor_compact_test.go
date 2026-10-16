@@ -13,11 +13,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 	"github.com/tidwall/gjson"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	cliproxyauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 func TestOpenAICompatExecutorCompactPassthrough(t *testing.T) {
@@ -1186,13 +1186,18 @@ func TestOpenAICompatExecutorStreamDropsChunksAfterDone(t *testing.T) {
 		}
 		payloads = append(payloads, string(chunk.Payload))
 	}
-	if len(payloads) != 2 {
-		t.Fatalf("got %d payloads %v, want 2 (content + finish; no post-DONE cost chunk)", len(payloads), payloads)
+	if len(payloads) != 3 {
+		t.Fatalf("got %d payloads %v, want 3 (content + finish + [DONE] sentinel; no post-DONE cost chunk)", len(payloads), payloads)
 	}
 	for _, p := range payloads {
 		if strings.Contains(p, `"cost"`) {
 			t.Fatalf("post-DONE cost chunk was forwarded: %s", p)
 		}
+	}
+	if strings.TrimSpace(payloads[2]) != "data: [DONE]" {
+		t.Fatalf("third payload = %q, want the [DONE] sentinel", payloads[2])
+	}
+	for _, p := range payloads[:2] {
 		if !gjson.Get(p, "id").Exists() {
 			t.Fatalf("chunk missing id: %s", p)
 		}

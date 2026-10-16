@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	sdkaccess "github.com/router-for-me/CLIProxyAPI/v8/sdk/access"
-	sdkconfig "github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
+	sdkaccess "github.com/xnuyoah/XRouter/v8/sdk/access"
+	sdkconfig "github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
 // Register ensures the config-access provider is available to the access manager.

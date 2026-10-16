@@ -1,4 +1,4 @@
-// Package config provides configuration management for the CLI Proxy API server.
+// Package config provides configuration management for the XRouter server.
 // It handles loading and parsing YAML configuration files, and provides structured
 // access to application settings including server port, authentication directory,
 // debug settings, proxy configuration, and API keys.
@@ -15,16 +15,10 @@ type SDKConfig struct {
 	// Values <= 0 disable the limit (default).
 	MaxRequestBodyBytes int64 `yaml:"max-request-body-bytes" json:"max-request-body-bytes"`
 
-	// Client configures client-facing compatibility behavior.
-	Client ClientConfig `yaml:"client" json:"client"`
-
 	// OAuthOnlyFields records v8 provider settings that must wait for credential
 	// selection and must not affect API-key credentials. Config YAML snapshots
 	// preserve the corresponding v8 paths instead of serializing this metadata.
 	OAuthOnlyFields map[string]bool `yaml:"-" json:"-"`
-
-	// CodexResponseSteering mirrors the provider-wide runtime setting for API handlers.
-	CodexResponseSteering bool `yaml:"-" json:"-"`
 
 	// ProxyURL is the URL of an optional proxy server to use for outbound requests.
 	ProxyURL string `yaml:"proxy-url" json:"proxy-url"`
@@ -56,29 +50,13 @@ type SDKConfig struct {
 	//     sent it and do not inject it otherwise; on /v1/images/generations and /v1/images/edits behave like "chat".
 	DisableImageGeneration DisableImageGenerationMode `yaml:"disable-image-generation" json:"disable-image-generation"`
 
-	// GPTImage2BaseModel sets the base (mainline) model used by the legacy hosted
-	// image_generation tool path when a Codex image request is not proxied directly
-	// through the Image API.
-	//
-	// The value must start with "gpt-" (case-insensitive). If empty or invalid, the
-	// default base model ("gpt-5.4-mini") is used.
-	GPTImage2BaseModel string `yaml:"gpt-image-2-base-model,omitempty" json:"gpt-image-2-base-model,omitempty"`
-
-	// VideoResultAuthCacheTTL controls how long video IDs stay pinned to the credential
-	// that created them. Accepts duration strings like "30m" or "3h".
-	// Empty or invalid values use the default 3h.
-	VideoResultAuthCacheTTL string `yaml:"video-result-auth-cache-ttl,omitempty" json:"video-result-auth-cache-ttl,omitempty"`
-
-	// ForceModelPrefix requires explicit model prefixes (e.g., "teamA/gemini-3-pro-preview")
+	// ForceModelPrefix requires explicit model prefixes (e.g., "teamA/claude-sonnet-4-5")
 	// to target prefixed credentials. When false, unprefixed model requests may use prefixed
 	// credentials as well.
 	ForceModelPrefix bool `yaml:"force-model-prefix" json:"force-model-prefix"`
 
 	// RequestLog enables or disables detailed request logging functionality.
 	RequestLog bool `yaml:"request-log" json:"request-log"`
-
-	// CodexOrphanDelegationCompatibility mirrors the provider-wide runtime setting for API handlers.
-	CodexOrphanDelegationCompatibility bool `yaml:"-" json:"-"`
 
 	// ClaudeCode configures Claude Code compatibility behavior.
 	ClaudeCode ClaudeCodeConfig `yaml:"claude-code" json:"claude-code"`
@@ -110,22 +88,6 @@ func (c *SDKConfig) TLSHandshakeTimeout() time.Duration {
 		return time.Duration(math.MaxInt64)
 	}
 	return time.Duration(c.TLSHandshakeTimeoutSeconds) * time.Second
-}
-
-// ClientConfig configures client-facing compatibility behavior.
-type ClientConfig struct {
-	Codex CodexClientConfig `yaml:"codex" json:"codex"`
-}
-
-// CodexClientConfig configures Codex client compatibility and the model catalog.
-type CodexClientConfig struct {
-	// OptimizeMultiAgentV2 optimizes official Codex multi-agent requests across providers.
-	// Default false leaves the client's multi-agent behavior unchanged.
-	OptimizeMultiAgentV2 bool `yaml:"optimize-multi-agent-v2" json:"optimize-multi-agent-v2"`
-
-	// EnableApplyPatch advertises freeform apply_patch only for supported models.
-	// Default false clears the capability regardless of template metadata.
-	EnableApplyPatch bool `yaml:"enable-apply-patch" json:"enable-apply-patch"`
 }
 
 // ClaudeCodeConfig configures Claude Code compatibility behavior.

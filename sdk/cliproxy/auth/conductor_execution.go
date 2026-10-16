@@ -15,13 +15,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	cliproxysession "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/session"
-	coreusage "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/logging"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	cliproxysession "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/session"
+	coreusage "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 func newUpstreamAttemptContext(ctx context.Context) context.Context {
@@ -166,13 +166,6 @@ func (m *Manager) Execute(ctx context.Context, providers []string, req cliproxye
 		}
 		lastErr = preferredExecutionAttemptError(lastErr, preferredUpstreamErr)
 		lastErr = unwrapExecutionBoundaryError(lastErr)
-		if hasAntigravityProvider(normalized) && shouldAttemptAntigravityCreditsFallback(m, lastErr, normalized) {
-			if resp, ok, errCredits := m.tryAntigravityCreditsExecute(ctx, req, opts); errCredits != nil {
-				return cliproxyexecutor.Response{}, errCredits
-			} else if ok {
-				return resp, nil
-			}
-		}
 		return cliproxyexecutor.Response{}, lastErr
 	}
 	return cliproxyexecutor.Response{}, &Error{Code: "auth_not_found", Message: "no auth available"}
@@ -303,13 +296,6 @@ func (m *Manager) ExecuteStream(ctx context.Context, providers []string, req cli
 			lastErr = preferredExecutionAttemptError(lastErr, preferredUpstreamErr)
 		}
 		lastErr = unwrapExecutionBoundaryError(lastErr)
-		if hasAntigravityProvider(normalized) && shouldAttemptAntigravityCreditsFallback(m, lastErr, normalized) {
-			if result, ok, errCredits := m.tryAntigravityCreditsExecuteStream(ctx, req, opts); errCredits != nil {
-				return nil, errCredits
-			} else if ok {
-				return result, nil
-			}
-		}
 		var bootstrapErr *streamBootstrapError
 		if errors.As(lastErr, &bootstrapErr) && bootstrapErr != nil {
 			return streamErrorResult(bootstrapErr.Headers(), lastErr), nil
@@ -416,20 +402,8 @@ func requestToFormat(provider string, executor ProviderExecutor, req cliproxyexe
 	switch strings.ToLower(strings.TrimSpace(provider)) {
 	case "codex":
 		return sdktranslator.FormatCodex
-	case "xai":
-		return sdktranslator.FormatCodex
 	case "claude":
 		return sdktranslator.FormatClaude
-	case "gemini", "vertex", "aistudio":
-		return sdktranslator.FormatGemini
-	case "kimi", "kimi-ai", "kimi.ai", "kimi.com":
-		return sdktranslator.FormatOpenAI
-	case "meta":
-		return sdktranslator.FormatCodex
-	case "antigravity":
-		return sdktranslator.FormatAntigravity
-	case "devin":
-		return sdktranslator.FormatInteractions
 	default:
 		return sdktranslator.FormatOpenAI
 	}
@@ -589,7 +563,7 @@ func (m *Manager) executeMixedOnce(ctx context.Context, providers []string, req 
 			if errIntercept != nil {
 				return cliproxyexecutor.Response{}, errIntercept
 			}
-			execReq = attachResolvedExecutionModelInfo(routing, execReq, auth, routeModel, upstreamModel, restoreExecutionModel)
+			execReq = attachResolvedExecutionModelInfo(routing, execReq, auth, routeModel, upstreamModel)
 			execCtx = syncMetadataSessionToContext(execCtx, execOpts.Metadata)
 			executionSeq := m.nextExecutionSeq()
 			startExec := time.Now()
@@ -803,7 +777,7 @@ func (m *Manager) executeCountMixedOnce(ctx context.Context, providers []string,
 			if errIntercept != nil {
 				return cliproxyexecutor.Response{}, errIntercept
 			}
-			execReq = attachResolvedExecutionModelInfo(routing, execReq, auth, routeModel, upstreamModel, restoreExecutionModel)
+			execReq = attachResolvedExecutionModelInfo(routing, execReq, auth, routeModel, upstreamModel)
 			execCtx = syncMetadataSessionToContext(execCtx, execOpts.Metadata)
 			executionSeq := m.nextExecutionSeq()
 			startExec := time.Now()
@@ -1820,15 +1794,7 @@ func executorKeyFromAuth(auth *Auth) string {
 		}
 		return util.OpenAICompatibleProviderKey(providerKey)
 	}
-	provider := strings.ToLower(strings.TrimSpace(auth.Provider))
-	switch provider {
-	case "kimi.com":
-		return "kimi"
-	case "kimi.ai":
-		return "kimi-ai"
-	default:
-		return provider
-	}
+	return strings.ToLower(strings.TrimSpace(auth.Provider))
 }
 
 // logEntryWithRequestID returns a logrus entry with request_id field if available in context.

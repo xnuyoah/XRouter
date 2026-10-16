@@ -3,7 +3,7 @@ package diff
 import (
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 func TestSummarizeExcludedModels_NormalizesAndDedupes(t *testing.T) {
@@ -58,22 +58,22 @@ func TestSummarizeOAuthExcludedModels_NormalizesKeys(t *testing.T) {
 	}
 }
 
-func TestSummarizeVertexModels(t *testing.T) {
-	summary := SummarizeVertexModels([]config.VertexCompatModel{
+func TestSummarizeNativeAPIModels(t *testing.T) {
+	summary := SummarizeNativeAPIModels([]config.NativeAPIModel{
 		{Name: "m1"},
 		{Name: " ", Alias: "alias"},
 		{}, // ignored
 	})
 	if summary.count != 2 {
-		t.Fatalf("expected 2 vertex models, got %d", summary.count)
+		t.Fatalf("expected 2 native models, got %d", summary.count)
 	}
 	if summary.hash == "" {
 		t.Fatal("expected non-empty hash")
 	}
-	if empty := SummarizeVertexModels(nil); empty.count != 0 || empty.hash != "" {
+	if empty := SummarizeNativeAPIModels(nil); empty.count != 0 || empty.hash != "" {
 		t.Fatalf("expected empty summary for nil input, got %+v", empty)
 	}
-	if blank := SummarizeVertexModels([]config.VertexCompatModel{{Name: " "}}); blank.count != 0 || blank.hash != "" {
+	if blank := SummarizeNativeAPIModels([]config.NativeAPIModel{{Name: " "}}); blank.count != 0 || blank.hash != "" {
 		t.Fatalf("expected blank model ignored, got %+v", blank)
 	}
 }

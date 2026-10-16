@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/modelconfig"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/modelconfig"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
 // ComputeOpenAICompatModelsHash returns a stable hash for OpenAI-compat models.
@@ -18,24 +18,9 @@ func ComputeOpenAICompatModelsHash(models []config.OpenAICompatibilityModel) str
 	return modelconfig.ComputeOpenAICompatModelsHash(models)
 }
 
-// ComputeVertexCompatModelsHash returns a stable hash for Vertex-compatible models.
-func ComputeVertexCompatModelsHash(models []config.VertexCompatModel) string {
-	return modelconfig.ComputeVertexCompatModelsHash(models)
-}
-
-// ComputeClaudeModelsHash returns a stable hash for Claude model aliases.
-func ComputeClaudeModelsHash(models []config.ClaudeModel) string {
-	return modelconfig.ComputeClaudeModelsHash(models)
-}
-
-// ComputeCodexModelsHash returns a stable hash for Codex model aliases.
-func ComputeCodexModelsHash(models []config.CodexModel) string {
-	return modelconfig.ComputeCodexModelsHash(models)
-}
-
-// ComputeGeminiModelsHash returns a stable hash for Gemini model aliases.
-func ComputeGeminiModelsHash(models []config.GeminiModel) string {
-	return modelconfig.ComputeGeminiModelsHash(models)
+// ComputeNativeAPIModelsHash returns a stable hash for native OpenAI-wire API-key models.
+func ComputeNativeAPIModelsHash(models []config.NativeAPIModel) string {
+	return modelconfig.ComputeNativeAPIModelsHash(models)
 }
 
 // ComputeExcludedModelsHash returns a normalized hash for excluded model lists.

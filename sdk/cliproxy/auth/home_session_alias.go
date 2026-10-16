@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	cliproxysession "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/session"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	cliproxysession "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/session"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 const (
@@ -376,12 +376,10 @@ func (m *Manager) homeDispatchSessionID(opts cliproxyexecutor.Options) string {
 
 func providerFromSourceFormat(format sdktranslator.Format) string {
 	switch {
-	case strings.EqualFold(string(format), string(sdktranslator.FormatGemini)), strings.EqualFold(string(format), string(sdktranslator.FormatAntigravity)):
+	case strings.EqualFold(string(format), string(sdktranslator.FormatAntigravity)):
 		return "google"
 	case strings.EqualFold(string(format), string(sdktranslator.FormatClaude)):
 		return "claude"
-	case strings.EqualFold(string(format), string(sdktranslator.FormatInteractions)):
-		return "devin"
 	default:
 		return "openai"
 	}

@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	cliproxysession "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/session"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v8/sdk/translator"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	cliproxysession "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/session"
+	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
 func TestFillFirstSelectorPick_Deterministic(t *testing.T) {
@@ -27,7 +27,7 @@ func TestFillFirstSelectorPick_Deterministic(t *testing.T) {
 		{ID: "c"},
 	}
 
-	got, err := selector.Pick(context.Background(), "gemini", "", cliproxyexecutor.Options{}, auths)
+	got, err := selector.Pick(context.Background(), "openai", "", cliproxyexecutor.Options{}, auths)
 	if err != nil {
 		t.Fatalf("Pick() error = %v", err)
 	}
@@ -51,7 +51,7 @@ func TestRoundRobinSelectorPick_CyclesDeterministic(t *testing.T) {
 
 	want := []string{"a", "b", "c", "a", "b"}
 	for i, id := range want {
-		got, err := selector.Pick(context.Background(), "gemini", "", cliproxyexecutor.Options{}, auths)
+		got, err := selector.Pick(context.Background(), "openai", "", cliproxyexecutor.Options{}, auths)
 		if err != nil {
 			t.Fatalf("Pick() #%d error = %v", i, err)
 		}
@@ -77,7 +77,7 @@ func TestWeightedRoundRobinSelectorPick_DistributesAndSkipsNonPositiveWeights(t 
 
 	counts := make(map[string]int)
 	for index := 0; index < 100; index++ {
-		got, errPick := selector.Pick(context.Background(), "gemini", "model", cliproxyexecutor.Options{}, auths)
+		got, errPick := selector.Pick(context.Background(), "openai", "model", cliproxyexecutor.Options{}, auths)
 		if errPick != nil {
 			t.Fatalf("Pick() #%d error = %v", index, errPick)
 		}
@@ -102,7 +102,7 @@ func TestWeightedRoundRobinSelectorPick_ResetsCreditsWhenWeightsChange(t *testin
 	authB := &Auth{ID: "b", Attributes: map[string]string{AttributeWeight: "1"}}
 	auths := []*Auth{authA, authB}
 	for index := 0; index < 1000; index++ {
-		if _, errPick := selector.Pick(context.Background(), "gemini", "model", cliproxyexecutor.Options{}, auths); errPick != nil {
+		if _, errPick := selector.Pick(context.Background(), "openai", "model", cliproxyexecutor.Options{}, auths); errPick != nil {
 			t.Fatalf("warmup Pick() #%d error = %v", index, errPick)
 		}
 	}
@@ -110,7 +110,7 @@ func TestWeightedRoundRobinSelectorPick_ResetsCreditsWhenWeightsChange(t *testin
 	authA.Attributes[AttributeWeight] = "1"
 	counts := make(map[string]int)
 	for index := 0; index < 20; index++ {
-		got, errPick := selector.Pick(context.Background(), "gemini", "model", cliproxyexecutor.Options{}, auths)
+		got, errPick := selector.Pick(context.Background(), "openai", "model", cliproxyexecutor.Options{}, auths)
 		if errPick != nil {
 			t.Fatalf("Pick() after weight change #%d error = %v", index, errPick)
 		}
@@ -132,7 +132,7 @@ func TestWeightedRoundRobinSelectorPick_RebalancesWhenHighestWeightUnavailable(t
 	}
 	counts := make(map[string]int)
 	for index := 0; index < 100; index++ {
-		got, errPick := selector.Pick(context.Background(), "gemini", "model", cliproxyexecutor.Options{}, auths)
+		got, errPick := selector.Pick(context.Background(), "openai", "model", cliproxyexecutor.Options{}, auths)
 		if errPick != nil {
 			t.Fatalf("Pick() #%d error = %v", index, errPick)
 		}
@@ -159,12 +159,12 @@ func TestWeightedRoundRobinSelectorPick_SkipsUnavailableAndQuotaExceededWithoutR
 		{ID: "available"},
 	}
 
-	gotModel, errModel := selector.Pick(context.Background(), "gemini", model, cliproxyexecutor.Options{}, auths)
+	gotModel, errModel := selector.Pick(context.Background(), "openai", model, cliproxyexecutor.Options{}, auths)
 	if errModel != nil || gotModel == nil || gotModel.ID != "available" {
 		t.Fatalf("model Pick() = %#v, %v; want available", gotModel, errModel)
 	}
 	for index := 0; index < 4; index++ {
-		gotAuth, errAuth := selector.Pick(context.Background(), "gemini", "", cliproxyexecutor.Options{}, auths)
+		gotAuth, errAuth := selector.Pick(context.Background(), "openai", "", cliproxyexecutor.Options{}, auths)
 		if errAuth != nil || gotAuth == nil {
 			t.Fatalf("auth Pick() #%d = %#v, %v; want available auth", index, gotAuth, errAuth)
 		}
@@ -227,14 +227,14 @@ func TestWeightedRoundRobinSelectorPick_RecoveredAuthReturnsWithoutAccumulatedCr
 	auths := []*Auth{authA, authB}
 
 	for index := 0; index < 6; index++ {
-		if _, errPick := selector.Pick(context.Background(), "gemini", "model", cliproxyexecutor.Options{}, auths); errPick != nil {
+		if _, errPick := selector.Pick(context.Background(), "openai", "model", cliproxyexecutor.Options{}, auths); errPick != nil {
 			t.Fatalf("warmup Pick() #%d error = %v", index, errPick)
 		}
 	}
 	authA.Unavailable = true
 	authA.NextRetryAfter = time.Now().Add(time.Hour)
 	for index := 0; index < 6; index++ {
-		got, errPick := selector.Pick(context.Background(), "gemini", "model", cliproxyexecutor.Options{}, auths)
+		got, errPick := selector.Pick(context.Background(), "openai", "model", cliproxyexecutor.Options{}, auths)
 		if errPick != nil || got == nil || got.ID != "b" {
 			t.Fatalf("unavailable Pick() #%d = %#v, %v; want b", index, got, errPick)
 		}
@@ -244,7 +244,7 @@ func TestWeightedRoundRobinSelectorPick_RecoveredAuthReturnsWithoutAccumulatedCr
 
 	counts := make(map[string]int)
 	for index := 0; index < 6; index++ {
-		got, errPick := selector.Pick(context.Background(), "gemini", "model", cliproxyexecutor.Options{}, auths)
+		got, errPick := selector.Pick(context.Background(), "openai", "model", cliproxyexecutor.Options{}, auths)
 		if errPick != nil {
 			t.Fatalf("recovered Pick() #%d error = %v", index, errPick)
 		}
@@ -262,7 +262,7 @@ func TestWeightedRoundRobinSelectorPick_DefaultWeightIsOne(t *testing.T) {
 	auths := []*Auth{{ID: "a"}, {ID: "b"}, {ID: "c"}}
 	counts := make(map[string]int)
 	for index := 0; index < 30; index++ {
-		got, errPick := selector.Pick(context.Background(), "gemini", "model", cliproxyexecutor.Options{}, auths)
+		got, errPick := selector.Pick(context.Background(), "openai", "model", cliproxyexecutor.Options{}, auths)
 		if errPick != nil {
 			t.Fatalf("Pick() #%d error = %v", index, errPick)
 		}
@@ -414,7 +414,7 @@ func TestRoundRobinSelectorPick_Concurrent(t *testing.T) {
 			defer wg.Done()
 			<-start
 			for j := 0; j < iterations; j++ {
-				got, err := selector.Pick(context.Background(), "gemini", "", cliproxyexecutor.Options{}, auths)
+				got, err := selector.Pick(context.Background(), "openai", "", cliproxyexecutor.Options{}, auths)
 				if err != nil {
 					select {
 					case errCh <- err:
@@ -529,7 +529,7 @@ func TestSelectorPick_AllCooldownReturnsModelCooldownError(t *testing.T) {
 		t.Parallel()
 
 		selector := &FillFirstSelector{}
-		_, err := selector.Pick(context.Background(), "gemini", model, cliproxyexecutor.Options{}, auths)
+		_, err := selector.Pick(context.Background(), "openai", model, cliproxyexecutor.Options{}, auths)
 		if err == nil {
 			t.Fatalf("Pick() error = nil")
 		}
@@ -547,8 +547,8 @@ func TestSelectorPick_AllCooldownReturnsModelCooldownError(t *testing.T) {
 		if !ok {
 			t.Fatalf("Error() payload missing error object: %v", payload)
 		}
-		if got, _ := rawErr["provider"].(string); got != "gemini" {
-			t.Fatalf("Error().error.provider = %q, want %q", got, "gemini")
+		if got, _ := rawErr["provider"].(string); got != "openai" {
+			t.Fatalf("Error().error.provider = %q, want %q", got, "openai")
 		}
 	})
 }
@@ -700,11 +700,11 @@ func TestRoundRobinSelectorPick_ThinkingSuffixSharesCursor(t *testing.T) {
 		{ID: "a"},
 	}
 
-	first, err := selector.Pick(context.Background(), "gemini", "test-model(high)", cliproxyexecutor.Options{}, auths)
+	first, err := selector.Pick(context.Background(), "openai", "test-model(high)", cliproxyexecutor.Options{}, auths)
 	if err != nil {
 		t.Fatalf("Pick() first error = %v", err)
 	}
-	second, err := selector.Pick(context.Background(), "gemini", "test-model(low)", cliproxyexecutor.Options{}, auths)
+	second, err := selector.Pick(context.Background(), "openai", "test-model(low)", cliproxyexecutor.Options{}, auths)
 	if err != nil {
 		t.Fatalf("Pick() second error = %v", err)
 	}
@@ -744,7 +744,7 @@ func TestRoundRobinSelectorPick_ResumesRotationAcrossRetryExclusions(t *testing.
 					candidates = append(candidates, auth)
 				}
 			}
-			got, errPick := selector.Pick(context.Background(), "gemini", "model", cliproxyexecutor.Options{}, candidates)
+			got, errPick := selector.Pick(context.Background(), "openai", "model", cliproxyexecutor.Options{}, candidates)
 			if errPick != nil {
 				t.Fatalf("Pick() request %d attempt %d error = %v", index, attempt, errPick)
 			}
@@ -827,9 +827,9 @@ func TestRoundRobinSelectorPick_CursorKeyCap(t *testing.T) {
 	selector := &RoundRobinSelector{maxKeys: 2}
 	auths := []*Auth{{ID: "a"}}
 
-	_, _ = selector.Pick(context.Background(), "gemini", "m1", cliproxyexecutor.Options{}, auths)
-	_, _ = selector.Pick(context.Background(), "gemini", "m2", cliproxyexecutor.Options{}, auths)
-	_, _ = selector.Pick(context.Background(), "gemini", "m3", cliproxyexecutor.Options{}, auths)
+	_, _ = selector.Pick(context.Background(), "openai", "m1", cliproxyexecutor.Options{}, auths)
+	_, _ = selector.Pick(context.Background(), "openai", "m2", cliproxyexecutor.Options{}, auths)
+	_, _ = selector.Pick(context.Background(), "openai", "m3", cliproxyexecutor.Options{}, auths)
 
 	selector.mu.Lock()
 	defer selector.mu.Unlock()
@@ -840,8 +840,8 @@ func TestRoundRobinSelectorPick_CursorKeyCap(t *testing.T) {
 	if len(selector.lastPicked) != 1 {
 		t.Fatalf("len(selector.lastPicked) = %d, want %d", len(selector.lastPicked), 1)
 	}
-	if _, ok := selector.lastPicked["gemini:m3"]; !ok {
-		t.Fatalf("selector.lastPicked missing key %q", "gemini:m3")
+	if _, ok := selector.lastPicked["openai:m3"]; !ok {
+		t.Fatalf("selector.lastPicked missing key %q", "openai:m3")
 	}
 }
 
@@ -1465,21 +1465,21 @@ func TestExtractSessionID_ClaudeAPITopLevelSystem(t *testing.T) {
 	}
 }
 
-func TestExtractSessionID_GeminiFormat(t *testing.T) {
+func TestExtractSessionID_ContentsFormat(t *testing.T) {
 	t.Parallel()
 
-	// Gemini format with systemInstruction and contents
+	// contents/parts format with systemInstruction
 	payload := []byte(`{
 		"systemInstruction": {"parts": [{"text": "You are a helpful assistant."}]},
 		"contents": [
-			{"role": "user", "parts": [{"text": "Hello Gemini"}]},
+			{"role": "user", "parts": [{"text": "Hello there"}]},
 			{"role": "model", "parts": [{"text": "Hi there!"}]}
 		]
 	}`)
 
 	got := ExtractSessionID(nil, payload, nil)
 	if got == "" {
-		t.Error("ExtractSessionID() with Gemini format should return hash-based session ID")
+		t.Error("ExtractSessionID() with contents/parts format should return hash-based session ID")
 	}
 	if !strings.HasPrefix(got, "msg:") {
 		t.Errorf("ExtractSessionID() = %q, want prefix 'msg:'", got)
@@ -1596,19 +1596,19 @@ func TestSessionAffinitySelector_ThreeScenarios(t *testing.T) {
 			payload:  []byte(`{"messages":[{"role":"system","content":"You are helpful"},{"role":"user","content":"Hello"},{"role":"assistant","content":"Hi there!"},{"role":"user","content":"Help me"},{"role":"assistant","content":"Sure!"},{"role":"user","content":"Thanks"}]}`),
 		},
 		{
-			name:     "Gemini_Scenario1_NewRequest",
+			name:     "Contents_Scenario1_NewRequest",
 			scenario: "new",
-			payload:  []byte(`{"systemInstruction":{"parts":[{"text":"You are helpful"}]},"contents":[{"role":"user","parts":[{"text":"Hello Gemini"}]}]}`),
+			payload:  []byte(`{"systemInstruction":{"parts":[{"text":"You are helpful"}]},"contents":[{"role":"user","parts":[{"text":"Hello there"}]}]}`),
 		},
 		{
-			name:     "Gemini_Scenario2_SecondTurn",
+			name:     "Contents_Scenario2_SecondTurn",
 			scenario: "second",
-			payload:  []byte(`{"systemInstruction":{"parts":[{"text":"You are helpful"}]},"contents":[{"role":"user","parts":[{"text":"Hello Gemini"}]},{"role":"model","parts":[{"text":"Hi!"}]},{"role":"user","parts":[{"text":"Help"}]}]}`),
+			payload:  []byte(`{"systemInstruction":{"parts":[{"text":"You are helpful"}]},"contents":[{"role":"user","parts":[{"text":"Hello there"}]},{"role":"model","parts":[{"text":"Hi!"}]},{"role":"user","parts":[{"text":"Help"}]}]}`),
 		},
 		{
-			name:     "Gemini_Scenario3_ManyTurns",
+			name:     "Contents_Scenario3_ManyTurns",
 			scenario: "many",
-			payload:  []byte(`{"systemInstruction":{"parts":[{"text":"You are helpful"}]},"contents":[{"role":"user","parts":[{"text":"Hello Gemini"}]},{"role":"model","parts":[{"text":"Hi!"}]},{"role":"user","parts":[{"text":"Help"}]},{"role":"model","parts":[{"text":"Sure!"}]},{"role":"user","parts":[{"text":"Thanks"}]}]}`),
+			payload:  []byte(`{"systemInstruction":{"parts":[{"text":"You are helpful"}]},"contents":[{"role":"user","parts":[{"text":"Hello there"}]},{"role":"model","parts":[{"text":"Hi!"}]},{"role":"user","parts":[{"text":"Help"}]},{"role":"model","parts":[{"text":"Sure!"}]},{"role":"user","parts":[{"text":"Thanks"}]}]}`),
 		},
 		{
 			name:     "Claude_Scenario1_NewRequest",
@@ -2003,7 +2003,7 @@ func TestSessionAffinitySelector_CrossProviderIsolation(t *testing.T) {
 	defer selector.Stop()
 
 	authClaude := &Auth{ID: "auth-claude"}
-	authGemini := &Auth{ID: "auth-gemini"}
+	authOpenAI := &Auth{ID: "auth-openai"}
 
 	// Same session ID for both providers
 	payload := []byte(`{"metadata":{"user_id":"user_xxx_account__session_cross-provider-test"}}`)
@@ -2018,24 +2018,24 @@ func TestSessionAffinitySelector_CrossProviderIsolation(t *testing.T) {
 		t.Fatalf("Pick() for claude = %q, want auth-claude", pickedClaude.ID)
 	}
 
-	// Same session but via gemini provider should get different auth
-	pickedGemini, err := selector.Pick(context.Background(), "gemini", "gemini-2.5-pro", opts, []*Auth{authGemini})
+	// Same session but via openai provider should get different auth
+	pickedOpenAI, err := selector.Pick(context.Background(), "openai", "gpt-5.5", opts, []*Auth{authOpenAI})
 	if err != nil {
-		t.Fatalf("Pick() for gemini error = %v", err)
+		t.Fatalf("Pick() for openai error = %v", err)
 	}
-	if pickedGemini.ID != "auth-gemini" {
-		t.Fatalf("Pick() for gemini = %q, want auth-gemini", pickedGemini.ID)
+	if pickedOpenAI.ID != "auth-openai" {
+		t.Fatalf("Pick() for openai = %q, want auth-openai", pickedOpenAI.ID)
 	}
 
 	// Verify both bindings remain stable
 	for i := 0; i < 5; i++ {
 		gotC, _ := selector.Pick(context.Background(), "claude", "claude-3", opts, []*Auth{authClaude})
-		gotG, _ := selector.Pick(context.Background(), "gemini", "gemini-2.5-pro", opts, []*Auth{authGemini})
+		gotG, _ := selector.Pick(context.Background(), "openai", "gpt-5.5", opts, []*Auth{authOpenAI})
 		if gotC.ID != "auth-claude" {
 			t.Fatalf("Pick() #%d for claude = %q, want auth-claude", i, gotC.ID)
 		}
-		if gotG.ID != "auth-gemini" {
-			t.Fatalf("Pick() #%d for gemini = %q, want auth-gemini", i, gotG.ID)
+		if gotG.ID != "auth-openai" {
+			t.Fatalf("Pick() #%d for openai = %q, want auth-openai", i, gotG.ID)
 		}
 	}
 }

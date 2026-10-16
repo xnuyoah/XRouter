@@ -1,11 +1,10 @@
 package helps
 
 import (
-	"regexp"
 	"testing"
 
 	"github.com/google/uuid"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 func TestDerivedSessionProviderMappings(t *testing.T) {
@@ -13,26 +12,18 @@ func TestDerivedSessionProviderMappings(t *testing.T) {
 
 	metadata := map[string]any{cliproxyexecutor.DerivedSessionIDMetadataKey: "ctx:v1:test-root"}
 	codexID := DerivedSessionUUID("codex", metadata)
-	xaiID := DerivedSessionUUID("xai", metadata)
+	deepseekID := DerivedSessionUUID("deepseek", metadata)
 	if _, errParse := uuid.Parse(codexID); errParse != nil {
 		t.Fatalf("Codex mapping %q is not a UUID: %v", codexID, errParse)
 	}
-	if _, errParse := uuid.Parse(xaiID); errParse != nil {
-		t.Fatalf("xAI mapping %q is not a UUID: %v", xaiID, errParse)
+	if _, errParse := uuid.Parse(deepseekID); errParse != nil {
+		t.Fatalf("DeepSeek mapping %q is not a UUID: %v", deepseekID, errParse)
 	}
-	if codexID == xaiID {
+	if codexID == deepseekID {
 		t.Fatalf("provider namespaces produced the same UUID: %q", codexID)
 	}
 	if repeated := DerivedSessionUUID("codex", metadata); repeated != codexID {
 		t.Fatalf("Codex mapping is not stable: first=%q repeated=%q", codexID, repeated)
-	}
-
-	antigravityID := DerivedAntigravitySessionID(metadata)
-	if matched := regexp.MustCompile(`^-[0-9]+$`).MatchString(antigravityID); !matched {
-		t.Fatalf("Antigravity mapping = %q, want negative decimal", antigravityID)
-	}
-	if repeated := DerivedAntigravitySessionID(metadata); repeated != antigravityID {
-		t.Fatalf("Antigravity mapping is not stable: first=%q repeated=%q", antigravityID, repeated)
 	}
 }
 
@@ -62,8 +53,5 @@ func TestDerivedSessionProviderMappingsRequireIdentity(t *testing.T) {
 
 	if got := DerivedSessionUUID("codex", nil); got != "" {
 		t.Fatalf("DerivedSessionUUID() = %q, want empty", got)
-	}
-	if got := DerivedAntigravitySessionID(nil); got != "" {
-		t.Fatalf("DerivedAntigravitySessionID() = %q, want empty", got)
 	}
 }

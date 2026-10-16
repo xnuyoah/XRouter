@@ -136,14 +136,11 @@ func TestBuildTXTRecords_SizeAndKeys(t *testing.T) {
 	if parsed["api_openai"] != "/v1" {
 		t.Errorf("expected api_openai=/v1, got %s", parsed["api_openai"])
 	}
-	if parsed["api_gemini"] != "/v1beta" {
-		t.Errorf("expected api_gemini=/v1beta, got %s", parsed["api_gemini"])
-	}
-	expectedProtocols := "chat-completions,responses,messages,generate-content,interactions"
+	expectedProtocols := "chat-completions,responses,messages"
 	if parsed["protocols"] != expectedProtocols {
 		t.Errorf("expected protocols=%s, got %s", expectedProtocols, parsed["protocols"])
 	}
-	expectedFeatures := "chat,responses,messages,generate_content,interactions"
+	expectedFeatures := "chat,responses,messages"
 	if parsed["features"] != expectedFeatures {
 		t.Errorf("expected features=%s, got %s", expectedFeatures, parsed["features"])
 	}
@@ -159,8 +156,8 @@ func TestBuildTXTRecords_SizeAndKeys(t *testing.T) {
 }
 
 func TestParseTXTRecords_NormalizesKeys(t *testing.T) {
-	parsed := ParseTXTRecords([]string{"TLS=1", "API_OpenAI=/v1", "Product=cliproxyapi"})
-	if parsed["tls"] != "1" || parsed["api_openai"] != "/v1" || parsed["product"] != "cliproxyapi" {
+	parsed := ParseTXTRecords([]string{"TLS=1", "API_OpenAI=/v1", "Product=xrouter"})
+	if parsed["tls"] != "1" || parsed["api_openai"] != "/v1" || parsed["product"] != "xrouter" {
 		t.Fatalf("parsed TXT records = %#v", parsed)
 	}
 }
@@ -325,7 +322,7 @@ func TestInterfaceFiltering_Helpers(t *testing.T) {
 }
 
 func TestBrowseEntryWithinLimits(t *testing.T) {
-	if !browseEntryWithinLimits(&zeroconf.ServiceEntry{Text: []string{"product=cliproxyapi"}}) {
+	if !browseEntryWithinLimits(&zeroconf.ServiceEntry{Text: []string{"product=xrouter"}}) {
 		t.Fatal("expected a small TXT entry to be accepted")
 	}
 	if browseEntryWithinLimits(&zeroconf.ServiceEntry{Text: []string{strings.Repeat("x", maxTXTRecordBytes+1)}}) {
@@ -341,7 +338,7 @@ func TestMergeDiscoveredService(t *testing.T) {
 		InstanceName: "node",
 		ServiceType:  DefaultServiceType,
 		Domain:       DefaultDomain,
-		Port:         8317,
+		Port:         11016,
 		IPv4:         []net.IP{net.ParseIP("192.0.2.10")},
 		RawTXT:       map[string]string{"auth_required": "true"},
 		Endpoints:    map[string]string{"openai": "/v1"},
@@ -350,7 +347,7 @@ func TestMergeDiscoveredService(t *testing.T) {
 		InstanceName: "node",
 		ServiceType:  DefaultServiceType,
 		Domain:       DefaultDomain,
-		Port:         8317,
+		Port:         11016,
 		IPv4:         []net.IP{net.ParseIP("192.0.2.10"), net.ParseIP("192.0.2.11")},
 		IPv6:         []net.IP{net.ParseIP("2001:db8::10")},
 		Product:      ProductCPA,
@@ -421,7 +418,7 @@ func TestEntryToDiscoveredLimitsTXTLists(t *testing.T) {
 			Service:  DefaultServiceType,
 			Domain:   DefaultDomain,
 		},
-		Port:     8317,
+		Port:     11016,
 		AddrIPv4: addresses,
 		Text:     []string{"auth_methods=" + methods.String()},
 	})

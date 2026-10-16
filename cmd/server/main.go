@@ -1,5 +1,5 @@
-// Package main provides the entry point for the CLI Proxy API server.
-// This server acts as a proxy that provides OpenAI/Gemini/Claude compatible API interfaces
+// Package main provides the entry point for the XRouter server.
+// This server acts as a proxy that provides OpenAI/Claude compatible API interfaces
 // for CLI models, allowing CLI models to be used with tools and libraries designed for standard AI APIs.
 package main
 
@@ -8,7 +8,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"io/fs"
 	"net/url"
 	"os"
@@ -18,29 +17,26 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	configaccess "github.com/router-for-me/CLIProxyAPI/v8/internal/access/config_access"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/api"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/buildinfo"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/cmd"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/githubauth"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/home"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/homeplugins"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/managementasset"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/misc"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/pluginhost"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/redisqueue"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/safemode"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/store"
-	_ "github.com/router-for-me/CLIProxyAPI/v8/internal/translator"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/tui"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	sdkAuth "github.com/router-for-me/CLIProxyAPI/v8/sdk/auth"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	sdkpluginstore "github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginstore"
 	log "github.com/sirupsen/logrus"
+	configaccess "github.com/xnuyoah/XRouter/v8/internal/access/config_access"
+	"github.com/xnuyoah/XRouter/v8/internal/api"
+	"github.com/xnuyoah/XRouter/v8/internal/buildinfo"
+	"github.com/xnuyoah/XRouter/v8/internal/cmd"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/githubauth"
+	"github.com/xnuyoah/XRouter/v8/internal/home"
+	"github.com/xnuyoah/XRouter/v8/internal/homeplugins"
+	"github.com/xnuyoah/XRouter/v8/internal/logging"
+	"github.com/xnuyoah/XRouter/v8/internal/misc"
+	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
+	"github.com/xnuyoah/XRouter/v8/internal/redisqueue"
+	"github.com/xnuyoah/XRouter/v8/internal/safemode"
+	"github.com/xnuyoah/XRouter/v8/internal/store"
+	_ "github.com/xnuyoah/XRouter/v8/internal/translator"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	sdkpluginstore "github.com/xnuyoah/XRouter/v8/sdk/pluginstore"
 )
 
 var (
@@ -58,11 +54,8 @@ func init() {
 	buildinfo.BuildDate = BuildDate
 }
 
-func shouldEnableExampleAPIKeySafeMode(cfg *config.Config, commandMode, tuiMode, standalone, cloudConfigMissing, homeMode bool) bool {
-	if cfg == nil || commandMode || homeMode || cloudConfigMissing {
-		return false
-	}
-	if tuiMode && !standalone {
+func shouldEnableExampleAPIKeySafeMode(cfg *config.Config, cloudConfigMissing, homeMode bool) bool {
+	if cfg == nil || homeMode || cloudConfigMissing {
 		return false
 	}
 	return safemode.HasExampleAPIKeys(cfg.APIKeys)
@@ -83,7 +76,7 @@ func main() {
 		discoverFlags.Func("exclude", "Comma-separated interface names to skip", appendCSV(&exclude))
 		_ = discoverFlags.Parse(os.Args[2:])
 		if !*jsonOut {
-			fmt.Fprintf(os.Stderr, "CLIProxyAPI Version: %s, Commit: %s, BuiltAt: %s\n", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
+			fmt.Fprintf(os.Stderr, "XRouter Version: %s, Commit: %s, BuiltAt: %s\n", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
 		}
 		cfgInclude, cfgExclude := cmd.LoadDiscoveryScanFilters(*configPathFlag)
 		include, exclude = cmd.ResolveDiscoveryInterfaceFilters(include, exclude, cfgInclude, cfgExclude)
@@ -101,51 +94,22 @@ func main() {
 	isJSONDiscover := argvEnablesBoolFlag(os.Args[1:], "discover-json")
 	isDiscoverMode := isJSONDiscover || argvEnablesBoolFlag(os.Args[1:], "discover")
 	if !isJSONDiscover {
-		fmt.Printf("CLIProxyAPI Version: %s, Commit: %s, BuiltAt: %s\n", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
+		fmt.Printf("XRouter Version: %s, Commit: %s, BuiltAt: %s\n", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
 	}
 
 	// Command-line flags to control the application's behavior.
-	var codexLogin bool
-	var codexDeviceLogin bool
-	var claudeLogin bool
-	var noBrowser bool
-	var oauthCallbackPort int
-	var antigravityLogin bool
-	var kimiLogin bool
-	var kimiAILogin bool
-	var xaiLogin bool
-	var devinLogin bool
-	var metaLogin bool
 	var discoverGateways bool
 	var discoverTimeout int
 	var discoverJSON bool
 	var discoverServiceType string
 	var discoverInclude []string
 	var discoverExclude []string
-	var vertexImport string
-	var vertexImportPrefix string
-	var siwcBind string
 	var configPath string
 	var password string
 	var homeJWT string
 	var homeDisableClusterDiscovery bool
-	var tuiMode bool
-	var standalone bool
-	var managementBaseURL string
-	var localModel bool
 
 	// Define command-line flags for different operation modes.
-	flag.BoolVar(&codexLogin, "codex-login", false, "Login to Codex using OAuth")
-	flag.BoolVar(&codexDeviceLogin, "codex-device-login", false, "Login to Codex using device code flow")
-	flag.BoolVar(&claudeLogin, "claude-login", false, "Login to Claude using OAuth")
-	flag.BoolVar(&noBrowser, "no-browser", false, "Don't open browser automatically for OAuth")
-	flag.IntVar(&oauthCallbackPort, "oauth-callback-port", 0, "Override OAuth callback port (defaults to provider-specific port)")
-	flag.BoolVar(&antigravityLogin, "antigravity-login", false, "Login to Antigravity using OAuth")
-	flag.BoolVar(&kimiLogin, "kimi-login", false, "Login to Kimi (.com) using OAuth")
-	flag.BoolVar(&kimiAILogin, "kimi-ai-login", false, "Login to Kimi.ai using OAuth")
-	flag.BoolVar(&xaiLogin, "xai-login", false, "Login to xAI using OAuth")
-	flag.BoolVar(&devinLogin, "devin-login", false, "Login to Devin using OAuth")
-	flag.BoolVar(&metaLogin, "meta-login", false, "Login to Meta using OAuth")
 	flag.BoolVar(&discoverGateways, "discover", false, "Discover local AI gateways and CPA instances on the LAN")
 	flag.IntVar(&discoverTimeout, "discover-timeout", 3, "Timeout in seconds for LAN discovery (default 3s)")
 	flag.BoolVar(&discoverJSON, "discover-json", false, "Output discovered gateways in JSON format")
@@ -153,16 +117,9 @@ func main() {
 	flag.Func("discover-include", "Comma-separated interface names to scan during LAN discovery", appendCSV(&discoverInclude))
 	flag.Func("discover-exclude", "Comma-separated interface names to skip during LAN discovery", appendCSV(&discoverExclude))
 	flag.StringVar(&configPath, "config", DefaultConfigPath, "Configure File Path")
-	flag.StringVar(&vertexImport, "vertex-import", "", "Import Vertex service account key JSON file")
-	flag.StringVar(&vertexImportPrefix, "vertex-import-prefix", "", "Prefix for Vertex model namespacing (use with -vertex-import)")
-	flag.StringVar(&siwcBind, "siwc-bind", "", "Bind Sign in with ChatGPT (SIWC) credentials to a Codex credential file")
 	flag.StringVar(&password, "password", "", "")
 	flag.StringVar(&homeJWT, "home-jwt", "", "Home control plane JWT for mTLS certificate bootstrap and connection")
 	flag.BoolVar(&homeDisableClusterDiscovery, "home-disable-cluster-discovery", false, "Disable Home CLUSTER NODES discovery and keep using the configured -home-jwt address")
-	flag.BoolVar(&tuiMode, "tui", false, "Start with terminal management UI")
-	flag.BoolVar(&standalone, "standalone", false, "In TUI mode, start an embedded local server")
-	flag.StringVar(&managementBaseURL, "management-base-url", "", "Base URL of remote management API for TUI client mode (e.g. https://proxy.example.com)")
-	flag.BoolVar(&localModel, "local-model", false, "Use embedded model catalogs unless models.catalog, models.codex-catalog, or models.devin-catalog explicitly overrides the source")
 
 	flag.CommandLine.Usage = func() {
 		out := flag.CommandLine.Output()
@@ -638,7 +595,7 @@ func main() {
 		return
 	}
 
-	log.Infof("CLIProxyAPI Version: %s, Commit: %s, BuiltAt: %s", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
+	log.Infof("XRouter Version: %s, Commit: %s, BuiltAt: %s", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
 
 	// Set the log level based on the configuration.
 	util.SetLogLevel(cfg)
@@ -650,18 +607,10 @@ func main() {
 		cfg.AuthDir = resolvedAuthDir
 	}
 	githubauth.SetToken(cfg.GitHubToken)
-	managementasset.SetCurrentConfig(cfg)
 
-	// Create login options to be used in authentication flows.
-	options := &cmd.LoginOptions{
-		NoBrowser:    noBrowser,
-		CallbackPort: oauthCallbackPort,
-	}
-
-	commandMode := vertexImport != "" || siwcBind != "" || antigravityLogin || codexLogin || codexDeviceLogin || claudeLogin || kimiLogin || kimiAILogin || xaiLogin || devinLogin || metaLogin
 	cloudConfigMissing := isCloudDeploy && !configFileExists
 	homeMode := configLoadedFromHome || (cfg != nil && cfg.Home.Enabled)
-	exampleAPIKeySafeMode := shouldEnableExampleAPIKeySafeMode(cfg, commandMode, tuiMode, standalone, cloudConfigMissing, homeMode)
+	exampleAPIKeySafeMode := shouldEnableExampleAPIKeySafeMode(cfg, cloudConfigMissing, homeMode)
 	serverOptions := []api.ServerOption(nil)
 	if exampleAPIKeySafeMode {
 		matches := safemode.ExampleAPIKeys(cfg.APIKeys)
@@ -711,150 +660,14 @@ func main() {
 		}
 	}
 
-	// Handle different command modes based on the provided flags.
-
-	if vertexImport != "" {
-		// Handle Vertex service account import
-		cmd.DoVertexImport(cfg, vertexImport, vertexImportPrefix)
-	} else if siwcBind != "" {
-		// Handle Sign in with ChatGPT (SIWC) credential binding
-		cmd.DoSIWCBind(cfg, siwcBind, options)
-	} else if antigravityLogin {
-		// Handle Antigravity login
-		cmd.DoAntigravityLogin(cfg, options)
-	} else if codexLogin {
-		// Handle Codex login
-		cmd.DoCodexLogin(cfg, options)
-	} else if codexDeviceLogin {
-		// Handle Codex device-code login
-		cmd.DoCodexDeviceLogin(cfg, options)
-	} else if claudeLogin {
-		// Handle Claude login
-		cmd.DoClaudeLogin(cfg, options)
-	} else if kimiLogin {
-		cmd.DoKimiLogin(cfg, options)
-	} else if kimiAILogin {
-		cmd.DoKimiAILogin(cfg, options)
-	} else if xaiLogin {
-		cmd.DoXAILogin(cfg, options)
-	} else if devinLogin {
-		cmd.DoDevinLogin(cfg, options)
-	} else if metaLogin {
-		cmd.DoMetaLogin(cfg, options)
-	} else {
-		// In cloud deploy mode without config file, just wait for shutdown signals
-		if isCloudDeploy && !configFileExists {
-			// No config file available, just wait for shutdown
-			cmd.WaitForCloudDeploy()
-			return
-		}
-		if localModel && (!tuiMode || standalone) {
-			log.Info("Local model mode: using embedded catalogs unless an explicit catalog source is configured")
-		}
-		if tuiMode {
-			if standalone {
-				// Standalone mode: start an embedded local server and connect TUI client to it.
-				managementasset.StartAutoUpdater(context.Background(), configFilePath)
-				misc.StartAntigravityVersionUpdater(context.Background())
-				registry.SetLocalModelCatalogs(localModel)
-				hook := tui.NewLogHook(2000)
-				hook.SetFormatter(&logging.LogFormatter{})
-				log.AddHook(hook)
-
-				origStdout := os.Stdout
-				origStderr := os.Stderr
-				origLogOutput := log.StandardLogger().Out
-				log.SetOutput(io.Discard)
-
-				devNull, errOpenDevNull := os.Open(os.DevNull)
-				if errOpenDevNull == nil {
-					os.Stdout = devNull
-					os.Stderr = devNull
-				}
-
-				restoreIO := func() {
-					os.Stdout = origStdout
-					os.Stderr = origStderr
-					log.SetOutput(origLogOutput)
-					if devNull != nil {
-						_ = devNull.Close()
-					}
-				}
-
-				localMgmtPassword := fmt.Sprintf("tui-%d-%d", os.Getpid(), time.Now().UnixNano())
-				if password == "" {
-					password = localMgmtPassword
-				}
-
-				cancel, done := cmd.StartServiceBackgroundWithPluginHost(cfg, configFilePath, password, pluginHost, serverOptions...)
-
-				client := tui.NewClient(cfg.Port, password)
-				ready := false
-				backoff := 100 * time.Millisecond
-				for i := 0; i < 30; i++ {
-					if _, errGetConfig := client.GetConfig(); errGetConfig == nil {
-						ready = true
-						break
-					}
-					time.Sleep(backoff)
-					if backoff < time.Second {
-						backoff = time.Duration(float64(backoff) * 1.5)
-					}
-				}
-
-				if !ready {
-					restoreIO()
-					cancel()
-					<-done
-					fmt.Fprintf(os.Stderr, "TUI error: embedded server is not ready\n")
-					return
-				}
-
-				if errRun := tui.Run(cfg.Port, password, hook, origStdout); errRun != nil {
-					restoreIO()
-					fmt.Fprintf(os.Stderr, "TUI error: %v\n", errRun)
-				} else {
-					restoreIO()
-				}
-
-				cancel()
-				<-done
-			} else {
-				// Default TUI mode: pure management client.
-				// The proxy server must already be running (locally or remotely).
-				baseURL := resolveManagementBaseURL(managementBaseURL, cfg)
-				if errRun := tui.RunWithBaseURL(baseURL, password, nil, os.Stdout); errRun != nil {
-					fmt.Fprintf(os.Stderr, "TUI error: %v\n", errRun)
-				}
-			}
-		} else {
-			// Start the main proxy service
-			managementasset.StartAutoUpdater(context.Background(), configFilePath)
-			misc.StartAntigravityVersionUpdater(context.Background())
-			registry.SetLocalModelCatalogs(localModel)
-			cmd.StartServiceWithPluginHost(cfg, configFilePath, password, pluginHost, serverOptions...)
-		}
+	// In cloud deploy mode without config file, just wait for shutdown signals
+	if isCloudDeploy && !configFileExists {
+		// No config file available, just wait for shutdown
+		cmd.WaitForCloudDeploy()
+		return
 	}
-}
-
-// resolveManagementBaseURL determines the management API base URL for TUI client mode.
-// Priority: command-line flag > config file remote-management.base-url > default localhost.
-func resolveManagementBaseURL(flagURL string, cfg *config.Config) string {
-	baseURL := strings.TrimSpace(flagURL)
-	if baseURL != "" {
-		return baseURL
-	}
-	if cfg != nil {
-		baseURL = strings.TrimSpace(cfg.RemoteManagement.BaseURL)
-		if baseURL != "" {
-			return baseURL
-		}
-	}
-	port := 8317
-	if cfg != nil && cfg.Port > 0 {
-		port = cfg.Port
-	}
-	return fmt.Sprintf("http://127.0.0.1:%d", port)
+	// Start the main proxy service
+	cmd.StartServiceWithPluginHost(cfg, configFilePath, password, pluginHost, serverOptions...)
 }
 
 // persistSeededConfig persists a config file freshly copied from the template. The file
@@ -963,10 +776,7 @@ func argvEnablesBoolFlag(args []string, name string) bool {
 
 func argvFlagConsumesValue(name string) bool {
 	switch name {
-	case "codex-login", "codex-device-login", "claude-login", "no-browser",
-		"antigravity-login", "kimi-login", "kimi-ai-login", "xai-login", "devin-login", "meta-login",
-		"discover", "discover-json", "home-disable-cluster-discovery",
-		"tui", "standalone", "local-model":
+	case "discover", "discover-json", "home-disable-cluster-discovery":
 		return false
 	default:
 		return name != ""

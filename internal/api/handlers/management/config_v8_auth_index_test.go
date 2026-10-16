@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher/synthesizer"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher/synthesizer"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
 func TestConfigV8APIKeysExposeAuthIndex_Issue6287(t *testing.T) {
@@ -23,19 +23,19 @@ func TestConfigV8APIKeysExposeAuthIndex_Issue6287(t *testing.T) {
 	path := filepath.Join(dir, "config.yaml")
 
 	rawYAML := `config-version: 8
-port: 8317
+port: 11016
 api-keys:
-  codex:
-    - name: codex-group
+  openai:
+    - name: openai-group
       base-url: https://api.openai.invalid
       keys:
-        - api-key: sk-codex-1
-        - api-key: sk-codex-2
-  claude:
-    - name: claude-group
-      base-url: https://api.anthropic.invalid
+        - api-key: sk-openai-1
+        - api-key: sk-openai-2
+  deepseek:
+    - name: deepseek-group
+      base-url: https://api.deepseek.invalid
       keys:
-        - api-key: sk-claude-1
+        - api-key: sk-deepseek-1
   openai-compatibility:
     - name: compat-provider
       base-url: https://api.compat.invalid
@@ -96,24 +96,24 @@ api-keys:
 	router.PUT("/v8/management/config/*path", h.ConfigV8)
 	router.PATCH("/v8/management/config", h.ConfigV8)
 
-	// 1. GET /v8/management/config/api-keys/codex
+	// 1. GET /v8/management/config/api-keys/openai
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/codex", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/openai", nil)
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("GET /v8/management/config/api-keys/codex: status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("GET /v8/management/config/api-keys/openai: status=%d body=%s", rec.Code, rec.Body.String())
 	}
 
-	var codexGroups []map[string]any
-	if err := json.Unmarshal(rec.Body.Bytes(), &codexGroups); err != nil {
-		t.Fatalf("decode codex groups: %v", err)
+	var openaiGroups []map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &openaiGroups); err != nil {
+		t.Fatalf("decode openai groups: %v", err)
 	}
-	if len(codexGroups) != 1 {
-		t.Fatalf("expected 1 codex group, got %d", len(codexGroups))
+	if len(openaiGroups) != 1 {
+		t.Fatalf("expected 1 openai group, got %d", len(openaiGroups))
 	}
-	keys, ok := codexGroups[0]["keys"].([]any)
+	keys, ok := openaiGroups[0]["keys"].([]any)
 	if !ok || len(keys) != 2 {
-		t.Fatalf("expected 2 keys in codex group, got %#v", codexGroups[0]["keys"])
+		t.Fatalf("expected 2 keys in openai group, got %#v", openaiGroups[0]["keys"])
 	}
 	for i, k := range keys {
 		keyMap, ok := k.(map[string]any)
@@ -122,12 +122,12 @@ api-keys:
 		}
 		apiKey, _ := keyMap["api-key"].(string)
 		authIndex, _ := keyMap["auth_index"].(string)
-		wantIndex := expectedIndexes["codex:"+apiKey]
+		wantIndex := expectedIndexes["openai:"+apiKey]
 		if wantIndex == "" {
-			t.Fatalf("missing expected index for codex key %s", apiKey)
+			t.Fatalf("missing expected index for openai key %s", apiKey)
 		}
 		if authIndex != wantIndex {
-			t.Fatalf("codex key %s: auth_index = %q, want %q", apiKey, authIndex, wantIndex)
+			t.Fatalf("openai key %s: auth_index = %q, want %q", apiKey, authIndex, wantIndex)
 		}
 	}
 
@@ -142,15 +142,15 @@ api-keys:
 	if err := json.Unmarshal(rec.Body.Bytes(), &allAPIKeys); err != nil {
 		t.Fatalf("decode all api-keys: %v", err)
 	}
-	claudeVal, ok := allAPIKeys["claude"].([]any)
-	if !ok || len(claudeVal) != 1 {
-		t.Fatalf("expected claude in api-keys, got %#v", allAPIKeys["claude"])
+	deepseekVal, ok := allAPIKeys["deepseek"].([]any)
+	if !ok || len(deepseekVal) != 1 {
+		t.Fatalf("expected deepseek in api-keys, got %#v", allAPIKeys["deepseek"])
 	}
-	claudeGroup := claudeVal[0].(map[string]any)
-	claudeKeys := claudeGroup["keys"].([]any)
-	claudeKeyMap := claudeKeys[0].(map[string]any)
-	if got := claudeKeyMap["auth_index"]; got != expectedIndexes["claude:sk-claude-1"] {
-		t.Fatalf("claude key auth_index = %q, want %q", got, expectedIndexes["claude:sk-claude-1"])
+	deepseekGroup := deepseekVal[0].(map[string]any)
+	deepseekKeys := deepseekGroup["keys"].([]any)
+	deepseekKeyMap := deepseekKeys[0].(map[string]any)
+	if got := deepseekKeyMap["auth_index"]; got != expectedIndexes["deepseek:sk-deepseek-1"] {
+		t.Fatalf("deepseek key auth_index = %q, want %q", got, expectedIndexes["deepseek:sk-deepseek-1"])
 	}
 
 	// Verify keyless openai-compatibility group has group-level auth_index
@@ -178,9 +178,9 @@ api-keys:
 	if !ok {
 		t.Fatalf("full config missing api-keys object: %#v", fullConfig["api-keys"])
 	}
-	codexFromRoot := configAPIKeys["codex"].([]any)[0].(map[string]any)["keys"].([]any)[0].(map[string]any)
-	if got := codexFromRoot["auth_index"]; got != expectedIndexes["codex:sk-codex-1"] {
-		t.Fatalf("root config codex auth_index = %q, want %q", got, expectedIndexes["codex:sk-codex-1"])
+	openaiFromRoot := configAPIKeys["openai"].([]any)[0].(map[string]any)["keys"].([]any)[0].(map[string]any)
+	if got := openaiFromRoot["auth_index"]; got != expectedIndexes["openai:sk-openai-1"] {
+		t.Fatalf("root config openai auth_index = %q, want %q", got, expectedIndexes["openai:sk-openai-1"])
 	}
 
 	// 4. GET /v8/management/config.yaml should not contain auth_index
@@ -195,13 +195,13 @@ api-keys:
 	}
 
 	// 5. PUT round-trip with payload containing auth_index
-	codexJSON, _ := json.Marshal(codexGroups)
+	openaiJSON, _ := json.Marshal(openaiGroups)
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodPut, "/v8/management/config/api-keys/codex", strings.NewReader(string(codexJSON)))
+	req = httptest.NewRequest(http.MethodPut, "/v8/management/config/api-keys/openai", strings.NewReader(string(openaiJSON)))
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("PUT /v8/management/config/api-keys/codex with auth_index: status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("PUT /v8/management/config/api-keys/openai with auth_index: status=%d body=%s", rec.Code, rec.Body.String())
 	}
 
 	// Verify disk config does not have auth_index
@@ -214,7 +214,7 @@ api-keys:
 	}
 
 	// 6. PATCH on root containing auth_index in api-keys
-	patchBody := `{"api-keys":{"claude":[{"name":"claude-group","base-url":"https://api.anthropic.invalid","keys":[{"api-key":"sk-claude-1","auth_index":"arbitrary-ignore"}]}]}}`
+	patchBody := `{"api-keys":{"deepseek":[{"name":"deepseek-group","base-url":"https://api.deepseek.invalid","keys":[{"api-key":"sk-deepseek-1","auth_index":"arbitrary-ignore"}]}]}}`
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPatch, "/v8/management/config", strings.NewReader(patchBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -237,81 +237,81 @@ api-keys:
 	routerNoManager.GET("/v8/management/config/*path", hNoManager.ConfigV8)
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/codex", nil)
+	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/openai", nil)
 	routerNoManager.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET with nil authManager: status=%d body=%s", rec.Code, rec.Body.String())
 	}
 	var noManagerGroups []map[string]any
 	if err := json.Unmarshal(rec.Body.Bytes(), &noManagerGroups); err != nil {
-		t.Fatalf("decode codex groups: %v", err)
+		t.Fatalf("decode openai groups: %v", err)
 	}
 	key0 := noManagerGroups[0]["keys"].([]any)[0].(map[string]any)
-	if got := key0["auth_index"]; got != expectedIndexes["codex:sk-codex-1"] {
-		t.Fatalf("fallback auth_index = %q, want %q", got, expectedIndexes["codex:sk-codex-1"])
+	if got := key0["auth_index"]; got != expectedIndexes["openai:sk-openai-1"] {
+		t.Fatalf("fallback auth_index = %q, want %q", got, expectedIndexes["openai:sk-openai-1"])
 	}
 
-	// 8. Meta provider with omitted base-url defaults to https://api.meta.ai/v1 matching runtime
-	metaYAML := `config-version: 8
-port: 8317
+	// 8. Nvidia provider with omitted base-url defaults to https://integrate.api.nvidia.com/v1 matching runtime
+	nvidiaYAML := `config-version: 8
+port: 11016
 api-keys:
-  meta:
-    - name: meta-group
+  nvidia:
+    - name: nvidia-group
       keys:
-        - api-key: sk-meta-default-base
+        - api-key: sk-nvidia-default-base
 `
-	metaPath := filepath.Join(dir, "meta-config.yaml")
-	if errWrite := os.WriteFile(metaPath, []byte(metaYAML), 0600); errWrite != nil {
+	nvidiaPath := filepath.Join(dir, "nvidia-config.yaml")
+	if errWrite := os.WriteFile(nvidiaPath, []byte(nvidiaYAML), 0600); errWrite != nil {
 		t.Fatal(errWrite)
 	}
-	metaCfg, errLoad := config.LoadConfig(metaPath)
+	nvidiaCfg, errLoad := config.LoadConfig(nvidiaPath)
 	if errLoad != nil {
 		t.Fatal(errLoad)
 	}
-	metaAuths, errMetaSynth := synth.Synthesize(&synthesizer.SynthesisContext{
-		Config:      metaCfg,
+	nvidiaAuths, errNvidiaSynth := synth.Synthesize(&synthesizer.SynthesisContext{
+		Config:      nvidiaCfg,
 		Now:         time.Now(),
 		IDGenerator: synthesizer.NewStableIDGenerator(),
 	})
-	if errMetaSynth != nil || len(metaAuths) != 1 {
-		t.Fatalf("synthesize meta auth: %v, len=%d", errMetaSynth, len(metaAuths))
+	if errNvidiaSynth != nil || len(nvidiaAuths) != 1 {
+		t.Fatalf("synthesize nvidia auth: %v, len=%d", errNvidiaSynth, len(nvidiaAuths))
 	}
-	metaManager := coreauth.NewManager(nil, nil, nil)
-	if _, errReg := metaManager.Register(context.Background(), metaAuths[0]); errReg != nil {
+	nvidiaManager := coreauth.NewManager(nil, nil, nil)
+	if _, errReg := nvidiaManager.Register(context.Background(), nvidiaAuths[0]); errReg != nil {
 		t.Fatal(errReg)
 	}
-	expectedMetaIndex := metaAuths[0].EnsureIndex()
+	expectedNvidiaIndex := nvidiaAuths[0].EnsureIndex()
 
-	hMeta := &Handler{cfg: metaCfg, configFilePath: metaPath, authManager: metaManager}
-	routerMeta := gin.New()
-	routerMeta.GET("/v8/management/config/*path", hMeta.ConfigV8)
+	hNvidia := &Handler{cfg: nvidiaCfg, configFilePath: nvidiaPath, authManager: nvidiaManager}
+	routerNvidia := gin.New()
+	routerNvidia.GET("/v8/management/config/*path", hNvidia.ConfigV8)
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/meta", nil)
-	routerMeta.ServeHTTP(rec, req)
+	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/nvidia", nil)
+	routerNvidia.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("GET /v8/management/config/api-keys/meta: status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("GET /v8/management/config/api-keys/nvidia: status=%d body=%s", rec.Code, rec.Body.String())
 	}
-	var metaGroups []map[string]any
-	if errDecode := json.Unmarshal(rec.Body.Bytes(), &metaGroups); errDecode != nil {
-		t.Fatalf("decode meta groups: %v", errDecode)
+	var nvidiaGroups []map[string]any
+	if errDecode := json.Unmarshal(rec.Body.Bytes(), &nvidiaGroups); errDecode != nil {
+		t.Fatalf("decode nvidia groups: %v", errDecode)
 	}
-	metaKey0 := metaGroups[0]["keys"].([]any)[0].(map[string]any)
-	if got := metaKey0["auth_index"]; got != expectedMetaIndex {
-		t.Fatalf("meta key auth_index = %q, want %q", got, expectedMetaIndex)
+	nvidiaKey0 := nvidiaGroups[0]["keys"].([]any)[0].(map[string]any)
+	if got := nvidiaKey0["auth_index"]; got != expectedNvidiaIndex {
+		t.Fatalf("nvidia key auth_index = %q, want %q", got, expectedNvidiaIndex)
 	}
 
 	// 9. Explicit empty proxy-url on key overrides group proxy-url
 	proxyYAML := `config-version: 8
-port: 8317
+port: 11016
 api-keys:
-  vertex:
-    - name: vertex-group
-      base-url: https://api.vertex.invalid
+  openai:
+    - name: openai-group
+      base-url: https://api.openai.invalid
       proxy-url: http://proxy.group.invalid:8080
       keys:
-        - api-key: sk-vertex-inherited
-        - api-key: sk-vertex-explicit-empty
+        - api-key: sk-openai-inherited
+        - api-key: sk-openai-explicit-empty
           proxy-url: ""
 `
 	proxyPath := filepath.Join(dir, "proxy-config.yaml")
@@ -328,7 +328,7 @@ api-keys:
 		IDGenerator: synthesizer.NewStableIDGenerator(),
 	})
 	if errProxySynth != nil || len(proxyAuths) != 2 {
-		t.Fatalf("synthesize vertex auths: %v, len=%d", errProxySynth, len(proxyAuths))
+		t.Fatalf("synthesize openai auths: %v, len=%d", errProxySynth, len(proxyAuths))
 	}
 	proxyManager := coreauth.NewManager(nil, nil, nil)
 	for _, a := range proxyAuths {
@@ -344,26 +344,26 @@ api-keys:
 	routerProxy.GET("/v8/management/config/*path", hProxy.ConfigV8)
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/vertex", nil)
+	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/openai", nil)
 	routerProxy.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("GET /v8/management/config/api-keys/vertex: status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("GET /v8/management/config/api-keys/openai: status=%d body=%s", rec.Code, rec.Body.String())
 	}
-	var vertexGroups []map[string]any
-	if errDecode := json.Unmarshal(rec.Body.Bytes(), &vertexGroups); errDecode != nil {
-		t.Fatalf("decode vertex groups: %v", errDecode)
+	var proxyGroups []map[string]any
+	if errDecode := json.Unmarshal(rec.Body.Bytes(), &proxyGroups); errDecode != nil {
+		t.Fatalf("decode openai groups: %v", errDecode)
 	}
-	vertexKeys := vertexGroups[0]["keys"].([]any)
-	if got := vertexKeys[0].(map[string]any)["auth_index"]; got != wantInheritedIndex {
-		t.Fatalf("vertex key 0 auth_index = %q, want %q", got, wantInheritedIndex)
+	proxyKeys := proxyGroups[0]["keys"].([]any)
+	if got := proxyKeys[0].(map[string]any)["auth_index"]; got != wantInheritedIndex {
+		t.Fatalf("openai key 0 auth_index = %q, want %q", got, wantInheritedIndex)
 	}
-	if got := vertexKeys[1].(map[string]any)["auth_index"]; got != wantExplicitEmptyIndex {
-		t.Fatalf("vertex key 1 auth_index = %q, want %q", got, wantExplicitEmptyIndex)
+	if got := proxyKeys[1].(map[string]any)["auth_index"]; got != wantExplicitEmptyIndex {
+		t.Fatalf("openai key 1 auth_index = %q, want %q", got, wantExplicitEmptyIndex)
 	}
 
 	// 10. Plugin options and headers retaining auth_index outside of credential level
 	pluginYAML := `config-version: 8
-port: 8317
+port: 11016
 plugins:
   configs:
     custom-plugin:
@@ -371,13 +371,13 @@ plugins:
       options:
         auth_index: keep-this-plugin-field
 api-keys:
-  codex:
-    - name: codex-group
+  openai:
+    - name: openai-group
       base-url: https://api.openai.invalid
       headers:
         auth_index: keep-group-header
       keys:
-        - api-key: sk-codex-headers
+        - api-key: sk-openai-headers
           headers:
             auth_index: keep-key-header
 `
@@ -394,26 +394,26 @@ api-keys:
 	routerPlugin.GET("/v8/management/config/*path", hPlugin.ConfigV8)
 	routerPlugin.PUT("/v8/management/config/*path", hPlugin.ConfigV8)
 
-	// Fetch codex keys with auth_index injected
+	// Fetch openai keys with auth_index injected
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/codex", nil)
+	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/openai", nil)
 	routerPlugin.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("GET codex with plugin: status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("GET openai with plugin: status=%d body=%s", rec.Code, rec.Body.String())
 	}
-	var pluginCodexGroups []map[string]any
-	if errDecode := json.Unmarshal(rec.Body.Bytes(), &pluginCodexGroups); errDecode != nil {
+	var pluginOpenAIGroups []map[string]any
+	if errDecode := json.Unmarshal(rec.Body.Bytes(), &pluginOpenAIGroups); errDecode != nil {
 		t.Fatal(errDecode)
 	}
 
-	// PUT codex keys back (round-trip with auth_index)
-	codexBytes, _ := json.Marshal(pluginCodexGroups)
+	// PUT openai keys back (round-trip with auth_index)
+	openaiBytes, _ := json.Marshal(pluginOpenAIGroups)
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodPut, "/v8/management/config/api-keys/codex", strings.NewReader(string(codexBytes)))
+	req = httptest.NewRequest(http.MethodPut, "/v8/management/config/api-keys/openai", strings.NewReader(string(openaiBytes)))
 	req.Header.Set("Content-Type", "application/json")
 	routerPlugin.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("PUT codex: status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("PUT openai: status=%d body=%s", rec.Code, rec.Body.String())
 	}
 
 	// Read saved config on disk: plugin option auth_index and headers auth_index MUST be intact!
@@ -432,75 +432,16 @@ api-keys:
 		t.Fatalf("key header auth_index was stripped! saved config:\n%s", savedPluginStr)
 	}
 
-	// 11. Duplicate Vertex keys in YAML map to the same deduplicated runtime auth_index
-	dupVertexYAML := `config-version: 8
-port: 8317
-api-keys:
-  vertex:
-    - name: vertex-group
-      base-url: https://api.vertex.invalid
-      keys:
-        - api-key: sk-vertex-shared
-        - api-key: sk-vertex-shared
-`
-	dupVertexPath := filepath.Join(dir, "dup-vertex-config.yaml")
-	if errWrite := os.WriteFile(dupVertexPath, []byte(dupVertexYAML), 0600); errWrite != nil {
-		t.Fatal(errWrite)
-	}
-	dupVertexCfg, errLoadDup := config.LoadConfig(dupVertexPath)
-	if errLoadDup != nil {
-		t.Fatal(errLoadDup)
-	}
-	dupAuths, errDupSynth := synth.Synthesize(&synthesizer.SynthesisContext{
-		Config:      dupVertexCfg,
-		Now:         time.Now(),
-		IDGenerator: synthesizer.NewStableIDGenerator(),
-	})
-	// Runtime deduplicates identical vertex keys to 1 credential!
-	if errDupSynth != nil || len(dupAuths) != 1 {
-		t.Fatalf("synthesize dup vertex auth: %v, len=%d", errDupSynth, len(dupAuths))
-	}
-	dupManager := coreauth.NewManager(nil, nil, nil)
-	if _, errReg := dupManager.Register(context.Background(), dupAuths[0]); errReg != nil {
-		t.Fatal(errReg)
-	}
-	expectedDupVertexIndex := dupAuths[0].EnsureIndex()
-
-	hDup := &Handler{cfg: dupVertexCfg, configFilePath: dupVertexPath, authManager: dupManager}
-	routerDup := gin.New()
-	routerDup.GET("/v8/management/config/*path", hDup.ConfigV8)
-
-	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/vertex", nil)
-	routerDup.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("GET /v8/management/config/api-keys/vertex: status=%d body=%s", rec.Code, rec.Body.String())
-	}
-	var dupVertexGroups []map[string]any
-	if errDecode := json.Unmarshal(rec.Body.Bytes(), &dupVertexGroups); errDecode != nil {
-		t.Fatal(errDecode)
-	}
-	dupKeys := dupVertexGroups[0]["keys"].([]any)
-	if len(dupKeys) != 2 {
-		t.Fatalf("expected 2 keys in YAML response, got %d", len(dupKeys))
-	}
-	if got0 := dupKeys[0].(map[string]any)["auth_index"]; got0 != expectedDupVertexIndex {
-		t.Fatalf("dup key 0 auth_index = %q, want %q", got0, expectedDupVertexIndex)
-	}
-	if got1 := dupKeys[1].(map[string]any)["auth_index"]; got1 != expectedDupVertexIndex {
-		t.Fatalf("dup key 1 auth_index = %q, want %q", got1, expectedDupVertexIndex)
-	}
-
-	// 12. Unnormalized prefix (prefix: /team/) matches live credential with normalized prefix
+	// 11. Unnormalized prefix (prefix: /team/) matches live credential with normalized prefix
 	unnormalizedPrefixYAML := `config-version: 8
-port: 8317
+port: 11016
 api-keys:
-  codex:
-    - name: codex-team
+  openai:
+    - name: openai-team
       prefix: /team/
       base-url: https://api.openai.invalid
       keys:
-        - api-key: sk-codex-team
+        - api-key: sk-openai-team
 `
 	prefixPath := filepath.Join(dir, "prefix-config.yaml")
 	if errWrite := os.WriteFile(prefixPath, []byte(unnormalizedPrefixYAML), 0600); errWrite != nil {
@@ -529,10 +470,10 @@ api-keys:
 	routerPrefix.GET("/v8/management/config/*path", hPrefix.ConfigV8)
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/codex", nil)
+	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/openai", nil)
 	routerPrefix.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("GET /v8/management/config/api-keys/codex: status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("GET /v8/management/config/api-keys/openai: status=%d body=%s", rec.Code, rec.Body.String())
 	}
 	var prefixGroups []map[string]any
 	if errDecode := json.Unmarshal(rec.Body.Bytes(), &prefixGroups); errDecode != nil {
@@ -543,83 +484,9 @@ api-keys:
 		t.Fatalf("prefix key auth_index = %q, want %q", got, expectedPrefixIndex)
 	}
 
-	// 13. Gemini with duplicate keys [A, A, B]: both A get A's index, B gets B's index
-	geminiDupYAML := `config-version: 8
-port: 8317
-api-keys:
-  gemini:
-    - name: gemini-group
-      base-url: https://api.gemini.invalid
-      keys:
-        - api-key: sk-gemini-a
-        - api-key: sk-gemini-a
-        - api-key: sk-gemini-b
-`
-	geminiPath := filepath.Join(dir, "gemini-dup-config.yaml")
-	if errWrite := os.WriteFile(geminiPath, []byte(geminiDupYAML), 0600); errWrite != nil {
-		t.Fatal(errWrite)
-	}
-	geminiCfg, errLoadGemini := config.LoadConfig(geminiPath)
-	if errLoadGemini != nil {
-		t.Fatal(errLoadGemini)
-	}
-	geminiAuths, errGeminiSynth := synth.Synthesize(&synthesizer.SynthesisContext{
-		Config:      geminiCfg,
-		Now:         time.Now(),
-		IDGenerator: synthesizer.NewStableIDGenerator(),
-	})
-	// Runtime deduplicates identical gemini keys to 2 credentials: A and B
-	if errGeminiSynth != nil || len(geminiAuths) != 2 {
-		t.Fatalf("synthesize gemini dup auth: %v, len=%d", errGeminiSynth, len(geminiAuths))
-	}
-	geminiManager := coreauth.NewManager(nil, nil, nil)
-	wantGeminiA := ""
-	wantGeminiB := ""
-	for _, a := range geminiAuths {
-		if _, errReg := geminiManager.Register(context.Background(), a); errReg != nil {
-			t.Fatal(errReg)
-		}
-		if a.Attributes["api_key"] == "sk-gemini-a" {
-			wantGeminiA = a.EnsureIndex()
-		} else if a.Attributes["api_key"] == "sk-gemini-b" {
-			wantGeminiB = a.EnsureIndex()
-		}
-	}
-	if wantGeminiA == "" || wantGeminiB == "" || wantGeminiA == wantGeminiB {
-		t.Fatalf("unexpected gemini auth indexes: A=%q, B=%q", wantGeminiA, wantGeminiB)
-	}
-
-	hGemini := &Handler{cfg: geminiCfg, configFilePath: geminiPath, authManager: geminiManager}
-	routerGemini := gin.New()
-	routerGemini.GET("/v8/management/config/*path", hGemini.ConfigV8)
-
-	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/gemini", nil)
-	routerGemini.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("GET /v8/management/config/api-keys/gemini: status=%d body=%s", rec.Code, rec.Body.String())
-	}
-	var geminiGroups []map[string]any
-	if errDecode := json.Unmarshal(rec.Body.Bytes(), &geminiGroups); errDecode != nil {
-		t.Fatal(errDecode)
-	}
-	geminiKeys := geminiGroups[0]["keys"].([]any)
-	if len(geminiKeys) != 3 {
-		t.Fatalf("expected 3 keys in gemini response, got %d", len(geminiKeys))
-	}
-	if got0 := geminiKeys[0].(map[string]any)["auth_index"]; got0 != wantGeminiA {
-		t.Fatalf("gemini key 0 auth_index = %q, want %q", got0, wantGeminiA)
-	}
-	if got1 := geminiKeys[1].(map[string]any)["auth_index"]; got1 != wantGeminiA {
-		t.Fatalf("gemini key 1 auth_index = %q, want %q", got1, wantGeminiA)
-	}
-	if got2 := geminiKeys[2].(map[string]any)["auth_index"]; got2 != wantGeminiB {
-		t.Fatalf("gemini key 2 auth_index = %q, want %q", got2, wantGeminiB)
-	}
-
-	// 14. OpenAI-compatible with [empty_key, B] and invalid group without base-url
+	// 12. OpenAI-compatible with [empty_key, B] and invalid group without base-url
 	compatMixedYAML := `config-version: 8
-port: 8317
+port: 11016
 api-keys:
   openai-compatibility:
     - name: invalid-group-no-base
@@ -692,18 +559,18 @@ api-keys:
 		t.Fatalf("key B auth_index = %q, want %q", gotB, wantKeyBIndex)
 	}
 
-	// 15. Empty API key with valid base-url (Gemini base-url only) produces non-empty auth_index
-	emptyKeyGeminiYAML := `config-version: 8
-port: 8317
+	// 13. Empty API key with valid base-url produces non-empty auth_index
+	emptyKeyYAML := `config-version: 8
+port: 11016
 api-keys:
-  gemini:
-    - name: gemini-emulator
+  openai:
+    - name: openai-emulator
       base-url: http://emulator.invalid:8080
       keys:
         - api-key: ""
 `
-	emptyKeyPath := filepath.Join(dir, "gemini-empty-key.yaml")
-	if errWrite := os.WriteFile(emptyKeyPath, []byte(emptyKeyGeminiYAML), 0600); errWrite != nil {
+	emptyKeyPath := filepath.Join(dir, "openai-empty-key.yaml")
+	if errWrite := os.WriteFile(emptyKeyPath, []byte(emptyKeyYAML), 0600); errWrite != nil {
 		t.Fatal(errWrite)
 	}
 	emptyKeyCfg, errLoadEmpty := config.LoadConfig(emptyKeyPath)
@@ -728,22 +595,22 @@ api-keys:
 	routerEmpty.GET("/v8/management/config/*path", hEmpty.ConfigV8)
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/gemini", nil)
+	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/openai", nil)
 	routerEmpty.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("GET /v8/management/config/api-keys/gemini: status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("GET /v8/management/config/api-keys/openai: status=%d body=%s", rec.Code, rec.Body.String())
 	}
 	var emptyKeyGroups []map[string]any
 	if errDecode := json.Unmarshal(rec.Body.Bytes(), &emptyKeyGroups); errDecode != nil {
-		t.Fatal(errDecode)
+		t.Fatalf("decode openai groups: %v", errDecode)
 	}
 	if got := emptyKeyGroups[0]["keys"].([]any)[0].(map[string]any)["auth_index"]; got != wantEmulatorIndex {
 		t.Fatalf("emulator auth_index = %q, want %q", got, wantEmulatorIndex)
 	}
 
-	// 16. Multiple OpenAI-compatible empty-key entries with different proxy-url
+	// 14. Multiple OpenAI-compatible empty-key entries with different proxy-url
 	compatMultiEmptyYAML := `config-version: 8
-port: 8317
+port: 11016
 api-keys:
   openai-compatibility:
     - name: multi-empty-group
@@ -801,12 +668,12 @@ api-keys:
 		t.Fatalf("multi key 2 auth_index = %q, want %q", got2, wantMultiIdx2)
 	}
 
-	// 17. Gemini with empty API keys and proxies [P1, P1, P2]: key 0 and 1 get P1, key 2 gets P2
-	geminiProxyYAML := `config-version: 8
-port: 8317
+	// 15. Native family with empty API keys and proxies [P1, P1, P2]: key 0 and 1 get P1, key 2 gets P2
+	proxyDupYAML := `config-version: 8
+port: 11016
 api-keys:
-  gemini:
-    - name: gemini-proxy-group
+  openai:
+    - name: openai-proxy-group
       base-url: http://emulator.invalid:8080
       keys:
         - api-key: ""
@@ -816,66 +683,69 @@ api-keys:
         - api-key: ""
           proxy-url: http://proxy2.invalid:8080
 `
-	geminiProxyPath := filepath.Join(dir, "gemini-proxy-dup.yaml")
-	if errWrite := os.WriteFile(geminiProxyPath, []byte(geminiProxyYAML), 0600); errWrite != nil {
+	proxyDupPath := filepath.Join(dir, "openai-proxy-dup.yaml")
+	if errWrite := os.WriteFile(proxyDupPath, []byte(proxyDupYAML), 0600); errWrite != nil {
 		t.Fatal(errWrite)
 	}
-	geminiProxyCfg, errLoadGProxy := config.LoadConfig(geminiProxyPath)
-	if errLoadGProxy != nil {
-		t.Fatal(errLoadGProxy)
+	proxyDupCfg, errLoadProxyDup := config.LoadConfig(proxyDupPath)
+	if errLoadProxyDup != nil {
+		t.Fatal(errLoadProxyDup)
 	}
-	gProxyAuths, errGProxySynth := synth.Synthesize(&synthesizer.SynthesisContext{
-		Config:      geminiProxyCfg,
+	proxyDupAuths, errProxyDupSynth := synth.Synthesize(&synthesizer.SynthesisContext{
+		Config:      proxyDupCfg,
 		Now:         time.Now(),
 		IDGenerator: synthesizer.NewStableIDGenerator(),
 	})
-	// Runtime deduplicates identical empty key + proxy entries to 2 credentials: P1 and P2
-	if errGProxySynth != nil || len(gProxyAuths) != 2 {
-		t.Fatalf("synthesize gemini proxy auths: %v, len=%d", errGProxySynth, len(gProxyAuths))
+	if errProxyDupSynth != nil || len(proxyDupAuths) != 3 {
+		t.Fatalf("synthesize openai proxy auths: %v, len=%d", errProxyDupSynth, len(proxyDupAuths))
 	}
-	gProxyManager := coreauth.NewManager(nil, nil, nil)
-	for _, a := range gProxyAuths {
-		if _, errReg := gProxyManager.Register(context.Background(), a); errReg != nil {
+	proxyDupManager := coreauth.NewManager(nil, nil, nil)
+	for _, a := range proxyDupAuths {
+		if _, errReg := proxyDupManager.Register(context.Background(), a); errReg != nil {
 			t.Fatal(errReg)
 		}
 	}
-	wantGProxy1 := gProxyAuths[0].EnsureIndex()
-	wantGProxy2 := gProxyAuths[1].EnsureIndex()
-	if wantGProxy1 == "" || wantGProxy2 == "" || wantGProxy1 == wantGProxy2 {
-		t.Fatalf("expected distinct indexes for P1 and P2: %q vs %q", wantGProxy1, wantGProxy2)
+	// Each YAML key consumes the next matching synthesized credential, so the
+	// repeated key 1 stays aligned with its own credential instead of drifting.
+	wantProxyDup1 := proxyDupAuths[0].EnsureIndex()
+	wantProxyDup1Dup := proxyDupAuths[1].EnsureIndex()
+	wantProxyDup2 := proxyDupAuths[2].EnsureIndex()
+	if wantProxyDup1 == "" || wantProxyDup1Dup == "" || wantProxyDup2 == "" ||
+		wantProxyDup1 == wantProxyDup2 || wantProxyDup1Dup == wantProxyDup2 {
+		t.Fatalf("expected distinct indexes for P1, P1 and P2: %q, %q, %q", wantProxyDup1, wantProxyDup1Dup, wantProxyDup2)
 	}
 
-	hGProxy := &Handler{cfg: geminiProxyCfg, configFilePath: geminiProxyPath, authManager: gProxyManager}
-	routerGProxy := gin.New()
-	routerGProxy.GET("/v8/management/config/*path", hGProxy.ConfigV8)
+	hProxyDup := &Handler{cfg: proxyDupCfg, configFilePath: proxyDupPath, authManager: proxyDupManager}
+	routerProxyDup := gin.New()
+	routerProxyDup.GET("/v8/management/config/*path", hProxyDup.ConfigV8)
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/gemini", nil)
-	routerGProxy.ServeHTTP(rec, req)
+	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/openai", nil)
+	routerProxyDup.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("GET gemini proxy: status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("GET openai proxy: status=%d body=%s", rec.Code, rec.Body.String())
 	}
-	var gProxyGroups []map[string]any
-	if errDecode := json.Unmarshal(rec.Body.Bytes(), &gProxyGroups); errDecode != nil {
-		t.Fatal(errDecode)
+	var proxyDupGroups []map[string]any
+	if errDecode := json.Unmarshal(rec.Body.Bytes(), &proxyDupGroups); errDecode != nil {
+		t.Fatalf("decode openai proxy groups: %v", errDecode)
 	}
-	gProxyKeys := gProxyGroups[0]["keys"].([]any)
-	if len(gProxyKeys) != 3 {
-		t.Fatalf("expected 3 keys, got %d", len(gProxyKeys))
+	proxyDupKeys := proxyDupGroups[0]["keys"].([]any)
+	if len(proxyDupKeys) != 3 {
+		t.Fatalf("expected 3 keys, got %d", len(proxyDupKeys))
 	}
-	if got0 := gProxyKeys[0].(map[string]any)["auth_index"]; got0 != wantGProxy1 {
-		t.Fatalf("key 0 auth_index = %q, want %q", got0, wantGProxy1)
+	if got0 := proxyDupKeys[0].(map[string]any)["auth_index"]; got0 != wantProxyDup1 {
+		t.Fatalf("key 0 auth_index = %q, want %q", got0, wantProxyDup1)
 	}
-	if got1 := gProxyKeys[1].(map[string]any)["auth_index"]; got1 != wantGProxy1 {
-		t.Fatalf("key 1 auth_index = %q, want %q (should reuse P1, not jump to P2)", got1, wantGProxy1)
+	if got1 := proxyDupKeys[1].(map[string]any)["auth_index"]; got1 != wantProxyDup1Dup {
+		t.Fatalf("key 1 auth_index = %q, want %q", got1, wantProxyDup1Dup)
 	}
-	if got2 := gProxyKeys[2].(map[string]any)["auth_index"]; got2 != wantGProxy2 {
-		t.Fatalf("key 2 auth_index = %q, want %q", got2, wantGProxy2)
+	if got2 := proxyDupKeys[2].(map[string]any)["auth_index"]; got2 != wantProxyDup2 {
+		t.Fatalf("key 2 auth_index = %q, want %q", got2, wantProxyDup2)
 	}
 
-	// 18. Two OpenAI-compatible groups with identical name and base-url: no cross-group collision
+	// 16. Two OpenAI-compatible groups with identical name and base-url: no cross-group collision
 	compatDupGroupYAML := `config-version: 8
-port: 8317
+port: 11016
 api-keys:
   openai-compatibility:
     - name: shared-name
@@ -943,12 +813,12 @@ api-keys:
 		t.Fatalf("group 1 key auth_index = %q, want %q", gotGroup1KeyIndex, wantGroup1Index)
 	}
 
-	// 19. Gemini with empty API keys and different prefixes [A, A, B]: key 0 and 1 get A, key 2 gets B
-	geminiPrefixYAML := `config-version: 8
-port: 8317
+	// 17. Native family with empty API keys and different prefixes [A, A, B]: key 0 and 1 get A, key 2 gets B
+	prefixDupYAML := `config-version: 8
+port: 11016
 api-keys:
-  gemini:
-    - name: gemini-prefix-group
+  openai:
+    - name: openai-prefix-group
       base-url: http://emulator.invalid:8080
       keys:
         - api-key: ""
@@ -958,65 +828,69 @@ api-keys:
         - api-key: ""
           prefix: /team-b/
 `
-	geminiPrefixPath := filepath.Join(dir, "gemini-prefix-dup.yaml")
-	if errWrite := os.WriteFile(geminiPrefixPath, []byte(geminiPrefixYAML), 0600); errWrite != nil {
+	prefixDupPath := filepath.Join(dir, "openai-prefix-dup.yaml")
+	if errWrite := os.WriteFile(prefixDupPath, []byte(prefixDupYAML), 0600); errWrite != nil {
 		t.Fatal(errWrite)
 	}
-	geminiPrefixCfg, errLoadGPrefix := config.LoadConfig(geminiPrefixPath)
-	if errLoadGPrefix != nil {
-		t.Fatal(errLoadGPrefix)
+	prefixDupCfg, errLoadPrefixDup := config.LoadConfig(prefixDupPath)
+	if errLoadPrefixDup != nil {
+		t.Fatal(errLoadPrefixDup)
 	}
-	gPrefixAuths, errGPrefixSynth := synth.Synthesize(&synthesizer.SynthesisContext{
-		Config:      geminiPrefixCfg,
+	prefixDupAuths, errPrefixDupSynth := synth.Synthesize(&synthesizer.SynthesisContext{
+		Config:      prefixDupCfg,
 		Now:         time.Now(),
 		IDGenerator: synthesizer.NewStableIDGenerator(),
 	})
-	if errGPrefixSynth != nil || len(gPrefixAuths) != 2 {
-		t.Fatalf("synthesize gemini prefix auths: %v, len=%d", errGPrefixSynth, len(gPrefixAuths))
+	if errPrefixDupSynth != nil || len(prefixDupAuths) != 3 {
+		t.Fatalf("synthesize openai prefix auths: %v, len=%d", errPrefixDupSynth, len(prefixDupAuths))
 	}
-	gPrefixManager := coreauth.NewManager(nil, nil, nil)
-	for _, a := range gPrefixAuths {
-		if _, errReg := gPrefixManager.Register(context.Background(), a); errReg != nil {
+	prefixDupManager := coreauth.NewManager(nil, nil, nil)
+	for _, a := range prefixDupAuths {
+		if _, errReg := prefixDupManager.Register(context.Background(), a); errReg != nil {
 			t.Fatal(errReg)
 		}
 	}
-	wantGPrefixA := gPrefixAuths[0].EnsureIndex()
-	wantGPrefixB := gPrefixAuths[1].EnsureIndex()
-	if wantGPrefixA == "" || wantGPrefixB == "" || wantGPrefixA == wantGPrefixB {
-		t.Fatalf("expected distinct indexes for A and B: %q vs %q", wantGPrefixA, wantGPrefixB)
+	// Each YAML key consumes the next matching synthesized credential, so the
+	// repeated key 1 stays aligned with its own credential instead of drifting.
+	wantPrefixDupA := prefixDupAuths[0].EnsureIndex()
+	wantPrefixDupADup := prefixDupAuths[1].EnsureIndex()
+	wantPrefixDupB := prefixDupAuths[2].EnsureIndex()
+	if wantPrefixDupA == "" || wantPrefixDupADup == "" || wantPrefixDupB == "" ||
+		wantPrefixDupA == wantPrefixDupB || wantPrefixDupADup == wantPrefixDupB {
+		t.Fatalf("expected distinct indexes for A, A and B: %q, %q, %q", wantPrefixDupA, wantPrefixDupADup, wantPrefixDupB)
 	}
 
-	hGPrefix := &Handler{cfg: geminiPrefixCfg, configFilePath: geminiPrefixPath, authManager: gPrefixManager}
-	routerGPrefix := gin.New()
-	routerGPrefix.GET("/v8/management/config/*path", hGPrefix.ConfigV8)
+	hPrefixDup := &Handler{cfg: prefixDupCfg, configFilePath: prefixDupPath, authManager: prefixDupManager}
+	routerPrefixDup := gin.New()
+	routerPrefixDup.GET("/v8/management/config/*path", hPrefixDup.ConfigV8)
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/gemini", nil)
-	routerGPrefix.ServeHTTP(rec, req)
+	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/openai", nil)
+	routerPrefixDup.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("GET gemini prefix: status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("GET openai prefix: status=%d body=%s", rec.Code, rec.Body.String())
 	}
-	var gPrefixGroups []map[string]any
-	if errDecode := json.Unmarshal(rec.Body.Bytes(), &gPrefixGroups); errDecode != nil {
-		t.Fatal(errDecode)
+	var prefixDupGroups []map[string]any
+	if errDecode := json.Unmarshal(rec.Body.Bytes(), &prefixDupGroups); errDecode != nil {
+		t.Fatalf("decode openai prefix groups: %v", errDecode)
 	}
-	gPrefixKeys := gPrefixGroups[0]["keys"].([]any)
-	if len(gPrefixKeys) != 3 {
-		t.Fatalf("expected 3 keys, got %d", len(gPrefixKeys))
+	prefixDupKeys := prefixDupGroups[0]["keys"].([]any)
+	if len(prefixDupKeys) != 3 {
+		t.Fatalf("expected 3 keys, got %d", len(prefixDupKeys))
 	}
-	if got0 := gPrefixKeys[0].(map[string]any)["auth_index"]; got0 != wantGPrefixA {
-		t.Fatalf("key 0 auth_index = %q, want %q", got0, wantGPrefixA)
+	if got0 := prefixDupKeys[0].(map[string]any)["auth_index"]; got0 != wantPrefixDupA {
+		t.Fatalf("key 0 auth_index = %q, want %q", got0, wantPrefixDupA)
 	}
-	if got1 := gPrefixKeys[1].(map[string]any)["auth_index"]; got1 != wantGPrefixA {
-		t.Fatalf("key 1 auth_index = %q, want %q (should reuse A, not jump to B)", got1, wantGPrefixA)
+	if got1 := prefixDupKeys[1].(map[string]any)["auth_index"]; got1 != wantPrefixDupADup {
+		t.Fatalf("key 1 auth_index = %q, want %q", got1, wantPrefixDupADup)
 	}
-	if got2 := gPrefixKeys[2].(map[string]any)["auth_index"]; got2 != wantGPrefixB {
-		t.Fatalf("key 2 auth_index = %q, want %q", got2, wantGPrefixB)
+	if got2 := prefixDupKeys[2].(map[string]any)["auth_index"]; got2 != wantPrefixDupB {
+		t.Fatalf("key 2 auth_index = %q, want %q", got2, wantPrefixDupB)
 	}
 
-	// 20. Unnamed OpenAI-compatible groups (name omitted) expose correct auth_index
+	// 18. Unnamed OpenAI-compatible groups (name omitted) expose correct auth_index
 	unnamedCompatYAML := `config-version: 8
-port: 8317
+port: 11016
 api-keys:
   openai-compatibility:
     - base-url: https://api.unnamed-keyless.invalid
@@ -1078,83 +952,12 @@ api-keys:
 		t.Fatalf("unnamed keyed auth_index = %q, want %q", gotKeyed, wantUnnamedKeyed)
 	}
 
-	// 21. Claude group with empty key entry [{}, {key-a}, {key-b}]: empty key has no index, A gets A, B gets B
-	claudeEmptyKeyYAML := `config-version: 8
-port: 8317
+	// 19. OpenAI with multiple empty API keys in the same group with different models (non-deduplicated)
+	openaiEmptyKeysYAML := `config-version: 8
+port: 11016
 api-keys:
-  claude:
-    - name: claude-group
-      keys:
-        - {}
-        - api-key: sk-claude-real-a
-        - api-key: sk-claude-real-b
-`
-	claudeEmptyPath := filepath.Join(dir, "claude-empty-key.yaml")
-	if errWrite := os.WriteFile(claudeEmptyPath, []byte(claudeEmptyKeyYAML), 0600); errWrite != nil {
-		t.Fatal(errWrite)
-	}
-	claudeEmptyCfg, errLoadClaudeEmpty := config.LoadConfig(claudeEmptyPath)
-	if errLoadClaudeEmpty != nil {
-		t.Fatal(errLoadClaudeEmpty)
-	}
-	claudeEmptyAuths, errClaudeSynth := synth.Synthesize(&synthesizer.SynthesisContext{
-		Config:      claudeEmptyCfg,
-		Now:         time.Now(),
-		IDGenerator: synthesizer.NewStableIDGenerator(),
-	})
-	// Empty Claude key with no base-url is skipped by synthesizeClaudeKeys, producing 2 auths: A and B
-	if errClaudeSynth != nil || len(claudeEmptyAuths) != 2 {
-		t.Fatalf("synthesize claude empty auths: %v, len=%d", errClaudeSynth, len(claudeEmptyAuths))
-	}
-	claudeEmptyManager := coreauth.NewManager(nil, nil, nil)
-	for _, a := range claudeEmptyAuths {
-		if _, errReg := claudeEmptyManager.Register(context.Background(), a); errReg != nil {
-			t.Fatal(errReg)
-		}
-	}
-	wantClaudeA := claudeEmptyAuths[0].EnsureIndex()
-	wantClaudeB := claudeEmptyAuths[1].EnsureIndex()
-	if wantClaudeA == "" || wantClaudeB == "" || wantClaudeA == wantClaudeB {
-		t.Fatalf("expected distinct indexes for A and B: %q vs %q", wantClaudeA, wantClaudeB)
-	}
-
-	hClaudeEmpty := &Handler{cfg: claudeEmptyCfg, configFilePath: claudeEmptyPath, authManager: claudeEmptyManager}
-	routerClaudeEmpty := gin.New()
-	routerClaudeEmpty.GET("/v8/management/config/*path", hClaudeEmpty.ConfigV8)
-
-	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/claude", nil)
-	routerClaudeEmpty.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("GET claude empty: status=%d body=%s", rec.Code, rec.Body.String())
-	}
-	var claudeEmptyGroups []map[string]any
-	if errDecode := json.Unmarshal(rec.Body.Bytes(), &claudeEmptyGroups); errDecode != nil {
-		t.Fatal(errDecode)
-	}
-	emptyGroupKeys := claudeEmptyGroups[0]["keys"].([]any)
-	if len(emptyGroupKeys) != 3 {
-		t.Fatalf("expected 3 keys in claude response, got %d", len(emptyGroupKeys))
-	}
-	// Key 0 was empty, should have no auth_index
-	if gotEmpty := emptyGroupKeys[0].(map[string]any)["auth_index"]; gotEmpty != nil {
-		t.Fatalf("claude empty key auth_index = %v, want nil", gotEmpty)
-	}
-	// Key 1 is A
-	if gotA := emptyGroupKeys[1].(map[string]any)["auth_index"]; gotA != wantClaudeA {
-		t.Fatalf("claude key 1 auth_index = %q, want %q", gotA, wantClaudeA)
-	}
-	// Key 2 is B
-	if gotB := emptyGroupKeys[2].(map[string]any)["auth_index"]; gotB != wantClaudeB {
-		t.Fatalf("claude key 2 auth_index = %q, want %q", gotB, wantClaudeB)
-	}
-
-	// 22. Codex with multiple empty API keys in the same group with different models (non-deduplicated)
-	codexEmptyKeysYAML := `config-version: 8
-port: 8317
-api-keys:
-  codex:
-    - name: codex-models-group
+  openai:
+    - name: openai-models-group
       base-url: https://api.openai.invalid
       keys:
         - api-key: ""
@@ -1166,115 +969,51 @@ api-keys:
             - name: gpt-6
               alias: gpt-6
 `
-	codexEmptyPath := filepath.Join(dir, "codex-empty-keys.yaml")
-	if errWrite := os.WriteFile(codexEmptyPath, []byte(codexEmptyKeysYAML), 0600); errWrite != nil {
+	openaiEmptyPath := filepath.Join(dir, "openai-empty-keys.yaml")
+	if errWrite := os.WriteFile(openaiEmptyPath, []byte(openaiEmptyKeysYAML), 0600); errWrite != nil {
 		t.Fatal(errWrite)
 	}
-	codexEmptyCfg, errLoadCodexEmpty := config.LoadConfig(codexEmptyPath)
-	if errLoadCodexEmpty != nil {
-		t.Fatal(errLoadCodexEmpty)
+	openaiEmptyCfg, errLoadOpenAIEmpty := config.LoadConfig(openaiEmptyPath)
+	if errLoadOpenAIEmpty != nil {
+		t.Fatal(errLoadOpenAIEmpty)
 	}
-	codexEmptyAuths, errCodexSynth := synth.Synthesize(&synthesizer.SynthesisContext{
-		Config:      codexEmptyCfg,
+	openaiEmptyAuths, errOpenAISynth := synth.Synthesize(&synthesizer.SynthesisContext{
+		Config:      openaiEmptyCfg,
 		Now:         time.Now(),
 		IDGenerator: synthesizer.NewStableIDGenerator(),
 	})
-	if errCodexSynth != nil || len(codexEmptyAuths) != 2 {
-		t.Fatalf("synthesize codex empty auths: %v, len=%d", errCodexSynth, len(codexEmptyAuths))
+	if errOpenAISynth != nil || len(openaiEmptyAuths) != 2 {
+		t.Fatalf("synthesize openai empty auths: %v, len=%d", errOpenAISynth, len(openaiEmptyAuths))
 	}
-	wantCodexModel0 := codexEmptyAuths[0].EnsureIndex()
-	wantCodexModel1 := codexEmptyAuths[1].EnsureIndex()
-	if wantCodexModel0 == "" || wantCodexModel1 == "" || wantCodexModel0 == wantCodexModel1 {
-		t.Fatalf("expected distinct indexes for codex empty keys: %q vs %q", wantCodexModel0, wantCodexModel1)
-	}
-
-	hCodexEmpty := &Handler{cfg: codexEmptyCfg, configFilePath: codexEmptyPath}
-	routerCodexEmpty := gin.New()
-	routerCodexEmpty.GET("/v8/management/config/*path", hCodexEmpty.ConfigV8)
-
-	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/codex", nil)
-	routerCodexEmpty.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("GET codex empty keys: status=%d body=%s", rec.Code, rec.Body.String())
-	}
-	var codexEmptyGroups []map[string]any
-	if errDecode := json.Unmarshal(rec.Body.Bytes(), &codexEmptyGroups); errDecode != nil {
-		t.Fatal(errDecode)
-	}
-	codexKeys := codexEmptyGroups[0]["keys"].([]any)
-	if len(codexKeys) != 2 {
-		t.Fatalf("expected 2 keys, got %d", len(codexKeys))
-	}
-	if got0 := codexKeys[0].(map[string]any)["auth_index"]; got0 != wantCodexModel0 {
-		t.Fatalf("codex key 0 auth_index = %q, want %q", got0, wantCodexModel0)
-	}
-	if got1 := codexKeys[1].(map[string]any)["auth_index"]; got1 != wantCodexModel1 {
-		t.Fatalf("codex key 1 auth_index = %q, want %q", got1, wantCodexModel1)
+	wantOpenAIModel0 := openaiEmptyAuths[0].EnsureIndex()
+	wantOpenAIModel1 := openaiEmptyAuths[1].EnsureIndex()
+	if wantOpenAIModel0 == "" || wantOpenAIModel1 == "" || wantOpenAIModel0 == wantOpenAIModel1 {
+		t.Fatalf("expected distinct indexes for openai empty keys: %q vs %q", wantOpenAIModel0, wantOpenAIModel1)
 	}
 
-	// 23. Meta with [empty key, dca key, valid A, valid B]: empty and dca skipped, A gets A, B gets B
-	metaFilteredYAML := `config-version: 8
-port: 8317
-api-keys:
-  meta:
-    - name: meta-filtered-group
-      keys:
-        - api-key: ""
-        - api-key: dca:some-oauth-token
-        - api-key: sk-meta-real-a
-        - api-key: sk-meta-real-b
-`
-	metaFilteredPath := filepath.Join(dir, "meta-filtered.yaml")
-	if errWrite := os.WriteFile(metaFilteredPath, []byte(metaFilteredYAML), 0600); errWrite != nil {
-		t.Fatal(errWrite)
-	}
-	metaFilteredCfg, errLoadMetaFiltered := config.LoadConfig(metaFilteredPath)
-	if errLoadMetaFiltered != nil {
-		t.Fatal(errLoadMetaFiltered)
-	}
-	metaFilteredAuths, errMetaFilteredSynth := synth.Synthesize(&synthesizer.SynthesisContext{
-		Config:      metaFilteredCfg,
-		Now:         time.Now(),
-		IDGenerator: synthesizer.NewStableIDGenerator(),
-	})
-	if errMetaFilteredSynth != nil || len(metaFilteredAuths) != 2 {
-		t.Fatalf("synthesize meta filtered auths: %v, len=%d", errMetaFilteredSynth, len(metaFilteredAuths))
-	}
-	wantMetaRealA := metaFilteredAuths[0].EnsureIndex()
-	wantMetaRealB := metaFilteredAuths[1].EnsureIndex()
-	if wantMetaRealA == "" || wantMetaRealB == "" || wantMetaRealA == wantMetaRealB {
-		t.Fatalf("expected distinct indexes for meta real keys: %q vs %q", wantMetaRealA, wantMetaRealB)
-	}
-
-	hMetaFiltered := &Handler{cfg: metaFilteredCfg, configFilePath: metaFilteredPath}
-	routerMetaFiltered := gin.New()
-	routerMetaFiltered.GET("/v8/management/config/*path", hMetaFiltered.ConfigV8)
+	hOpenAIEmpty := &Handler{cfg: openaiEmptyCfg, configFilePath: openaiEmptyPath}
+	routerOpenAIEmpty := gin.New()
+	routerOpenAIEmpty.GET("/v8/management/config/*path", hOpenAIEmpty.ConfigV8)
 
 	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/meta", nil)
-	routerMetaFiltered.ServeHTTP(rec, req)
+	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/openai", nil)
+	routerOpenAIEmpty.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("GET meta filtered: status=%d body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("GET openai empty keys: status=%d body=%s", rec.Code, rec.Body.String())
 	}
-	var metaFilteredGroups []map[string]any
-	if errDecode := json.Unmarshal(rec.Body.Bytes(), &metaFilteredGroups); errDecode != nil {
+	var openaiEmptyGroups []map[string]any
+	if errDecode := json.Unmarshal(rec.Body.Bytes(), &openaiEmptyGroups); errDecode != nil {
 		t.Fatal(errDecode)
 	}
-	metaFilteredKeys := metaFilteredGroups[0]["keys"].([]any)
-	if len(metaFilteredKeys) != 4 {
-		t.Fatalf("expected 4 keys in response, got %d", len(metaFilteredKeys))
+	openaiKeys := openaiEmptyGroups[0]["keys"].([]any)
+	if len(openaiKeys) != 2 {
+		t.Fatalf("expected 2 keys, got %d", len(openaiKeys))
 	}
-	if gotEmpty := metaFilteredKeys[0].(map[string]any)["auth_index"]; gotEmpty != nil {
-		t.Fatalf("empty key auth_index = %v, want nil", gotEmpty)
+	if got0 := openaiKeys[0].(map[string]any)["auth_index"]; got0 != wantOpenAIModel0 {
+		t.Fatalf("openai key 0 auth_index = %q, want %q", got0, wantOpenAIModel0)
 	}
-	if gotDCA := metaFilteredKeys[1].(map[string]any)["auth_index"]; gotDCA != nil {
-		t.Fatalf("dca key auth_index = %v, want nil", gotDCA)
+	if got1 := openaiKeys[1].(map[string]any)["auth_index"]; got1 != wantOpenAIModel1 {
+		t.Fatalf("openai key 1 auth_index = %q, want %q", got1, wantOpenAIModel1)
 	}
-	if gotA := metaFilteredKeys[2].(map[string]any)["auth_index"]; gotA != wantMetaRealA {
-		t.Fatalf("key A auth_index = %q, want %q", gotA, wantMetaRealA)
-	}
-	if gotB := metaFilteredKeys[3].(map[string]any)["auth_index"]; gotB != wantMetaRealB {
-		t.Fatalf("key B auth_index = %q, want %q", gotB, wantMetaRealB)
-	}
+
 }

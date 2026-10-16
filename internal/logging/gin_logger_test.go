@@ -65,8 +65,7 @@ func TestIsAIAPIPathIncludesPublicAPIGroups(t *testing.T) {
 	for _, path := range []string{
 		"/v1",
 		"/v1/models",
-		"/v1/alpha/search",
-		"/v1beta/interactions",
+		"/v1/responses",
 		"/openai/v1/videos",
 		"/backend-api/codex/responses",
 	} {
@@ -77,6 +76,7 @@ func TestIsAIAPIPathIncludesPublicAPIGroups(t *testing.T) {
 	for _, path := range []string{
 		"/v0/management/config",
 		"/v10/models",
+		"/v1beta/models",
 		"/openai/v10/videos",
 		"/backend-api/codex-status",
 	} {

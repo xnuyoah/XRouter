@@ -14,14 +14,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/clienterror"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/thinking"
-	_ "github.com/router-for-me/CLIProxyAPI/v8/internal/thinking/provider/codex"
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
+	"github.com/xnuyoah/XRouter/v8/internal/clienterror"
+	"github.com/xnuyoah/XRouter/v8/internal/logging"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/internal/thinking"
+	_ "github.com/xnuyoah/XRouter/v8/internal/thinking/provider/codex"
+	cliproxyauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
 )
 
 func TestParseOpenAIUsageChatCompletions(t *testing.T) {
@@ -413,8 +413,8 @@ func TestParseClaudeUsageFallsBackToTopLevelThinkingTokens(t *testing.T) {
 	}
 }
 
-func TestParseGeminiUsageNormalizesCachedContent(t *testing.T) {
-	detail := ParseGeminiUsage([]byte(`{"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":2,"cachedContentTokenCount":4,"totalTokenCount":12}}`))
+func TestParseAntigravityUsageNormalizesCachedContent(t *testing.T) {
+	detail := ParseAntigravityUsage([]byte(`{"response":{"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":2,"cachedContentTokenCount":4,"totalTokenCount":12}}}`))
 	if detail.CachedTokens != 4 {
 		t.Fatalf("cached tokens = %d, want 4", detail.CachedTokens)
 	}
@@ -426,8 +426,8 @@ func TestParseGeminiUsageNormalizesCachedContent(t *testing.T) {
 	}
 }
 
-func TestParseGeminiUsageIncludesToolUsePromptTokens(t *testing.T) {
-	detail := ParseGeminiUsage([]byte(`{"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":2,"thoughtsTokenCount":3,"toolUsePromptTokenCount":5,"totalTokenCount":20}}`))
+func TestParseAntigravityUsageIncludesToolUsePromptTokens(t *testing.T) {
+	detail := ParseAntigravityUsage([]byte(`{"response":{"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":2,"thoughtsTokenCount":3,"toolUsePromptTokenCount":5,"totalTokenCount":20}}}`))
 	if detail.InputTokens != 15 || detail.TotalTokens != 20 {
 		t.Fatalf("detail = %+v", detail)
 	}
@@ -437,37 +437,14 @@ func TestParseGeminiUsageIncludesToolUsePromptTokens(t *testing.T) {
 	}
 }
 
-func TestParseGeminiStreamUsageSkipsZeroPlaceholder(t *testing.T) {
-	lines := [][]byte{
-		[]byte(`data: {"usageMetadata":{"promptTokenCount":0,"candidatesTokenCount":0,"thoughtsTokenCount":0,"totalTokenCount":0}}`),
-		[]byte(`data: {"usageMetadata":{"promptTokenCount":17984,"candidatesTokenCount":2668,"thoughtsTokenCount":1028,"totalTokenCount":21680}}`),
-	}
-
-	accepted := make([]usage.Detail, 0, len(lines))
-	for _, line := range lines {
-		detail, ok := ParseGeminiStreamUsage(line)
-		if ok {
-			accepted = append(accepted, detail)
-		}
-	}
-
-	if len(accepted) != 1 {
-		t.Fatalf("accepted usage count = %d, want 1", len(accepted))
-	}
-	detail := accepted[0]
-	if detail.InputTokens != 17984 || detail.OutputTokens != 2668 || detail.ReasoningTokens != 1028 || detail.TotalTokens != 21680 {
-		t.Fatalf("accepted usage detail = %+v", detail)
-	}
-}
-
-func TestParseGeminiUsageRejectsInvalidToolUseSums(t *testing.T) {
+func TestParseAntigravityUsageRejectsInvalidToolUseSums(t *testing.T) {
 	tests := map[string]string{
-		"negative": `{"usageMetadata":{"promptTokenCount":10,"toolUsePromptTokenCount":-1,"totalTokenCount":10}}`,
-		"overflow": `{"usageMetadata":{"promptTokenCount":9223372036854775807,"toolUsePromptTokenCount":1,"totalTokenCount":9223372036854775807}}`,
+		"negative": `{"response":{"usageMetadata":{"promptTokenCount":10,"toolUsePromptTokenCount":-1,"totalTokenCount":10}}}`,
+		"overflow": `{"response":{"usageMetadata":{"promptTokenCount":9223372036854775807,"toolUsePromptTokenCount":1,"totalTokenCount":9223372036854775807}}}`,
 	}
 	for name, payload := range tests {
 		t.Run(name, func(t *testing.T) {
-			detail := ParseGeminiUsage([]byte(payload))
+			detail := ParseAntigravityUsage([]byte(payload))
 			if detail.InputTokens < 0 || !detail.TokenBreakdown.Valid() ||
 				detail.TokenBreakdown.Quality != usage.TokenAccountingQualityInconsistent {
 				t.Fatalf("detail = %+v", detail)

@@ -1,4 +1,4 @@
-// Package middleware provides HTTP middleware components for the CLI Proxy API server.
+// Package middleware provides HTTP middleware components for the XRouter server.
 // This file contains the request logging middleware that captures comprehensive
 // request and response data when enabled through configuration.
 package middleware
@@ -16,9 +16,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/klauspost/compress/zstd"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/logging"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
 const (

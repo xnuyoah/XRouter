@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	applypatch "github.com/router-for-me/CLIProxyAPI/v8/internal/client/codex/apply-patch"
 	"github.com/tidwall/gjson"
+	applypatch "github.com/xnuyoah/XRouter/v8/internal/client/codex/apply-patch"
 )
 
 var patchResponsesRequest = []byte(`{"tools":[{"type":"custom","name":"apply_patch"}]}`)

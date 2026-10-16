@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor/helps"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/signature"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/xnuyoah/XRouter/v8/internal/runtime/executor/helps"
+	"github.com/xnuyoah/XRouter/v8/internal/signature"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
 func openaiResponsesReasoningSummaryIsEmpty(summary gjson.Result) bool {
@@ -49,18 +49,10 @@ func promoteOpenAIResponsesReasoningTextToSummary(itemRaw string, content gjson.
 }
 
 func sanitizeOpenAIResponsesReasoningEncryptedContent(ctx context.Context, provider string, body []byte) []byte {
-	return sanitizeOpenAIResponsesReasoningEncryptedContentWithOptions(ctx, provider, body, false, false)
+	return sanitizeOpenAIResponsesReasoningEncryptedContentWithOptions(ctx, provider, body, false)
 }
 
-func sanitizeOpenAIResponsesReasoningEncryptedContentWithCompat(ctx context.Context, provider string, body []byte, isCompat bool) []byte {
-	return sanitizeOpenAIResponsesReasoningEncryptedContentWithOptions(ctx, provider, body, isCompat, isCompat)
-}
-
-func sanitizeOpenAIResponsesReasoningEncryptedContentKeepForeign(ctx context.Context, provider string, body []byte) []byte {
-	return sanitizeOpenAIResponsesReasoningEncryptedContentWithOptions(ctx, provider, body, false, true)
-}
-
-func sanitizeOpenAIResponsesReasoningEncryptedContentWithOptions(ctx context.Context, provider string, body []byte, isCompat bool, keepForeign bool) []byte {
+func sanitizeOpenAIResponsesReasoningEncryptedContentWithOptions(ctx context.Context, provider string, body []byte, isCompat bool) []byte {
 	inputResult := util.GetGJSONBytesNoCopy(body, "input")
 	if !inputResult.Exists() || !inputResult.IsArray() {
 		return body
@@ -176,12 +168,7 @@ func sanitizeOpenAIResponsesReasoningEncryptedContentWithOptions(ctx context.Con
 			if rawSignature != strings.TrimSpace(rawSignature) {
 				reason = "encrypted_content has leading or trailing whitespace"
 			} else if _, err := signature.InspectGPTReasoningSignature(rawSignature); err != nil {
-				// When keepForeign is true (compat callers enable it via WithCompat),
-				// third-party Responses models (such as Muse) expect their own
-				// unknown-format encrypted_content to be replayed.
-				if !keepForeign || rawSignature == "" || signature.DetectSignatureProvider(rawSignature) != signature.SignatureProviderUnknown {
-					reason = err.Error()
-				}
+				reason = err.Error()
 			}
 		case gjson.Null:
 			reason = "encrypted_content is null"

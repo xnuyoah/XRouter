@@ -3,22 +3,18 @@ package api
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/access"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/cache"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/githubauth"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/managementasset"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/redisqueue"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor"
-	responsesclaude "github.com/router-for-me/CLIProxyAPI/v8/internal/translator/claude/openai/responses"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	sdkAuth "github.com/router-for-me/CLIProxyAPI/v8/sdk/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/access"
+	"github.com/xnuyoah/XRouter/v8/internal/cache"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/githubauth"
+	"github.com/xnuyoah/XRouter/v8/internal/logging"
+	"github.com/xnuyoah/XRouter/v8/internal/redisqueue"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 	"gopkg.in/yaml.v3"
 )
 
@@ -118,11 +114,6 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 	}
 
 	applySignatureCacheConfig(oldCfg, cfg)
-	applyClaudeToolSearchConfig(cfg)
-
-	if oldCfg != nil && !reflect.DeepEqual(oldCfg.Antigravity.ConnectionPool, cfg.Antigravity.ConnectionPool) {
-		executor.ResetAntigravityTransports()
-	}
 
 	if s.handlers != nil && s.handlers.AuthManager != nil {
 		s.handlers.AuthManager.SetRetryConfig(cfg.RequestRetry, time.Duration(cfg.MaxRetryInterval)*time.Second, cfg.MaxRetryCredentials)
@@ -177,17 +168,7 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 	s.cfgMu.Lock()
 	s.cfg = cfg
 	s.cfgMu.Unlock()
-	if s.codexLiveHandler != nil {
-		if errUpdate := s.codexLiveHandler.UpdateConfig(cfg); errUpdate != nil {
-			log.WithError(errUpdate).Error("failed to update Codex Live media relay configuration")
-		}
-	}
-	s.wsAuthEnabled.Store(cfg.WebsocketAuth)
-	if oldCfg != nil && s.wsAuthChanged != nil && oldCfg.WebsocketAuth != cfg.WebsocketAuth {
-		s.wsAuthChanged(oldCfg.WebsocketAuth, cfg.WebsocketAuth)
-	}
 	githubauth.SetToken(cfg.GitHubToken)
-	managementasset.SetCurrentConfig(cfg)
 	if errContext := ctx.Err(); errContext != nil {
 		return false
 	}
@@ -223,13 +204,10 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 			return false
 		}
 	}
-	geminiAPIKeyCount := len(cfg.GeminiKey)
-	interactionsAPIKeyCount := len(cfg.InteractionsKey)
-	claudeAPIKeyCount := len(cfg.ClaudeKey)
-	codexAPIKeyCount := len(cfg.CodexKey)
-	xaiAPIKeyCount := len(cfg.XAIKey)
-	metaAPIKeyCount := len(cfg.MetaKey)
-	vertexAICompatCount := len(cfg.VertexCompatAPIKey)
+	openAIAPIKeyCount := len(cfg.OpenAIKey)
+	deepseekAPIKeyCount := len(cfg.DeepseekKey)
+	nvidiaAPIKeyCount := len(cfg.NvidiaKey)
+	agnesAPIKeyCount := len(cfg.AgnesKey)
 	openAICompatCount := 0
 	for i := range cfg.OpenAICompatibility {
 		entry := cfg.OpenAICompatibility[i]
@@ -239,66 +217,24 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 		openAICompatCount += len(entry.APIKeyEntries)
 	}
 
-	total := authEntries + geminiAPIKeyCount + interactionsAPIKeyCount + claudeAPIKeyCount + codexAPIKeyCount + xaiAPIKeyCount + metaAPIKeyCount + vertexAICompatCount + openAICompatCount
-	fmt.Printf("server clients and configuration updated: %d clients (%d auth entries + %d Gemini API keys + %d Interactions API keys + %d Claude API keys + %d Codex keys + %d xAI keys + %d Meta API keys + %d Vertex-compat + %d OpenAI-compat)\n",
+	total := authEntries + openAIAPIKeyCount + deepseekAPIKeyCount + nvidiaAPIKeyCount + agnesAPIKeyCount + openAICompatCount
+	fmt.Printf("server clients and configuration updated: %d clients (%d auth entries + %d OpenAI API keys + %d DeepSeek API keys + %d NVIDIA API keys + %d Agnes API keys + %d OpenAI-compat)\n",
 		total,
 		authEntries,
-		geminiAPIKeyCount,
-		interactionsAPIKeyCount,
-		claudeAPIKeyCount,
-		codexAPIKeyCount,
-		xaiAPIKeyCount,
-		metaAPIKeyCount,
-		vertexAICompatCount,
+		openAIAPIKeyCount,
+		deepseekAPIKeyCount,
+		nvidiaAPIKeyCount,
+		agnesAPIKeyCount,
 		openAICompatCount,
 	)
 	return ctx.Err() == nil
 }
 
-func (s *Server) SetWebsocketAuthChangeHandler(fn func(bool, bool)) {
-	if s == nil {
-		return
-	}
-	s.wsAuthChanged = fn
-}
-
-// applyClaudeToolSearchConfig publishes upstream.claude.tool-search to the
-// Claude Responses translator, which the Claude executor and the Codex model
-// catalog also read so all three agree on it.
-func applyClaudeToolSearchConfig(cfg *config.Config) {
-	responsesclaude.SetClientToolSearchEnabled(cfg != nil && cfg.Claude.ToolSearch)
-}
-
-func configuredSignatureCacheEnabled(cfg *config.Config) bool {
-	if cfg != nil && cfg.AntigravitySignatureCacheEnabled != nil {
-		return *cfg.AntigravitySignatureCacheEnabled
-	}
-	return true
-}
-
+// applySignatureCacheConfig keeps the thinking-signature cache at its default
+// policy: cache validation enabled, bypass mode non-strict.
 func applySignatureCacheConfig(oldCfg, cfg *config.Config) {
-	newVal := configuredSignatureCacheEnabled(cfg)
-	newStrict := configuredSignatureBypassStrict(cfg)
-	if oldCfg == nil {
-		cache.SetSignatureCacheEnabled(newVal)
-		cache.SetSignatureBypassStrictMode(newStrict)
-		return
-	}
-
-	oldVal := configuredSignatureCacheEnabled(oldCfg)
-	if oldVal != newVal {
-		cache.SetSignatureCacheEnabled(newVal)
-	}
-
-	oldStrict := configuredSignatureBypassStrict(oldCfg)
-	if oldStrict != newStrict {
-		cache.SetSignatureBypassStrictMode(newStrict)
-	}
-}
-
-func configuredSignatureBypassStrict(cfg *config.Config) bool {
-	if cfg != nil && cfg.AntigravitySignatureBypassStrict != nil {
-		return *cfg.AntigravitySignatureBypassStrict
-	}
-	return false
+	_ = oldCfg
+	_ = cfg
+	cache.SetSignatureCacheEnabled(true)
+	cache.SetSignatureBypassStrictMode(false)
 }

@@ -9,8 +9,8 @@ import (
 // Kimi thinking signatures carry no self-describing envelope. Every byte is
 // indistinguishable from uniform random data: a per-offset scan over 44 samples
 // x 9709 bytes found zero positions below a 4-sigma floor, so there is no magic
-// prefix, version byte, key id or timestamp to anchor on the way GPT (Fernet),
-// Claude (CAIS/protobuf) and Gemini (Tink envelope) all provide.
+// prefix, version byte, key id or timestamp to anchor on the way GPT (Fernet)
+// and Claude (CAIS/protobuf) provide.
 //
 // What Kimi does expose is size. The raw signature length is fixed per protocol
 // mode and completely independent of the content it accompanies:
@@ -39,7 +39,7 @@ import (
 //     (61 unique samples) both yield exactly {4340, 12946}.
 //
 // Cross-family safety: across 1027 catalog signatures plus 215 native Grok
-// samples, no Claude, Gemini, GPT or Grok value lands on either length. The
+// samples, no Claude, GPT or Grok value lands on either length. The
 // nearest miss is a 4344-character GPT token, which the gAAAA probe claims long
 // before this check runs.
 //
@@ -95,11 +95,11 @@ type KimiThinkingSignatureInfo struct {
 // InspectKimiThinkingSignature validates the transport shape of a Kimi Messages
 // thinking signature.
 //
-// Unlike the Claude, Gemini and GPT validators this proves nothing about the
-// payload: it reports that the value has the size and character class Kimi
-// produces. Because size is the only available signal, this probe must run after
-// every self-describing envelope check has declined, so that a Claude, Gemini or
-// GPT signature can never be captured by a length coincidence.
+// Unlike the Claude and GPT validators this proves nothing about the payload: it
+// reports that the value has the size and character class Kimi produces. Because
+// size is the only available signal, this probe must run after every
+// self-describing envelope check has declined, so that a Claude or GPT signature
+// can never be captured by a length coincidence.
 func InspectKimiThinkingSignature(raw string) (*KimiThinkingSignatureInfo, error) {
 	sig := strings.TrimSpace(raw)
 	if sig == "" {
@@ -134,9 +134,6 @@ func InspectKimiThinkingSignature(raw string) (*KimiThinkingSignatureInfo, error
 		}
 		if IsValidClaudeThinkingSignature(sig, ClaudeSignatureValidationOptions{Strict: true}) {
 			return nil, fmt.Errorf("Kimi thinking signature looks like Claude thinking signature")
-		}
-		if IsValidGeminiThoughtSignature(sig, GeminiThoughtSignatureValidationOptions{RequireKnownEnvelope: true}) {
-			return nil, fmt.Errorf("Kimi thinking signature looks like Gemini thoughtSignature")
 		}
 	}
 	decoded, err := base64.RawStdEncoding.DecodeString(sig)

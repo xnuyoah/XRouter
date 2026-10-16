@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/signature/signaturetest"
+	"github.com/xnuyoah/XRouter/v8/internal/signature/signaturetest"
 	"google.golang.org/protobuf/encoding/protowire"
 )
 
@@ -36,10 +36,7 @@ func TestAntigravityCAQSRecognitionAndReplay(t *testing.T) {
 			t.Fatalf("normalization changed the wrapper: %v", errNormalize)
 		}
 	}
-	if normalized, ok := CompatibleAntigravityClaudeThinkingSignature(sig); !ok || normalized != sig {
-		t.Fatal("Antigravity replay must preserve the original bytes")
-	}
-	for _, target := range []SignatureProvider{SignatureProviderClaude, SignatureProviderGemini, SignatureProviderGPT, SignatureProviderKimi, SignatureProviderGrok} {
+	for _, target := range []SignatureProvider{SignatureProviderClaude, SignatureProviderGPT, SignatureProviderKimi, SignatureProviderGrok} {
 		if d := DecideSignatureCompatibility(target, sig, SignatureBlockKindClaudeThinking); d.Compatible {
 			t.Errorf("Google wrapper must not be replayed directly to %s", target)
 		}
@@ -47,9 +44,6 @@ func TestAntigravityCAQSRecognitionAndReplay(t *testing.T) {
 	inner, _ := base64.StdEncoding.DecodeString(sig)
 	if !IsValidClaudeCAISSignature(string(inner)) {
 		t.Fatal("inner CAQS is invalid")
-	}
-	if _, ok := CompatibleAntigravityClaudeThinkingSignature(string(inner)); ok {
-		t.Fatal("bare CAQS must not be promoted to Antigravity wire format")
 	}
 }
 
@@ -136,9 +130,6 @@ func TestAntigravityCAQSRejectsMalformedWrappers(t *testing.T) {
 				if IsValidClaudeThinkingSignature(value, opts) {
 					t.Fatalf("invalid wrapper accepted in mode %+v", opts)
 				}
-			}
-			if got, ok := CompatibleAntigravityClaudeThinkingSignature(value); ok || got != "" {
-				t.Fatal("invalid wrapper replayable")
 			}
 		})
 	}

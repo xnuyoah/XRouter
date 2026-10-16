@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	applypatch "github.com/router-for-me/CLIProxyAPI/v8/internal/client/codex/apply-patch"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	applypatch "github.com/xnuyoah/XRouter/v8/internal/client/codex/apply-patch"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
 // NormalizeApplyPatchResponsesRequest adapts declarations and explicit custom patch history.

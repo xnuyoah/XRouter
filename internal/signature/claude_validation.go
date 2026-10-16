@@ -47,7 +47,7 @@
 // # Compatibility
 //
 // Verified against all confirmed spec samples (Anthropic Max 20x, Azure,
-// Vertex, Bedrock) and legacy ch=11 signatures. Both single-layer (E) and
+// Bedrock) and legacy ch=11 signatures. Both single-layer (E) and
 // double-layer (R) encodings are supported. Historical cache-mode modelGroup#
 // prefixes are stripped.
 //
@@ -638,7 +638,7 @@ func InspectClaudeCAISSignature(rawSignature string) (*ClaudeCAISSignatureInfo, 
 	// A payload whose first byte is 0x08 always base64-encodes to a string
 	// starting with 'C' (0x08>>2 == 2). Checking that first keeps this validator
 	// cheap on the hot paths that probe every signature, since classic Claude
-	// (E/R) and Gemini envelopes are rejected without a base64 decode.
+	// (E/R) envelopes are rejected without a base64 decode.
 	if sig[0] != 'C' {
 		return nil, fmt.Errorf("invalid Claude CAIS signature: expected 'C' prefix, got %q", string(sig[0]))
 	}

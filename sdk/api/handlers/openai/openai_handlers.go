@@ -15,15 +15,14 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
-	codexmodels "github.com/router-for-me/CLIProxyAPI/v8/internal/client/codex/models"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/clienterror"
-	. "github.com/router-for-me/CLIProxyAPI/v8/internal/constant"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/interfaces"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	responsesconverter "github.com/router-for-me/CLIProxyAPI/v8/internal/translator/openai/openai/responses"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/xnuyoah/XRouter/v8/internal/clienterror"
+	. "github.com/xnuyoah/XRouter/v8/internal/constant"
+	"github.com/xnuyoah/XRouter/v8/internal/interfaces"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	responsesconverter "github.com/xnuyoah/XRouter/v8/internal/translator/openai/openai/responses"
+	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
 )
 
 // OpenAIAPIHandler contains the handlers for OpenAI API endpoints.
@@ -62,22 +61,6 @@ func (h *OpenAIAPIHandler) Models() []map[string]any {
 // It returns a list of available AI models with their capabilities
 // and specifications in OpenAI-compatible format.
 func (h *OpenAIAPIHandler) OpenAIModels(c *gin.Context) {
-	if _, ok := c.Request.URL.Query()["client_version"]; ok {
-		clientVersion := c.Query("client_version")
-		body, errMarshal := codexmodels.MarshalCompact(h.codexClientModelsResponse(clientVersion))
-		if errMarshal != nil {
-			c.JSON(http.StatusInternalServerError, handlers.ErrorResponse{
-				Error: handlers.ErrorDetail{
-					Message: fmt.Sprintf("Failed to encode model list: %v", errMarshal),
-					Type:    "server_error",
-				},
-			})
-			return
-		}
-		h.WriteModelListResponse(c, h.HandlerType(), body)
-		return
-	}
-
 	// Get all available models
 	allModels := h.Models()
 
@@ -438,8 +421,8 @@ func convertChatCompletionsStreamChunkToCompletions(chunkData []byte) []byte {
 	return out
 }
 
-// handleNonStreamingResponse handles non-streaming chat completion responses
-// for Gemini models. It selects a client from the pool, sends the request, and
+// handleNonStreamingResponse handles non-streaming chat completion responses.
+// It selects a client from the pool, sends the request, and
 // aggregates the response before sending it back to the client in OpenAI format.
 //
 // Parameters:
@@ -463,7 +446,7 @@ func (h *OpenAIAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSON []
 	cliCancel()
 }
 
-// handleStreamingResponse handles streaming responses for Gemini models.
+// handleStreamingResponse handles streaming chat completion responses.
 // It establishes a streaming connection with the backend service and forwards
 // the response chunks to the client in real-time using Server-Sent Events.
 //

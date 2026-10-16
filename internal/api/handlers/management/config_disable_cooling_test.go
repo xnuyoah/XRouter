@@ -8,10 +8,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
-func TestPatchDisableCoolingOverrideForEveryFamily(t *testing.T) {
+func TestPatchDisableCoolingOverride(t *testing.T) {
 	initial := true
 	tests := []struct {
 		name  string
@@ -19,30 +19,6 @@ func TestPatchDisableCoolingOverrideForEveryFamily(t *testing.T) {
 		patch func(*Handler, *gin.Context)
 		get   func(*config.Config) *bool
 	}{
-		{
-			name: "gemini",
-			setup: func(cfg *config.Config) {
-				cfg.GeminiKey = []config.GeminiKey{{APIKey: "key", DisableCooling: &initial}}
-			},
-			patch: (*Handler).PatchGeminiKey,
-			get:   func(cfg *config.Config) *bool { return cfg.GeminiKey[0].DisableCooling },
-		},
-		{
-			name: "interactions",
-			setup: func(cfg *config.Config) {
-				cfg.InteractionsKey = []config.GeminiKey{{APIKey: "key", DisableCooling: &initial}}
-			},
-			patch: (*Handler).PatchInteractionsKey,
-			get:   func(cfg *config.Config) *bool { return cfg.InteractionsKey[0].DisableCooling },
-		},
-		{
-			name: "claude",
-			setup: func(cfg *config.Config) {
-				cfg.ClaudeKey = []config.ClaudeKey{{APIKey: "key", DisableCooling: &initial}}
-			},
-			patch: (*Handler).PatchClaudeKey,
-			get:   func(cfg *config.Config) *bool { return cfg.ClaudeKey[0].DisableCooling },
-		},
 		{
 			name: "openai compatibility",
 			setup: func(cfg *config.Config) {
@@ -55,54 +31,6 @@ func TestPatchDisableCoolingOverrideForEveryFamily(t *testing.T) {
 			},
 			patch: (*Handler).PatchOpenAICompat,
 			get:   func(cfg *config.Config) *bool { return cfg.OpenAICompatibility[0].DisableCooling },
-		},
-		{
-			name: "vertex",
-			setup: func(cfg *config.Config) {
-				cfg.VertexCompatAPIKey = []config.VertexCompatKey{{
-					APIKey:         "key",
-					BaseURL:        "https://vertex.example.com",
-					DisableCooling: &initial,
-				}}
-			},
-			patch: (*Handler).PatchVertexCompatKey,
-			get:   func(cfg *config.Config) *bool { return cfg.VertexCompatAPIKey[0].DisableCooling },
-		},
-		{
-			name: "codex",
-			setup: func(cfg *config.Config) {
-				cfg.CodexKey = []config.CodexKey{{
-					APIKey:         "key",
-					BaseURL:        "https://codex.example.com",
-					DisableCooling: &initial,
-				}}
-			},
-			patch: (*Handler).PatchCodexKey,
-			get:   func(cfg *config.Config) *bool { return cfg.CodexKey[0].DisableCooling },
-		},
-		{
-			name: "xai",
-			setup: func(cfg *config.Config) {
-				cfg.XAIKey = []config.XAIKey{{
-					APIKey:         "key",
-					BaseURL:        "https://api.x.ai/v1",
-					DisableCooling: &initial,
-				}}
-			},
-			patch: (*Handler).PatchXAIKey,
-			get:   func(cfg *config.Config) *bool { return cfg.XAIKey[0].DisableCooling },
-		},
-		{
-			name: "meta",
-			setup: func(cfg *config.Config) {
-				cfg.MetaKey = []config.MetaKey{{
-					APIKey:         "key",
-					BaseURL:        "https://api.meta.ai/v1",
-					DisableCooling: &initial,
-				}}
-			},
-			patch: (*Handler).PatchMetaKey,
-			get:   func(cfg *config.Config) *bool { return cfg.MetaKey[0].DisableCooling },
 		},
 	}
 

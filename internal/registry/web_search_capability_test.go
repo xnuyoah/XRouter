@@ -21,12 +21,8 @@ func TestResolveResponsesWebSearchCapability(t *testing.T) {
 		want    bool
 		present bool
 	}{
-		{name: "supported codex", routes: []NativeCapabilityRoute{{Provider: "codex", NativeCapabilities: testNativeCapabilities(&trueValue)}}, want: true, present: true},
-		{name: "supported xai", routes: []NativeCapabilityRoute{{Provider: "xai", NativeCapabilities: testNativeCapabilities(&trueValue)}}, want: true, present: true},
-		{name: "supported claude", routes: []NativeCapabilityRoute{{Provider: "claude", NativeCapabilities: testNativeCapabilities(&trueValue)}}, want: true, present: true},
-		{name: "supported antigravity", routes: []NativeCapabilityRoute{{Provider: "antigravity", NativeCapabilities: testNativeCapabilities(&trueValue)}}, want: true, present: true},
 		{name: "explicit unsupported model", routes: []NativeCapabilityRoute{{Provider: "codex", NativeCapabilities: testNativeCapabilities(&falseValue)}}, want: false, present: true},
-		{name: "unsupported provider path", routes: []NativeCapabilityRoute{{Provider: "gemini", NativeCapabilities: testNativeCapabilities(&trueValue)}}, want: false, present: true},
+		{name: "unsupported provider path", routes: []NativeCapabilityRoute{{Provider: "deepseek", NativeCapabilities: testNativeCapabilities(&trueValue)}}, want: false, present: true},
 		{name: "unknown metadata", routes: []NativeCapabilityRoute{{Provider: "codex"}}, present: false},
 		{name: "unknown provider", routes: []NativeCapabilityRoute{{Provider: "custom", NativeCapabilities: testNativeCapabilities(&trueValue)}}, present: false},
 		{name: "explicit false on unknown provider", routes: []NativeCapabilityRoute{{Provider: "custom", NativeCapabilities: testNativeCapabilities(&falseValue)}}, want: false, present: true},
@@ -45,49 +41,6 @@ func TestResolveResponsesWebSearchCapability(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestModelRegistryResponsesWebSearchCapabilityChecksEveryExactClientRoute(t *testing.T) {
-	reg := newTestModelRegistry()
-	trueValue, falseValue := true, false
-	reg.RegisterClient("codex-a", "codex", []*ModelInfo{
-		{ID: "shared", MetadataModelID: "upstream-a", NativeCapabilities: testNativeCapabilities(&trueValue)},
-		{ID: "alias", MetadataModelID: "upstream-capable", NativeCapabilities: testNativeCapabilities(&trueValue)},
-		{ID: "team/alias", MetadataModelID: "upstream-incapable", NativeCapabilities: testNativeCapabilities(&falseValue)},
-	})
-	reg.RegisterClient("codex-b", "codex", []*ModelInfo{
-		{ID: "shared", MetadataModelID: "upstream-b"},
-		{ID: "mixed-same-provider", MetadataModelID: "upstream-capable", NativeCapabilities: testNativeCapabilities(&trueValue)},
-	})
-	reg.RegisterClient("codex-c", "codex", []*ModelInfo{
-		{ID: "mixed-same-provider", MetadataModelID: "upstream-incapable", NativeCapabilities: testNativeCapabilities(&falseValue)},
-		{ID: "mixed-provider", NativeCapabilities: testNativeCapabilities(&trueValue)},
-	})
-	reg.RegisterClient("gemini-a", "gemini", []*ModelInfo{
-		{ID: "mixed-provider", NativeCapabilities: testNativeCapabilities(&trueValue)},
-	})
-	reg.RegisterClient("missing-info", "codex", []*ModelInfo{
-		{ID: "missing-client-info", NativeCapabilities: testNativeCapabilities(&trueValue)},
-	})
-	delete(reg.clientModelInfos["missing-info"], "missing-client-info")
-
-	assertCapability := func(id string, want bool, present bool) {
-		t.Helper()
-		got := reg.GetResponsesWebSearchCapability(id)
-		if (got != nil) != present {
-			t.Fatalf("%s presence = %v, want %v", id, got != nil, present)
-		}
-		if got != nil && *got != want {
-			t.Fatalf("%s = %v, want %v", id, *got, want)
-		}
-	}
-	assertCapability("shared", false, false)
-	assertCapability("mixed-same-provider", false, true)
-	assertCapability("mixed-provider", false, true)
-	assertCapability("alias", true, true)
-	assertCapability("team/alias", false, true)
-	assertCapability("upstream-capable", false, false)
-	assertCapability("missing-client-info", false, false)
 }
 
 func TestNativeCapabilitiesCloneIsolationAndJSONVisibility(t *testing.T) {
@@ -120,27 +73,6 @@ func TestNativeCapabilitiesCloneIsolationAndJSONVisibility(t *testing.T) {
 	}
 	if _, exists := exposed["native_capabilities"]; exists {
 		t.Fatalf("native metadata leaked into normal serialization: %s", raw)
-	}
-}
-
-func TestModelSectionChangedIncludesNativeCapabilities(t *testing.T) {
-	trueValue, falseValue := true, false
-	oldModels := []*ModelInfo{{ID: "remote", NativeCapabilities: testNativeCapabilities(&trueValue)}}
-	newModels := []*ModelInfo{{ID: "remote", NativeCapabilities: testNativeCapabilities(&falseValue)}}
-	if !modelSectionChanged(oldModels, newModels) {
-		t.Fatal("native capability update was not detected")
-	}
-}
-
-func TestModelSectionChangedPreservesExistingComparisonSemantics(t *testing.T) {
-	if modelSectionChanged(nil, []*ModelInfo{}) {
-		t.Fatal("nil and empty sections should remain equivalent")
-	}
-	if modelSectionChanged([]*ModelInfo{{ID: "a", MetadataModelID: "old"}}, []*ModelInfo{{ID: "a", MetadataModelID: "new"}}) {
-		t.Fatal("unrelated serialization-excluded fields should remain ignored")
-	}
-	if !modelSectionChanged([]*ModelInfo{nil}, []*ModelInfo{{ID: "a"}}) {
-		t.Fatal("nil model replacement should be detected")
 	}
 }
 

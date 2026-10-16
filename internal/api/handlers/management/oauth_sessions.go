@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	// oauthSessionTTL must cover device-code flows (xAI ~30m, Kimi ~15m).
+	// oauthSessionTTL must cover plugin device-code flows (typically 15-30m).
 	oauthSessionTTL          = 30 * time.Minute
 	oauthCompletedSessionTTL = time.Minute
 	maxOAuthStateLength      = 128
@@ -360,30 +360,17 @@ func ValidateOAuthState(state string) error {
 	return nil
 }
 
+// NormalizeOAuthProvider lowercases and sanitizes a provider name for OAuth flows.
+// OAuth is plugin-only: all built-in provider aliases were removed, so the generic
+// plugin provider sanitization is the only normalization left. Exported because
+// sdk/api re-exports it for embedding.
 func NormalizeOAuthProvider(provider string) (string, error) {
-	switch strings.ToLower(strings.TrimSpace(provider)) {
-	case "anthropic", "claude":
-		return "anthropic", nil
-	case "codex", "openai":
-		return "codex", nil
-	case "antigravity", "anti-gravity":
-		return "antigravity", nil
-	case "xai", "x-ai", "x.ai", "grok":
-		return "xai", nil
-	case "devin", "cognition":
-		return "devin", nil
-	case "meta", "muse":
-		return "meta", nil
-	default:
-		return "", errUnsupportedOAuthFlow
-	}
+	return NormalizePluginOAuthCallbackProvider(provider)
 }
 
+// NormalizeOAuthCallbackProvider normalizes the provider reported on an OAuth callback.
 func NormalizeOAuthCallbackProvider(provider string) (string, error) {
-	if normalized, errNormalize := NormalizeOAuthProvider(provider); errNormalize == nil {
-		return normalized, nil
-	}
-	return NormalizePluginOAuthCallbackProvider(provider)
+	return NormalizeOAuthProvider(provider)
 }
 
 func NormalizePluginOAuthCallbackProvider(provider string) (string, error) {
@@ -401,14 +388,6 @@ func NormalizePluginOAuthCallbackProvider(provider string) (string, error) {
 		}
 	}
 	return trimmed, nil
-}
-
-func normalizeOAuthCallbackProviderForPendingSession(provider, state string) (string, error) {
-	session, ok := oauthSessions.Get(state)
-	if ok && session.Source == oauthSessionSourcePlugin {
-		return NormalizePluginOAuthCallbackProvider(provider)
-	}
-	return NormalizeOAuthCallbackProvider(provider)
 }
 
 type oauthCallbackFilePayload struct {
@@ -477,7 +456,7 @@ func writeOAuthCallbackFile(authDir, canonicalProvider, state, code, errorMessag
 }
 
 func WriteOAuthCallbackFileForPendingSession(authDir, provider, state, code, errorMessage string) (string, error) {
-	canonicalProvider, err := normalizeOAuthCallbackProviderForPendingSession(provider, state)
+	canonicalProvider, err := NormalizeOAuthCallbackProvider(provider)
 	if err != nil {
 		return "", err
 	}

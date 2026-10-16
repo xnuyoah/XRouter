@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	homekv "github.com/router-for-me/CLIProxyAPI/v8/internal/home"
 	log "github.com/sirupsen/logrus"
+	homekv "github.com/xnuyoah/XRouter/v8/internal/home"
 )
 
 const testModelName = "claude-sonnet-4-5"
@@ -210,23 +210,6 @@ func TestClearSignatureCacheHomeDoesNotPrefixDelete(t *testing.T) {
 	}
 }
 
-func TestGetCachedSignatureRequiredGeminiEmptyThinkingSentinel(t *testing.T) {
-	client := newFakeSignatureKVClient()
-	client.getErr = errors.New("get should not be called")
-	useFakeSignatureKVClient(t, client, true, nil)
-
-	got, errGet := GetCachedSignatureRequired(context.Background(), "gemini-3-pro-preview", "")
-	if errGet != nil {
-		t.Fatalf("GetCachedSignatureRequired() error = %v", errGet)
-	}
-	if got != "skip_thought_signature_validator" {
-		t.Fatalf("GetCachedSignatureRequired() = %q, want Gemini sentinel", got)
-	}
-	if client.getCount != 0 {
-		t.Fatalf("KVGet count = %d, want 0", client.getCount)
-	}
-}
-
 func TestCacheSignature_DifferentModelGroups(t *testing.T) {
 	ClearSignatureCache("")
 
@@ -234,15 +217,15 @@ func TestCacheSignature_DifferentModelGroups(t *testing.T) {
 	sig1 := "signature1_1234567890123456789012345678901234567890123456"
 	sig2 := "signature2_1234567890123456789012345678901234567890123456"
 
-	geminiModel := "gemini-3-pro-preview"
+	otherModel := "gpt-5.2-preview"
 	CacheSignature(testModelName, text, sig1)
-	CacheSignature(geminiModel, text, sig2)
+	CacheSignature(otherModel, text, sig2)
 
 	if GetCachedSignature(testModelName, text) != sig1 {
 		t.Error("Claude signature mismatch")
 	}
-	if GetCachedSignature(geminiModel, text) != sig2 {
-		t.Error("Gemini signature mismatch")
+	if GetCachedSignature(otherModel, text) != sig2 {
+		t.Error("distinct model group signature mismatch")
 	}
 }
 
@@ -330,7 +313,6 @@ func TestHasValidSignature(t *testing.T) {
 		{"49 chars - invalid", testModelName, "1234567890123456789012345678901234567890123456789", false},
 		{"empty string", testModelName, "", false},
 		{"short signature", testModelName, "abc", false},
-		{"gemini sentinel", "gemini-3-pro-preview", "skip_thought_signature_validator", true},
 	}
 
 	for _, tt := range tests {
@@ -436,7 +418,7 @@ func TestSignatureModeSetters_LogAtInfoLevel(t *testing.T) {
 	SetSignatureBypassStrictMode(false)
 
 	output := buffer.String()
-	if !strings.Contains(output, "antigravity signature cache DISABLED") {
+	if !strings.Contains(output, "thinking signature cache DISABLED") {
 		t.Fatalf("expected info output for disabling signature cache, got: %q", output)
 	}
 	if strings.Contains(output, "strict mode (protobuf tree)") {

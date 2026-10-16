@@ -1,4 +1,4 @@
-// Package cliproxy provides the core service implementation for the CLI Proxy API.
+// Package cliproxy provides the core service implementation for XRouter.
 // It includes service lifecycle management, authentication handling, file watching,
 // and integration with various AI service providers through a unified interface.
 package cliproxy
@@ -7,10 +7,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/watcher"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	"github.com/xnuyoah/XRouter/v8/internal/watcher"
+	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
+	"github.com/xnuyoah/XRouter/v8/sdk/config"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 // TokenClientProvider loads clients backed by stored authentication tokens.
@@ -53,24 +53,17 @@ type APIKeyClientProvider interface {
 
 // APIKeyClientResult is returned by APIKeyClientProvider.Load()
 type APIKeyClientResult struct {
-	// GeminiKeyCount is the number of Gemini-family API keys loaded.
-	// It includes native Interactions API keys.
-	GeminiKeyCount int
+	// OpenAIKeyCount is the number of native OpenAI API keys loaded
+	OpenAIKeyCount int
 
-	// VertexCompatKeyCount is the number of Vertex-compatible API keys loaded
-	VertexCompatKeyCount int
+	// DeepseekKeyCount is the number of native DeepSeek API keys loaded
+	DeepseekKeyCount int
 
-	// ClaudeKeyCount is the number of Claude API keys loaded
-	ClaudeKeyCount int
+	// NvidiaKeyCount is the number of native NVIDIA API keys loaded
+	NvidiaKeyCount int
 
-	// CodexKeyCount is the number of Codex API keys loaded
-	CodexKeyCount int
-
-	// XAIKeyCount is the number of xAI API keys loaded
-	XAIKeyCount int
-
-	// MetaKeyCount is the number of Meta API keys loaded
-	MetaKeyCount int
+	// AgnesKeyCount is the number of native Agnes API keys loaded
+	AgnesKeyCount int
 
 	// OpenAICompatCount is the number of OpenAI compatibility API keys loaded
 	OpenAICompatCount int

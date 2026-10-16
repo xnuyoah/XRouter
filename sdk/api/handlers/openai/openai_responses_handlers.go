@@ -18,16 +18,15 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/client/codex/optimize-multi-agent-v2"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/clienterror"
-	. "github.com/router-for-me/CLIProxyAPI/v8/internal/constant"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/httpwire"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/interfaces"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/xnuyoah/XRouter/v8/internal/clienterror"
+	. "github.com/xnuyoah/XRouter/v8/internal/constant"
+	"github.com/xnuyoah/XRouter/v8/internal/httpwire"
+	"github.com/xnuyoah/XRouter/v8/internal/interfaces"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
+	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/usage"
 )
 
 func writeResponsesSSEChunk(w io.Writer, chunk []byte) error {
@@ -550,57 +549,6 @@ func (h *OpenAIResponsesAPIHandler) OpenAIResponsesModels(c *gin.Context) {
 	})
 }
 
-func (h *OpenAIResponsesAPIHandler) prepareCodexMultiAgentV2Tools(c *gin.Context, payload []byte) []byte {
-	if h == nil {
-		return payload
-	}
-	cfg := h.CurrentConfig()
-	if cfg == nil {
-		return payload
-	}
-
-	requestCtx := context.Background()
-	if c != nil && c.Request != nil {
-		requestCtx = c.Request.Context()
-	}
-	requestCtx = context.WithValue(requestCtx, "gin", c)
-
-	var requestHeaders http.Header
-	if c != nil && c.Request != nil {
-		requestHeaders = c.Request.Header
-	}
-	homeEnabled := h.AuthManager != nil && h.AuthManager.HomeEnabled()
-	updated, prepared := multiagentv2.PrepareCodexMultiAgentV2Tools(
-		requestCtx,
-		requestHeaders,
-		payload,
-		cfg.Client.Codex.OptimizeMultiAgentV2,
-		homeEnabled,
-	)
-	if prepared && c != nil {
-		c.Set(multiagentv2.CodexMultiAgentV2ToolsPreparedContextKey, true)
-	}
-	return updated
-}
-
-func (h *OpenAIResponsesAPIHandler) prepareCodexOrphanDelegation(c *gin.Context, payload []byte) []byte {
-	if h == nil {
-		return payload
-	}
-	cfg := h.CurrentConfig()
-	if cfg == nil || !cfg.CodexOrphanDelegationCompatibility {
-		return payload
-	}
-	requestCtx := context.Background()
-	var requestHeaders http.Header
-	if c != nil && c.Request != nil {
-		requestCtx = c.Request.Context()
-		requestHeaders = c.Request.Header
-	}
-	requestCtx = context.WithValue(requestCtx, "gin", c)
-	return multiagentv2.RewriteCodexOrphanDelegationInput(requestCtx, requestHeaders, payload, true)
-}
-
 // Responses handles the /v1/responses endpoint.
 // It determines whether the request is for a streaming or non-streaming response
 // and calls the appropriate handler based on the model provider.
@@ -619,9 +567,6 @@ func (h *OpenAIResponsesAPIHandler) Responses(c *gin.Context) {
 		})
 		return
 	}
-
-	rawJSON = h.prepareCodexMultiAgentV2Tools(c, rawJSON)
-	rawJSON = h.prepareCodexOrphanDelegation(c, rawJSON)
 
 	// Check if the client requested a streaming response.
 	streamResult := gjson.GetBytes(rawJSON, "stream")
@@ -644,8 +589,6 @@ func (h *OpenAIResponsesAPIHandler) Compact(c *gin.Context) {
 		})
 		return
 	}
-
-	rawJSON = h.prepareCodexOrphanDelegation(c, rawJSON)
 
 	streamResult := gjson.GetBytes(rawJSON, "stream")
 	if streamResult.Type == gjson.True {
@@ -679,8 +622,8 @@ func (h *OpenAIResponsesAPIHandler) Compact(c *gin.Context) {
 	cliCancel()
 }
 
-// handleNonStreamingResponse handles non-streaming chat completion responses
-// for Gemini models. It selects a client from the pool, sends the request, and
+// handleNonStreamingResponse handles non-streaming chat completion responses.
+// It selects a client from the pool, sends the request, and
 // aggregates the response before sending it back to the client in OpenAIResponses format.
 //
 // Parameters:
@@ -705,7 +648,7 @@ func (h *OpenAIResponsesAPIHandler) handleNonStreamingResponse(c *gin.Context, r
 	cliCancel()
 }
 
-// handleStreamingResponse handles streaming responses for Gemini models.
+// handleStreamingResponse handles streaming responses.
 // It establishes a streaming connection with the backend service and forwards
 // the response chunks to the client in real-time using Server-Sent Events.
 //
@@ -920,7 +863,7 @@ func isCodexResponsesClientRequest(c *gin.Context) bool {
 	if c == nil || c.Request == nil {
 		return false
 	}
-	if multiagentv2.IsCodexClientUserAgent(c.GetHeader("User-Agent")) {
+	if isCodexClientUserAgent(c.GetHeader("User-Agent")) {
 		return true
 	}
 
@@ -930,6 +873,16 @@ func isCodexResponsesClientRequest(c *gin.Context) bool {
 	default:
 		return strings.HasPrefix(originator, "codex desktop/") || strings.HasPrefix(originator, "codex-tui/") || strings.HasPrefix(originator, "codex_cli_rs/")
 	}
+}
+
+// isCodexClientUserAgent reports whether a User-Agent belongs to an official Codex client.
+func isCodexClientUserAgent(userAgent string) bool {
+	userAgent = strings.TrimSpace(userAgent)
+	return strings.HasPrefix(userAgent, "Codex Desktop/") ||
+		strings.HasPrefix(userAgent, "codex-tui/") ||
+		userAgent == "codex_cli_rs" ||
+		strings.HasPrefix(userAgent, "codex_cli_rs/") ||
+		strings.HasPrefix(userAgent, "codex_exec/")
 }
 
 const (

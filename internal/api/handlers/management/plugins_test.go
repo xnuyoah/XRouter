@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/pluginhost"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 	"gopkg.in/yaml.v3"
 )
 
@@ -238,7 +238,7 @@ enabled: false
 priority: 7
 mode: safe
 allowed_models:
-  - gemini-2.5-pro
+  - gpt-5-pro
   - claude-sonnet-4
 options:
   retries: 2
@@ -274,7 +274,7 @@ options:
 	if body.Enabled || body.Priority != 7 || body.Mode != "safe" {
 		t.Fatalf("base fields = enabled %v priority %d mode %q, want false 7 safe", body.Enabled, body.Priority, body.Mode)
 	}
-	if len(body.AllowedModels) != 2 || body.AllowedModels[0] != "gemini-2.5-pro" || body.AllowedModels[1] != "claude-sonnet-4" {
+	if len(body.AllowedModels) != 2 || body.AllowedModels[0] != "gpt-5-pro" || body.AllowedModels[1] != "claude-sonnet-4" {
 		t.Fatalf("allowed_models = %#v", body.AllowedModels)
 	}
 	if body.Options["retries"] != float64(2) || body.Options["strict"] != true {
@@ -528,7 +528,7 @@ func TestDeletePluginRejectsUnresolvedPluginsDir(t *testing.T) {
 	t.Setenv("USERPROFILE", "")
 	t.Chdir(workspace)
 
-	literalPluginsDir := filepath.Join(workspace, "~", ".cli-proxy-api", "plugins")
+	literalPluginsDir := filepath.Join(workspace, "~", ".xrouter", "plugins")
 	targetDir := filepath.Join(literalPluginsDir, runtime.GOOS, runtime.GOARCH)
 	if errMkdir := os.MkdirAll(targetDir, 0o755); errMkdir != nil {
 		t.Fatalf("MkdirAll(%s) error = %v", targetDir, errMkdir)
@@ -540,7 +540,7 @@ func TestDeletePluginRejectsUnresolvedPluginsDir(t *testing.T) {
 	h := &Handler{
 		cfg: &config.Config{
 			Plugins: config.PluginsConfig{
-				Dir: "~/.cli-proxy-api/plugins",
+				Dir: "~/.xrouter/plugins",
 				Configs: map[string]config.PluginInstanceConfig{
 					"sample": pluginConfigFromYAML(t, "enabled: false\n"),
 				},

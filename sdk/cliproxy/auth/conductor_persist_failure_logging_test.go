@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	internallogging "github.com/router-for-me/CLIProxyAPI/v8/internal/logging"
 	log "github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
+	internallogging "github.com/xnuyoah/XRouter/v8/internal/logging"
 )
 
 // persistFailureStore always fails Save to simulate an unwritable auth file.

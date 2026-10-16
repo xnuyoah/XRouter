@@ -40,7 +40,7 @@ func TestMetadataConfigFieldsExposePluginSchema(t *testing.T) {
 		Name:             "example",
 		Version:          "1.0.0",
 		Author:           "test",
-		GitHubRepository: "https://github.com/router-for-me/CLIProxyAPI",
+		GitHubRepository: "https://github.com/xnuyoah/XRouter",
 		Logo:             "https://example.com/logo.svg",
 		ConfigFields: []ConfigField{{
 			Name:        "mode",

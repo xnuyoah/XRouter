@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 const requestScopedNotFoundMessage = "Item with id 'rs_0b5f3eb6f51f175c0169ca74e4a85881998539920821603a74' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input."
@@ -747,7 +747,7 @@ func TestManagerExecute_AntigravityInvalidGrantFallsBackAndSuspendsAuth(t *testi
 	}
 	m.RegisterExecutor(executor)
 
-	model := "gemini-3-pro-preview"
+	model := "antigravity-2-preview"
 	badAuth := &Auth{ID: "aa-bad-auth", Provider: "antigravity"}
 	goodAuth := &Auth{ID: "bb-good-auth", Provider: "antigravity"}
 
@@ -821,7 +821,7 @@ func TestManagerExecuteStream_AntigravityInvalidGrantFallsBackAndSuspendsAuth(t 
 	}
 	m.RegisterExecutor(executor)
 
-	model := "gemini-3-pro-preview"
+	model := "antigravity-2-preview"
 	badAuth := &Auth{ID: "aa-bad-auth", Provider: "antigravity"}
 	goodAuth := &Auth{ID: "bb-good-auth", Provider: "antigravity"}
 
@@ -1797,9 +1797,9 @@ func TestManager_UnknownUpstreamErrorRotatesAndPenalizesModelOnly(t *testing.T) 
 	m := NewManager(nil, nil, nil)
 	m.SetRetryConfig(3, 30*time.Second, 0)
 
-	const provider = "gemini"
-	const model = "gemini-3.6-pro"
-	const siblingModel = "gemini-3.6-flash"
+	const provider = "openai"
+	const model = "gpt-3.6-pro"
+	const siblingModel = "gpt-3.6-flash"
 
 	executor := &authFallbackExecutor{id: provider}
 	executor.executeErrors = map[string]error{

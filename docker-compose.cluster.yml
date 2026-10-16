@@ -1,6 +1,6 @@
 services:
-  cli-proxy-api:
-    image: ${CLI_PROXY_IMAGE:-eceasy/cli-proxy-api:latest}
+  xrouter:
+    image: ${XROUTER_IMAGE:-registry.cn-hangzhou.aliyuncs.com/xctr/xrouter:latest}
     pull_policy: always
     build:
       context: .
@@ -9,15 +9,15 @@ services:
         VERSION: ${VERSION:-dev}
         COMMIT: ${COMMIT:-none}
         BUILD_DATE: ${BUILD_DATE:-unknown}
-    container_name: cli-proxy-api-cluster
+    container_name: xrouter-cluster
     environment:
       HOME_JWT: ${HOME_JWT:-}
     ports:
-      - "8317:8317"
+      - "11016:11016"
     volumes:
-      - ${CLI_PROXY_HOME_PATH:-./home}:/root/.cli-proxy-api
-      - ${CLI_PROXY_LOG_PATH:-./logs}:/CLIProxyAPI/logs
-      - ${CLI_PROXY_PLUGIN_PATH:-./plugins}:/CLIProxyAPI/plugins
+      - ${XROUTER_HOME_PATH:-./home}:/root/.xrouter
+      - ${XROUTER_LOG_PATH:-./logs}:/xrouter/logs
+      - ${XROUTER_PLUGIN_PATH:-./plugins}:/xrouter/plugins
     command: >
       sh -eu -c '
         if [ -z "$$HOME_JWT" ]; then
@@ -25,6 +25,6 @@ services:
           exit 1
         fi
 
-        exec ./CLIProxyAPI -home-jwt "$$HOME_JWT"
+        exec ./xrouter -home-jwt "$$HOME_JWT"
       '
     restart: unless-stopped

@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginabi"
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginabi"
+	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
 func TestRegisterManagementRoutesSkipsReservedAndUsesPriority(t *testing.T) {
@@ -381,7 +381,7 @@ func TestRegisteredPluginsIncludesResourceMenus(t *testing.T) {
 	}
 	host := newHostWithRecords(capabilityRecord{
 		id:     "menu",
-		meta:   pluginapi.Metadata{Name: "menu", Version: "1.0.0", Author: "test", GitHubRepository: "https://github.com/router-for-me/CLIProxyAPI"},
+		meta:   pluginapi.Metadata{Name: "menu", Version: "1.0.0", Author: "test", GitHubRepository: "https://github.com/xnuyoah/XRouter"},
 		plugin: pluginapi.Plugin{Capabilities: pluginapi.Capabilities{ManagementAPI: plugin}},
 	})
 	host.RegisterManagementRoutes(context.Background(), nil)

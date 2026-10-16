@@ -32,13 +32,11 @@ func ParseConfigBytes(data []byte) (*Config, error) {
 	cfg.SaveCooldownStatus = false
 	cfg.TransientErrorCooldownSeconds = 0
 	cfg.DisableImageGeneration = DisableImageGenerationOff
-	cfg.WebsocketAuth = true
 	cfg.Pprof.Enable = false
 	cfg.Pprof.Addr = DefaultPprofAddr
 	cfg.Discovery.Enabled = false
 	cfg.Discovery.ServiceType = DefaultDiscoveryServiceType
-	cfg.Discovery.Subtypes = []string{"_chat-completions", "_responses", "_messages", "_generate-content", "_interactions"}
-	cfg.RemoteManagement.PanelGitHubRepository = DefaultPanelGitHubRepository
+	cfg.Discovery.Subtypes = []string{"_chat-completions", "_responses", "_messages"}
 	cfg.CredentialInFlight = DefaultCredentialInFlightConfig()
 
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
@@ -55,14 +53,11 @@ func ParseConfigBytes(data []byte) (*Config, error) {
 	if errValidate := cfg.ValidateCredentialWeights(); errValidate != nil {
 		return nil, errValidate
 	}
-	if errValidate := cfg.Codex.LiveMediaRelay.Validate(); errValidate != nil {
-		return nil, errValidate
-	}
 	if cfg.Discovery.ServiceType == "" {
 		cfg.Discovery.ServiceType = DefaultDiscoveryServiceType
 	}
 	if len(cfg.Discovery.Subtypes) == 0 {
-		cfg.Discovery.Subtypes = []string{"_chat-completions", "_responses", "_messages", "_generate-content", "_interactions"}
+		cfg.Discovery.Subtypes = []string{"_chat-completions", "_responses", "_messages"}
 	}
 
 	// Hash remote management key if plaintext is detected (nested), but do NOT persist.
@@ -72,11 +67,6 @@ func ParseConfigBytes(data []byte) (*Config, error) {
 			return nil, fmt.Errorf("hash remote management key: %w", errHash)
 		}
 		cfg.RemoteManagement.SecretKey = string(hashed)
-	}
-
-	cfg.RemoteManagement.PanelGitHubRepository = strings.TrimSpace(cfg.RemoteManagement.PanelGitHubRepository)
-	if cfg.RemoteManagement.PanelGitHubRepository == "" {
-		cfg.RemoteManagement.PanelGitHubRepository = DefaultPanelGitHubRepository
 	}
 
 	cfg.Pprof.Addr = strings.TrimSpace(cfg.Pprof.Addr)
@@ -109,15 +99,7 @@ func ParseConfigBytes(data []byte) (*Config, error) {
 	}
 
 	// Apply the same sanitization pipeline.
-	cfg.SanitizeGeminiKeys()
-	cfg.SanitizeInteractionsKeys()
-	cfg.SanitizeVertexCompatKeys()
-	cfg.SanitizeCodexKeys()
-	cfg.SanitizeXAIKeys()
-	cfg.SanitizeMetaKeys()
-	cfg.SanitizeCodexHeaderDefaults()
-	cfg.SanitizeClaudeHeaderDefaults()
-	cfg.SanitizeClaudeKeys()
+	cfg.SanitizeNativeAPIKeys()
 	cfg.SanitizeOpenAICompatibility()
 	cfg.OAuthExcludedModels = NormalizeOAuthExcludedModels(cfg.OAuthExcludedModels)
 	cfg.SanitizeOAuthModelAlias()

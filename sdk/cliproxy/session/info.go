@@ -8,9 +8,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
 	"github.com/tidwall/gjson"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 // SessionInfo encapsulates incoming request details needed for session affinity and upstream reporting.
@@ -84,7 +84,7 @@ func (object sessionObject) Get(path string) gjson.Result {
 //  1. X-Claude-Code-Session-Id
 //  2. Claude Code metadata.user_id session
 //  3. Session-Id / Session_id (Codex and compatible clients)
-//  4. X-Http-Session-Id (Antigravity CLI)
+//  4. X-Http-Session-Id client headers
 //  5. X-Session-ID / X-Session-Affinity / X-Slot-Session-Id
 //  6. X-Conversation-Id / X-Thread-Id / X-Client-Request-Id
 //  7. Gemini cachedContent
@@ -446,7 +446,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 		return finalizeSessionInfo(info)
 	}
 
-	// 4. Antigravity CLI (agy) Headers
+	// 4. X-Http-Session-Id client headers
 	if sid := sessionHeaderValue(headers, "X-Http-Session-Id"); sid != "" {
 		info.ClientType = "agy"
 		info.SessionID = "agy:" + sid

@@ -28,7 +28,6 @@ type TXTOptions struct {
 	Features            []string
 	APIPathOpenAI       string
 	APIPathAnthropic    string
-	APIPathGemini       string
 	TLS                 bool
 	AuthRequired        bool
 	AuthMethods         []string
@@ -42,11 +41,10 @@ func DefaultTXTOptions() TXTOptions {
 	return TXTOptions{
 		Version:          "1",
 		Product:          ProductCPA,
-		Protocols:        []string{"chat-completions", "responses", "messages", "generate-content", "interactions"},
-		Features:         []string{"chat", "responses", "messages", "generate_content", "interactions"},
+		Protocols:        []string{"chat-completions", "responses", "messages"},
+		Features:         []string{"chat", "responses", "messages"},
 		APIPathOpenAI:    "/v1",
 		APIPathAnthropic: "/v1",
-		APIPathGemini:    "/v1beta",
 		TLS:              false,
 		AuthRequired:     true,
 		AuthMethods:      []string{"api_key"},
@@ -68,9 +66,6 @@ func BuildTXTRecords(opts TXTOptions) []string {
 	}
 	if opts.APIPathAnthropic == "" {
 		opts.APIPathAnthropic = "/v1"
-	}
-	if opts.APIPathGemini == "" {
-		opts.APIPathGemini = "/v1beta"
 	}
 
 	type kv struct {
@@ -105,7 +100,6 @@ func BuildTXTRecords(opts TXTOptions) []string {
 
 	// Priority 2: Standard endpoints and protocols
 	addCandidate("api_anthropic", opts.APIPathAnthropic, 2)
-	addCandidate("api_gemini", opts.APIPathGemini, 2)
 	if opts.AdvertiseManagement {
 		addCandidate("management", "true", 2)
 	} else {

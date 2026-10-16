@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="XRouter">
+  <title>XRouter</title>
+  <defs>
+    <linearGradient id="xr-tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#1E293B"/>
+    </linearGradient>
+    <linearGradient id="xr-x" gradientUnits="userSpaceOnUse" x1="140" y1="140" x2="372" y2="372">
+      <stop offset="0" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="115" fill="url(#xr-tile)"/>
+  <g stroke="url(#xr-x)" stroke-width="64" stroke-linecap="round" fill="none">
+    <path d="M140 140 L372 372"/>
+    <path d="M372 140 L140 372"/>
+  </g>
+</svg>

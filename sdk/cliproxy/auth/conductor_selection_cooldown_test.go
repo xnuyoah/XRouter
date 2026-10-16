@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
+	"github.com/xnuyoah/XRouter/v8/internal/registry"
+	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
 func TestBuiltInSelectorCooldownErrorPreservesRouteModel(t *testing.T) {
@@ -319,13 +319,13 @@ func TestMixedUnavailableErrorLocked_GlobalModelErrorPriorityAcrossShards(t *tes
 	const routeModel = "gpt-5.6-sol"
 	now := time.Now()
 	codexModelErr := "codex model error: rate limited"
-	geminiAuthErr := "gemini global error: network timeout"
+	openaiAuthErr := "openai global error: network timeout"
 
 	registry.GetGlobalRegistry().RegisterClient("auth-codex", "codex", []*registry.ModelInfo{{ID: routeModel}})
-	registry.GetGlobalRegistry().RegisterClient("auth-gemini", "gemini", []*registry.ModelInfo{{ID: routeModel}})
+	registry.GetGlobalRegistry().RegisterClient("auth-openai", "openai", []*registry.ModelInfo{{ID: routeModel}})
 	t.Cleanup(func() {
 		registry.GetGlobalRegistry().UnregisterClient("auth-codex")
-		registry.GetGlobalRegistry().UnregisterClient("auth-gemini")
+		registry.GetGlobalRegistry().UnregisterClient("auth-openai")
 	})
 
 	manager := NewManager(nil, nil, nil)
@@ -349,19 +349,19 @@ func TestMixedUnavailableErrorLocked_GlobalModelErrorPriorityAcrossShards(t *tes
 	}
 
 	if _, err := manager.Register(context.Background(), &Auth{
-		ID:            "auth-gemini",
-		Provider:      "gemini",
+		ID:            "auth-openai",
+		Provider:      "openai",
 		Unavailable:   true,
 		Status:        StatusError,
-		StatusMessage: geminiAuthErr,
-		UpdatedAt:     now.Add(-10 * time.Second), // Newer timestamp, but only auth-level on gemini
+		StatusMessage: openaiAuthErr,
+		UpdatedAt:     now.Add(-10 * time.Second), // Newer timestamp, but only auth-level on openai
 	}); err != nil {
-		t.Fatalf("manager.Register(gemini): %v", err)
+		t.Fatalf("manager.Register(openai): %v", err)
 	}
 
 	manager.syncScheduler()
 	manager.scheduler.mu.Lock()
-	err := manager.scheduler.mixedUnavailableErrorLocked([]string{"codex", "gemini"}, routeModel, nil)
+	err := manager.scheduler.mixedUnavailableErrorLocked([]string{"codex", "openai"}, routeModel, nil)
 	manager.scheduler.mu.Unlock()
 	if err == nil {
 		t.Fatal("expected error when all auths in mixed scheduler are unavailable")
@@ -372,7 +372,7 @@ func TestMixedUnavailableErrorLocked_GlobalModelErrorPriorityAcrossShards(t *tes
 		t.Fatal("expected unwrap cause from mixed unavailable error")
 	}
 	if !strings.Contains(cause.Error(), "rate limited") {
-		t.Fatalf("expected codex model-level error to be prioritized across shards over gemini auth-level error, got %q", cause.Error())
+		t.Fatalf("expected codex model-level error to be prioritized across shards over openai auth-level error, got %q", cause.Error())
 	}
 }
 

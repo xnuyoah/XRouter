@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
 // BuildConfigChangeDetails computes a redacted, human-readable list of config changes.
@@ -19,9 +19,6 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 	}
 
 	// Simple scalars
-	if oldCfg.Client.Codex.EnableApplyPatch != newCfg.Client.Codex.EnableApplyPatch {
-		changes = append(changes, fmt.Sprintf("client.codex.enable-apply-patch: %t -> %t", oldCfg.Client.Codex.EnableApplyPatch, newCfg.Client.Codex.EnableApplyPatch))
-	}
 	if oldCfg.Port != newCfg.Port {
 		changes = append(changes, fmt.Sprintf("port: %d -> %d", oldCfg.Port, newCfg.Port))
 	}
@@ -55,17 +52,11 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 	if oldCfg.TransientErrorCooldownSeconds != newCfg.TransientErrorCooldownSeconds {
 		changes = append(changes, fmt.Sprintf("transient-error-cooldown-seconds: %d -> %d", oldCfg.TransientErrorCooldownSeconds, newCfg.TransientErrorCooldownSeconds))
 	}
-	if oldCfg.DisableClaudeCloakMode != newCfg.DisableClaudeCloakMode {
-		changes = append(changes, fmt.Sprintf("disable-claude-cloak-mode: %t -> %t", oldCfg.DisableClaudeCloakMode, newCfg.DisableClaudeCloakMode))
-	}
 	if oldCfg.ClaudeCode.DisableCloakingModelList != newCfg.ClaudeCode.DisableCloakingModelList {
 		changes = append(changes, fmt.Sprintf("claude-code.disable-cloaking-model-list: %t -> %t", oldCfg.ClaudeCode.DisableCloakingModelList, newCfg.ClaudeCode.DisableCloakingModelList))
 	}
 	if oldCfg.DisableImageGeneration != newCfg.DisableImageGeneration {
 		changes = append(changes, fmt.Sprintf("disable-image-generation: %v -> %v", oldCfg.DisableImageGeneration, newCfg.DisableImageGeneration))
-	}
-	if strings.TrimSpace(oldCfg.GPTImage2BaseModel) != strings.TrimSpace(newCfg.GPTImage2BaseModel) {
-		changes = append(changes, fmt.Sprintf("gpt-image-2-base-model: %s -> %s", strings.TrimSpace(oldCfg.GPTImage2BaseModel), strings.TrimSpace(newCfg.GPTImage2BaseModel)))
 	}
 	if oldCfg.RequestLog != newCfg.RequestLog {
 		changes = append(changes, fmt.Sprintf("request-log: %t -> %t", oldCfg.RequestLog, newCfg.RequestLog))
@@ -88,9 +79,6 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 	if oldCfg.ProxyURL != newCfg.ProxyURL {
 		changes = append(changes, fmt.Sprintf("proxy-url: %s -> %s", formatProxyURL(oldCfg.ProxyURL), formatProxyURL(newCfg.ProxyURL)))
 	}
-	if oldCfg.WebsocketAuth != newCfg.WebsocketAuth {
-		changes = append(changes, fmt.Sprintf("ws-auth: %t -> %t", oldCfg.WebsocketAuth, newCfg.WebsocketAuth))
-	}
 	if oldCfg.ForceModelPrefix != newCfg.ForceModelPrefix {
 		changes = append(changes, fmt.Sprintf("force-model-prefix: %t -> %t", oldCfg.ForceModelPrefix, newCfg.ForceModelPrefix))
 	}
@@ -104,85 +92,6 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 	}
 	if oldCfg.QuotaExceeded.SwitchPreviewModel != newCfg.QuotaExceeded.SwitchPreviewModel {
 		changes = append(changes, fmt.Sprintf("quota-exceeded.switch-preview-model: %t -> %t", oldCfg.QuotaExceeded.SwitchPreviewModel, newCfg.QuotaExceeded.SwitchPreviewModel))
-	}
-	if oldCfg.QuotaExceeded.AntigravityCredits != newCfg.QuotaExceeded.AntigravityCredits {
-		changes = append(changes, fmt.Sprintf("quota-exceeded.antigravity-credits: %t -> %t", oldCfg.QuotaExceeded.AntigravityCredits, newCfg.QuotaExceeded.AntigravityCredits))
-	}
-	if !reflect.DeepEqual(oldCfg.Antigravity.SensitiveWords, newCfg.Antigravity.SensitiveWords) {
-		changes = append(changes, fmt.Sprintf("antigravity.sensitive-words: %d -> %d", len(oldCfg.Antigravity.SensitiveWords), len(newCfg.Antigravity.SensitiveWords)))
-	}
-	if !reflect.DeepEqual(oldCfg.Devin.SensitiveWords, newCfg.Devin.SensitiveWords) {
-		changes = append(changes, fmt.Sprintf("devin.sensitive-words: %d -> %d", len(oldCfg.Devin.SensitiveWords), len(newCfg.Devin.SensitiveWords)))
-	}
-	oldEnabled := "<nil>"
-	if oldCfg.Antigravity.ConnectionPool.Enabled != nil {
-		oldEnabled = fmt.Sprintf("%t", *oldCfg.Antigravity.ConnectionPool.Enabled)
-	}
-	newEnabled := "<nil>"
-	if newCfg.Antigravity.ConnectionPool.Enabled != nil {
-		newEnabled = fmt.Sprintf("%t", *newCfg.Antigravity.ConnectionPool.Enabled)
-	}
-	if oldEnabled != newEnabled {
-		changes = append(changes, fmt.Sprintf("antigravity.connection-pool.enabled: %s -> %s", oldEnabled, newEnabled))
-	}
-	if oldCfg.Antigravity.ConnectionPool.IdleConnTimeout != newCfg.Antigravity.ConnectionPool.IdleConnTimeout {
-		changes = append(changes, fmt.Sprintf("antigravity.connection-pool.idle-conn-timeout: %q -> %q", oldCfg.Antigravity.ConnectionPool.IdleConnTimeout, newCfg.Antigravity.ConnectionPool.IdleConnTimeout))
-	}
-	oldMaxIdle := "<nil>"
-	if oldCfg.Antigravity.ConnectionPool.MaxIdleConnsPerHost != nil {
-		oldMaxIdle = fmt.Sprintf("%d", *oldCfg.Antigravity.ConnectionPool.MaxIdleConnsPerHost)
-	}
-	newMaxIdle := "<nil>"
-	if newCfg.Antigravity.ConnectionPool.MaxIdleConnsPerHost != nil {
-		newMaxIdle = fmt.Sprintf("%d", *newCfg.Antigravity.ConnectionPool.MaxIdleConnsPerHost)
-	}
-	if oldMaxIdle != newMaxIdle {
-		changes = append(changes, fmt.Sprintf("antigravity.connection-pool.max-idle-conns-per-host: %s -> %s", oldMaxIdle, newMaxIdle))
-	}
-
-	if oldCfg.Codex.DisableCodexCloaking != newCfg.Codex.DisableCodexCloaking {
-		changes = append(changes, fmt.Sprintf("codex.disable-codex-cloaking: %t -> %t", oldCfg.Codex.DisableCodexCloaking, newCfg.Codex.DisableCodexCloaking))
-	}
-	if oldCfg.Codex.StreamBootstrapBuffering != newCfg.Codex.StreamBootstrapBuffering {
-		changes = append(changes, fmt.Sprintf("codex.stream-bootstrap-buffering: %t -> %t", oldCfg.Codex.StreamBootstrapBuffering, newCfg.Codex.StreamBootstrapBuffering))
-	}
-	if strings.TrimSpace(oldCfg.Codex.StreamBootstrapTimeout) != strings.TrimSpace(newCfg.Codex.StreamBootstrapTimeout) {
-		changes = append(changes, fmt.Sprintf("codex.stream-bootstrap-timeout: %s -> %s", strings.TrimSpace(oldCfg.Codex.StreamBootstrapTimeout), strings.TrimSpace(newCfg.Codex.StreamBootstrapTimeout)))
-	}
-	if oldCfg.Client.Codex.OptimizeMultiAgentV2 != newCfg.Client.Codex.OptimizeMultiAgentV2 {
-		changes = append(changes, fmt.Sprintf("client.codex.optimize-multi-agent-v2: %t -> %t", oldCfg.Client.Codex.OptimizeMultiAgentV2, newCfg.Client.Codex.OptimizeMultiAgentV2))
-	}
-	if oldCfg.Codex.OrphanDelegationCompatibility != newCfg.Codex.OrphanDelegationCompatibility {
-		changes = append(changes, fmt.Sprintf("codex.orphan-delegation-compatibility: %t -> %t", oldCfg.Codex.OrphanDelegationCompatibility, newCfg.Codex.OrphanDelegationCompatibility))
-	}
-	if oldCfg.Claude.ToolSearch != newCfg.Claude.ToolSearch {
-		changes = append(changes, fmt.Sprintf("claude.tool-search: %t -> %t", oldCfg.Claude.ToolSearch, newCfg.Claude.ToolSearch))
-	}
-	if oldCfg.XAI.InjectXSearch != newCfg.XAI.InjectXSearch {
-		changes = append(changes, fmt.Sprintf("xai.inject-x-search: %t -> %t", oldCfg.XAI.InjectXSearch, newCfg.XAI.InjectXSearch))
-	}
-	oldLiveRelay := oldCfg.Codex.LiveMediaRelay
-	newLiveRelay := newCfg.Codex.LiveMediaRelay
-	if oldLiveRelay.Enabled != newLiveRelay.Enabled {
-		changes = append(changes, fmt.Sprintf("codex.live-media-relay.enabled: %t -> %t", oldLiveRelay.Enabled, newLiveRelay.Enabled))
-	}
-	if oldLiveRelay.MaxSessions != newLiveRelay.MaxSessions {
-		changes = append(changes, fmt.Sprintf("codex.live-media-relay.max-sessions: %d -> %d", oldLiveRelay.MaxSessions, newLiveRelay.MaxSessions))
-	}
-	if oldLiveRelay.DisablePrivateRemoteIPs != newLiveRelay.DisablePrivateRemoteIPs {
-		changes = append(changes, fmt.Sprintf("codex.live-media-relay.disable-private-remote-ips: %t -> %t", oldLiveRelay.DisablePrivateRemoteIPs, newLiveRelay.DisablePrivateRemoteIPs))
-	}
-	if strings.TrimSpace(oldLiveRelay.PublicIP) != strings.TrimSpace(newLiveRelay.PublicIP) {
-		changes = append(changes, fmt.Sprintf("codex.live-media-relay.public-ip: %s -> %s", displayOptionalValue(oldLiveRelay.PublicIP), displayOptionalValue(newLiveRelay.PublicIP)))
-	}
-	if oldLiveRelay.UDPPortMin != newLiveRelay.UDPPortMin {
-		changes = append(changes, fmt.Sprintf("codex.live-media-relay.udp-port-min: %d -> %d", oldLiveRelay.UDPPortMin, newLiveRelay.UDPPortMin))
-	}
-	if oldLiveRelay.UDPPortMax != newLiveRelay.UDPPortMax {
-		changes = append(changes, fmt.Sprintf("codex.live-media-relay.udp-port-max: %d -> %d", oldLiveRelay.UDPPortMax, newLiveRelay.UDPPortMax))
-	}
-	if !reflect.DeepEqual(oldLiveRelay.ICEServers, newLiveRelay.ICEServers) {
-		changes = append(changes, fmt.Sprintf("codex.live-media-relay.ice-servers: updated (%d -> %d entries, credentials redacted)", len(oldLiveRelay.ICEServers), len(newLiveRelay.ICEServers)))
 	}
 
 	if oldCfg.Routing.Strategy != newCfg.Routing.Strategy {
@@ -198,260 +107,49 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 	} else if !reflect.DeepEqual(trimStrings(oldCfg.APIKeys), trimStrings(newCfg.APIKeys)) {
 		changes = append(changes, "api-keys: values updated (count unchanged, redacted)")
 	}
-	if len(oldCfg.GeminiKey) != len(newCfg.GeminiKey) {
-		changes = append(changes, fmt.Sprintf("gemini-api-key count: %d -> %d", len(oldCfg.GeminiKey), len(newCfg.GeminiKey)))
-	} else {
-		for i := range oldCfg.GeminiKey {
-			o := oldCfg.GeminiKey[i]
-			n := newCfg.GeminiKey[i]
-			if strings.TrimSpace(o.BaseURL) != strings.TrimSpace(n.BaseURL) {
-				changes = append(changes, fmt.Sprintf("gemini[%d].base-url: %s -> %s", i, formatURL(o.BaseURL), formatURL(n.BaseURL)))
-			}
-			if strings.TrimSpace(o.ProxyURL) != strings.TrimSpace(n.ProxyURL) {
-				changes = append(changes, fmt.Sprintf("gemini[%d].proxy-url: %s -> %s", i, formatProxyURL(o.ProxyURL), formatProxyURL(n.ProxyURL)))
-			}
-			if strings.TrimSpace(o.Prefix) != strings.TrimSpace(n.Prefix) {
-				changes = append(changes, fmt.Sprintf("gemini[%d].prefix: %s -> %s", i, strings.TrimSpace(o.Prefix), strings.TrimSpace(n.Prefix)))
-			}
-			changes = appendOptionalBoolChange(changes, fmt.Sprintf("gemini[%d].disable-cooling", i), o.DisableCooling, n.DisableCooling)
-			if strings.TrimSpace(o.APIKey) != strings.TrimSpace(n.APIKey) {
-				changes = append(changes, fmt.Sprintf("gemini[%d].api-key: updated", i))
-			}
-			if !equalStringMap(o.Headers, n.Headers) {
-				changes = append(changes, fmt.Sprintf("gemini[%d].headers: updated", i))
-			}
-			oldModels := SummarizeGeminiModels(o.Models)
-			newModels := SummarizeGeminiModels(n.Models)
-			if oldModels.hash != newModels.hash {
-				changes = append(changes, fmt.Sprintf("gemini[%d].models: updated (%d -> %d entries)", i, oldModels.count, newModels.count))
-			}
-			oldExcluded := SummarizeExcludedModels(o.ExcludedModels)
-			newExcluded := SummarizeExcludedModels(n.ExcludedModels)
-			if oldExcluded.hash != newExcluded.hash {
-				changes = append(changes, fmt.Sprintf("gemini[%d].excluded-models: updated (%d -> %d entries)", i, oldExcluded.count, newExcluded.count))
-			}
-			changes = appendOptionalIntChange(changes, fmt.Sprintf("gemini[%d].request-retry", i), o.RequestRetry, n.RequestRetry)
-		}
-	}
-	if len(oldCfg.InteractionsKey) != len(newCfg.InteractionsKey) {
-		changes = append(changes, fmt.Sprintf("interactions-api-key count: %d -> %d", len(oldCfg.InteractionsKey), len(newCfg.InteractionsKey)))
-	} else {
-		for i := range oldCfg.InteractionsKey {
-			o := oldCfg.InteractionsKey[i]
-			n := newCfg.InteractionsKey[i]
-			if strings.TrimSpace(o.BaseURL) != strings.TrimSpace(n.BaseURL) {
-				changes = append(changes, fmt.Sprintf("interactions[%d].base-url: %s -> %s", i, formatURL(o.BaseURL), formatURL(n.BaseURL)))
-			}
-			if strings.TrimSpace(o.ProxyURL) != strings.TrimSpace(n.ProxyURL) {
-				changes = append(changes, fmt.Sprintf("interactions[%d].proxy-url: %s -> %s", i, formatProxyURL(o.ProxyURL), formatProxyURL(n.ProxyURL)))
-			}
-			if strings.TrimSpace(o.Prefix) != strings.TrimSpace(n.Prefix) {
-				changes = append(changes, fmt.Sprintf("interactions[%d].prefix: %s -> %s", i, strings.TrimSpace(o.Prefix), strings.TrimSpace(n.Prefix)))
-			}
-			changes = appendOptionalBoolChange(changes, fmt.Sprintf("interactions[%d].disable-cooling", i), o.DisableCooling, n.DisableCooling)
-			if strings.TrimSpace(o.APIKey) != strings.TrimSpace(n.APIKey) {
-				changes = append(changes, fmt.Sprintf("interactions[%d].api-key: updated", i))
-			}
-			if !equalStringMap(o.Headers, n.Headers) {
-				changes = append(changes, fmt.Sprintf("interactions[%d].headers: updated", i))
-			}
-			oldModels := SummarizeGeminiModels(o.Models)
-			newModels := SummarizeGeminiModels(n.Models)
-			if oldModels.hash != newModels.hash {
-				changes = append(changes, fmt.Sprintf("interactions[%d].models: updated (%d -> %d entries)", i, oldModels.count, newModels.count))
-			}
-			oldExcluded := SummarizeExcludedModels(o.ExcludedModels)
-			newExcluded := SummarizeExcludedModels(n.ExcludedModels)
-			if oldExcluded.hash != newExcluded.hash {
-				changes = append(changes, fmt.Sprintf("interactions[%d].excluded-models: updated (%d -> %d entries)", i, oldExcluded.count, newExcluded.count))
-			}
-			changes = appendOptionalIntChange(changes, fmt.Sprintf("interactions[%d].request-retry", i), o.RequestRetry, n.RequestRetry)
-		}
-	}
 
-	// Claude keys (do not print key material)
-	if len(oldCfg.ClaudeKey) != len(newCfg.ClaudeKey) {
-		changes = append(changes, fmt.Sprintf("claude-api-key count: %d -> %d", len(oldCfg.ClaudeKey), len(newCfg.ClaudeKey)))
-	} else {
-		for i := range oldCfg.ClaudeKey {
-			o := oldCfg.ClaudeKey[i]
-			n := newCfg.ClaudeKey[i]
-			if strings.TrimSpace(o.BaseURL) != strings.TrimSpace(n.BaseURL) {
-				changes = append(changes, fmt.Sprintf("claude[%d].base-url: %s -> %s", i, formatURL(o.BaseURL), formatURL(n.BaseURL)))
-			}
-			if strings.TrimSpace(o.ProxyURL) != strings.TrimSpace(n.ProxyURL) {
-				changes = append(changes, fmt.Sprintf("claude[%d].proxy-url: %s -> %s", i, formatProxyURL(o.ProxyURL), formatProxyURL(n.ProxyURL)))
-			}
-			if strings.TrimSpace(o.Prefix) != strings.TrimSpace(n.Prefix) {
-				changes = append(changes, fmt.Sprintf("claude[%d].prefix: %s -> %s", i, strings.TrimSpace(o.Prefix), strings.TrimSpace(n.Prefix)))
-			}
-			changes = appendOptionalBoolChange(changes, fmt.Sprintf("claude[%d].disable-cooling", i), o.DisableCooling, n.DisableCooling)
-			if strings.TrimSpace(o.APIKey) != strings.TrimSpace(n.APIKey) {
-				changes = append(changes, fmt.Sprintf("claude[%d].api-key: updated", i))
-			}
-			if !equalStringMap(o.Headers, n.Headers) {
-				changes = append(changes, fmt.Sprintf("claude[%d].headers: updated", i))
-			}
-			oldModels := SummarizeClaudeModels(o.Models)
-			newModels := SummarizeClaudeModels(n.Models)
-			if oldModels.hash != newModels.hash {
-				changes = append(changes, fmt.Sprintf("claude[%d].models: updated (%d -> %d entries)", i, oldModels.count, newModels.count))
-			}
-			oldExcluded := SummarizeExcludedModels(o.ExcludedModels)
-			newExcluded := SummarizeExcludedModels(n.ExcludedModels)
-			if oldExcluded.hash != newExcluded.hash {
-				changes = append(changes, fmt.Sprintf("claude[%d].excluded-models: updated (%d -> %d entries)", i, oldExcluded.count, newExcluded.count))
-			}
-			if o.RebuildMidSystemMessage != n.RebuildMidSystemMessage {
-				changes = append(changes, fmt.Sprintf("claude[%d].rebuild-mid-system-message: %t -> %t", i, o.RebuildMidSystemMessage, n.RebuildMidSystemMessage))
-			}
-			if o.NativeToolSearch != n.NativeToolSearch {
-				changes = append(changes, fmt.Sprintf("claude[%d].native-tool-search: %t -> %t", i, o.NativeToolSearch, n.NativeToolSearch))
-			}
-			if strings.TrimSpace(o.FingerprintProfile) != strings.TrimSpace(n.FingerprintProfile) {
-				changes = append(changes, fmt.Sprintf("claude[%d].fingerprint-profile: %s -> %s", i, strings.TrimSpace(o.FingerprintProfile), strings.TrimSpace(n.FingerprintProfile)))
-			}
-			changes = appendOptionalIntChange(changes, fmt.Sprintf("claude[%d].request-retry", i), o.RequestRetry, n.RequestRetry)
-			if o.Cloak != nil && n.Cloak != nil {
-				if strings.TrimSpace(o.Cloak.Mode) != strings.TrimSpace(n.Cloak.Mode) {
-					changes = append(changes, fmt.Sprintf("claude[%d].cloak.mode: %s -> %s", i, o.Cloak.Mode, n.Cloak.Mode))
-				}
-				if o.Cloak.StrictMode != n.Cloak.StrictMode {
-					changes = append(changes, fmt.Sprintf("claude[%d].cloak.strict-mode: %t -> %t", i, o.Cloak.StrictMode, n.Cloak.StrictMode))
-				}
-				if len(o.Cloak.SensitiveWords) != len(n.Cloak.SensitiveWords) {
-					changes = append(changes, fmt.Sprintf("claude[%d].cloak.sensitive-words: %d -> %d", i, len(o.Cloak.SensitiveWords), len(n.Cloak.SensitiveWords)))
-				}
-			}
+	appendNativeAPIKeyChanges := func(changes []string, family string, oldKeys, newKeys []config.NativeAPIKey) []string {
+		if len(oldKeys) != len(newKeys) {
+			return append(changes, fmt.Sprintf("%s count: %d -> %d", family, len(oldKeys), len(newKeys)))
 		}
-	}
-
-	// Codex keys (do not print key material)
-	if len(oldCfg.CodexKey) != len(newCfg.CodexKey) {
-		changes = append(changes, fmt.Sprintf("codex-api-key count: %d -> %d", len(oldCfg.CodexKey), len(newCfg.CodexKey)))
-	} else {
-		for i := range oldCfg.CodexKey {
-			o := oldCfg.CodexKey[i]
-			n := newCfg.CodexKey[i]
+		for i := range oldKeys {
+			o := oldKeys[i]
+			n := newKeys[i]
 			if strings.TrimSpace(o.BaseURL) != strings.TrimSpace(n.BaseURL) {
-				changes = append(changes, fmt.Sprintf("codex[%d].base-url: %s -> %s", i, formatURL(o.BaseURL), formatURL(n.BaseURL)))
+				changes = append(changes, fmt.Sprintf("%s[%d].base-url: %s -> %s", family, i, formatURL(o.BaseURL), formatURL(n.BaseURL)))
 			}
 			if strings.TrimSpace(o.ProxyURL) != strings.TrimSpace(n.ProxyURL) {
-				changes = append(changes, fmt.Sprintf("codex[%d].proxy-url: %s -> %s", i, formatProxyURL(o.ProxyURL), formatProxyURL(n.ProxyURL)))
+				changes = append(changes, fmt.Sprintf("%s[%d].proxy-url: %s -> %s", family, i, formatProxyURL(o.ProxyURL), formatProxyURL(n.ProxyURL)))
 			}
 			if strings.TrimSpace(o.Prefix) != strings.TrimSpace(n.Prefix) {
-				changes = append(changes, fmt.Sprintf("codex[%d].prefix: %s -> %s", i, strings.TrimSpace(o.Prefix), strings.TrimSpace(n.Prefix)))
-			}
-			if o.Websockets != n.Websockets {
-				changes = append(changes, fmt.Sprintf("codex[%d].websockets: %t -> %t", i, o.Websockets, n.Websockets))
-			}
-			if o.AlphaSearch != n.AlphaSearch {
-				changes = append(changes, fmt.Sprintf("codex[%d].alpha-search: %t -> %t", i, o.AlphaSearch, n.AlphaSearch))
-			}
-			changes = appendOptionalBoolChange(changes, fmt.Sprintf("codex[%d].disable-cooling", i), o.DisableCooling, n.DisableCooling)
-			changes = appendOptionalBoolChange(changes, fmt.Sprintf("codex[%d].disable-codex-cloaking", i), o.DisableCodexCloaking, n.DisableCodexCloaking)
-			if strings.TrimSpace(o.APIKey) != strings.TrimSpace(n.APIKey) {
-				changes = append(changes, fmt.Sprintf("codex[%d].api-key: updated", i))
-			}
-			if !equalStringMap(o.Headers, n.Headers) {
-				changes = append(changes, fmt.Sprintf("codex[%d].headers: updated", i))
-			}
-			oldModels := SummarizeCodexModels(o.Models)
-			newModels := SummarizeCodexModels(n.Models)
-			if oldModels.hash != newModels.hash {
-				changes = append(changes, fmt.Sprintf("codex[%d].models: updated (%d -> %d entries)", i, oldModels.count, newModels.count))
-			}
-			oldExcluded := SummarizeExcludedModels(o.ExcludedModels)
-			newExcluded := SummarizeExcludedModels(n.ExcludedModels)
-			if oldExcluded.hash != newExcluded.hash {
-				changes = append(changes, fmt.Sprintf("codex[%d].excluded-models: updated (%d -> %d entries)", i, oldExcluded.count, newExcluded.count))
-			}
-			changes = appendOptionalIntChange(changes, fmt.Sprintf("codex[%d].request-retry", i), o.RequestRetry, n.RequestRetry)
-		}
-	}
-
-	// xAI keys (do not print key material)
-	if len(oldCfg.XAIKey) != len(newCfg.XAIKey) {
-		changes = append(changes, fmt.Sprintf("xai-api-key count: %d -> %d", len(oldCfg.XAIKey), len(newCfg.XAIKey)))
-	} else {
-		for i := range oldCfg.XAIKey {
-			o := oldCfg.XAIKey[i]
-			n := newCfg.XAIKey[i]
-			if strings.TrimSpace(o.BaseURL) != strings.TrimSpace(n.BaseURL) {
-				changes = append(changes, fmt.Sprintf("xai[%d].base-url: %s -> %s", i, formatURL(o.BaseURL), formatURL(n.BaseURL)))
-			}
-			if strings.TrimSpace(o.ProxyURL) != strings.TrimSpace(n.ProxyURL) {
-				changes = append(changes, fmt.Sprintf("xai[%d].proxy-url: %s -> %s", i, formatProxyURL(o.ProxyURL), formatProxyURL(n.ProxyURL)))
-			}
-			if strings.TrimSpace(o.Prefix) != strings.TrimSpace(n.Prefix) {
-				changes = append(changes, fmt.Sprintf("xai[%d].prefix: %s -> %s", i, strings.TrimSpace(o.Prefix), strings.TrimSpace(n.Prefix)))
+				changes = append(changes, fmt.Sprintf("%s[%d].prefix: %s -> %s", family, i, strings.TrimSpace(o.Prefix), strings.TrimSpace(n.Prefix)))
 			}
 			if o.Priority != n.Priority {
-				changes = append(changes, fmt.Sprintf("xai[%d].priority: %d -> %d", i, o.Priority, n.Priority))
+				changes = append(changes, fmt.Sprintf("%s[%d].priority: %d -> %d", family, i, o.Priority, n.Priority))
 			}
-			if o.Websockets != n.Websockets {
-				changes = append(changes, fmt.Sprintf("xai[%d].websockets: %t -> %t", i, o.Websockets, n.Websockets))
-			}
-			changes = appendOptionalBoolChange(changes, fmt.Sprintf("xai[%d].disable-cooling", i), o.DisableCooling, n.DisableCooling)
-			changes = appendOptionalIntChange(changes, fmt.Sprintf("xai[%d].request-retry", i), o.RequestRetry, n.RequestRetry)
+			changes = appendOptionalBoolChange(changes, fmt.Sprintf("%s[%d].disable-cooling", family, i), o.DisableCooling, n.DisableCooling)
+			changes = appendOptionalIntChange(changes, fmt.Sprintf("%s[%d].request-retry", family, i), o.RequestRetry, n.RequestRetry)
 			if strings.TrimSpace(o.APIKey) != strings.TrimSpace(n.APIKey) {
-				changes = append(changes, fmt.Sprintf("xai[%d].api-key: updated", i))
+				changes = append(changes, fmt.Sprintf("%s[%d].api-key: updated", family, i))
 			}
 			if !equalStringMap(o.Headers, n.Headers) {
-				changes = append(changes, fmt.Sprintf("xai[%d].headers: updated", i))
+				changes = append(changes, fmt.Sprintf("%s[%d].headers: updated", family, i))
 			}
-			oldModels := SummarizeCodexModels(o.Models)
-			newModels := SummarizeCodexModels(n.Models)
-			if oldModels.hash != newModels.hash {
-				changes = append(changes, fmt.Sprintf("xai[%d].models: updated (%d -> %d entries)", i, oldModels.count, newModels.count))
+			if !reflect.DeepEqual(o.Models, n.Models) {
+				changes = append(changes, fmt.Sprintf("%s[%d].models: updated (%d -> %d entries)", family, i, len(o.Models), len(n.Models)))
 			}
 			oldExcluded := SummarizeExcludedModels(o.ExcludedModels)
 			newExcluded := SummarizeExcludedModels(n.ExcludedModels)
 			if oldExcluded.hash != newExcluded.hash {
-				changes = append(changes, fmt.Sprintf("xai[%d].excluded-models: updated (%d -> %d entries)", i, oldExcluded.count, newExcluded.count))
+				changes = append(changes, fmt.Sprintf("%s[%d].excluded-models: updated (%d -> %d entries)", family, i, oldExcluded.count, newExcluded.count))
 			}
 		}
+		return changes
 	}
-
-	// Meta keys (do not print key material)
-	if len(oldCfg.MetaKey) != len(newCfg.MetaKey) {
-		changes = append(changes, fmt.Sprintf("meta-api-key count: %d -> %d", len(oldCfg.MetaKey), len(newCfg.MetaKey)))
-	} else {
-		for i := range oldCfg.MetaKey {
-			o := oldCfg.MetaKey[i]
-			n := newCfg.MetaKey[i]
-			if strings.TrimSpace(o.BaseURL) != strings.TrimSpace(n.BaseURL) {
-				changes = append(changes, fmt.Sprintf("meta[%d].base-url: %s -> %s", i, formatURL(o.BaseURL), formatURL(n.BaseURL)))
-			}
-			if strings.TrimSpace(o.ProxyURL) != strings.TrimSpace(n.ProxyURL) {
-				changes = append(changes, fmt.Sprintf("meta[%d].proxy-url: %s -> %s", i, formatProxyURL(o.ProxyURL), formatProxyURL(n.ProxyURL)))
-			}
-			if strings.TrimSpace(o.Prefix) != strings.TrimSpace(n.Prefix) {
-				changes = append(changes, fmt.Sprintf("meta[%d].prefix: %s -> %s", i, o.Prefix, n.Prefix))
-			}
-			if o.Priority != n.Priority {
-				changes = append(changes, fmt.Sprintf("meta[%d].priority: %d -> %d", i, o.Priority, n.Priority))
-			}
-			changes = appendOptionalBoolChange(changes, fmt.Sprintf("meta[%d].disable-cooling", i), o.DisableCooling, n.DisableCooling)
-			changes = appendOptionalIntChange(changes, fmt.Sprintf("meta[%d].request-retry", i), o.RequestRetry, n.RequestRetry)
-			if strings.TrimSpace(o.APIKey) != strings.TrimSpace(n.APIKey) {
-				changes = append(changes, fmt.Sprintf("meta[%d].api-key: updated", i))
-			}
-			if !equalStringMap(o.Headers, n.Headers) {
-				changes = append(changes, fmt.Sprintf("meta[%d].headers: updated", i))
-			}
-			oldModels := SummarizeCodexModels(o.Models)
-			newModels := SummarizeCodexModels(n.Models)
-			if oldModels.hash != newModels.hash {
-				changes = append(changes, fmt.Sprintf("meta[%d].models: updated (%d -> %d entries)", i, oldModels.count, newModels.count))
-			}
-			oldExcluded := SummarizeExcludedModels(o.ExcludedModels)
-			newExcluded := SummarizeExcludedModels(n.ExcludedModels)
-			if oldExcluded.hash != newExcluded.hash {
-				changes = append(changes, fmt.Sprintf("meta[%d].excluded-models: updated (%d -> %d entries)", i, oldExcluded.count, newExcluded.count))
-			}
-		}
-	}
+	changes = appendNativeAPIKeyChanges(changes, "openai-api-key", oldCfg.OpenAIKey, newCfg.OpenAIKey)
+	changes = appendNativeAPIKeyChanges(changes, "deepseek-api-key", oldCfg.DeepseekKey, newCfg.DeepseekKey)
+	changes = appendNativeAPIKeyChanges(changes, "nvidia-api-key", oldCfg.NvidiaKey, newCfg.NvidiaKey)
+	changes = appendNativeAPIKeyChanges(changes, "agnes-api-key", oldCfg.AgnesKey, newCfg.AgnesKey)
 
 	if entries, _ := DiffOAuthExcludedModelChanges(oldCfg.OAuthExcludedModels, newCfg.OAuthExcludedModels); len(entries) > 0 {
 		changes = append(changes, entries...)
@@ -472,14 +170,6 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 	}
 	if oldCfg.RemoteManagement.DisableControlPanel != newCfg.RemoteManagement.DisableControlPanel {
 		changes = append(changes, fmt.Sprintf("remote-management.disable-control-panel: %t -> %t", oldCfg.RemoteManagement.DisableControlPanel, newCfg.RemoteManagement.DisableControlPanel))
-	}
-	if oldCfg.RemoteManagement.DisableAutoUpdatePanel != newCfg.RemoteManagement.DisableAutoUpdatePanel {
-		changes = append(changes, fmt.Sprintf("remote-management.disable-auto-update-panel: %t -> %t", oldCfg.RemoteManagement.DisableAutoUpdatePanel, newCfg.RemoteManagement.DisableAutoUpdatePanel))
-	}
-	oldPanelRepo := strings.TrimSpace(oldCfg.RemoteManagement.PanelGitHubRepository)
-	newPanelRepo := strings.TrimSpace(newCfg.RemoteManagement.PanelGitHubRepository)
-	if oldPanelRepo != newPanelRepo {
-		changes = append(changes, fmt.Sprintf("remote-management.panel-github-repository: %s -> %s", formatURL(oldPanelRepo), formatURL(newPanelRepo)))
 	}
 	oldBaseURL := strings.TrimSpace(oldCfg.RemoteManagement.BaseURL)
 	newBaseURL := strings.TrimSpace(newCfg.RemoteManagement.BaseURL)
@@ -502,43 +192,6 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 		changes = append(changes, "openai-compatibility:")
 		for _, c := range compat {
 			changes = append(changes, "  "+c)
-		}
-	}
-
-	// Vertex-compatible API keys
-	if len(oldCfg.VertexCompatAPIKey) != len(newCfg.VertexCompatAPIKey) {
-		changes = append(changes, fmt.Sprintf("vertex-api-key count: %d -> %d", len(oldCfg.VertexCompatAPIKey), len(newCfg.VertexCompatAPIKey)))
-	} else {
-		for i := range oldCfg.VertexCompatAPIKey {
-			o := oldCfg.VertexCompatAPIKey[i]
-			n := newCfg.VertexCompatAPIKey[i]
-			if strings.TrimSpace(o.BaseURL) != strings.TrimSpace(n.BaseURL) {
-				changes = append(changes, fmt.Sprintf("vertex[%d].base-url: %s -> %s", i, formatURL(o.BaseURL), formatURL(n.BaseURL)))
-			}
-			if strings.TrimSpace(o.ProxyURL) != strings.TrimSpace(n.ProxyURL) {
-				changes = append(changes, fmt.Sprintf("vertex[%d].proxy-url: %s -> %s", i, formatProxyURL(o.ProxyURL), formatProxyURL(n.ProxyURL)))
-			}
-			if strings.TrimSpace(o.Prefix) != strings.TrimSpace(n.Prefix) {
-				changes = append(changes, fmt.Sprintf("vertex[%d].prefix: %s -> %s", i, strings.TrimSpace(o.Prefix), strings.TrimSpace(n.Prefix)))
-			}
-			changes = appendOptionalBoolChange(changes, fmt.Sprintf("vertex[%d].disable-cooling", i), o.DisableCooling, n.DisableCooling)
-			if strings.TrimSpace(o.APIKey) != strings.TrimSpace(n.APIKey) {
-				changes = append(changes, fmt.Sprintf("vertex[%d].api-key: updated", i))
-			}
-			oldModels := SummarizeVertexModels(o.Models)
-			newModels := SummarizeVertexModels(n.Models)
-			if oldModels.hash != newModels.hash {
-				changes = append(changes, fmt.Sprintf("vertex[%d].models: updated (%d -> %d entries)", i, oldModels.count, newModels.count))
-			}
-			oldExcluded := SummarizeExcludedModels(o.ExcludedModels)
-			newExcluded := SummarizeExcludedModels(n.ExcludedModels)
-			if oldExcluded.hash != newExcluded.hash {
-				changes = append(changes, fmt.Sprintf("vertex[%d].excluded-models: updated (%d -> %d entries)", i, oldExcluded.count, newExcluded.count))
-			}
-			if !equalStringMap(o.Headers, n.Headers) {
-				changes = append(changes, fmt.Sprintf("vertex[%d].headers: updated", i))
-			}
-			changes = appendOptionalIntChange(changes, fmt.Sprintf("vertex[%d].request-retry", i), o.RequestRetry, n.RequestRetry)
 		}
 	}
 
@@ -634,14 +287,6 @@ func equalStringMap(a, b map[string]string) bool {
 		}
 	}
 	return true
-}
-
-func displayOptionalValue(raw string) string {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return "<none>"
-	}
-	return trimmed
 }
 
 func formatProxyURL(raw string) string {

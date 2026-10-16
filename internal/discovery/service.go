@@ -8,9 +8,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/util"
 	log "github.com/sirupsen/logrus"
+	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
 // ResolveDiscoveryStateDir returns an absolute state directory for discovery metadata,
@@ -180,8 +180,6 @@ func BuildServiceSpec(cfg *config.Config, port int, tlsEnabled bool) (ServiceSpe
 			SubtypeChatCompletions,
 			SubtypeResponses,
 			SubtypeMessages,
-			SubtypeGenerateContent,
-			SubtypeInteractions,
 		}
 	}
 	for _, raw := range rawSubtypes {
