@@ -776,8 +776,7 @@ func argvEnablesBoolFlag(args []string, name string) bool {
 
 func argvFlagConsumesValue(name string) bool {
 	switch name {
-	case "discover", "discover-json", "home-disable-cluster-discovery",
-		"local-model":
+	case "discover", "discover-json", "home-disable-cluster-discovery":
 		return false
 	default:
 		return name != ""
