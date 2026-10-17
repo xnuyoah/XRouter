@@ -193,8 +193,9 @@ func TestWebSearchGatewayRejectsUnknownChannelAndOperation(t *testing.T) {
 	})
 }
 
-// 未声明任何渠道时子系统视为关闭：不注册路由，也不创建状态目录。
-func TestWebSearchRoutesAbsentWhenDisabled(t *testing.T) {
+// 未声明任何渠道时子系统视为关闭：路由已注册但返回 503，且不创建状态目录。
+// 路由保持注册是为了让配置热重载启用后无需重启进程。
+func TestWebSearchReturnsUnavailableWhenDisabled(t *testing.T) {
 	cfg := &proxyconfig.Config{}
 	cfg.APIKeys = []string{"test-key"}
 	server := newTestServerWithConfig(t, cfg)
@@ -204,10 +205,79 @@ func TestWebSearchRoutesAbsentWhenDisabled(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/gateway/tavily/search", strings.NewReader(`{"query":"x"}`))
 	req.Header.Set("Authorization", "Bearer test-key")
+	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	server.engine.ServeHTTP(rr, req)
-	if rr.Code != http.StatusNotFound {
-		t.Fatalf("未启用时状态码 = %d，期望 404", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("未启用时状态码 = %d，期望 503 body=%s", rr.Code, rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), "channel_disabled") {
+		t.Fatalf("未启用时应返回 channel_disabled: %s", rr.Body.String())
+	}
+}
+
+// 启动时未启用，配置热重载后应立即可用，无需重启进程。
+func TestWebSearchEnabledByHotReload(t *testing.T) {
+	var upstreamCalls int
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upstreamCalls++
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer upstream.Close()
+
+	cfg := &proxyconfig.Config{}
+	cfg.APIKeys = []string{"test-key"}
+	server := newTestServerWithConfig(t, cfg)
+
+	// 初始状态：未启用。
+	before := httptest.NewRequest(http.MethodGet, "/gateway/tavily/usage", nil)
+	before.Header.Set("Authorization", "Bearer test-key")
+	beforeRR := httptest.NewRecorder()
+	server.engine.ServeHTTP(beforeRR, before)
+	if beforeRR.Code != http.StatusServiceUnavailable {
+		t.Fatalf("热重载前状态码 = %d，期望 503", beforeRR.Code)
+	}
+
+	// 热重载：声明 Tavily 渠道并指向上游桩。
+	next := *cfg
+	next.WebSearch = proxyconfig.WebSearchConfig{
+		Channels: []proxyconfig.WebSearchChannel{{
+			ID:      "tavily",
+			Name:    "Tavily",
+			BaseURL: upstream.URL,
+			Accounts: []proxyconfig.WebSearchAccount{
+				{Name: "acc-1", APIKey: "tvly-hot-key"},
+			},
+		}},
+	}
+	server.UpdateClients(&next)
+
+	service := server.webSearch
+	if service == nil {
+		t.Fatal("热重载后应创建搜索渠道服务")
+	}
+	// 让账号直接可用，跳过测活。
+	accounts := service.Accounts("tavily")
+	if len(accounts) != 1 {
+		t.Fatalf("账号数 = %d", len(accounts))
+	}
+	state := accounts[0].State
+	state.Status = "available"
+	state.CredentialFingerprint = accounts[0].Account.Fingerprint()
+	if errSave := service.Store().SaveAccountState(state); errSave != nil {
+		t.Fatal(errSave)
+	}
+
+	after := httptest.NewRequest(http.MethodGet, "/gateway/tavily/usage", nil)
+	after.Header.Set("Authorization", "Bearer test-key")
+	afterRR := httptest.NewRecorder()
+	server.engine.ServeHTTP(afterRR, after)
+	if afterRR.Code != http.StatusOK {
+		t.Fatalf("热重载后状态码 = %d，期望 200 body=%s", afterRR.Code, afterRR.Body.String())
+	}
+	if upstreamCalls != 1 {
+		t.Fatalf("上游调用次数 = %d，期望 1", upstreamCalls)
 	}
 }
 
