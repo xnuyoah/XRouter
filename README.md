@@ -26,6 +26,7 @@ XRouter 是一个本地代理服务器，对 CLI 及其他客户端暴露 **Open
 - 多个凭据的轮询负载均衡（round-robin、加权轮询、fill-first）
 - 原生 API Key 家族：`openai`、`deepseek`、`nvidia`、`agnes`
 - 通用的 `openai-compatibility` 上游配置，可接入任意兼容供应商
+- 搜索渠道：`tavily` / `exa` / `anysearch` / `firecrawl` / `tinyfish` 的透传网关、MCP 镜像、账号池选号、测活、渠道状态与额度读取（见 `docs/web-search.md`）
 - 动态库插件体系，以及内置的管理面板
 - 可嵌入的 Go SDK（见 `docs/sdk-usage.md`）
 
@@ -87,7 +88,7 @@ go build -o xrouter ./cmd/server
 
 ### 5. 管理面板
 
-访问 `http://127.0.0.1:11016/` 会跳转到管理面板 `http://127.0.0.1:11016/management.html`。管理接口默认只允许本机访问，且必须配置 `management.secret-key` 才能使用。
+访问 `http://127.0.0.1:11016/` 会跳转到管理面板 `http://127.0.0.1:11016/index.html`（旧地址 `/management.html` 保留为别名）。管理接口默认只允许本机访问，且必须配置 `management.secret-key` 才能使用。
 
 ## 命令行参数
 
@@ -109,6 +110,8 @@ go build -o xrouter ./cmd/server
 | `/v1/images/generations`、`/v1/images/edits` | 图像生成 / 编辑 |
 | `/v1/models`、`/v1/models/*` | 模型列表与详情 |
 | `/backend-api/codex/responses` | Codex CLI 兼容别名（指向 Responses） |
+| `/gateway/<channel>/<path>` | 搜索渠道透传网关（复用 `access.api-keys`） |
+| `/mcp/<channel>` | 搜索渠道 MCP 镜像端点（复用 `access.api-keys`） |
 | `/v8/management/*` | 管理 API |
 | `/healthz` | 健康检查 |
 | `/` | 跳转到管理面板 |
@@ -127,6 +130,7 @@ go build -o xrouter ./cmd/server
 - `api-keys` —— 上游供应商凭据（`openai` / `deepseek` / `nvidia` / `agnes` / `openai-compatibility`）
 - `multimedia` —— 内置图片生成行为
 - `observability` —— 日志、用量统计、profiling
+- `web-search` —— 搜索渠道（渠道、账号池、探测代理与调度）
 - `plugins` —— 动态库插件与插件配置
 
 完整的字段与注释见 [`config.example.yaml`](config.example.yaml)。
@@ -134,6 +138,7 @@ go build -o xrouter ./cmd/server
 ## 文档
 
 - 管理 API：[docs/management-api-v8.md](docs/management-api-v8.md)
+- 搜索渠道：[docs/web-search.md](docs/web-search.md)
 - SDK 使用：[docs/sdk-usage.md](docs/sdk-usage.md)
 - SDK 进阶（executor 与 translator）：[docs/sdk-advanced.md](docs/sdk-advanced.md)
 - SDK 访问控制：[docs/sdk-access.md](docs/sdk-access.md)
