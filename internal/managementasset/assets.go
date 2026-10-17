@@ -1,6 +1,6 @@
-// Package managementasset resolves the location of the bundled management
-// control panel asset. The panel ships with the repository under static/ and is
-// served as-is; XRouter never downloads or auto-updates it.
+// Package managementasset 负责定位随仓库分发的管理面板产物。
+// 面板源码位于 webui/，构建为单文件 index.html 后放在 static/ 下直接读盘提供；
+// XRouter 不会在运行时下载或自动更新它。
 package managementasset
 
 import (
@@ -11,12 +11,13 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
-const managementAssetName = "management.html"
+// managementAssetName 是管理面板产物文件名；构建产物必须以此名存放。
+const managementAssetName = "index.html"
 
-// ManagementFileName exposes the control panel asset filename.
+// ManagementFileName 对外暴露管理面板产物文件名。
 const ManagementFileName = managementAssetName
 
-// StaticDir resolves the directory that stores the management control panel asset.
+// StaticDir 返回存放管理面板产物的目录。
 func StaticDir(configFilePath string) string {
 	if override := strings.TrimSpace(os.Getenv("MANAGEMENT_STATIC_PATH")); override != "" {
 		cleaned := filepath.Clean(override)
@@ -46,7 +47,7 @@ func StaticDir(configFilePath string) string {
 	return filepath.Join(base, "static")
 }
 
-// FilePath resolves the absolute path to the management control panel asset.
+// FilePath 返回管理面板产物的绝对路径。
 func FilePath(configFilePath string) string {
 	if override := strings.TrimSpace(os.Getenv("MANAGEMENT_STATIC_PATH")); override != "" {
 		cleaned := filepath.Clean(override)
