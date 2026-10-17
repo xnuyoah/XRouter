@@ -6,14 +6,37 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AuthState, LoginCredentials, ConnectionStatus } from '@/types';
-import { STORAGE_KEY_AUTH } from '@/utils/constants';
+import { STORAGE_KEY_AUTH, STORAGE_KEY_SESSION } from '@/utils/constants';
 import { obfuscatedStorage } from '@/services/storage/secureStorage';
 import { apiClient } from '@/services/api/client';
 import { LegacyBackendError, probeLegacyBackend } from '@/services/api/legacyBackendProbe';
 import { useConfigStore } from './useConfigStore';
 import { useModelsStore } from './useModelsStore';
-import { useQuotaStore } from './useQuotaStore';
 import { detectApiBaseFromLocation, normalizeApiBase } from '@/utils/connection';
+import { obfuscateData } from '@/utils/encryption';
+
+// The main panel persists its session under a dedicated key; the
+// `cli-proxy-auth` key is reserved for extension pages (such as plugin
+// dashboard iframes) which share localStorage with the panel but decode
+// it with the legacy salt `cli-proxy-api-webui`. Rewriting that key on
+// every persist flush keeps extensions password-free (cleared on logout
+// or when the key is not remembered).
+const PLUGIN_COMPAT_SALT = 'cli-proxy-api-webui::secure-storage';
+
+const writePluginCompatAuth = (apiBase: string, managementKey: string, remember: boolean) => {
+  try {
+    if (remember && managementKey) {
+      localStorage.setItem(
+        STORAGE_KEY_AUTH,
+        obfuscateData(JSON.stringify({ apiBase, managementKey }), PLUGIN_COMPAT_SALT)
+      );
+    } else {
+      localStorage.removeItem(STORAGE_KEY_AUTH);
+    }
+  } catch {
+    // Password-free extensions are a best-effort enhancement; write failures must not break the main flow.
+  }
+};
 
 interface AuthStoreState extends AuthState {
   connectionStatus: ConnectionStatus;
@@ -28,6 +51,22 @@ interface AuthStoreState extends AuthState {
 }
 
 let restoreSessionPromise: Promise<boolean> | null = null;
+
+// One-time migration: the main panel session moves from the legacy
+// `cli-proxy-auth` key to the dedicated `cli-proxy-session` key (the old
+// key now belongs to extension pages). This must run synchronously before
+// the store is created so the first persist hydration sees the session.
+const migrateSessionKey = () => {
+  try {
+    const legacy = obfuscatedStorage.getItem<Record<string, unknown>>(STORAGE_KEY_AUTH);
+    if (legacy && !obfuscatedStorage.getItem(STORAGE_KEY_SESSION)) {
+      obfuscatedStorage.setItem(STORAGE_KEY_SESSION, legacy);
+    }
+  } catch {
+    // A failed migration only affects auto-restore of an old session; the user can sign in again.
+  }
+};
+migrateSessionKey();
 
 export const useAuthStore = create<AuthStoreState>()(
   persist(
@@ -105,7 +144,6 @@ export const useAuthStore = create<AuthStoreState>()(
           });
           useConfigStore.getState().clearCache();
           useModelsStore.getState().clearCache();
-          useQuotaStore.getState().clearQuotaCache();
 
           // 配置 API 客户端
           apiClient.setConfig({
@@ -154,7 +192,6 @@ export const useAuthStore = create<AuthStoreState>()(
         apiClient.setConfig({ apiBase: '', managementKey: '' });
         useConfigStore.getState().clearCache();
         useModelsStore.getState().clearCache();
-        useQuotaStore.getState().clearQuotaCache();
         set({
           isAuthenticated: false,
           apiBase: '',
@@ -212,17 +249,35 @@ export const useAuthStore = create<AuthStoreState>()(
       },
     }),
     {
-      name: STORAGE_KEY_AUTH,
+      name: STORAGE_KEY_SESSION,
       storage: createJSONStorage(() => ({
         getItem: (name) => {
           const data = obfuscatedStorage.getItem<AuthStoreState>(name);
           return data ? JSON.stringify(data) : null;
         },
         setItem: (name, value) => {
-          obfuscatedStorage.setItem(name, JSON.parse(value));
+          // persist passes a top-level `{ state: partialize(...), version }`
+          // envelope; it must be stored as-is (dropping the envelope breaks
+          // the next hydration due to the missing version). Only the inner
+          // state is read to mirror the plugin-salt credentials.
+          const envelope = JSON.parse(value) as {
+            state?: {
+              apiBase?: string;
+              managementKey?: string;
+              rememberPassword?: boolean;
+            };
+          };
+          obfuscatedStorage.setItem(name, envelope);
+          const inner = envelope.state ?? {};
+          writePluginCompatAuth(
+            inner.apiBase ?? '',
+            inner.managementKey ?? '',
+            Boolean(inner.rememberPassword && inner.managementKey)
+          );
         },
         removeItem: (name) => {
           obfuscatedStorage.removeItem(name);
+          writePluginCompatAuth('', '', false);
         },
       })),
       partialize: (state) => ({

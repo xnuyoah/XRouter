@@ -2,9 +2,9 @@
  * 通用类型定义
  */
 
-export type Theme = 'light' | 'white' | 'dark' | 'auto';
+export type Theme = 'light' | 'dark';
 
-export type Language = 'zh-CN' | 'zh-TW' | 'en' | 'ru' | 'vi' | 'ko';
+export type Language = 'zh-CN' | 'en';
 
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
 

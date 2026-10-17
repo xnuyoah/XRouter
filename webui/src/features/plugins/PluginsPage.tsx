@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/Input';
@@ -13,18 +12,17 @@ import {
   IconRefreshCw,
   IconSearch,
   IconSettings,
-  IconSidebarStore,
   IconTrash2,
 } from '@/components/ui/icons';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
-import { pluginsApi, pluginStoreApi } from '@/services/api';
+import { pluginsApi } from '@/services/api';
 import { useAuthStore, useConfigStore, useNotificationStore } from '@/stores';
 import { getErrorMessage, isRecord } from '@/utils/helpers';
 import type {
   PluginConfigField,
+  PluginEnvironment,
   PluginListEntry,
   PluginListResponse,
-  PluginStoreEntry,
 } from '@/types';
 import {
   buildPluginConfigDraft,
@@ -63,20 +61,13 @@ const hasRestartRequiredError = (error: unknown) =>
 
 export function PluginsPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
   const apiBase = useAuthStore((state) => state.apiBase);
-  const managementKey = useAuthStore((state) => state.managementKey);
   const clearConfigCache = useConfigStore((state) => state.clearCache);
   const showNotification = useNotificationStore((state) => state.showNotification);
   const showConfirmation = useNotificationStore((state) => state.showConfirmation);
 
   const [data, setData] = useState<PluginListResponse | null>(null);
-  const [storeLogos, setStoreLogos] = useState<{
-    apiBase: string;
-    managementKey: string;
-    entries: PluginStoreEntry[];
-  } | null>(null);
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -133,30 +124,6 @@ export function PluginsPage() {
   useEffect(() => {
     void loadPlugins();
   }, [loadPlugins]);
-
-  useEffect(() => {
-    setStoreLogos(null);
-    if (!connected || !data) return;
-    let cancelled = false;
-    void pluginStoreApi.list().then(
-      (response) => {
-        if (!cancelled) {
-          setStoreLogos({ apiBase, managementKey, entries: response.plugins });
-        }
-      },
-      () => {
-        // Store metadata is optional; its failure must not block plugin management.
-      }
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [connected, apiBase, managementKey, data]);
-
-  const logoEntries =
-    connected && storeLogos?.apiBase === apiBase && storeLogos.managementKey === managementKey
-      ? storeLogos.entries
-      : [];
 
   const pluginStats = useMemo(() => {
     const plugins = data?.plugins ?? [];
@@ -276,7 +243,7 @@ export function PluginsPage() {
   const handleDeletePlugin = (plugin: PluginListEntry) => {
     if (!connected || mutatingID || openingConfigID || deletingID) return;
 
-    const name = getPluginTitle(plugin);
+    const name = getPluginTitle(plugin, t);
     showConfirmation({
       title: t('plugin_management.delete_confirm_title'),
       message: t('plugin_management.delete_confirm_message', { name, id: plugin.id }),
@@ -484,6 +451,30 @@ export function PluginsPage() {
 
   const savingConfig = Boolean(editingPlugin && mutatingID === editingPlugin.id);
 
+  /** Runtime verdict: is this environment able to load plugins at all? */
+  const environmentVerdict = (environment: PluginEnvironment | null) => {
+    if (!environment) return null;
+    if (!environment.cgoPluginSupport) {
+      return {
+        tone: styles.badgeWarning,
+        key: 'plugin_management.env_no_cgo' as const,
+      };
+    }
+    if (environment.skippedPlatformFiles > 0 && environment.platformMatchedFiles === 0) {
+      return {
+        tone: styles.badgeDanger,
+        key: 'plugin_management.env_platform_mismatch' as const,
+      };
+    }
+    return {
+      tone: styles.badgeSuccess,
+      key: 'plugin_management.env_available' as const,
+    };
+  };
+
+  const environment = data?.environment ?? null;
+  const verdict = environmentVerdict(environment);
+
   return (
     <div className={styles.page}>
       {/* ── Page Header ── */}
@@ -546,6 +537,56 @@ export function PluginsPage() {
         </div>
       ) : null}
 
+      {/* ── Environment Card ── */}
+      {data && environment ? (
+        <div className={styles.envCard}>
+          <div className={styles.envVerdict}>
+            <span className={`${styles.badge} ${verdict?.tone ?? styles.badgeMuted}`}>
+              {verdict ? t(verdict.key, { count: environment.skippedPlatformFiles }) : ''}
+            </span>
+          </div>
+          <div className={styles.envGrid}>
+            <div className={styles.envItem}>
+              <span className={styles.envLabel}>{t('plugin_management.env_platform')}</span>
+              <span className={styles.envValue}>
+                {environment.goos}/{environment.goarch}
+              </span>
+            </div>
+            <div className={styles.envItem}>
+              <span className={styles.envLabel}>{t('plugin_management.env_container')}</span>
+              <span className={styles.envValue}>
+                {environment.inContainer
+                  ? t('plugin_management.env_container_yes')
+                  : t('plugin_management.env_container_no')}
+              </span>
+            </div>
+            <div className={styles.envItem}>
+              <span className={styles.envLabel}>{t('plugin_management.env_cgo')}</span>
+              <span className={styles.envValue}>
+                {environment.cgoPluginSupport
+                  ? t('plugin_management.env_cgo_yes')
+                  : t('plugin_management.env_cgo_no')}
+              </span>
+            </div>
+            <div className={styles.envItem}>
+              <span className={styles.envLabel}>{t('plugin_management.env_platform_dir')}</span>
+              <span className={`${styles.envValue} ${styles.envPath}`} title={environment.platformDir}>
+                {environment.platformDir || '—'}
+              </span>
+            </div>
+            {environment.skippedPlatformFiles > 0 ? (
+              <div className={styles.envItem}>
+                <span className={styles.envLabel}>{t('plugin_management.env_skipped')}</span>
+                <span className={styles.envValue}>{environment.skippedPlatformFiles}</span>
+              </div>
+            ) : null}
+          </div>
+          {environment.skippedPlatformFiles > 0 && environment.platformMatchedFiles === 0 ? (
+            <p className={styles.envHint}>{t('plugin_management.env_mismatch_hint')}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* ── Toolbar ── */}
       <div className={styles.toolbar}>
         <Input
@@ -565,10 +606,6 @@ export function PluginsPage() {
         >
           <IconRefreshCw size={16} />
           {t('plugin_management.refresh')}
-        </Button>
-        <Button variant="secondary" size="sm" onClick={() => navigate('/plugin-store')}>
-          <IconSidebarStore size={16} />
-          {t('plugin_store.title')}
         </Button>
       </div>
 
@@ -599,7 +636,7 @@ export function PluginsPage() {
       ) : (
         <div className={styles.pluginList}>
           {visiblePlugins.map((plugin) => {
-            const logo = resolvePluginAsset(getPluginLogo(plugin, logoEntries));
+            const logo = resolvePluginAsset(getPluginLogo(plugin));
             const github = plugin.metadata?.githubRepository.trim();
             const openingConfig = openingConfigID === plugin.id;
             const deletingPlugin = deletingID === plugin.id;
@@ -617,7 +654,7 @@ export function PluginsPage() {
                 {/* Info */}
                 <div className={styles.pluginInfo}>
                   <div className={styles.pluginName}>
-                    <h2>{getPluginTitle(plugin)}</h2>
+                    <h2>{getPluginTitle(plugin, t)}</h2>
                     <div className={styles.badgeRow}>
                       <span
                         className={
@@ -728,7 +765,7 @@ export function PluginsPage() {
         size="lg"
         title={
           editingPlugin
-            ? t('plugin_management.config_title', { name: getPluginTitle(editingPlugin) })
+            ? t('plugin_management.config_title', { name: getPluginTitle(editingPlugin, t) })
             : t('plugin_management.edit_config')
         }
         description={editingPlugin?.id}

@@ -1,8 +1,8 @@
 /**
- * 搜索渠道模块的共享常量与展示映射。
+ * Shared constants and display mappings for the web tools module.
  *
- * 页面结构参考 OpenRegister 的管理台（概览 / 账号池 / 测活 / 渠道状态 / 接入说明），
- * 配色沿用面板自身的主题变量，避免引入第二套视觉语言。
+ * Colors reuse the panel's own theme variables so light and dark themes both
+ * follow automatically.
  */
 
 import type {
@@ -12,21 +12,19 @@ import type {
   WebSearchQuotaRefreshStatus,
 } from '@/services/api/webSearch';
 
-/** 页面内的标签页。 */
-export type WebSearchTabId = 'overview' | 'accounts' | 'probes' | 'status' | 'access';
+/** Tabs inside the page. */
+export type WebSearchTabId = 'overview' | 'accounts' | 'access';
 
 export const WEB_SEARCH_TABS: { id: WebSearchTabId; labelKey: string }[] = [
   { id: 'overview', labelKey: 'webSearch.tabs.overview' },
   { id: 'accounts', labelKey: 'webSearch.tabs.accounts' },
-  { id: 'probes', labelKey: 'webSearch.tabs.probes' },
-  { id: 'status', labelKey: 'webSearch.tabs.status' },
   { id: 'access', labelKey: 'webSearch.tabs.access' },
 ];
 
-/** 状态色调，用于 pill 与进度条。 */
+/** Status tones used by pills and progress strips. */
 export type ToneId = 'green' | 'orange' | 'red' | 'gray' | 'blue';
 
-/** 账号状态 → 文案键与色调。 */
+/** Account status to label key and tone. */
 export const ACCOUNT_STATUS_META: Record<
   WebSearchAccountStatus,
   { labelKey: string; tone: ToneId }
@@ -38,7 +36,7 @@ export const ACCOUNT_STATUS_META: Record<
   pending: { labelKey: 'webSearch.accountStatus.pending', tone: 'blue' },
 };
 
-/** 渠道整体状态 → 文案键与色调。 */
+/** Channel overall status to label key, tone and symbol. */
 export const CHANNEL_STATUS_META: Record<
   WebSearchChannelStatusValue,
   { labelKey: string; tone: ToneId; symbol: string }
@@ -49,7 +47,7 @@ export const CHANNEL_STATUS_META: Record<
   unknown: { labelKey: 'webSearch.channelStatus.unknown', tone: 'gray', symbol: '·' },
 };
 
-/** 额度刷新状态 → 文案键与色调。 */
+/** Quota refresh status to label key and tone. */
 export const QUOTA_REFRESH_META: Record<
   WebSearchQuotaRefreshStatus,
   { labelKey: string; tone: ToneId }
@@ -60,7 +58,7 @@ export const QUOTA_REFRESH_META: Record<
   never: { labelKey: 'webSearch.quotaRefresh.never', tone: 'blue' },
 };
 
-/** 额度维度 → 文案键。 */
+/** Quota dimension to label key. */
 export const QUOTA_KIND_LABEL_KEYS: Record<WebSearchQuotaKind, string> = {
   credits: 'webSearch.quotaKind.credits',
   key: 'webSearch.quotaKind.key',
@@ -68,7 +66,7 @@ export const QUOTA_KIND_LABEL_KEYS: Record<WebSearchQuotaKind, string> = {
   paygo: 'webSearch.quotaKind.paygo',
 };
 
-/** 演示/文档用的渠道接入路径。 */
+/** Documented gateway paths per channel. */
 export function gatewayExample(channel: string): string {
   switch (channel) {
     case 'tavily':
@@ -86,19 +84,19 @@ export function gatewayExample(channel: string): string {
   }
 }
 
-/** 各渠道的官方托管 MCP 端点说明（面板只展示，不代理请求）。 */
+/** Managed MCP endpoint per channel (display only; requests are not proxied). */
 export function mcpExample(channel: string): string {
   return `POST /mcp/${channel}`;
 }
 
-/** 测活轮询间隔（毫秒）。测活是同步接口，这里只用于概览页的轻量刷新。 */
+/** Polling intervals in ms. Probing is synchronous; these cover status refresh only. */
 export const WEB_SEARCH_POLL_IDLE_MS = 60_000;
 export const WEB_SEARCH_POLL_ACTIVE_MS = 2_000;
 
-/** 历史色条渲染的最大天数。 */
+/** Maximum number of days rendered in the history strip. */
 export const HISTORY_STRIP_DAYS = 90;
 
-/** 渠道状态自动刷新间隔（毫秒）。 */
+/** Status auto-refresh interval in ms. */
 export function statusPollInterval(running: boolean): number {
   return running ? WEB_SEARCH_POLL_ACTIVE_MS : WEB_SEARCH_POLL_IDLE_MS;
 }

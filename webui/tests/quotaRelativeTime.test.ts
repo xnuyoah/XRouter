@@ -54,8 +54,6 @@ describe('formatRelativeInstant', () => {
   test('renders in the requested locale', () => {
     expect(formatRelativeInstant(NOW + 11 * DAY_MS, NOW, 'en')).toContain('days');
     expect(formatRelativeInstant(NOW + 11 * DAY_MS, NOW, 'zh-CN')).toContain('天');
-    expect(formatRelativeInstant(NOW + 11 * DAY_MS, NOW, 'zh-TW')).toContain('天');
-    expect(formatRelativeInstant(NOW + 11 * DAY_MS, NOW, 'ru')).toBeTruthy();
   });
 
   test('distinguishes past from future', () => {

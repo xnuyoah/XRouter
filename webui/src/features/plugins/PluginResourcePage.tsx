@@ -81,9 +81,9 @@ export function PluginResourcePage() {
   }, [loadResource]);
 
   const resource = useMemo(() => {
-    const entries = collectPluginResourceEntries(data?.plugins ?? []);
+    const entries = collectPluginResourceEntries(data?.plugins ?? [], t);
     return entries.find((entry) => entry.pluginID === pluginID && entry.menuIndex === menuIndex);
-  }, [data?.plugins, menuIndex, pluginID]);
+  }, [data?.plugins, menuIndex, pluginID, t]);
 
   const iframeSrc = resource ? resolvePluginAssetURL(resource.menu.path, apiBase) : '';
 

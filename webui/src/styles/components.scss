@@ -5,20 +5,33 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: $spacing-sm;
-  border: 1px solid transparent;
-  border-radius: $radius-md;
-  padding: 10px 14px;
-  font-weight: 600;
+  gap: 7px;
+  min-height: 36px;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
-  transition: all $transition-fast;
-  background-color: var(--bg-secondary);
+  transition:
+    background-color $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast,
+    box-shadow $transition-fast;
+  background-color: var(--bg-primary);
   color: var(--text-primary);
+
+  &:hover {
+    background-color: var(--accent-bg);
+    border-color: var(--border-hover);
+  }
 
   &.btn-primary {
     background-color: var(--primary-color);
     color: var(--primary-contrast, #fff);
     border-color: var(--primary-color);
+    box-shadow: 0 2px 4px var(--primary-10);
 
     &:hover {
       background-color: var(--primary-hover);
@@ -27,12 +40,12 @@
   }
 
   &.btn-secondary {
-    background-color: var(--bg-tertiary);
+    background-color: var(--bg-primary);
     border-color: var(--border-color);
     color: var(--text-primary);
 
     &:hover {
-      background-color: var(--bg-hover, var(--bg-tertiary));
+      background-color: var(--accent-bg);
       border-color: var(--border-hover);
     }
   }
@@ -44,17 +57,17 @@
 
     &:hover {
       color: var(--text-primary);
-      background: var(--bg-tertiary);
+      background: var(--accent-bg);
     }
   }
 
   &.btn-danger {
-    background-color: $error-color;
-    border-color: $error-color;
-    color: #fff;
+    color: var(--error-text, $error-color);
+    background: var(--bg-error-light);
+    border-color: var(--failure-badge-border, transparent);
 
     &:hover {
-      background-color: color.adjust($error-color, $lightness: -5%);
+      background: var(--failure-badge-bg);
     }
   }
 
@@ -63,24 +76,14 @@
   }
 
   &.btn-sm {
-    padding: 8px 10px;
-    font-size: 14px;
+    min-height: 30px;
+    padding: 6px 11px;
+    font-size: 12px;
   }
 
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.45;
     cursor: not-allowed;
-  }
-}
-
-[data-theme='dark'] {
-  .btn {
-    color: #fff;
-  }
-
-  .btn.btn-secondary,
-  .btn.btn-ghost {
-    color: #fff;
   }
 }
 
