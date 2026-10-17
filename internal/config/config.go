@@ -1,147 +1,151 @@
-// Package config provides configuration management for the XRouter server.
-// It handles loading and parsing YAML configuration files, and provides structured
-// access to application settings including server port, authentication directory,
-// debug settings, proxy configuration, and API keys.
+// Package config 为 XRouter 服务器提供配置管理。
+// 它负责加载和解析 YAML 配置文件，并提供对应用配置的
+// 结构化访问，包括服务器端口、认证目录、
+// 调试设置、代理配置和 API key。
 package config
 
-// Config represents the application's configuration, loaded from a YAML file.
+// Config 表示应用的配置，从 YAML 文件加载。
 type Config struct {
 	SDKConfig `yaml:",inline"`
-	// Host is the network host/interface on which the API server will bind.
-	// Default is empty ("") to bind all interfaces (IPv4 + IPv6). Use "127.0.0.1" or "localhost" for local-only access.
+	// Host 是 API 服务器绑定的网络主机/网卡。
+	// 默认为空 ("") 表示绑定所有网卡（IPv4 + IPv6）。如需仅本机访问，请使用 "127.0.0.1" 或 "localhost"。
 	Host string `yaml:"host" json:"-"`
-	// Port is the network port on which the API server will listen.
+	// Port 是 API 服务器监听的网络端口。
 	Port int `yaml:"port" json:"-"`
 
-	// GitHubToken is the global token for GitHub requests, taking precedence over GITHUB_TOKEN.
+	// GitHubToken 是 GitHub 请求的全局令牌，优先级高于 GITHUB_TOKEN。
 	GitHubToken string `yaml:"github-token" json:"-"`
 
-	// TrustedProxies lists the IPs or CIDRs allowed to provide forwarded client IP headers.
-	// The server applies this list at startup; changing it requires a restart.
+	// TrustedProxies 列出允许提供转发客户端 IP 头的 IP 或 CIDR。
+	// 服务器在启动时应用该列表；修改后需要重启。
 	TrustedProxies []string `yaml:"trusted-proxies" json:"trusted-proxies"`
 
-	// TLS config controls HTTPS server settings.
+	// TLS config 控制 HTTPS 服务器设置。
 	TLS TLSConfig `yaml:"tls" json:"tls"`
 
-	// Home config is runtime-only and is populated from -home-jwt.
+	// Home config 仅运行时存在，由 -home-jwt 填充。
 	Home HomeConfig `yaml:"-" json:"-"`
 
-	// SourceHash is runtime-only: the SHA-256 of the config file bytes this config was
-	// parsed from, or empty when the config was not loaded from a file.
+	// SourceHash 仅运行时存在：本配置所解析的配置文件字节的 SHA-256，
+	// 若配置不是从文件加载则为空。
 	SourceHash string `yaml:"-" json:"-"`
 
-	// CredentialConcurrency contains Home-authoritative credential lifecycle settings.
+	// CredentialConcurrency 包含 Home 权威的凭据生命周期设置。
 	CredentialConcurrency CredentialConcurrencyConfig `yaml:"credential-concurrency" json:"credential-concurrency"`
 
-	// CredentialInFlight configures credential observation snapshots.
+	// CredentialInFlight 配置凭据观测快照。
 	CredentialInFlight CredentialInFlightConfig `yaml:"credential-in-flight" json:"credential-in-flight"`
 
-	// RemoteManagement nests management-related options under 'remote-management'.
+	// RemoteManagement 将管理相关选项嵌套在 'remote-management' 下。
 	RemoteManagement RemoteManagement `yaml:"remote-management" json:"-"`
 
-	// Plugins configures dynamic plugin discovery and per-plugin settings.
+	// Plugins 配置动态插件发现及各插件的设置。
 	Plugins PluginsConfig `yaml:"plugins" json:"plugins"`
 
-	// AuthDir is the directory where authentication token files are stored.
+	// AuthDir 是存放认证令牌文件的目录。
 	AuthDir string `yaml:"auth-dir" json:"-"`
 
-	// Debug enables or disables debug-level logging and other debug features.
+	// Debug 开启或关闭 debug 级别日志及其他调试功能。
 	Debug bool `yaml:"debug" json:"debug"`
 
-	// Pprof config controls the optional pprof HTTP debug server.
+	// Pprof config 控制可选的 pprof HTTP 调试服务器。
 	Pprof PprofConfig `yaml:"pprof" json:"pprof"`
 
-	// Discovery configures local network mDNS / DNS-SD service advertising.
+	// Discovery 配置本地网络 mDNS / DNS-SD 服务广播。
 	Discovery DiscoveryConfig `yaml:"discovery" json:"discovery"`
 
-	// CommercialMode disables high-overhead request logging and HTTP middleware features to minimize per-request memory usage.
+	// CommercialMode 关闭高开销的请求日志和 HTTP 中间件功能，以尽量减少单请求内存占用。
 	CommercialMode bool `yaml:"commercial-mode" json:"commercial-mode"`
 
-	// LoggingToFile controls whether application logs are written to rotating files or stdout.
+	// LoggingToFile 控制应用日志写入轮转文件还是标准输出。
 	LoggingToFile bool `yaml:"logging-to-file" json:"logging-to-file"`
 
-	// LogsMaxTotalSizeMB limits the total size (in MB) of log files under the logs directory.
-	// When exceeded, the oldest log files are deleted until within the limit. Set to 0 to disable.
+	// LogsMaxTotalSizeMB 限制 logs 目录下日志文件的总大小（MB）。
+	// 超出时会删除最旧的日志文件直至符合限制。设为 0 表示禁用。
 	LogsMaxTotalSizeMB int `yaml:"logs-max-total-size-mb" json:"logs-max-total-size-mb"`
 
-	// ErrorLogsMaxFiles limits the number of error log files retained when request logging is disabled.
-	// When exceeded, the oldest error log files are deleted. Default is 10. Set to 0 to disable cleanup.
+	// ErrorLogsMaxFiles 限制请求日志关闭时保留的错误日志文件数量。
+	// 超出时会删除最旧的错误日志文件。默认 10。设为 0 表示禁用清理。
 	ErrorLogsMaxFiles int `yaml:"error-logs-max-files" json:"error-logs-max-files"`
 
-	// UsageStatisticsEnabled toggles in-memory usage aggregation; when false, usage data is discarded.
+	// UsageStatisticsEnabled 控制内存内使用量聚合；为 false 时使用量数据会被丢弃。
 	UsageStatisticsEnabled bool `yaml:"usage-statistics-enabled" json:"usage-statistics-enabled"`
 
-	// RedisUsageQueueRetentionSeconds controls how long usage queue items are retained
-	// in memory for Management API consumers.
-	// Default: 60. Max: 3600.
+	// RedisUsageQueueRetentionSeconds 控制使用量队列项在内存中为
+	// Management API 消费方保留的时长。
+	// 默认：60。最大：3600。
 	RedisUsageQueueRetentionSeconds int `yaml:"redis-usage-queue-retention-seconds" json:"redis-usage-queue-retention-seconds"`
 
-	// DisableCooling disables auth/model cooldown scheduling when true unless a credential or provider overrides it.
+	// DisableCooling 为 true 时禁用 auth/模型冷却调度，除非某个凭据或供应商覆盖该设置。
 	DisableCooling bool `yaml:"disable-cooling" json:"disable-cooling"`
 
-	// SaveCooldownStatus persists runtime cooldown status next to auth files when true.
+	// SaveCooldownStatus 为 true 时把运行时冷却状态持久化到 auth 文件旁边。
 	SaveCooldownStatus bool `yaml:"save-cooldown-status" json:"save-cooldown-status"`
 
-	// TransientErrorCooldownSeconds controls cooldowns for transient upstream errors (408/500/502/503/504/520-526).
-	// 0 keeps the legacy default cooldown. Negative values disable these cooldowns.
+	// TransientErrorCooldownSeconds 控制瞬时上游错误（408/500/502/503/504/520-526）的冷却。
+	// 0 保持旧版默认冷却。负值表示禁用这些冷却。
 	TransientErrorCooldownSeconds int `yaml:"transient-error-cooldown-seconds" json:"transient-error-cooldown-seconds"`
 
-	// AuthAutoRefreshWorkers overrides the size of the core auth auto-refresh and manual refresh-all worker pool.
-	// When <= 0, the default worker count is used.
+	// AuthAutoRefreshWorkers 覆盖核心 auth 自动刷新与手动全部刷新的工作池大小。
+	// 当 <= 0 时使用默认工作线程数。
 	AuthAutoRefreshWorkers int `yaml:"auth-auto-refresh-workers" json:"auth-auto-refresh-workers"`
 
-	// RequestRetry defines the number of additional credential retry rounds after
-	// the first round has exhausted its eligible credentials.
+	// RequestRetry 定义首轮用尽可用凭据之后
+	// 额外的凭据重试轮数。
 	RequestRetry int `yaml:"request-retry" json:"request-retry"`
-	// MaxRetryCredentials defines the maximum number of different credentials to
-	// try in each credential retry round.
-	// Set to 0 or a negative value to keep trying all available credentials (legacy behavior).
+	// MaxRetryCredentials 定义每轮凭据重试中最多尝试
+	// 多少个不同的凭据。
+	// 设为 0 或负值表示持续尝试所有可用凭据（旧版行为）。
 	MaxRetryCredentials int `yaml:"max-retry-credentials" json:"max-retry-credentials"`
-	// MaxRetryInterval defines the maximum positive cooldown wait, in seconds,
-	// allowed before starting another credential retry round. A non-positive value
-	// forbids positive cooldown waits; it does not disable same-round credential
-	// failover or immediate additional rounds allowed by RequestRetry.
+	// MaxRetryInterval 定义开始下一轮凭据重试前允许的
+	// 最大正向冷却等待秒数。非正值会禁止正向冷却等待；
+	// 它不会禁用同轮内凭据故障转移，也不会禁用
+	// RequestRetry 允许的立即追加轮次。
 	MaxRetryInterval int `yaml:"max-retry-interval" json:"max-retry-interval"`
 
-	// QuotaExceeded defines the behavior when a quota is exceeded.
+	// QuotaExceeded 定义额度超限时的行为。
 	QuotaExceeded QuotaExceeded `yaml:"quota-exceeded" json:"quota-exceeded"`
 
-	// Routing controls credential selection behavior.
+	// Routing 控制凭据选择行为。
 	Routing RoutingConfig `yaml:"routing" json:"routing"`
 
-	// OpenAIKey defines OpenAI API key configurations for the native OpenAI provider.
+	// OpenAIKey 定义原生 OpenAI 供应商的 OpenAI API key 配置。
 	OpenAIKey []OpenAIKey `yaml:"openai-api-key" json:"openai-api-key"`
 
-	// DeepseekKey defines DeepSeek API key configurations for the native DeepSeek provider.
+	// DeepseekKey 定义原生 DeepSeek 供应商的 DeepSeek API key 配置。
 	DeepseekKey []DeepseekKey `yaml:"deepseek-api-key" json:"deepseek-api-key"`
 
-	// NvidiaKey defines NVIDIA API key configurations for the native NVIDIA provider.
+	// NvidiaKey 定义原生 NVIDIA 供应商的 NVIDIA API key 配置。
 	NvidiaKey []NvidiaKey `yaml:"nvidia-api-key" json:"nvidia-api-key"`
 
-	// AgnesKey defines Agnes AI API key configurations for the native Agnes provider.
+	// AgnesKey 定义原生 Agnes 供应商的 Agnes AI API key 配置。
 	AgnesKey []AgnesKey `yaml:"agnes-api-key" json:"agnes-api-key"`
 
-	// OpenAICompatibility defines OpenAI API compatibility configurations for external providers.
+	// OpenAICompatibility 定义外部供应商的 OpenAI API 兼容配置。
 	OpenAICompatibility []OpenAICompatibility `yaml:"openai-compatibility" json:"openai-compatibility"`
 
-	// OAuthExcludedModels defines per-provider global model exclusions applied to OAuth/file-backed auth entries.
+	// OAuthExcludedModels 定义应用于 OAuth/文件型 auth 条目的按供应商全局模型排除。
 	OAuthExcludedModels map[string][]string `yaml:"oauth-excluded-models,omitempty" json:"oauth-excluded-models,omitempty"`
 
-	// OAuthModelAlias defines global model name aliases for OAuth/file-backed auth channels.
+	// OAuthModelAlias 定义 OAuth/文件型 auth 通道的全局模型名别名。
 	//
-	// NOTE: This does not apply to existing per-credential model alias features under:
-	// openai-api-key, deepseek-api-key, nvidia-api-key, agnes-api-key, openai-compatibility.
+	// 注意：它不适用于以下已有的按凭据模型别名功能：
+	// openai-api-key、deepseek-api-key、nvidia-api-key、agnes-api-key、openai-compatibility。
 	OAuthModelAlias map[string][]OAuthModelAlias `yaml:"oauth-model-alias,omitempty" json:"oauth-model-alias,omitempty"`
 
-	// OAuthRequestScopedErrors defines per-provider request-scoped error rules applied to OAuth/file-backed auth entries.
-	// Supported channels include OAuth plugin provider keys.
+	// OAuthRequestScopedErrors 定义应用于 OAuth/文件型 auth 条目的按供应商请求级错误规则。
+	// 支持的通道包括 OAuth 插件供应商 key。
 	//
-	// NOTE: This applies only to OAuth credentials and does not affect per-credential request-scoped-errors under *-api-key.
+	// 注意：它仅适用于 OAuth 凭据，不影响 *-api-key 下的按凭据 request-scoped-errors。
 	OAuthRequestScopedErrors map[string][]RequestScopedErrorRule `yaml:"oauth-request-scoped-errors,omitempty" json:"oauth-request-scoped-errors,omitempty"`
 
-	// OAuthSettings defines per-channel model settings (such as max-context-length) applied to OAuth/file-backed auth entries.
+	// OAuthSettings 定义应用于 OAuth/文件型 auth 条目的按通道模型设置（例如 max-context-length）。
 	OAuthSettings map[string][]OAuthModelSetting `yaml:"oauth-settings,omitempty" json:"oauth-settings,omitempty"`
 
-	// Payload defines default and override rules for provider payload parameters.
+	// Payload 定义供应商载荷参数的默认与覆盖规则。
 	Payload PayloadConfig `yaml:"payload" json:"payload"`
+
+	// WebSearch 定义搜索渠道（tavily / exa / anysearch / firecrawl / tinyfish）的接入配置。
+	// 搜索渠道只做搜索/抓取类 HTTP 透传，独立于上面的 LLM 供应商族。
+	WebSearch WebSearchConfig `yaml:"web-search" json:"web-search"`
 }

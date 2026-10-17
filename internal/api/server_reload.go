@@ -28,18 +28,18 @@ func (s *Server) applyAccessConfig(oldCfg, newCfg *config.Config) bool {
 	return true
 }
 
-// UpdateClients updates the server's client list and configuration.
-// This method is called when the configuration or authentication tokens change.
+// UpdateClients 更新服务器的客户端列表与配置。
+// 当配置或认证令牌发生变化时调用此方法。
 //
-// Parameters:
-//   - clients: The new slice of AI service clients
-//   - cfg: The new application configuration
+// 参数：
+//   - clients：新的 AI 服务客户端切片
+//   - cfg：新的应用配置
 func (s *Server) UpdateClients(cfg *config.Config) {
 	s.UpdateClientsContext(context.Background(), cfg)
 }
 
-// UpdateClientsContext updates runtime clients while honoring cancellation between
-// short configuration and filesystem operations.
+// UpdateClientsContext 更新运行时客户端，并在短小的配置与文件系统
+// 操作之间响应取消。
 func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) bool {
 	if s == nil || cfg == nil {
 		return false
@@ -51,7 +51,7 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 		return false
 	}
 	cfg = cfg.CloneForRuntime()
-	// Reconstruct old config from YAML snapshot to avoid reference sharing issues
+	// 从 YAML 快照重建旧配置，避免引用共享问题
 	var oldCfg *config.Config
 	s.cfgMu.RLock()
 	oldConfigYaml := append([]byte(nil), s.oldConfigYaml...)
@@ -60,7 +60,7 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 		_ = yaml.Unmarshal(oldConfigYaml, &oldCfg)
 	}
 
-	// Update request logger enabled state if it has changed
+	// 若请求日志器的启用状态已变化则更新它
 	previousRequestLog := false
 	if oldCfg != nil {
 		previousRequestLog = oldCfg.RequestLog
@@ -119,7 +119,7 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 		s.handlers.AuthManager.SetRetryConfig(cfg.RequestRetry, time.Duration(cfg.MaxRetryInterval)*time.Second, cfg.MaxRetryCredentials)
 	}
 
-	// Update log level dynamically when debug flag changes
+	// 当 debug 标志变化时动态更新日志级别
 	if oldCfg == nil || oldCfg.Debug != cfg.Debug {
 		util.SetLogLevel(cfg)
 	}
@@ -172,7 +172,7 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 	if errContext := ctx.Err(); errContext != nil {
 		return false
 	}
-	// Save YAML snapshot for next comparison
+	// 保存 YAML 快照供下次比较
 	marshaledCfg, _ := yaml.Marshal(cfg)
 	s.cfgMu.Lock()
 	s.oldConfigYaml = marshaledCfg
@@ -190,9 +190,14 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 		s.mgmt.SetAuthManager(s.handlers.AuthManager)
 		s.mgmt.SetPluginHost(s.pluginHost)
 	}
+	// 搜索渠道视图跟随配置热重载；配置启用且尚未创建时会在此创建。
+	s.refreshWebSearchService(cfg)
+	if s.mgmt != nil {
+		s.mgmt.SetWebSearchService(s.webSearch)
+	}
 	s.refreshPluginManagementRoutes()
 
-	// Count client sources from configuration and auth store.
+	// 统计来自配置和 auth store 的客户端来源数量。
 	authEntries := 0
 	if cfg != nil && !cfg.Home.Enabled {
 		tokenStore := sdkAuth.GetTokenStore()
@@ -230,8 +235,8 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 	return ctx.Err() == nil
 }
 
-// applySignatureCacheConfig keeps the thinking-signature cache at its default
-// policy: cache validation enabled, bypass mode non-strict.
+// applySignatureCacheConfig 将 thinking 签名缓存保持在默认
+// 策略：启用缓存校验，bypass 模式为非严格。
 func applySignatureCacheConfig(oldCfg, cfg *config.Config) {
 	_ = oldCfg
 	_ = cfg

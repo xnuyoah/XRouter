@@ -1,7 +1,7 @@
-// Package api provides the HTTP API server implementation for XRouter.
-// It includes the main server struct, routing setup, middleware for CORS and authentication,
-// and integration with various AI API handlers (OpenAI, Claude).
-// The server supports hot-reloading of clients and configuration.
+// Package api 提供 XRouter 的 HTTP API 服务器实现。
+// 它包括主服务器结构体、路由设置、用于 CORS 和认证的中间件，
+// 以及与各种 AI API 处理器（OpenAI、Claude）的集成。
+// 该服务器支持客户端和配置的热重载。
 package api
 
 import (
@@ -20,12 +20,14 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	managementHandlers "github.com/xnuyoah/XRouter/v8/internal/api/handlers/management"
+	websearchHandlers "github.com/xnuyoah/XRouter/v8/internal/api/handlers/websearch"
 	"github.com/xnuyoah/XRouter/v8/internal/api/middleware"
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 	"github.com/xnuyoah/XRouter/v8/internal/githubauth"
 	"github.com/xnuyoah/XRouter/v8/internal/logging"
 	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
 	"github.com/xnuyoah/XRouter/v8/internal/redisqueue"
+	"github.com/xnuyoah/XRouter/v8/internal/websearch"
 	sdkaccess "github.com/xnuyoah/XRouter/v8/sdk/access"
 	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
 	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
@@ -33,61 +35,66 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Server represents the main API server.
-// It encapsulates the Gin engine, HTTP server, handlers, and configuration.
+// Server 表示主 API 服务器。
+// 它封装了 Gin 引擎、HTTP 服务器、处理器和配置。
 type Server struct {
-	// engine is the Gin web framework engine instance.
+	// engine 是 Gin Web 框架引擎实例。
 	engine *gin.Engine
 
-	// server is the underlying HTTP server.
+	// server 是底层 HTTP 服务器。
 	server *http.Server
 
-	// muxBaseListener is the shared TCP listener used to serve both HTTP and Redis protocol traffic.
+	// muxBaseListener 是用于同时服务 HTTP 和 Redis 协议流量的共享 TCP 监听器。
 	listenerMu      sync.Mutex
 	muxBaseListener net.Listener
 
-	// muxHTTPListener receives HTTP connections selected by the multiplexer.
+	// muxHTTPListener 接收由多路复用器选出的 HTTP 连接。
 	muxHTTPListener *muxListener
 
-	// handlers contains the API handlers for processing requests.
+	// handlers 包含用于处理请求的 API 处理器。
 	handlers *handlers.BaseAPIHandler
 
-	// cfg holds the current server configuration.
+	// cfg 保存当前服务器配置。
 	cfgMu sync.RWMutex
 	cfg   *config.Config
 
-	// oldConfigYaml stores a YAML snapshot of the previous configuration for change detection.
-	// This prevents issues when the config object is modified in place by Management API.
+	// oldConfigYaml 存储前一配置的 YAML 快照以进行变更检测。
+	// 这可以避免 Management API 就地修改配置对象时产生的问题。
 	oldConfigYaml []byte
 
-	// accessManager handles request authentication providers.
+	// accessManager 处理请求认证供应商。
 	accessManager *sdkaccess.Manager
 
-	// requestLogger is the request logger instance for dynamic configuration updates.
+	// requestLogger 是用于动态配置更新的请求日志记录器实例。
 	requestLogger logging.RequestLogger
 	loggerToggle  func(bool)
 
-	// configFilePath is the absolute path to the YAML config file for persistence.
+	// configFilePath 是用于持久化的 YAML 配置文件的绝对路径。
 	configFilePath string
 
-	// currentPath is the absolute path to the current working directory.
+	// currentPath 是当前工作目录的绝对路径。
 	currentPath string
 
-	// management handler
+	// management 处理器
 	mgmt *managementHandlers.Handler
 
-	// pluginHost owns dynamic plugin Management API route dispatch.
+	// pluginHost 负责动态插件 Management API 路由分发。
 	pluginHost *pluginhost.Host
 
-	// managementRoutesRegistered tracks whether the management routes have been attached to the engine.
+	// managementRoutesRegistered 跟踪管理路由是否已挂载到引擎。
 	managementRoutesRegistered atomic.Bool
-	// managementRoutesEnabled controls whether management endpoints serve real handlers.
+	// managementRoutesEnabled 控制管理端点是否提供真实处理器。
 	managementRoutesEnabled atomic.Bool
 
-	// envManagementSecret indicates whether MANAGEMENT_PASSWORD is configured.
+	// envManagementSecret 表示是否已配置 MANAGEMENT_PASSWORD。
 	envManagementSecret bool
 
 	localPassword string
+
+	// webSearch 是搜索渠道子系统（透传网关、MCP 镜像、测活与额度）。
+	// 配置未启用时为 nil。
+	webSearch        *websearch.Service
+	webSearchHandler *websearchHandlers.Handler
 
 	keepAliveEnabled   bool
 	keepAliveTimeout   time.Duration
@@ -99,16 +106,16 @@ type Server struct {
 	exampleAPIKeySafeModeActive  atomic.Bool
 }
 
-// NewServer creates and initializes a new API server instance.
-// It sets up the Gin engine, middleware, routes, and handlers.
+// NewServer 创建并初始化一个新的 API 服务器实例。
+// 它设置 Gin 引擎、中间件、路由和处理器。
 //
-// Parameters:
-//   - cfg: The server configuration
-//   - authManager: core runtime auth manager
-//   - accessManager: request authentication manager
+// 参数：
+//   - cfg: 服务器配置
+//   - authManager: 核心运行时 auth 管理器
+//   - accessManager: 请求认证管理器
 //
-// Returns:
-//   - *Server: A new server instance
+// 返回：
+//   - *Server: 新的服务器实例
 func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdkaccess.Manager, configFilePath string, opts ...ServerOption) *Server {
 	if cfg != nil {
 		cfg = cfg.CloneForRuntime()
@@ -119,12 +126,12 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	for i := range opts {
 		opts[i](optionState)
 	}
-	// Set gin mode
+	// 设置 gin 模式
 	if !cfg.Debug {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Create gin engine
+	// 创建 gin 引擎
 	engine := gin.New()
 	if errSetTrustedProxies := engine.SetTrustedProxies(cfg.TrustedProxies); errSetTrustedProxies != nil {
 		log.WithError(errSetTrustedProxies).Error("invalid trusted-proxies configuration; forwarded client IP headers will be ignored")
@@ -145,7 +152,7 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	envAdminPassword = strings.TrimSpace(envAdminPassword)
 	envManagementSecret := envAdminPasswordSet && envAdminPassword != ""
 
-	// Create server instance
+	// 创建服务器实例
 	s := &Server{
 		engine:                       engine,
 		handlers:                     handlers.NewBaseAPIHandlers(effectiveSDKConfig(cfg), authManager),
@@ -158,7 +165,7 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 		exampleAPIKeySafeModeEnabled: optionState.exampleAPIKeySafeMode,
 	}
 
-	// Add middleware
+	// 添加中间件
 	engine.Use(logging.GinLogrusLogger())
 	engine.Use(logging.GinLogrusRecovery())
 	engine.Use(logging.CPATraceIDMiddleware())
@@ -167,8 +174,8 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 		engine.Use(mw)
 	}
 
-	// Add request logging middleware (positioned after recovery, before auth)
-	// Resolve logs directory relative to the configuration file directory.
+	// 添加请求日志记录中间件（位于 recovery 之后、auth 之前）
+	// 相对于配置文件目录解析日志目录。
 	var requestLogger logging.RequestLogger
 	var toggle func(bool)
 	if !cfg.CommercialMode {
@@ -192,7 +199,7 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 		optionState.pluginHost.SetModelExecutor(s.handlers)
 		optionState.pluginHost.SetAuthManager(authManager)
 	}
-	// Save initial YAML snapshot
+	// 保存初始 YAML 快照
 	s.oldConfigYaml, _ = yaml.Marshal(cfg)
 	s.applyAccessConfig(nil, cfg)
 	if authManager != nil {
@@ -202,7 +209,7 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	auth.SetQuotaCooldownDisabled(cfg.DisableCooling)
 	auth.SetTransientErrorCooldownSeconds(cfg.TransientErrorCooldownSeconds)
 	applySignatureCacheConfig(nil, cfg)
-	// Initialize management handler
+	// 初始化 management 处理器
 	s.mgmt = managementHandlers.NewHandler(cfg, configFilePath, authManager)
 	s.mgmt.SetPluginHost(optionState.pluginHost)
 	s.mgmt.SetConfigReloadHook(optionState.configReloadHook)
@@ -219,21 +226,25 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	}
 	s.localPassword = optionState.localPassword
 
-	// Home heartbeat gate: when home is enabled, block all endpoints with 503 until the
-	// subscribe-config heartbeat connection is healthy.
+	// 搜索渠道子系统：仅在配置启用时创建，失败不阻断服务启动。
+	s.refreshWebSearchService(cfg)
+	s.mgmt.SetWebSearchService(s.webSearch)
+
+	// Home 心跳门控：启用 home 后，在 subscribe-config 心跳连接健康之前，
+	// 使用 503 阻塞所有端点。
 	engine.Use(s.homeHeartbeatMiddleware())
 	engine.Use(s.exampleAPIKeySafeModeMiddleware())
 
-	// Setup routes
+	// 设置路由
 	s.setupRoutes()
 
-	// Apply additional router configurators from options
+	// 应用来自选项的额外路由配置器
 	if optionState.routerConfigurator != nil {
 		optionState.routerConfigurator(engine, s.handlers, cfg)
 	}
 
-	// Register management routes when configuration or environment secrets are available,
-	// or when a local management password is provided.
+	// 当配置或环境密钥可用，或提供了本地管理密码时，
+	// 注册管理路由。
 	hasManagementSecret := cfg.RemoteManagement.SecretKey != "" || envManagementSecret || s.localPassword != ""
 	s.managementRoutesEnabled.Store(hasManagementSecret)
 	redisqueue.SetEnabled(hasManagementSecret || (cfg != nil && cfg.Home.Enabled))
@@ -247,7 +258,10 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 		s.enableKeepAlive(optionState.keepAliveTimeout, optionState.keepAliveOnTimeout)
 	}
 
-	// Create HTTP server
+	// 搜索渠道定时任务（渠道状态检测 + 额度刷新）随进程生命周期运行。
+	s.startWebSearchScheduler(context.Background())
+
+	// 创建 HTTP 服务器
 	s.server = &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		Handler: engine,
@@ -265,7 +279,7 @@ func (s *Server) getConfig() *config.Config {
 	return s.cfg
 }
 
-// Handler returns the HTTP handler used by the server.
+// Handler 返回服务器使用的 HTTP 处理器。
 func (s *Server) Handler() http.Handler {
 	if s == nil || s.server == nil {
 		return nil
@@ -273,11 +287,11 @@ func (s *Server) Handler() http.Handler {
 	return s.server.Handler
 }
 
-// Start begins listening for and serving HTTP or HTTPS requests.
-// It's a blocking call and will only return on an unrecoverable error.
+// Start 开始监听并服务 HTTP 或 HTTPS 请求。
+// 它是阻塞调用，仅在发生不可恢复的错误时返回。
 //
-// Returns:
-//   - error: An error if the server fails to start
+// 返回：
+//   - error: 服务器启动失败时的错误
 func (s *Server) Start() error {
 	if s == nil || s.server == nil {
 		return fmt.Errorf("failed to start HTTP server: server not initialized")
@@ -392,13 +406,13 @@ func (s *Server) Start() error {
 	}
 }
 
-// Stop closes listeners and immediately shuts down the API server without waiting for active connections.
+// Stop 关闭监听器并立即关闭 API 服务器，不等待活跃连接。
 //
-// Parameters:
-//   - ctx: Context passed for compatibility.
+// 参数：
+//   - ctx: 为兼容性而传入的上下文。
 //
-// Returns:
-//   - error: An error if the server fails to stop
+// 返回：
+//   - error: 服务器停止失败时的错误
 func (s *Server) Stop(ctx context.Context) error {
 	log.Debug("Stopping API server...")
 
@@ -407,6 +421,10 @@ func (s *Server) Stop(ctx context.Context) error {
 		case s.keepAliveStop <- struct{}{}:
 		default:
 		}
+	}
+
+	if s.webSearch != nil {
+		s.webSearch.Stop()
 	}
 
 	s.listenerMu.Lock()
@@ -425,7 +443,7 @@ func (s *Server) Stop(ctx context.Context) error {
 		}
 	}
 
-	// Close the HTTP server immediately without graceful draining.
+	// 立即关闭 HTTP 服务器，不进行优雅排空。
 	var errCloseServer error
 	if s.server != nil {
 		errCloseServer = s.server.Close()

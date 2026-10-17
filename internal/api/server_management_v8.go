@@ -7,8 +7,8 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/api/handlers/management"
 )
 
-// registerManagementV8Routes defines the v8 contract independently of v0.
-// Configuration paths mirror the v8 YAML tree; operational routes use its groups.
+// registerManagementV8Routes 独立于 v0 定义 v8 契约。
+// 配置路径镜像 v8 YAML 树；运维路由使用其分组。
 func (s *Server) registerManagementV8Routes() {
 	const prefix = "/v8/management"
 	s.engine.GET(prefix+"/oauth/callback", s.managementAvailabilityMiddleware(), s.mgmt.GetOAuthCallback)
@@ -58,4 +58,18 @@ func (s *Server) registerManagementV8Routes() {
 	v8.GET("/plugins/:id/quota", s.mgmt.GetPluginQuota)
 	v8.POST("/plugins/:id/quota", s.mgmt.FetchPluginQuota)
 	v8.DELETE("/plugins/:id/quota", s.mgmt.ResetPluginQuota)
+
+	// 搜索渠道：渠道与账号池、测活、渠道状态、额度刷新、调用日志。
+	// 账号的新增/修改/删除会写回 config.yaml 的 web-search 段。
+	v8.GET("/web-search/channels", s.mgmt.GetWebSearchChannels)
+	v8.GET("/web-search/accounts", s.mgmt.GetWebSearchAccounts)
+	v8.PUT("/web-search/accounts", s.mgmt.PutWebSearchAccount)
+	v8.POST("/web-search/accounts", s.mgmt.PutWebSearchAccount)
+	v8.DELETE("/web-search/accounts", s.mgmt.DeleteWebSearchAccount)
+	v8.POST("/web-search/probes", s.mgmt.PostWebSearchProbe)
+	v8.GET("/web-search/status", s.mgmt.GetWebSearchStatus)
+	v8.POST("/web-search/status/check", s.mgmt.PostWebSearchStatusCheck)
+	v8.GET("/web-search/monitoring", s.mgmt.GetWebSearchMonitoring)
+	v8.POST("/web-search/quota/refresh", s.mgmt.PostWebSearchQuotaRefresh)
+	v8.GET("/web-search/requests", s.mgmt.GetWebSearchRequests)
 }
