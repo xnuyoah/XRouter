@@ -51,7 +51,9 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: STORAGE_KEY_THEME,
-      // 历史「auto」「white」值迁移为浅色
+      // 版本 1：历史「auto」「white」值迁移为浅色。zustand 仅在存储版本
+      // 与此版本不同时调用 migrate，升级版本号才能让 0 版老数据走迁移。
+      version: 1,
       migrate: (persisted) => {
         const state = persisted as { theme?: string; resolvedTheme?: ResolvedTheme };
         if (state?.theme === 'white' || state?.theme === 'auto' || !state?.theme) {

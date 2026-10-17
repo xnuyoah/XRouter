@@ -15,10 +15,12 @@ import { useModelsStore } from './useModelsStore';
 import { detectApiBaseFromLocation, normalizeApiBase } from '@/utils/connection';
 import { obfuscateData } from '@/utils/encryption';
 
-// 主面板会话持久化使用独立 key；cli-proxy-auth 这个 key 专供扩展页面
-// （如插件提供的 dashboard iframe）读取——它们与主面板同源共享 localStorage，
-// 且解码时使用旧版盐 cli-proxy-api-webui。persist 每次落盘时按主状态同步
-// 重写该 key，扩展页即可持续免密加载（登出或未记住密码时清除）。
+// The main panel persists its session under a dedicated key; the
+// `cli-proxy-auth` key is reserved for extension pages (such as plugin
+// dashboard iframes) which share localStorage with the panel but decode
+// it with the legacy salt `cli-proxy-api-webui`. Rewriting that key on
+// every persist flush keeps extensions password-free (cleared on logout
+// or when the key is not remembered).
 const PLUGIN_COMPAT_SALT = 'cli-proxy-api-webui::secure-storage';
 
 const writePluginCompatAuth = (apiBase: string, managementKey: string, remember: boolean) => {
@@ -32,7 +34,7 @@ const writePluginCompatAuth = (apiBase: string, managementKey: string, remember:
       localStorage.removeItem(STORAGE_KEY_AUTH);
     }
   } catch {
-    // 插件免密是尽力而为的增强，写失败不影响主流程。
+    // Password-free extensions are a best-effort enhancement; write failures must not break the main flow.
   }
 };
 
@@ -50,9 +52,10 @@ interface AuthStoreState extends AuthState {
 
 let restoreSessionPromise: Promise<boolean> | null = null;
 
-// 一次性迁移：主面板会话持久化从旧的 cli-proxy-auth key 挪到独立的
-// cli-proxy-session key（旧 key 现在专供扩展页面使用）。必须在 store
-// 创建前同步执行，persist 首次 hydrate 才能读到既有会话。
+// One-time migration: the main panel session moves from the legacy
+// `cli-proxy-auth` key to the dedicated `cli-proxy-session` key (the old
+// key now belongs to extension pages). This must run synchronously before
+// the store is created so the first persist hydration sees the session.
 const migrateSessionKey = () => {
   try {
     const legacy = obfuscatedStorage.getItem<Record<string, unknown>>(STORAGE_KEY_AUTH);
@@ -60,7 +63,7 @@ const migrateSessionKey = () => {
       obfuscatedStorage.setItem(STORAGE_KEY_SESSION, legacy);
     }
   } catch {
-    // 迁移失败仅影响旧会话自动恢复，用户重新登录即可。
+    // A failed migration only affects auto-restore of an old session; the user can sign in again.
   }
 };
 migrateSessionKey();
@@ -253,9 +256,10 @@ export const useAuthStore = create<AuthStoreState>()(
           return data ? JSON.stringify(data) : null;
         },
         setItem: (name, value) => {
-          // persist 传入的顶层结构是 { state: partialize(...), version }；
-          // 必须原样落盘（丢掉包裹会让下次 hydrate 因缺 version 而失败），
-          // 仅解出 state 用于同步补写插件盐凭据。
+          // persist passes a top-level `{ state: partialize(...), version }`
+          // envelope; it must be stored as-is (dropping the envelope breaks
+          // the next hydration due to the missing version). Only the inner
+          // state is read to mirror the plugin-salt credentials.
           const envelope = JSON.parse(value) as {
             state?: {
               apiBase?: string;

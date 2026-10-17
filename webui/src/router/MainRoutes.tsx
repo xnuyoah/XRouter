@@ -5,30 +5,23 @@ import { PluginResourcePage } from '@/features/plugins/PluginResourcePage';
 import { PluginsPage } from '@/features/plugins/PluginsPage';
 import { ConfigPage } from '@/features/config/ConfigPage';
 import { LogsPage } from '@/features/logs/LogsPage';
-import { useAuthStore } from '@/stores';
 
-const createMainRoutes = (supportsPlugin: boolean) => [
+const mainRoutes = [
   { path: '/', element: <DashboardPage /> },
   { path: '/dashboard', element: <DashboardPage /> },
   { path: '/settings', element: <Navigate to="/config" replace /> },
   { path: '/api-keys', element: <Navigate to="/config" replace /> },
   { path: '/web-search', element: <WebSearchPage /> },
-  ...(supportsPlugin
-    ? [
-        { path: '/plugin-pages/:pluginId/:menuIndex', element: <PluginResourcePage /> },
-        { path: '/plugins', element: <PluginsPage /> },
-        { path: '/plugins/*', element: <Navigate to="/plugins" replace /> },
-      ]
-    : [
-        { path: '/plugin-pages/*', element: <Navigate to="/" replace /> },
-        { path: '/plugins/*', element: <Navigate to="/" replace /> },
-      ]),
+  // /plugins is always reachable: the page itself renders the no-CGO /
+  // platform-mismatch diagnostics from the plugin environment report.
+  { path: '/plugin-pages/:pluginId/:menuIndex', element: <PluginResourcePage /> },
+  { path: '/plugins', element: <PluginsPage /> },
+  { path: '/plugins/*', element: <Navigate to="/plugins" replace /> },
   { path: '/config', element: <ConfigPage /> },
   { path: '/logs', element: <LogsPage /> },
   { path: '*', element: <Navigate to="/" replace /> },
 ];
 
 export function MainRoutes({ location }: { location?: Location }) {
-  const supportsPlugin = useAuthStore((state) => state.supportsPlugin);
-  return useRoutes(createMainRoutes(supportsPlugin), location);
+  return useRoutes(mainRoutes, location);
 }

@@ -507,12 +507,23 @@ export function MainLayout() {
 
   // 全局搜索：⌘K / Ctrl+K 聚焦，Escape 关闭；纯客户端过滤导航条目。
   const searchCandidates = useMemo(
-    () =>
-      navItems.map((item) => ({
+    () => {
+      const fromNav = navItems.map((item) => ({
         path: item.path,
         label: item.label ?? (item.labelKey ? t(item.labelKey) : ''),
         meta: item.meta ?? (item.metaKey ? t(item.metaKey) : ''),
-      })),
+      }));
+      // 扩展管理不再出现在侧边栏，但路由仍有效；当动态扩展分组为空时
+      // 这里是唯一入口，保证全局搜索始终可达。
+      if (supportsPlugin && !fromNav.some((item) => item.path === '/plugins')) {
+        fromNav.push({
+          path: '/plugins',
+          label: t('nav.plugins'),
+          meta: t('nav_meta.plugins'),
+        });
+      }
+      return fromNav;
+    },
     // navItems 每次渲染都是新建数组，这里依赖 t 与导航内容本身即可。
     // eslint-disable-next-line react-hooks/exhaustive-deps -- navItems is rebuilt every render; key on the translated strings instead.
     [t, pluginPageNavItems, supportsPlugin]
