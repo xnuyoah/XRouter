@@ -1843,7 +1843,7 @@ func (h *OpenAIAPIHandler) streamImagesFromResponses(c *gin.Context, responsesRe
 		flusher.Flush()
 	}
 
-	// Peek for the first chunk/error while still allowing configured SSE heartbeats.
+	// 窥探首个数据块/错误，同时仍允许已配置的 SSE 心跳。
 	for {
 		select {
 		case <-c.Request.Context().Done():

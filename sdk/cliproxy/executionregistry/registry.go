@@ -1,4 +1,4 @@
-// Package executionregistry tracks Home-dispatched executions for one subscriber lifetime.
+// Package executionregistry 跟踪一个订阅者生命周期内由 Home 分派的执行。
 package executionregistry
 
 import (
@@ -19,7 +19,7 @@ var (
 	ErrExecutionResourceAlreadyBound = errors.New("execution resource is already bound")
 )
 
-// State is the lifecycle state of a Registry.
+// State 是 Registry 的生命周期状态。
 type State uint32
 
 const (
@@ -28,7 +28,7 @@ const (
 	StateClosed
 )
 
-// Registry owns all dispatches accepted during one Home subscriber lifetime.
+// Registry 拥有在一个 Home 订阅者生命周期内接受的所有分派。
 type Registry struct {
 	state atomic.Uint32
 
@@ -50,7 +50,7 @@ type Registry struct {
 	closeErr     error
 }
 
-// PendingDispatch reserves an execution slot until it is installed or ended.
+// PendingDispatch 预留一个执行槽位，直到它被装入或结束。
 type PendingDispatch struct {
 	id       uint64
 	registry *Registry
@@ -58,7 +58,7 @@ type PendingDispatch struct {
 	once     sync.Once
 }
 
-// ScopeSpec describes a Home-dispatched execution.
+// ScopeSpec 描述一次由 Home 分派的执行。
 type ScopeSpec struct {
 	RequestID    string
 	CredentialID string
@@ -68,21 +68,21 @@ type ScopeSpec struct {
 	Accounted    bool
 }
 
-// ReleaseGroup identifies the cumulative release sequence for one accounted credential and model.
+// ReleaseGroup 标识某个被计入的凭据和模型所对应的累积释放序列。
 type ReleaseGroup struct {
 	CredentialID string
 	Model        string
 }
 
-// ReleaseTicket completes after Home acknowledges a cumulative release sequence.
+// ReleaseTicket 在 Home 确认一个累积释放序列后完成。
 type ReleaseTicket struct {
 	Group    ReleaseGroup
 	Sequence int64
 	done     <-chan struct{}
 }
 
-// NewReleaseTicket creates a ticket backed by done. A nil done channel represents
-// a release sink that does not support acknowledgements.
+// NewReleaseTicket 创建一个由 done 支持的票据。done 通道为 nil 表示
+// 该释放接收端不支持确认。
 func NewReleaseTicket(group ReleaseGroup, sequence int64, done <-chan struct{}) *ReleaseTicket {
 	if sequence <= 0 || done == nil {
 		return nil
@@ -90,7 +90,7 @@ func NewReleaseTicket(group ReleaseGroup, sequence int64, done <-chan struct{}) 
 	return &ReleaseTicket{Group: group, Sequence: sequence, done: done}
 }
 
-// Wait blocks until Home acknowledges the release or ctx expires.
+// Wait 阻塞直到 Home 确认释放或 ctx 过期。
 func (t *ReleaseTicket) Wait(ctx context.Context) error {
 	if t == nil || t.done == nil {
 		return nil
@@ -106,11 +106,11 @@ func (t *ReleaseTicket) Wait(ctx context.Context) error {
 	}
 }
 
-// ReleaseSink receives the latest cumulative sequence for a release group and
-// optionally returns an acknowledgement ticket.
+// ReleaseSink 接收某个释放组的最新累积序列，并
+// 可选地返回一个确认票据。
 type ReleaseSink func(ReleaseGroup, int64) *ReleaseTicket
 
-// Scope owns the resource for one installed execution.
+// Scope 拥有一次已装入执行的资源。
 type Scope struct {
 	id       uint64
 	registry *Registry
@@ -124,7 +124,7 @@ type Scope struct {
 	ended         sync.Once
 }
 
-// New creates an accepting registry.
+// New 创建一个可接受新分派的注册表。
 func New() *Registry {
 	registry := &Registry{
 		pending:          make(map[uint64]*PendingDispatch),
@@ -136,7 +136,7 @@ func New() *Registry {
 	return registry
 }
 
-// BeginDispatch reserves a dispatch token while the registry accepts traffic.
+// BeginDispatch 在注册表接受流量期间预留一个分派令牌。
 func (r *Registry) BeginDispatch() (*PendingDispatch, error) {
 	if r == nil || State(r.state.Load()) != StateAccepting {
 		return nil, ErrRegistryNotAccepting
@@ -154,7 +154,7 @@ func (r *Registry) BeginDispatch() (*PendingDispatch, error) {
 	return pending, nil
 }
 
-// WaitPending waits until every dispatch with an unresolved Home response has ended or been installed.
+// WaitPending 等待直到所有 Home 响应尚未解决的分派都已结束或已装入。
 func (r *Registry) WaitPending(ctx context.Context) error {
 	if r == nil {
 		return ErrRegistryClosed
@@ -178,7 +178,7 @@ func (r *Registry) WaitPending(ctx context.Context) error {
 	return nil
 }
 
-// End releases a dispatch token that was not installed.
+// End 释放一个未被装入的分派令牌。
 func (p *PendingDispatch) End() {
 	if p == nil || p.registry == nil {
 		return
@@ -194,7 +194,7 @@ func (p *PendingDispatch) End() {
 	})
 }
 
-// Install atomically turns a pending dispatch token into an active execution scope.
+// Install 原子地将待处理的分派令牌转为活跃的执行作用域。
 func (r *Registry) Install(pending *PendingDispatch, spec ScopeSpec) (*Scope, error) {
 	if r == nil || pending == nil || pending.registry != r {
 		return nil, ErrInvalidPendingDispatch
@@ -223,8 +223,8 @@ func (r *Registry) Install(pending *PendingDispatch, spec ScopeSpec) (*Scope, er
 	return scope, nil
 }
 
-// SetReleaseSink replaces the cumulative release sink and replays every known group.
-// Legacy callbacks remain supported but cannot provide acknowledgement tickets.
+// SetReleaseSink 替换累积释放接收端并重放所有已知的组。
+// 旧式回调仍受支持，但无法提供确认票据。
 func (r *Registry) SetReleaseSink(rawSink any) {
 	if r == nil {
 		return
@@ -264,7 +264,7 @@ func (r *Registry) SetReleaseSink(rawSink any) {
 	}
 }
 
-// Bind attaches the execution resource. A scope accepts exactly one resource.
+// Bind 挂接执行资源。一个作用域只接受一个资源。
 func (s *Scope) Bind(closeFn func() error) error {
 	if s == nil || s.registry == nil || closeFn == nil {
 		return ErrInvalidExecutionResource
@@ -285,13 +285,13 @@ func (s *Scope) Bind(closeFn func() error) error {
 	return nil
 }
 
-// End closes the bound resource and releases this execution scope exactly once.
+// End 关闭已绑定的资源并恰好释放该执行作用域一次。
 func (s *Scope) End(reason string) {
 	_ = s.EndWithRelease(reason)
 }
 
-// EndWithRelease closes the scope and returns the release acknowledgement ticket.
-// The release sink is invoked without the registry mutex held.
+// EndWithRelease 关闭该作用域并返回释放确认票据。
+// 调用释放接收端时不持有注册表互斥锁。
 func (s *Scope) EndWithRelease(_ string) *ReleaseTicket {
 	if s == nil || s.registry == nil {
 		return nil
@@ -375,7 +375,7 @@ func (s *Scope) closeResource(closeFn func() error) {
 	}
 }
 
-// Drain rejects new work, cancels active resources, and waits for all owners to end.
+// Drain 拒绝新工作、取消活跃资源，并等待所有持有者结束。
 func (r *Registry) Drain(ctx context.Context) error {
 	if r == nil {
 		return ErrRegistryClosed
@@ -415,7 +415,7 @@ func (r *Registry) Drain(ctx context.Context) error {
 	return nil
 }
 
-// Close permanently rejects new work and closes every currently bound resource.
+// Close 永久拒绝新工作并关闭所有当前已绑定的资源。
 func (r *Registry) Close() error {
 	if r == nil {
 		return ErrRegistryClosed

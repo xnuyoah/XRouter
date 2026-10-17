@@ -29,7 +29,7 @@ const (
 	maxDeferredAPIRequestBodyBytes = 32 << 20 // 32 MiB
 )
 
-// UpstreamRequestLog captures the outbound upstream request details for logging.
+// UpstreamRequestLog 捕获出站上游请求的详细信息，用于日志记录。
 type UpstreamRequestLog struct {
 	URL       string
 	Method    string
@@ -61,7 +61,7 @@ func requestLogCaptureEnabled(cfg *config.Config) bool {
 	return cfg != nil && cfg.RequestLog && !cfg.CommercialMode
 }
 
-// RecordAPIRequest stores the upstream request metadata in Gin context for request logging.
+// RecordAPIRequest 将上游请求元数据存入 Gin context，供请求日志使用。
 func RecordAPIRequest(ctx context.Context, cfg *config.Config, info UpstreamRequestLog) {
 	if cfg == nil || cfg.CommercialMode {
 		return
@@ -187,7 +187,7 @@ func newAPIRequestLogBuilder(index int, info UpstreamRequestLog, timestamp time.
 	return builder
 }
 
-// RecordAPIResponseMetadata captures upstream response status/header information for the latest attempt.
+// RecordAPIResponseMetadata 捕获最近一次尝试的上游响应状态/请求头信息。
 func RecordAPIResponseMetadata(ctx context.Context, cfg *config.Config, status int, headers http.Header) {
 	logging.SetResponseHeaders(ctx, headers)
 	if !requestLogCaptureEnabled(cfg) {
@@ -216,7 +216,7 @@ func RecordAPIResponseMetadata(ctx context.Context, cfg *config.Config, status i
 	updateAggregatedResponseIfMemoryBacked(ginCtx, attempts)
 }
 
-// RecordAPIResponseError adds an error entry for the latest attempt when no HTTP response is available.
+// RecordAPIResponseError 在没有可用 HTTP 响应时为最近一次尝试添加错误条目。
 func RecordAPIResponseError(ctx context.Context, cfg *config.Config, err error) {
 	if !requestLogCaptureEnabled(cfg) || err == nil {
 		return
@@ -229,7 +229,7 @@ func RecordAPIResponseError(ctx context.Context, cfg *config.Config, err error) 
 	ensureResponseIntro(ginCtx, attempt)
 
 	if attempt.bodyStarted && !attempt.bodyHasContent {
-		// Ensure body does not stay empty marker if error arrives first.
+		// 确保若错误先到达，body 不会停留在空标记状态。
 		attempt.bodyStarted = false
 	}
 	if attempt.errorWritten {
@@ -241,7 +241,7 @@ func RecordAPIResponseError(ctx context.Context, cfg *config.Config, err error) 
 	updateAggregatedResponseIfMemoryBacked(ginCtx, attempts)
 }
 
-// AppendAPIResponseChunk appends an upstream response chunk to Gin context for request logging.
+// AppendAPIResponseChunk 将上游响应分块追加到 Gin context，供请求日志使用。
 func AppendAPIResponseChunk(ctx context.Context, cfg *config.Config, chunk []byte) {
 	if !requestLogCaptureEnabled(cfg) {
 		return
@@ -285,7 +285,7 @@ func AppendAPIResponseChunk(ctx context.Context, cfg *config.Config, chunk []byt
 	updateAggregatedResponseIfMemoryBacked(ginCtx, attempts)
 }
 
-// RecordAPIWebsocketRequest stores an upstream websocket request event in Gin context.
+// RecordAPIWebsocketRequest 将上游 websocket 请求事件存入 Gin context。
 func RecordAPIWebsocketRequest(ctx context.Context, cfg *config.Config, info UpstreamRequestLog) {
 	if !requestLogCaptureEnabled(cfg) {
 		return
@@ -317,7 +317,7 @@ func RecordAPIWebsocketRequest(ctx context.Context, cfg *config.Config, info Ups
 	appendAPIWebsocketTimeline(ginCtx, []byte(builder.String()))
 }
 
-// RecordAPIWebsocketHandshake stores the upstream websocket handshake response metadata.
+// RecordAPIWebsocketHandshake 存储上游 websocket 握手的响应元数据。
 func RecordAPIWebsocketHandshake(ctx context.Context, cfg *config.Config, status int, headers http.Header) {
 	logging.SetResponseHeaders(ctx, headers)
 	if !requestLogCaptureEnabled(cfg) {
@@ -341,7 +341,7 @@ func RecordAPIWebsocketHandshake(ctx context.Context, cfg *config.Config, status
 	appendAPIWebsocketTimeline(ginCtx, []byte(builder.String()))
 }
 
-// RecordAPIWebsocketUpgradeRejection stores a rejected websocket upgrade as an HTTP attempt.
+// RecordAPIWebsocketUpgradeRejection 将遭拒的 websocket 升级记录为一次 HTTP 尝试。
 func RecordAPIWebsocketUpgradeRejection(ctx context.Context, cfg *config.Config, info UpstreamRequestLog, status int, headers http.Header, body []byte) {
 	logging.SetResponseHeaders(ctx, headers)
 	if !requestLogCaptureEnabled(cfg) {
@@ -357,7 +357,7 @@ func RecordAPIWebsocketUpgradeRejection(ctx context.Context, cfg *config.Config,
 	AppendAPIResponseChunk(ctx, cfg, body)
 }
 
-// WebsocketUpgradeRequestURL converts a websocket URL back to its HTTP handshake URL for logging.
+// WebsocketUpgradeRequestURL 将 websocket URL 转换回其 HTTP 握手 URL，用于日志记录。
 func WebsocketUpgradeRequestURL(rawURL string) string {
 	trimmedURL := strings.TrimSpace(rawURL)
 	if trimmedURL == "" {
@@ -376,7 +376,7 @@ func WebsocketUpgradeRequestURL(rawURL string) string {
 	return parsed.String()
 }
 
-// AppendAPIWebsocketResponse stores an upstream websocket response frame in Gin context.
+// AppendAPIWebsocketResponse 将上游 websocket 响应帧存入 Gin context。
 func AppendAPIWebsocketResponse(ctx context.Context, cfg *config.Config, payload []byte) {
 	if !requestLogCaptureEnabled(cfg) {
 		return
@@ -400,7 +400,7 @@ func AppendAPIWebsocketResponse(ctx context.Context, cfg *config.Config, payload
 	appendAPIWebsocketTimeline(ginCtx, []byte(builder.String()))
 }
 
-// RecordAPIWebsocketError stores an upstream websocket error event in Gin context.
+// RecordAPIWebsocketError 将上游 websocket 错误事件存入 Gin context。
 func RecordAPIWebsocketError(ctx context.Context, cfg *config.Config, stage string, err error) {
 	if !requestLogCaptureEnabled(cfg) || err == nil {
 		return
@@ -702,7 +702,7 @@ func SummarizeErrorBody(contentType string, body []byte) string {
 		return "[html body omitted]"
 	}
 
-	// Try to extract error message from JSON response
+	// 尝试从 JSON 响应中提取错误消息
 	if message := extractJSONErrorMessage(body); message != "" {
 		return message
 	}
@@ -734,7 +734,7 @@ func extractHTMLTitle(body []byte) string {
 	return strings.Join(strings.Fields(title), " ")
 }
 
-// extractJSONErrorMessage attempts to extract error.message from JSON error responses
+// extractJSONErrorMessage 尝试从 JSON 错误响应中提取 error.message
 func extractJSONErrorMessage(body []byte) string {
 	result := gjson.GetBytes(body, "error.message")
 	if result.Exists() && result.String() != "" {
@@ -743,8 +743,8 @@ func extractJSONErrorMessage(body []byte) string {
 	return ""
 }
 
-// logWithRequestID returns a logrus Entry with request_id field populated from context.
-// If no request ID is found in context, it returns the standard logger.
+// logWithRequestID 返回一个 logrus Entry，其 request_id 字段从 context 填充。
+// 如果在 context 中找不到请求 ID，则返回标准 logger。
 func LogWithRequestID(ctx context.Context) *log.Entry {
 	if ctx == nil {
 		return log.NewEntry(log.StandardLogger())
@@ -756,7 +756,7 @@ func LogWithRequestID(ctx context.Context) *log.Entry {
 	return log.WithField("request_id", requestID)
 }
 
-// MarkCreditsUsed flags the request as having used AI credits for billing.
+// MarkCreditsUsed 将该请求标记为已使用 AI 额度以用于计费。
 func MarkCreditsUsed(ctx context.Context) {
 	ginCtx := ginContextFrom(ctx)
 	if ginCtx != nil {
@@ -764,7 +764,7 @@ func MarkCreditsUsed(ctx context.Context) {
 	}
 }
 
-// CreditsUsed returns true if the request used AI credits.
+// CreditsUsed 在请求使用了 AI 额度时返回 true。
 func CreditsUsed(ctx context.Context) bool {
 	ginCtx := ginContextFrom(ctx)
 	if ginCtx != nil {

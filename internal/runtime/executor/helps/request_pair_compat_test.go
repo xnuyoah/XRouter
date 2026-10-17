@@ -74,9 +74,9 @@ func TestCompatibilityRequestPair(t *testing.T) {
 	}
 }
 
-// TestTranslateRequestPairWithAPIKeyModelCompatibilityCountsTranslations counts
-// translator calls. Executors share this helper, and byte equality stays green
-// when the same deterministic translator runs twice.
+// TestTranslateRequestPairWithAPIKeyModelCompatibilityCountsTranslations 统计
+// 转换器调用次数。各执行器共享该辅助函数；当同一个确定性转换器
+// 运行两次时，字节相等性检查仍会通过。
 func TestTranslateRequestPairWithAPIKeyModelCompatibilityCountsTranslations(t *testing.T) {
 	from := sdktranslator.Format("api-key-compat-count-from")
 	to := sdktranslator.Format("api-key-compat-count-to")

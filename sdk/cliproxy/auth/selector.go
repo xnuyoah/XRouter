@@ -24,19 +24,19 @@ import (
 	cliproxysession "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/session"
 )
 
-// RoundRobinSelector provides a simple provider scoped round-robin selection strategy.
+// RoundRobinSelector 提供一个简单的、按供应商划分的轮询选择策略。
 //
-// Rotation continues from the identity of the previous pick rather than from a numeric
-// index. Candidate slices shrink whenever a retry excludes already tried credentials or a
-// credential enters cooldown, and indexing a monotonic counter into a shrinking slice
-// silently re-seats the rotation, which starves some credentials and hammers others.
+// 轮询从上次选中的身份继续，而不是从数字
+// 索引继续。每当重试排除已尝试的凭据或
+// 凭据进入冷却时，候选切片都会收缩，而把单调计数器索引到不断收缩的切片中
+// 会悄然重置轮询位置，导致某些凭据被饿死、另一些被过度使用。
 type RoundRobinSelector struct {
 	mu         sync.Mutex
 	lastPicked map[string]string
 	maxKeys    int
 }
 
-// WeightedRoundRobinSelector provides smooth weighted round-robin selection.
+// WeightedRoundRobinSelector 提供平滑加权轮询选择。
 type WeightedRoundRobinSelector struct {
 	mu      sync.Mutex
 	states  map[string]*smoothWeightedState
@@ -66,9 +66,9 @@ func weightedSelectorStateModel(ctx context.Context, availabilityModel string) s
 	return availabilityModel
 }
 
-// FillFirstSelector selects the first available credential (deterministic ordering).
-// This "burns" one account before moving to the next, which can help stagger
-// rolling-window subscription caps (e.g. chat message limits).
+// FillFirstSelector 选择第一个可用凭据（确定性排序）。
+// 它会"用尽"一个账号后再移到下一个，这有助于错开
+// 滚动窗口的订阅上限（例如聊天消息数限制）。
 type FillFirstSelector struct{}
 
 type blockReason int
@@ -87,7 +87,7 @@ type modelCooldownError struct {
 	cause    error
 }
 
-// NewModelCooldownError creates an error representing model-level cooldown.
+// NewModelCooldownError 创建一个表示模型级冷却的错误。
 func NewModelCooldownError(model, provider string, resetIn time.Duration) error {
 	return newModelCooldownErrorWithCause(model, provider, resetIn, nil)
 }
@@ -185,7 +185,7 @@ var (
 	sanitizerWindowsUNCPathPattern         = regexp.MustCompile(`\\\\[^\r\n:,;'"<>]+\\[^\r\n:,;'"<>]+`)
 )
 
-// ExtractUpstreamErrorSummary extracts and sanitizes a concise error summary from upstream error strings.
+// ExtractUpstreamErrorSummary 从上游错误字符串中提取并脱敏出简洁的错误摘要。
 func ExtractUpstreamErrorSummary(raw string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -248,7 +248,7 @@ func sanitizeUpstreamErrorSummaryNoTruncate(s string) string {
 	s = sanitizerWindowsPathPattern.ReplaceAllString(s, "[REDACTED_PATH]")
 	s = sanitizerWindowsUNCPathPattern.ReplaceAllString(s, "[REDACTED_PATH]")
 
-	// Handle connector-separated paths like "copy /tmp/a TO /tmp/b: denied"
+	// 处理以连接词分隔的路径，例如 "copy /tmp/a TO /tmp/b: denied"
 	if loc := sanitizerPathConnectorPattern.FindStringSubmatchIndex(s); loc != nil {
 		firstPart := s[:loc[0]]
 		connRaw := s[loc[0] : loc[1]-1]
@@ -256,7 +256,7 @@ func sanitizeUpstreamErrorSummaryNoTruncate(s string) string {
 		return sanitizeUpstreamErrorSummaryNoTruncate(firstPart) + connRaw + sanitizeUpstreamErrorSummaryNoTruncate(secondPart)
 	}
 
-	// Handle path before colon error delimiter, finding the first known error or first colon
+	// 处理冒号错误分隔符之前的路径，找到第一个已知错误或第一个冒号
 	var colonIdx = -1
 	knownErrorPrefixes := []string{
 		"permission denied", "no such file", "file not found", "access denied",
@@ -333,7 +333,7 @@ func sanitizeUpstreamErrorSummaryNoTruncate(s string) string {
 	return s
 }
 
-// SanitizeUpstreamErrorSummary removes sensitive credentials, tokens, and paths, and bounds length.
+// SanitizeUpstreamErrorSummary 移除敏感的凭据、令牌和路径，并限制长度。
 func SanitizeUpstreamErrorSummary(s string) string {
 	s = sanitizeUpstreamErrorSummaryNoTruncate(s)
 	runes := []rune(s)
@@ -503,10 +503,10 @@ func getSelectorAvailableAuthsAcrossPriorities(ctx context.Context, auths []*Aut
 func getSelectorAvailableAuthsWithPriorityMode(ctx context.Context, auths []*Auth, provider, model string, now time.Time, allPriorities bool) ([]*Auth, error) {
 	if ctx != nil {
 		if validated, _ := ctx.Value(prevalidatedAuthCandidatesKey{}).(bool); validated && len(auths) > 0 {
-			// The manager already resolved each credential's upstream model and supplied
-			// ID-sorted candidates. Rechecking the alias or an empty model would apply
-			// unrelated cooldowns. Affinity bindings may span all priority tiers, but
-			// fallback selection must still use the highest available tier.
+			// 管理器已解析每个凭据的上游模型，并提供了
+			// 按 ID 排序的候选。重新检查别名或空模型会应用
+			// 无关的冷却。亲和绑定可能跨越所有优先级层，但
+			// 回退选择仍必须使用可用的最高层。
 			if !allPriorities {
 				return highestPriorityAuths(auths), nil
 			}
@@ -544,11 +544,11 @@ func getAvailableAuthsWithPriorityMode(auths []*Auth, provider, model string, no
 	return availableAuthsFromPriorityBuckets(availableByPriority, allPriorities), nil
 }
 
-// availableAuthsFromPriorityBuckets flattens availability buckets into a stable, ID-sorted slice.
-// When allPriorities is false only the highest available priority tier is returned.
-// When allPriorities is true every tier is merged, so the result carries no priority ordering:
-// use it for membership checks or feed it to highestPriorityAuths, never as a priority-ordered
-// selection order.
+// availableAuthsFromPriorityBuckets 将可用性桶展平为稳定的、按 ID 排序的切片。
+// 当 allPriorities 为 false 时只返回可用的最高优先级层。
+// 当 allPriorities 为 true 时会合并所有层，因此结果不携带优先级顺序：
+// 可将其用于成员检查或传给 highestPriorityAuths，绝不能当作按优先级排序的
+// 选择顺序。
 func availableAuthsFromPriorityBuckets(availableByPriority map[int][]*Auth, allPriorities bool) []*Auth {
 	var candidates []*Auth
 	if allPriorities {
@@ -579,9 +579,9 @@ func availableAuthsFromPriorityBuckets(availableByPriority map[int][]*Auth, allP
 	return candidates
 }
 
-// highestPriorityAuths narrows an availability slice to its highest priority tier while
-// preserving the input order. The input slice is returned unchanged when every candidate
-// already shares the highest priority, so the common single-tier case allocates nothing.
+// highestPriorityAuths 将可用性切片收窄到最高优先级层，同时
+// 保持输入顺序。当所有候选已共享最高优先级时，原样返回
+// 输入切片，因此常见的单层情形不会产生分配。
 func highestPriorityAuths(auths []*Auth) []*Auth {
 	if len(auths) <= 1 {
 		return auths
@@ -610,7 +610,7 @@ func highestPriorityAuths(auths []*Auth) []*Auth {
 	return highest
 }
 
-// Pick selects the next available auth for the provider in a round-robin manner.
+// Pick 以轮询方式为该供应商选择下一个可用的 auth。
 func (s *RoundRobinSelector) Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*Auth) (*Auth, error) {
 	_ = opts
 	now := time.Now()
@@ -636,10 +636,10 @@ func (s *RoundRobinSelector) Pick(ctx context.Context, provider, model string, o
 	return picked, nil
 }
 
-// successorIndex returns the index of the first candidate ordered after lastID, wrapping to
-// the start of the ring. Candidates arrive sorted by ID, so this resumes the rotation at the
-// credential that follows the previous pick even when candidates were filtered out in
-// between. An empty lastID starts at the head.
+// successorIndex 返回第一个排在 lastID 之后的候选索引，并环绕到
+// 环的起点。候选按 ID 排序到达，因此即便中间过滤掉了候选，
+// 轮询也会从上次选中之后的
+// 凭据处恢复。lastID 为空时从头部开始。
 func successorIndex(available []*Auth, lastID string) int {
 	if lastID == "" {
 		return 0
@@ -651,8 +651,8 @@ func successorIndex(available []*Auth, lastID string) int {
 	return index
 }
 
-// ensureRotationKey ensures the rotation map has capacity for the given key.
-// Must be called with s.mu held.
+// ensureRotationKey 确保轮询 map 对给定 key 有容量。
+// 必须在持有 s.mu 的情况下调用。
 func (s *RoundRobinSelector) ensureRotationKey(key string, limit int) {
 	if _, ok := s.lastPicked[key]; !ok && len(s.lastPicked) >= limit {
 		s.lastPicked = make(map[string]string)
@@ -669,7 +669,7 @@ func positiveWeightAuths(auths []*Auth) []*Auth {
 	return weightedCandidates
 }
 
-// Pick selects the next available auth using smooth weighted round-robin.
+// Pick 使用平滑加权轮询选择下一个可用 auth。
 func (s *WeightedRoundRobinSelector) Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*Auth) (*Auth, error) {
 	_ = opts
 	available, errAvailable := getSelectorAvailableAuths(ctx, positiveWeightAuths(auths), provider, model, time.Now())
@@ -706,16 +706,16 @@ func (s *WeightedRoundRobinSelector) Pick(ctx context.Context, provider, model s
 	return picked, nil
 }
 
-// maxSmoothWeightedStateEntries bounds a single accumulator map so credentials that are
-// removed permanently cannot leak entries. Real pools stay far below this bound, so the
-// transient subsets produced by retry exclusions and cooldowns are never pruned.
+// maxSmoothWeightedStateEntries 限制单个累加器 map 的规模，使被永久
+// 移除的凭据无法泄漏条目。真实池远低于此上限，因此
+// 重试排除与冷却产生的临时子集永远不会被裁剪。
 const maxSmoothWeightedStateEntries = 1024
 
-// prepare syncs the configured weights into the state without discarding accumulated
-// credits. Credits are reset only when a credential's configured weight actually changes,
-// never when the candidate set shrinks temporarily (retry exclusions, cooldowns, session
-// affinity), because discarding credits there would collapse selection onto the first
-// candidate in slice order.
+// prepare 将配置的权重同步到状态中，而不丢弃累积的
+// 额度。仅当某个凭据配置的权重确实发生变化时才重置额度，
+// 绝不会在候选集临时收缩时（重试排除、冷却、会话
+// 亲和）重置，因为在那里丢弃额度会使选择坍缩到
+// 切片顺序中的第一个候选。
 func (s *smoothWeightedState) prepare(weights map[string]int64) {
 	if s.current == nil || weightsConfigChanged(s.weights, weights) {
 		s.current = make(map[string]int64, len(weights))
@@ -729,8 +729,8 @@ func (s *smoothWeightedState) prepare(weights map[string]int64) {
 	s.pruneStale(weights)
 }
 
-// pruneStale drops entries for credentials outside the current candidate set, but only
-// once a map exceeds the safety bound, so ordinary transient exclusions keep their credits.
+// pruneStale 丢弃当前候选集之外的凭据条目，但仅在
+// map 超出安全上限时才这样做，因此普通的临时排除会保留其额度。
 func (s *smoothWeightedState) pruneStale(weights map[string]int64) {
 	if len(s.current) <= maxSmoothWeightedStateEntries && len(s.weights) <= maxSmoothWeightedStateEntries {
 		return
@@ -747,9 +747,9 @@ func (s *smoothWeightedState) pruneStale(weights map[string]int64) {
 	}
 }
 
-// weightsConfigChanged reports whether any credential present in both vectors has a
-// different configured weight. Credentials that are merely missing from one side are
-// ignored, since a candidate subset is not a configuration change.
+// weightsConfigChanged 报告两个向量中都存在的凭据是否有
+// 任一者的配置权重不同。仅在一侧缺失的凭据
+// 会被忽略，因为候选子集并非配置变更。
 func weightsConfigChanged(left, right map[string]int64) bool {
 	if len(left) == 0 {
 		return false
@@ -808,7 +808,7 @@ func saturatingAddInt64(value, delta int64) int64 {
 	return value + delta
 }
 
-// Pick selects the first available auth for the provider in a deterministic manner.
+// Pick 以确定性的方式为该供应商选择第一个可用 auth。
 func (s *FillFirstSelector) Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*Auth) (*Auth, error) {
 	_ = opts
 	now := time.Now()
@@ -872,10 +872,10 @@ func isAuthBlockedForModel(auth *Auth, model string, now time.Time) (bool, block
 		return availabilityBlock(auth.Unavailable, auth.Quota.Exceeded, auth.NextRetryAfter, auth.Quota.NextRecoverAt, now)
 	}
 	quotaExceeded := auth.Quota.Exceeded
-	// When model is empty and the credential has individual model states, auth.Quota.Exceeded
-	// is an aggregate of single-model quota cooldowns (reason "quota"). As long as the credential
-	// itself is not unavailable (not all models failed) and not under a credential-wide quota,
-	// do not treat individual model cooldowns as blocking the entire credential.
+	// 当 model 为空且凭据具有各自的模型状态时，auth.Quota.Exceeded
+	// 是单模型额度冷却的聚合（原因为 "quota"）。只要凭据
+	// 本身并非不可用（并非所有模型都失败）且不处于凭据级额度限制下，
+	// 就不要把单个模型的冷却视为阻塞整个凭据。
 	if len(auth.ModelStates) > 0 && auth.Quota.Reason != "credential_quota" && !auth.Unavailable {
 		quotaExceeded = false
 	}
@@ -906,9 +906,9 @@ func availabilityBlock(unavailable, quotaExceeded bool, nextRetryAfter, nextReco
 	return true, blockReasonOther, time.Time{}
 }
 
-// SessionAffinitySelector wraps another selector with session-sticky behavior.
-// It extracts session ID from multiple sources and maintains session-to-auth
-// mappings with automatic failover when the bound auth becomes unavailable.
+// SessionAffinitySelector 用会话粘性行为包装另一个选择器。
+// 它从多个来源提取会话 ID，并维护会话到 auth
+// 的映射，在绑定的 auth 变为不可用时自动故障转移。
 type SessionAffinitySelector struct {
 	fallback          Selector
 	cache             *SessionCache
@@ -918,10 +918,10 @@ type SessionAffinitySelector struct {
 }
 
 const (
-	// SessionAffinityRebindOnAny rebinds the session on any credential-attributed failure (default).
+	// SessionAffinityRebindOnAny 在发生任何归因于凭据的失败时重新绑定会话（默认）。
 	SessionAffinityRebindOnAny = "any"
-	// SessionAffinityRebindOnQuota preserves the existing session binding across transient failures
-	// and only rebinds on quota, auth, model-support, or permanent unavailability.
+	// SessionAffinityRebindOnQuota 在临时失败期间保留现有的会话绑定，
+	// 仅在额度、auth、模型支持或永久不可用时重新绑定。
 	SessionAffinityRebindOnQuota = "quota"
 )
 
@@ -1040,7 +1040,7 @@ func (s *SessionAffinitySelector) shouldPreserveBindingWhenUnavailable(ctx conte
 	return false
 }
 
-// SessionAffinityConfig configures the session affinity selector.
+// SessionAffinityConfig 配置会话亲和选择器。
 type SessionAffinityConfig struct {
 	Fallback         Selector
 	TTL              time.Duration
@@ -1048,7 +1048,7 @@ type SessionAffinityConfig struct {
 	RebindOn         string
 }
 
-// NewSessionAffinitySelector creates a new session-aware selector.
+// NewSessionAffinitySelector 创建一个新的会话感知选择器。
 func NewSessionAffinitySelector(fallback Selector) *SessionAffinitySelector {
 	return NewSessionAffinitySelectorWithConfig(SessionAffinityConfig{
 		Fallback: fallback,
@@ -1056,7 +1056,7 @@ func NewSessionAffinitySelector(fallback Selector) *SessionAffinitySelector {
 	})
 }
 
-// NewSessionAffinitySelectorWithConfig creates a selector with custom configuration.
+// NewSessionAffinitySelectorWithConfig 使用自定义配置创建选择器。
 func NewSessionAffinitySelectorWithConfig(cfg SessionAffinityConfig) *SessionAffinitySelector {
 	if cfg.Fallback == nil {
 		cfg.Fallback = &RoundRobinSelector{}
@@ -1078,25 +1078,25 @@ func NewSessionAffinitySelectorWithConfig(cfg SessionAffinityConfig) *SessionAff
 	}
 }
 
-// Trees returns a backward-compatible in-memory session tree store.
-// Deprecated: Session tree management has moved to Home.
+// Trees 返回一个向后兼容的内存会话树存储。
+// Deprecated: 会话树管理已移至 Home。
 func (s *SessionAffinitySelector) Trees() *cliproxysession.InMemorySessionTreeStore {
 	return cliproxysession.NewInMemorySessionTreeStore(0, time.Hour)
 }
 
-// Pick selects an auth with session affinity when possible.
-// Explicit Claude Code, Codex, OpenCode, pi, and request-body session signals
-// are absolute authority. Requests without those signals use the Merkle LCP
-// matcher before retaining the legacy derived/hash fallback behavior.
+// Pick 尽可能按会话亲和选择一个 auth。
+// 显式的 Claude Code、Codex、OpenCode、pi 以及请求体中的会话信号
+// 具有绝对权威性。没有这些信号的请求会先使用 Merkle LCP
+// 匹配器，之后才保留 legacy 的派生/哈希回退行为。
 //
-// An established binding outranks credential priority: a bound credential that is still
-// available is reused even when a higher-priority credential recovers. Credential priority
-// applies to cold bindings, requests without a session, and genuine bound-credential
-// failover, so the fallback selector only ever receives the highest available priority tier.
+// 已建立的绑定优先于凭据优先级：仍然可用的绑定凭据
+// 会被复用，即使更高优先级的凭据已恢复。凭据优先级
+// 适用于冷绑定、无会话的请求，以及真正的绑定凭据
+// 故障转移，因此回退选择器只会收到可用的最高优先级层。
 //
-// Note: The cache key includes provider, session ID, and model to handle cases where
-// a session uses multiple models (e.g., gpt-4o and gpt-4o-mini)
-// that may be supported by different auth credentials, and to avoid cross-provider conflicts.
+// 注意：缓存 key 包含供应商、会话 ID 和模型，以处理
+// 同一会话使用多个模型（例如 gpt-4o 与 gpt-4o-mini）
+// 而它们可能由不同 auth 凭据支持的情况，并避免跨供应商冲突。
 func (s *SessionAffinitySelector) Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*Auth) (*Auth, error) {
 	entry := selectorLogEntry(ctx)
 	if opts.Metadata == nil {
@@ -1105,8 +1105,8 @@ func (s *SessionAffinitySelector) Pick(ctx context.Context, provider, model stri
 	opts.Metadata[cliproxyexecutor.SessionAffinityProviderMetadataKey] = provider
 	opts.Metadata[cliproxyexecutor.SessionAffinityModelMetadataKey] = model
 
-	// Explicit harness identities are absolute authority. The LCP matcher is only
-	// consulted when no header, body, or execution-session identity is present.
+	// 显式的 harness 身份具有绝对权威性。仅当不存在 header、body 或执行会话
+	// 身份时才会查询 LCP 匹配器。
 	explicitID, explicitFallbackID := extractExplicitSessionIDs(opts.Headers, opts.OriginalRequest, opts.Metadata)
 	if explicitID == "" {
 		if auth, handled, errLCP := s.pickLCP(ctx, provider, model, opts, auths, entry); handled || errLCP != nil {
@@ -1154,8 +1154,8 @@ func (s *SessionAffinitySelector) Pick(ctx context.Context, provider, model stri
 		return s.fallback.Pick(ctx, provider, model, opts, fallbackAuths)
 	}
 
-	// A single availability pass serves both lookups: the bound credential is validated against
-	// every priority tier, while the fallback selector keeps seeing only the highest tier.
+	// 一次可用性遍历同时服务两次查找：绑定的凭据会对
+	// 所有优先级层进行校验，而回退选择器仍只看到最高层。
 	available, err := getSelectorAvailableAuthsAcrossPriorities(ctx, availabilityCandidates, provider, model, now)
 	if err != nil {
 		return nil, err
@@ -1191,7 +1191,7 @@ func (s *SessionAffinitySelector) Pick(ctx context.Context, provider, model stri
 				return auth, nil
 			}
 		}
-		// Cached auth not available, reselect via fallback selector for even distribution
+		// 缓存的 auth 不可用，通过回退选择器重新选择以实现均匀分布
 		auth, err := s.fallback.Pick(ctx, provider, model, opts, fallbackAuths)
 		if err != nil {
 			return nil, err
@@ -1481,7 +1481,7 @@ func selectorLogEntry(ctx context.Context) *log.Entry {
 	return log.NewEntry(log.StandardLogger())
 }
 
-// truncateSessionID shortens session ID for logging (first 8 chars + "...")
+// truncateSessionID 缩短会话 ID 以便记录日志（前 8 个字符 + "..."）
 func truncateSessionID(id string) string {
 	if len(id) <= 20 {
 		return id
@@ -1489,7 +1489,7 @@ func truncateSessionID(id string) string {
 	return id[:8] + "..."
 }
 
-// Stop releases resources held by the selector.
+// Stop 释放选择器持有的资源。
 func (s *SessionAffinitySelector) Stop() {
 	if s == nil {
 		return
@@ -1502,8 +1502,8 @@ func (s *SessionAffinitySelector) Stop() {
 	}
 }
 
-// InvalidateAuth removes all session bindings for a specific auth.
-// Called when an auth becomes rate-limited or unavailable.
+// InvalidateAuth 移除特定 auth 的所有会话绑定。
+// 当某个 auth 被限流或变为不可用时调用。
 func (s *SessionAffinitySelector) InvalidateAuth(authID string) {
 	if s == nil {
 		return
@@ -1516,9 +1516,9 @@ func (s *SessionAffinitySelector) InvalidateAuth(authID string) {
 	}
 }
 
-// LookupAffinity observes the current session affinity binding without side effects.
-// It never selects a credential, creates a binding, rebinds, or refreshes TTL.
-// Optional authFilters allow callers (such as Manager) to exclude credentials that do not match the requested provider.
+// LookupAffinity 以无副作用的方式观察当前的会话亲和绑定。
+// 它绝不会选择凭据、创建绑定、重新绑定或刷新 TTL。
+// 可选的 authFilters 允许调用方（例如 Manager）排除与所请求供应商不匹配的凭据。
 func (s *SessionAffinitySelector) LookupAffinity(provider, model, sessionID string, authFilters ...func(authID string) bool) (string, string) {
 	if s == nil || s.cache == nil {
 		return "", "unsupported"
@@ -1616,7 +1616,7 @@ func (s *SessionAffinitySelector) LookupAffinity(provider, model, sessionID stri
 	return "", "unbound"
 }
 
-// OnResult handles session affinity binding or release based on execution outcome.
+// OnResult 根据执行结果处理会话亲和绑定的建立或释放。
 func (s *SessionAffinitySelector) OnResult(res Result) {
 	if s == nil || res.AuthID == "" {
 		return
@@ -1639,19 +1639,19 @@ func (s *SessionAffinitySelector) OnResult(res Result) {
 	}
 
 	if res.Error != nil && shouldSkipCredentialCooldown(res.Error) {
-		// Request-scoped or caller-attributed failures are not evidence that the
-		// selected credential is unhealthy, so preserve both explicit and LCP bindings.
+		// 请求范围或归因于调用方的失败并不能证明所选凭据
+		// 不健康，因此保留显式绑定与 LCP 绑定。
 		return
 	}
 	if !res.Success && s.rebindOnQuotaOnly && !shouldRebindSessionAffinityOnError(res.Error) {
-		// Under session-affinity-rebind-on: quota, transient failures fail over for
-		// the current request without unbinding the session from its bound credential.
+		// 在 session-affinity-rebind-on: quota 下，临时失败会为
+		// 当前请求做故障转移，但不会将会话与其绑定凭据解绑。
 		return
 	}
 
-	// LCP bindings are independent from explicit harness bindings. A successful
-	// extension is recorded as a new sequence while credential-attributed failures
-	// only remove the exact sequence that was attempted.
+	// LCP 绑定独立于显式的 harness 绑定。成功的
+	// 扩展会记录为新的序列，而归因于凭据的失败
+	// 只会移除所尝试的那个确切序列。
 	if explicitID == "" && s.matcher != nil {
 		if namespace := lcpAffinityNamespace(ns, nsModel, res.Options.Metadata); namespace != "" {
 			fingerprints, minPrefixLength := lcpFingerprintsFromMetadata(res.Options.Metadata)
@@ -1725,9 +1725,9 @@ func (s *SessionAffinitySelector) OnResult(res Result) {
 	}
 }
 
-// normalizedSessionCandidate validates an explicit client-provided session signal.
-// It keeps opaque printable IDs intact while rejecting values that are unsafe or
-// implausibly large for routing keys and logs.
+// normalizedSessionCandidate 校验客户端显式提供的会话信号。
+// 它保留不透明的可打印 ID，同时拒绝对于路由 key 和日志而言
+// 不安全或大得不合理的取值。
 func normalizedSessionCandidate(raw string) string {
 	return cliproxysession.NormalizeExplicitID(raw)
 }
@@ -1742,7 +1742,7 @@ func isSubagentSession(primaryID, fallbackID string) bool {
 	return isHierarchyParent(primaryID, fallbackID)
 }
 
-// CanonicalSessionID resolves the single authoritative session identity from request options and metadata.
+// CanonicalSessionID 从请求选项和元数据中解析出唯一的权威会话身份。
 func CanonicalSessionID(headers http.Header, payload []byte, metadata map[string]any) string {
 	if explicitID, _ := extractExplicitSessionIDs(headers, payload, metadata); explicitID != "" {
 		return cliproxysession.BoundSessionIdentity(explicitID)
@@ -1758,21 +1758,21 @@ func CanonicalSessionID(headers http.Header, payload []byte, metadata map[string
 	return cliproxysession.BoundSessionIdentity(ExtractSessionID(headers, payload, metadata))
 }
 
-// ExtractSessionID extracts a session identifier from explicit client signals,
-// then falls back to execution metadata, derived identity, and message history.
-// Priority order:
+// ExtractSessionID 从客户端显式信号中提取会话标识符，
+// 之后回退到执行元数据、派生身份和消息历史。
+// 优先级顺序：
 //  1. X-Claude-Code-Session-Id
 //  2. Claude Code metadata.user_id session
-//  3. Session-Id / Session_id (Codex and compatible clients)
+//  3. Session-Id / Session_id（Codex 及兼容客户端）
 //  4. X-Session-ID
 //  5. X-Session-Affinity (OpenCode)
 //  6. X-Client-Request-Id (pi Responses)
 //  7. session_id / sessionId
-//  8. prompt_cache_key, with conversation / conversation.id as an alias
-//  9. metadata.user_id and conversation_id legacy body fields
-//  10. explicit execution session metadata
-//  11. stable context-derived session identity
-//  12. stable hash from initial message content
+//  8. prompt_cache_key，以 conversation / conversation.id 作为别名
+//  9. metadata.user_id 与 conversation_id 这两个 legacy body 字段
+//  10. 显式执行会话元数据
+//  11. 稳定的、由 context 派生的会话身份
+//  12. 来自初始消息内容的稳定哈希
 func ExtractSessionID(headers http.Header, payload []byte, metadata map[string]any) string {
 	primary, _ := extractSessionIDs(headers, payload, metadata)
 	return primary
@@ -1800,8 +1800,8 @@ func extractConversationAlias(payload []byte) string {
 	return ""
 }
 
-// extractExplicitSessionIDs returns only client- or execution-provided identities.
-// LCP fallback must run after this function so explicit harness sessions remain authoritative.
+// extractExplicitSessionIDs 仅返回客户端或执行提供的身份。
+// LCP 回退必须在该函数之后运行，以便显式 harness 会话保持权威。
 func extractExplicitSessionIDs(headers http.Header, payload []byte, metadata map[string]any) (string, string) {
 	info, ok := cliproxysession.ExtractSessionInfo(headers, payload, metadata)
 	if !ok || info.ClientType == "lcp" {
@@ -1822,9 +1822,9 @@ func extractExplicitSessionIDs(headers http.Header, payload []byte, metadata map
 	return info.SessionID, fallback
 }
 
-// extractSessionIDs returns (primaryID, fallbackID) for session affinity.
-// fallbackID preserves an earlier binding when a stronger body identifier appears
-// later, and lets callers bind both identifiers when both are present.
+// extractSessionIDs 返回会话亲和的 (primaryID, fallbackID)。
+// 当稍后出现更强的 body 标识符时，fallbackID 会保留更早的绑定，
+// 并让调用方在两者都存在时绑定两个标识符。
 func extractSessionIDs(headers http.Header, payload []byte, metadata map[string]any) (string, string) {
 	if primaryID, fallbackID := extractExplicitSessionIDs(headers, payload, metadata); primaryID != "" {
 		return primaryID, fallbackID
@@ -1841,7 +1841,7 @@ func extractSessionIDs(headers http.Header, payload []byte, metadata map[string]
 func extractMessageHashIDs(payload []byte) (primaryID, fallbackID string) {
 	var systemPrompt, firstUserMsg, firstAssistantMsg string
 
-	// OpenAI/Claude messages format
+	// OpenAI/Claude messages 格式
 	messages := gjson.GetBytes(payload, "messages")
 	if messages.Exists() && messages.IsArray() {
 		messages.ForEach(func(_, msg gjson.Result) bool {
@@ -1873,7 +1873,7 @@ func extractMessageHashIDs(payload []byte) (primaryID, fallbackID string) {
 		})
 	}
 
-	// Claude API: top-level "system" field (array or string)
+	// Claude API：顶层 "system" 字段（数组或字符串）
 	if systemPrompt == "" {
 		topSystem := gjson.GetBytes(payload, "system")
 		if topSystem.Exists() {
@@ -1891,7 +1891,7 @@ func extractMessageHashIDs(payload []byte) (primaryID, fallbackID string) {
 		}
 	}
 
-	// Google-style contents/parts payload format (systemInstruction + contents).
+	// Google 风格的 contents/parts 载荷格式（systemInstruction + contents）。
 	if systemPrompt == "" && firstUserMsg == "" {
 		sysInstr := gjson.GetBytes(payload, "systemInstruction.parts")
 		if sysInstr.Exists() && sysInstr.IsArray() {
@@ -1933,7 +1933,7 @@ func extractMessageHashIDs(payload []byte) (primaryID, fallbackID string) {
 		}
 	}
 
-	// OpenAI Responses API format (v1/responses)
+	// OpenAI Responses API 格式（v1/responses）
 	if systemPrompt == "" && firstUserMsg == "" {
 		if instr := gjson.GetBytes(payload, "instructions").String(); instr != "" {
 			systemPrompt = truncateString(instr, 100)
@@ -1946,8 +1946,8 @@ func extractMessageHashIDs(payload []byte) (primaryID, fallbackID string) {
 				if itemType == "reasoning" {
 					return true
 				}
-				// Skip non-message typed items (function_call, function_call_output, etc.)
-				// but allow items with no type that have a role (inline message format).
+				// 跳过非 message 类型的项（function_call、function_call_output 等），
+				// 但允许没有 type 却带有 role 的项（内联消息格式）。
 				if itemType != "" && itemType != "message" {
 					return true
 				}
@@ -1957,7 +1957,7 @@ func extractMessageHashIDs(payload []byte) (primaryID, fallbackID string) {
 					return true
 				}
 
-				// Handle both string content and array content (multimodal).
+				// 同时处理字符串内容和数组内容（多模态）。
 				content := item.Get("content")
 				var text string
 				if content.Type == gjson.String {
@@ -2026,27 +2026,27 @@ func truncateString(s string, maxLen int) string {
 	return s
 }
 
-// extractMessageContent extracts text content from a message content field.
-// Handles both string content and array content (multimodal messages).
-// For array content, extracts text from all text-type elements.
+// extractMessageContent 从消息的 content 字段中提取文本内容。
+// 同时处理字符串内容与数组内容（多模态消息）。
+// 对于数组内容，提取所有 text 类型元素的文本。
 func extractMessageContent(content gjson.Result) string {
-	// String content: "Hello world"
+	// 字符串内容："Hello world"
 	if content.Type == gjson.String {
 		return content.String()
 	}
 
-	// Array content: [{"type":"text","text":"Hello"},{"type":"image",...}]
+	// 数组内容：[{"type":"text","text":"Hello"},{"type":"image",...}]
 	if content.IsArray() {
 		var texts []string
 		content.ForEach(func(_, part gjson.Result) bool {
-			// Handle Claude format: {"type":"text","text":"content"}
+			// 处理 Claude 格式：{"type":"text","text":"content"}
 			if part.Get("type").String() == "text" {
 				if text := part.Get("text").String(); text != "" {
 					texts = append(texts, text)
 				}
 			}
-			// Handle OpenAI format: {"type":"text","text":"content"}
-			// Same structure as Claude, already handled above
+			// 处理 OpenAI 格式：{"type":"text","text":"content"}
+			// 与 Claude 结构相同，已在上面处理
 			return true
 		})
 		if len(texts) > 0 {
@@ -2077,8 +2077,8 @@ func extractResponsesAPIContent(content gjson.Result) string {
 	return ""
 }
 
-// extractSessionID is kept for backward compatibility.
-// Deprecated: Use ExtractSessionID instead.
+// extractSessionID 为向后兼容而保留。
+// Deprecated: 请改用 ExtractSessionID。
 func extractSessionID(payload []byte) string {
 	return ExtractSessionID(nil, payload, nil)
 }

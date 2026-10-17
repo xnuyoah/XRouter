@@ -10,7 +10,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/thinking"
 )
 
-// Registry manages translation functions across schemas.
+// Registry 管理跨 schema 的转换函数。
 type Registry struct {
 	mu        sync.RWMutex
 	requests  map[Format]map[Format]RequestEnvelopeTransform
@@ -18,7 +18,7 @@ type Registry struct {
 	hooks     PluginHooks
 }
 
-// NewRegistry constructs an empty translator registry.
+// NewRegistry 构造一个空的转换器注册表。
 func NewRegistry() *Registry {
 	return &Registry{
 		requests:  make(map[Format]map[Format]RequestEnvelopeTransform),
@@ -26,7 +26,7 @@ func NewRegistry() *Registry {
 	}
 }
 
-// Register stores request/response transforms between two formats.
+// Register 存储两种格式之间的请求/响应转换。
 func (r *Registry) Register(from, to Format, request RequestTransform, response ResponseTransform) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -47,8 +47,8 @@ func (r *Registry) Register(from, to Format, request RequestTransform, response 
 	r.responses[from][to] = response
 }
 
-// RegisterRequestEnvelope stores a request transform that consumes the complete
-// request envelope, including request-scoped model metadata.
+// RegisterRequestEnvelope 存储一个消费完整请求信封的请求转换，
+// 其中包括请求作用域的模型元数据。
 func (r *Registry) RegisterRequestEnvelope(from, to Format, request RequestEnvelopeTransform) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -60,8 +60,8 @@ func (r *Registry) RegisterRequestEnvelope(from, to Format, request RequestEnvel
 	}
 }
 
-// Unregister removes the request and response transforms for one format pair.
-// Empty parent maps are dropped so a temporary registration can be restored.
+// Unregister 移除某一格式对的请求与响应转换。
+// 空的父映射会被清理，以便临时注册可以被还原。
 func (r *Registry) Unregister(from, to Format) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -80,7 +80,7 @@ func (r *Registry) Unregister(from, to Format) {
 	}
 }
 
-// SetPluginHooks stores translator plugin hooks for this registry.
+// SetPluginHooks 为本注册表存储转换器插件钩子。
 func (r *Registry) SetPluginHooks(hooks PluginHooks) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -88,17 +88,17 @@ func (r *Registry) SetPluginHooks(hooks PluginHooks) {
 	r.hooks = hooks
 }
 
-// HasPluginHooks reports whether request or response translation hooks are installed.
+// HasPluginHooks 报告是否安装了请求或响应转换钩子。
 func (r *Registry) HasPluginHooks() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.hooks != nil
 }
 
-// TranslateRequest converts a payload between schemas, returning the original payload
-// if no translator is registered. When falling back to the original payload, the
-// "model" field is still updated to match the resolved model name so that
-// client-side prefixes (e.g. "copilot/gpt-5-mini") are not leaked upstream.
+// TranslateRequest 在不同 schema 之间转换载荷；若未注册转换器，
+// 则返回原始载荷。回退到原始载荷时，
+// "model" 字段仍会被更新为解析后的模型名，以免
+// 客户端前缀（例如 "copilot/gpt-5-mini"）泄漏到上游。
 func (r *Registry) TranslateRequest(from, to Format, model string, rawJSON []byte, stream bool) []byte {
 	req := r.TranslateRequestEnvelope(context.Background(), from, to, RequestEnvelope{
 		Format: from,
@@ -109,8 +109,8 @@ func (r *Registry) TranslateRequest(from, to Format, model string, rawJSON []byt
 	return req.Body
 }
 
-// TranslateRequestEnvelope translates a complete request envelope while preserving
-// request-scoped metadata for the selected transform.
+// TranslateRequestEnvelope 转换完整的请求信封，
+// 同时为所选转换保留请求作用域的元数据。
 func (r *Registry) TranslateRequestEnvelope(ctx context.Context, from, to Format, req RequestEnvelope) RequestEnvelope {
 	if ctx == nil {
 		ctx = context.Background()
@@ -128,8 +128,8 @@ func (r *Registry) TranslateRequestEnvelope(ctx context.Context, from, to Format
 		req = fn(ctx, req)
 		req.Body = thinking.ApplySummaryConfigForModel(req.Body, to.String(), req.Model, summaryConfig)
 		if hooks != nil {
-			// Request normalizers run after native translation and own the final
-			// provider payload, including any summary field they remove.
+			// 请求规范化器在原生转换之后运行，并掌控最终的
+			// 供应商载荷，包括它们移除的任何 summary 字段。
 			before := configurationUpdates(req.Body)
 			req.Body = hooks.NormalizeRequest(ctx, from, to, req.Model, req.Body, req.Stream)
 			req.ConfigurationUpdatesChanged = req.ConfigurationUpdatesChanged || updatesChanged(before, configurationUpdates(req.Body))
@@ -146,15 +146,15 @@ func (r *Registry) TranslateRequestEnvelope(ctx context.Context, from, to Format
 		}
 	}
 	if hooks == nil {
-		// No translation occurred. Preserve the documented fallback shape instead
-		// of mixing target-protocol summary fields into the source payload.
+		// 未发生转换。保留文档所述的回落形态，
+		// 而不是把目标协议的 summary 字段混入源载荷。
 		req.Format = to
 		return req
 	}
 
-	// Plugin request normalizers canonicalize the source before a plugin request
-	// translator gets a chance to handle a missing native route. Extract summary
-	// intent from that normalized source so a normalizer can remove or rewrite it.
+	// 插件请求规范化器会先对源做规范化，之后插件请求转换器
+	// 才有机会处理缺失的原生路由。从规范化后的源中提取
+	// summary 意图，以便规范化器移除或改写它。
 	before := configurationUpdates(req.Body)
 	req.Body = hooks.NormalizeRequest(ctx, from, to, req.Model, req.Body, req.Stream)
 	req.ConfigurationUpdatesChanged = req.ConfigurationUpdatesChanged || updatesChanged(before, configurationUpdates(req.Body))
@@ -166,8 +166,8 @@ func (r *Registry) TranslateRequestEnvelope(ctx context.Context, from, to Format
 	return req
 }
 
-// configurationUpdates captures only Responses update items before and after a plugin
-// normalizer. A native cross-protocol translation removing updates is not a plugin edit.
+// configurationUpdates 只捕获插件规范化器前后的 Responses update item。
+// 原生跨协议转换移除 update 不算插件编辑。
 func configurationUpdates(body []byte) []string {
 	input := gjson.GetBytes(body, "input")
 	if !input.IsArray() {
@@ -195,7 +195,7 @@ func updatesChanged(before, after []string) bool {
 	return false
 }
 
-// HasRequestTransformer indicates whether a request translator exists.
+// HasRequestTransformer 指示是否存在请求转换器。
 func (r *Registry) HasRequestTransformer(from, to Format) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -208,7 +208,7 @@ func (r *Registry) HasRequestTransformer(from, to Format) bool {
 	return false
 }
 
-// HasResponseTransformer indicates whether a response translator exists.
+// HasResponseTransformer 指示是否存在响应转换器。
 func (r *Registry) HasResponseTransformer(from, to Format) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -221,7 +221,7 @@ func (r *Registry) HasResponseTransformer(from, to Format) bool {
 	return false
 }
 
-// HasStreamResponseTransformer indicates whether a streaming response translator exists.
+// HasStreamResponseTransformer 指示是否存在流式响应转换器。
 func (r *Registry) HasStreamResponseTransformer(from, to Format) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -234,7 +234,7 @@ func (r *Registry) HasStreamResponseTransformer(from, to Format) bool {
 	return false
 }
 
-// HasNonStreamResponseTransformer indicates whether a non-streaming response translator exists.
+// HasNonStreamResponseTransformer 指示是否存在非流式响应转换器。
 func (r *Registry) HasNonStreamResponseTransformer(from, to Format) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -247,7 +247,7 @@ func (r *Registry) HasNonStreamResponseTransformer(from, to Format) bool {
 	return false
 }
 
-// TranslateStream applies the registered streaming response translator.
+// TranslateStream 应用已注册的流式响应转换器。
 func (r *Registry) TranslateStream(ctx context.Context, from, to Format, model string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) [][]byte {
 	r.mu.RLock()
 	var stream ResponseStreamTransform
@@ -272,7 +272,7 @@ func (r *Registry) TranslateStream(ctx context.Context, from, to Format, model s
 			outputs = [][]byte{translated}
 		}
 	}
-	// Retained tool failures are never recovered by raw fallback or plugin normalization.
+	// 已保留的工具失败永远不会被原始回退或插件规范化恢复。
 	if translationToolInputFailed(param) {
 		return outputs
 	}
@@ -287,7 +287,7 @@ func (r *Registry) TranslateStream(ctx context.Context, from, to Format, model s
 	return outputs
 }
 
-// TranslateNonStream applies the registered non-stream response translator.
+// TranslateNonStream 应用已注册的非流式响应转换器。
 func (r *Registry) TranslateNonStream(ctx context.Context, from, to Format, model string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) []byte {
 	r.mu.RLock()
 	var fn ResponseTransform
@@ -317,7 +317,7 @@ func (r *Registry) TranslateNonStream(ctx context.Context, from, to Format, mode
 	return body
 }
 
-// translationToolInputFailed consumes only the optional, request-local error contract.
+// translationToolInputFailed 只消费可选的、请求局部的错误契约。
 func translationToolInputFailed(param *any) bool {
 	if param == nil {
 		return false
@@ -326,7 +326,7 @@ func translationToolInputFailed(param *any) bool {
 	return okState && state.ToolInputError() != nil
 }
 
-// TranslateTokenCount applies the registered token count response translator.
+// TranslateTokenCount 应用已注册的 token 计数响应转换器。
 func (r *Registry) TranslateTokenCount(ctx context.Context, from, to Format, count int64, rawJSON []byte) []byte {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -339,8 +339,8 @@ func (r *Registry) TranslateTokenCount(ctx context.Context, from, to Format, cou
 	return rawJSON
 }
 
-// NormalizeRequest executes registered plugin request normalizer hooks, returning
-// the payload unmodified if no hooks are registered.
+// NormalizeRequest 执行已注册的插件请求规范化钩子；
+// 若未注册钩子，则原样返回载荷。
 func (r *Registry) NormalizeRequest(ctx context.Context, from, to Format, model string, body []byte, stream bool) []byte {
 	if ctx == nil {
 		ctx = context.Background()
@@ -357,82 +357,82 @@ func (r *Registry) NormalizeRequest(ctx context.Context, from, to Format, model 
 
 var defaultRegistry = NewRegistry()
 
-// Default exposes the package-level registry for shared use.
+// Default 暴露包级注册表以供共享使用。
 func Default() *Registry {
 	return defaultRegistry
 }
 
-// Register attaches transforms to the default registry.
+// Register 将转换附加到默认注册表。
 func Register(from, to Format, request RequestTransform, response ResponseTransform) {
 	defaultRegistry.Register(from, to, request, response)
 }
 
-// Unregister removes transforms for one format pair from the default registry.
+// Unregister 从默认注册表中移除某一格式对的转换。
 func Unregister(from, to Format) {
 	defaultRegistry.Unregister(from, to)
 }
 
-// RegisterRequestEnvelope stores an envelope-aware transform on the default registry.
+// RegisterRequestEnvelope 在默认注册表上存储能感知信封的转换。
 func RegisterRequestEnvelope(from, to Format, request RequestEnvelopeTransform) {
 	defaultRegistry.RegisterRequestEnvelope(from, to, request)
 }
 
-// SetPluginHooks stores plugin hooks on the default registry.
+// SetPluginHooks 在默认注册表上存储插件钩子。
 func SetPluginHooks(hooks PluginHooks) {
 	defaultRegistry.SetPluginHooks(hooks)
 }
 
-// HasPluginHooks reports whether hooks are installed on the default registry.
+// HasPluginHooks 报告默认注册表上是否安装了钩子。
 func HasPluginHooks() bool {
 	return defaultRegistry.HasPluginHooks()
 }
 
-// TranslateRequest is a helper on the default registry.
+// TranslateRequest 是默认注册表上的辅助函数。
 func TranslateRequest(from, to Format, model string, rawJSON []byte, stream bool) []byte {
 	return defaultRegistry.TranslateRequest(from, to, model, rawJSON, stream)
 }
 
-// TranslateRequestEnvelope translates a complete request envelope using the default registry.
+// TranslateRequestEnvelope 使用默认注册表转换完整的请求信封。
 func TranslateRequestEnvelope(ctx context.Context, from, to Format, req RequestEnvelope) RequestEnvelope {
 	return defaultRegistry.TranslateRequestEnvelope(ctx, from, to, req)
 }
 
-// NormalizeRequest executes registered plugin request normalizer hooks on the default registry.
+// NormalizeRequest 在默认注册表上执行已注册的插件请求规范化钩子。
 func NormalizeRequest(ctx context.Context, from, to Format, model string, body []byte, stream bool) []byte {
 	return defaultRegistry.NormalizeRequest(ctx, from, to, model, body, stream)
 }
 
-// HasRequestTransformer inspects the default registry.
+// HasRequestTransformer 检查默认注册表。
 func HasRequestTransformer(from, to Format) bool {
 	return defaultRegistry.HasRequestTransformer(from, to)
 }
 
-// HasResponseTransformer inspects the default registry.
+// HasResponseTransformer 检查默认注册表。
 func HasResponseTransformer(from, to Format) bool {
 	return defaultRegistry.HasResponseTransformer(from, to)
 }
 
-// HasStreamResponseTransformer inspects the default registry for a streaming response translator.
+// HasStreamResponseTransformer 检查默认注册表中是否存在流式响应转换器。
 func HasStreamResponseTransformer(from, to Format) bool {
 	return defaultRegistry.HasStreamResponseTransformer(from, to)
 }
 
-// HasNonStreamResponseTransformer inspects the default registry for a non-streaming response translator.
+// HasNonStreamResponseTransformer 检查默认注册表中是否存在非流式响应转换器。
 func HasNonStreamResponseTransformer(from, to Format) bool {
 	return defaultRegistry.HasNonStreamResponseTransformer(from, to)
 }
 
-// TranslateStream is a helper on the default registry.
+// TranslateStream 是默认注册表上的辅助函数。
 func TranslateStream(ctx context.Context, from, to Format, model string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) [][]byte {
 	return defaultRegistry.TranslateStream(ctx, from, to, model, originalRequestRawJSON, requestRawJSON, rawJSON, param)
 }
 
-// TranslateNonStream is a helper on the default registry.
+// TranslateNonStream 是默认注册表上的辅助函数。
 func TranslateNonStream(ctx context.Context, from, to Format, model string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) []byte {
 	return defaultRegistry.TranslateNonStream(ctx, from, to, model, originalRequestRawJSON, requestRawJSON, rawJSON, param)
 }
 
-// TranslateTokenCount is a helper on the default registry.
+// TranslateTokenCount 是默认注册表上的辅助函数。
 func TranslateTokenCount(ctx context.Context, from, to Format, count int64, rawJSON []byte) []byte {
 	return defaultRegistry.TranslateTokenCount(ctx, from, to, count, rawJSON)
 }

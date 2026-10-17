@@ -7,25 +7,25 @@ import (
 	"sync"
 )
 
-// DefaultTransportCacheCapacity bounds how many transports a TransportCache keeps
-// alive at once. Every cached transport owns an independent connection pool, so an
-// unbounded cache would let idle sockets and the goroutines managing them grow
-// without limit whenever keys churn, for example when a credential's proxy is
-// rotated through the management API or when an SDK embedder supplies a freshly
-// built base transport per request.
+// DefaultTransportCacheCapacity 限制一个 TransportCache 同时保持存活的
+// transport 数量。每个被缓存的 transport 都拥有独立的连接池，因此无界的
+// 缓存会在 key 频繁变动时让空闲套接字及其管理 goroutine 无限制地增长，
+// 例如当某个凭据的代理通过管理 API 被
+// 轮换，或当 SDK 嵌入方为每个请求提供
+// 新构建的基础 transport 时。
 const DefaultTransportCacheCapacity = 64
 
-// TransportCache memoizes HTTP transports under a comparable key using a bounded
-// LRU. Evicting an entry closes its idle connections so neither the pool nor its
-// background goroutines outlive the cache entry.
+// TransportCache 使用有界的 LRU 按可比较的 key 记忆化 HTTP transport。
+// 淘汰某个条目时会关闭其空闲连接，因此连接池及其后台
+// goroutine 都不会比缓存条目存活更久。
 //
-// The key type is generic so callers can mix value identity (a normalized proxy
-// URL) with pointer identity (a base transport supplied by the caller) without the
-// cache retaining either beyond the LRU window.
+// key 类型是泛型的，因此调用方可以混用值身份（规范化后的代理
+// URL）与指针身份（调用方提供的基础 transport），而缓存
+// 不会在 LRU 窗口之外保留其中任何一个。
 type TransportCache[K comparable] struct {
 	mu       sync.Mutex
 	capacity int
-	// order keeps the most recently used entry at the front.
+	// order 将最近使用的条目保留在最前面。
 	order *list.List
 	items map[K]*list.Element
 }
@@ -35,8 +35,8 @@ type transportCacheEntry[K comparable] struct {
 	transport *http.Transport
 }
 
-// NewTransportCache returns a cache holding at most capacity transports. A
-// non-positive capacity falls back to DefaultTransportCacheCapacity.
+// NewTransportCache 返回一个至多持有 capacity 个 transport 的缓存。
+// 非正的 capacity 会回退到 DefaultTransportCacheCapacity。
 func NewTransportCache[K comparable](capacity int) *TransportCache[K] {
 	if capacity <= 0 {
 		capacity = DefaultTransportCacheCapacity
@@ -48,12 +48,12 @@ func NewTransportCache[K comparable](capacity int) *TransportCache[K] {
 	}
 }
 
-// Get returns the transport cached under key, calling build on the first use of
-// that key. Concurrent callers observe the same instance.
+// Get 返回缓存在 key 下的 transport，并在首次使用该 key 时调用 build。
+// 并发的调用方会看到同一个实例。
 //
-// A build error is propagated without being cached, so a later call can retry and
-// a failed lookup never occupies a cache slot. build must not call back into the
-// same cache.
+// build 的错误会被传播而不会被缓存，因此之后的调用可以重试，
+// 失败的查找也绝不会占用缓存槽位。build 不得回调
+// 同一个缓存。
 func (c *TransportCache[K]) Get(key K, build func() (*http.Transport, error)) (*http.Transport, error) {
 	if c == nil {
 		return nil, errors.New("transport cache: nil cache")
@@ -80,7 +80,7 @@ func (c *TransportCache[K]) Get(key K, build func() (*http.Transport, error)) (*
 		return nil, errors.New("transport cache: build returned no transport")
 	}
 
-	// Double check in case key was populated while build was running
+	// 再次检查，以防在 build 运行期间该 key 已被填充
 	if element, ok := c.items[key]; ok {
 		c.order.MoveToFront(element)
 		existing := element.Value.(*transportCacheEntry[K]).transport
@@ -99,11 +99,11 @@ func (c *TransportCache[K]) Get(key K, build func() (*http.Transport, error)) (*
 	return transport, nil
 }
 
-// evictLocked drops least recently used entries until the cache fits its capacity,
-// returning a slice of evicted transports to be closed outside the lock.
-// Closing idle connections is what actually releases the evicted pool; in-flight
-// requests still holding the transport are unaffected because CloseIdleConnections
-// only reaps connections that are currently idle.
+// evictLocked 丢弃最近最少使用的条目，直到缓存符合其容量，
+// 并返回被淘汰 transport 的切片，以便在锁外关闭。
+// 关闭空闲连接才真正释放被淘汰的连接池；仍持有该 transport 的
+// 在途请求不受影响，因为 CloseIdleConnections
+// 只回收当前处于空闲状态的连接。
 func (c *TransportCache[K]) evictLocked() []*http.Transport {
 	var evicted []*http.Transport
 	for c.order.Len() > c.capacity {
@@ -119,7 +119,7 @@ func (c *TransportCache[K]) evictLocked() []*http.Transport {
 	return evicted
 }
 
-// Len reports how many transports the cache currently holds.
+// Len 报告缓存当前持有的 transport 数量。
 func (c *TransportCache[K]) Len() int {
 	if c == nil {
 		return 0
@@ -129,7 +129,7 @@ func (c *TransportCache[K]) Len() int {
 	return c.order.Len()
 }
 
-// Contains reports whether key exists in the cache.
+// Contains 报告 key 是否存在于缓存中。
 func (c *TransportCache[K]) Contains(key K) bool {
 	if c == nil {
 		return false
@@ -140,8 +140,8 @@ func (c *TransportCache[K]) Contains(key K) bool {
 	return ok
 }
 
-// CloseKey removes the transport cached under key (if present) and closes its idle connections.
-// Returns true if the entry was found and closed.
+// CloseKey 移除缓存在 key 下的 transport（如果存在）并关闭其空闲连接。
+// 如果找到并关闭了该条目则返回 true。
 func (c *TransportCache[K]) CloseKey(key K) bool {
 	if c == nil {
 		return false
@@ -161,8 +161,8 @@ func (c *TransportCache[K]) CloseKey(key K) bool {
 	return true
 }
 
-// CloseMatching removes and closes idle connections for every cached transport whose key
-// satisfies predicate. Returns the number of closed transports.
+// CloseMatching 为所有 key 满足 predicate 的缓存 transport 移除并关闭空闲连接。
+// 返回被关闭的 transport 数量。
 func (c *TransportCache[K]) CloseMatching(predicate func(key K) bool) int {
 	if c == nil || predicate == nil {
 		return 0
@@ -187,7 +187,7 @@ func (c *TransportCache[K]) CloseMatching(predicate func(key K) bool) int {
 	return len(toClose)
 }
 
-// Purge drops every entry and closes the idle connections it was holding.
+// Purge 丢弃所有条目并关闭其持有的空闲连接。
 func (c *TransportCache[K]) Purge() {
 	if c == nil {
 		return

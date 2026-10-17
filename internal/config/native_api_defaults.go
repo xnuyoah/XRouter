@@ -6,10 +6,10 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/constant"
 )
 
-// NativeAPIProviderDefaults describes one native OpenAI-wire provider family's
-// built-in endpoint and model catalog. A credential that declares its own model
-// list replaces the catalog entirely; the base URL default stays until the
-// credential overrides it.
+// NativeAPIProviderDefaults 描述某个原生 OpenAI 线路格式供应商标族的
+// 内置端点与模型目录。声明了自己模型列表的凭据
+// 会完全取代该目录；base URL 默认值会一直保留，
+// 直到凭据覆盖它。
 type NativeAPIProviderDefaults struct {
 	BaseURL string
 	Models  []NativeAPIModel
@@ -61,8 +61,8 @@ var nativeAPIProviderDefaults = map[string]NativeAPIProviderDefaults{
 	},
 }
 
-// NativeAPIProviderDefaultsFor returns the built-in defaults for a native
-// OpenAI-wire provider family, or a zero value for unknown providers.
+// NativeAPIProviderDefaultsFor 返回某个原生 OpenAI 线路格式
+// 供应商标族的内置默认值，未知供应商则返回零值。
 func NativeAPIProviderDefaultsFor(provider string) NativeAPIProviderDefaults {
 	defaults, ok := nativeAPIProviderDefaults[strings.ToLower(strings.TrimSpace(provider))]
 	if !ok {
@@ -73,8 +73,8 @@ func NativeAPIProviderDefaultsFor(provider string) NativeAPIProviderDefaults {
 	return NativeAPIProviderDefaults{BaseURL: defaults.BaseURL, Models: models}
 }
 
-// NativeAPIEffectiveModels returns the credential's declared models, or the
-// provider family's built-in defaults when none are declared.
+// NativeAPIEffectiveModels 返回凭据声明的模型，未声明时
+// 返回该供应商标族的内置默认值。
 func NativeAPIEffectiveModels(entry *NativeAPIKey, provider string) []NativeAPIModel {
 	if entry != nil && len(entry.Models) > 0 {
 		return entry.Models
@@ -82,8 +82,8 @@ func NativeAPIEffectiveModels(entry *NativeAPIKey, provider string) []NativeAPIM
 	return NativeAPIProviderDefaultsFor(provider).Models
 }
 
-// NativeAPIEffectiveBaseURL returns the credential's base URL override, or the
-// provider family's default endpoint.
+// NativeAPIEffectiveBaseURL 返回凭据的 base URL 覆盖值，
+// 否则返回该供应商标族的默认端点。
 func NativeAPIEffectiveBaseURL(entry *NativeAPIKey, provider string) string {
 	if entry != nil {
 		if baseURL := strings.TrimSpace(entry.BaseURL); baseURL != "" {

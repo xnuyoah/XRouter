@@ -75,10 +75,10 @@ func (l *muxListener) Close() error {
 		close(l.closeCh)
 		l.mu.Unlock()
 
-		// Wait for all in-flight Put calls to complete their channel send or observe closeCh
+		// 等待所有进行中的 Put 调用完成其通道发送或观察到 closeCh
 		l.inFlight.Wait()
 
-		// Drain and close all connections currently queued in connCh
+		// 排空并关闭当前排队在 connCh 中的所有连接
 		for {
 			select {
 			case conn := <-l.connCh:

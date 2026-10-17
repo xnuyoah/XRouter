@@ -17,13 +17,13 @@ import (
 	baseauth "github.com/xnuyoah/XRouter/v8/internal/auth"
 )
 
-// PostAuthHook defines a function that is called after an Auth record is created
-// but before it is persisted to storage. This allows for modification of the
-// Auth record (e.g., injecting metadata) based on external context.
+// PostAuthHook 定义一个函数，它在 Auth 记录创建之后、
+// 但在持久化到存储之前被调用。这样可以基于外部上下文
+// 修改 Auth 记录（例如注入元数据）。
 type PostAuthHook func(context.Context, *Auth) error
 
-// RequestInfo holds information extracted from the HTTP request.
-// It is injected into the context passed to PostAuthHook.
+// RequestInfo 保存从 HTTP 请求中提取的信息。
+// 它会被注入到传给 PostAuthHook 的上下文里。
 type RequestInfo struct {
 	Query   url.Values
 	Headers http.Header
@@ -31,12 +31,12 @@ type RequestInfo struct {
 
 type requestInfoKey struct{}
 
-// WithRequestInfo returns a new context with the given RequestInfo attached.
+// WithRequestInfo 返回一个附加了给定 RequestInfo 的新上下文。
 func WithRequestInfo(ctx context.Context, info *RequestInfo) context.Context {
 	return context.WithValue(ctx, requestInfoKey{}, info)
 }
 
-// GetRequestInfo retrieves the RequestInfo from the context, if present.
+// GetRequestInfo 从上下文中取出 RequestInfo（如果存在）。
 func GetRequestInfo(ctx context.Context) *RequestInfo {
 	if val, ok := ctx.Value(requestInfoKey{}).(*RequestInfo); ok {
 		return val
@@ -44,75 +44,75 @@ func GetRequestInfo(ctx context.Context) *RequestInfo {
 	return nil
 }
 
-// Auth encapsulates the runtime state and metadata associated with a single credential.
+// Auth 封装与单个凭据关联的运行时状态和元数据。
 type Auth struct {
-	// ID uniquely identifies the auth record across restarts.
+	// ID 在重启后仍能唯一标识该 auth 记录。
 	ID string `json:"id"`
-	// RegistrationEpoch tracks monotonic registration cycles across unregister/re-register.
+	// RegistrationEpoch 跟踪注销/重新注册之间的单调注册周期。
 	RegistrationEpoch uint64 `json:"registration_epoch,omitempty"`
-	// CredentialVersion tracks monotonic credential replacements for secret material.
+	// CredentialVersion 跟踪密钥材料的单调凭据替换。
 	CredentialVersion uint64 `json:"credential_version,omitempty"`
-	// Generation tracks monotonic mutations to resolve scheduler/reconcile snapshot races.
+	// Generation 跟踪单调变更，以解决调度器/对账的快照竞争。
 	Generation uint64 `json:"generation,omitempty"`
-	// Index is a stable runtime identifier derived from auth metadata (not persisted).
+	// Index 是由 auth 元数据派生的稳定运行时标识（不持久化）。
 	Index string `json:"-"`
-	// Provider is the upstream provider key (e.g. "openai", "claude").
+	// Provider 是上游供应商标识（例如 "openai"、"claude"）。
 	Provider string `json:"provider"`
-	// Prefix optionally namespaces models for routing (e.g., "teamA/gpt-4o").
+	// Prefix 可选地为路由中的模型加命名空间（例如 "teamA/gpt-4o"）。
 	Prefix string `json:"prefix,omitempty"`
-	// FileName stores the relative or absolute path of the backing auth file.
+	// FileName 保存后端 auth 文件的相对或绝对路径。
 	FileName string `json:"-"`
-	// Storage holds the token persistence implementation used during login flows.
+	// Storage 保存登录流程中使用的令牌持久化实现。
 	Storage baseauth.TokenStorage `json:"-"`
-	// Label is an optional human readable label for logging.
+	// Label 是用于日志的可选人类可读标签。
 	Label string `json:"label,omitempty"`
-	// Status is the lifecycle status managed by the AuthManager.
+	// Status 是由 AuthManager 管理的生命周期状态。
 	Status Status `json:"status"`
-	// StatusMessage holds a short description for the current status.
+	// StatusMessage 保存当前状态的简短描述。
 	StatusMessage string `json:"status_message,omitempty"`
-	// Disabled indicates the auth is intentionally disabled by operator.
+	// Disabled 表示该 auth 被运维人员有意禁用。
 	Disabled bool `json:"disabled"`
-	// Unavailable flags transient provider unavailability (e.g. quota exceeded).
+	// Unavailable 标记供应商的临时不可用（例如超出额度）。
 	Unavailable bool `json:"unavailable"`
-	// ProxyURL overrides the global proxy setting for this auth if provided.
+	// ProxyURL 若提供，则覆盖该 auth 的全局代理设置。
 	ProxyURL string `json:"proxy_url,omitempty"`
-	// Attributes stores provider specific metadata needed by executors (immutable configuration).
+	// Attributes 保存执行器所需的供应商特定元数据（不可变配置）。
 	Attributes map[string]string `json:"attributes,omitempty"`
-	// Metadata stores runtime mutable provider state (e.g. tokens, cookies).
+	// Metadata 保存运行时可变的上游状态（例如令牌、cookies）。
 	Metadata map[string]any `json:"metadata,omitempty"`
-	// Quota captures recent quota information for load balancers.
+	// Quota 记录供负载均衡使用的近期额度信息。
 	Quota QuotaState `json:"quota"`
-	// LastError stores the last failure encountered while executing or refreshing.
+	// LastError 保存执行或刷新时遇到的最后一次失败。
 	LastError *Error `json:"last_error,omitempty"`
-	// CreatedAt is the creation timestamp in UTC.
+	// CreatedAt 是 UTC 的创建时间戳。
 	CreatedAt time.Time `json:"created_at"`
-	// UpdatedAt is the last modification timestamp in UTC.
+	// UpdatedAt 是 UTC 的最后修改时间戳。
 	UpdatedAt time.Time `json:"updated_at"`
-	// LastRefreshedAt records the last successful refresh time in UTC.
+	// LastRefreshedAt 记录 UTC 下最后一次成功刷新的时间。
 	LastRefreshedAt time.Time `json:"last_refreshed_at"`
-	// NextRefreshAfter is the earliest time a refresh should retrigger.
+	// NextRefreshAfter 是应重新触发刷新最早时间。
 	NextRefreshAfter time.Time `json:"next_refresh_after"`
-	// RefreshFailures tracks consecutive refresh failures for exponential backoff (in-memory only).
+	// RefreshFailures 跟踪连续刷新失败次数，用于指数退避（仅内存中）。
 	RefreshFailures int `json:"-"`
-	// NextRetryAfter is the earliest time a retry should retrigger.
+	// NextRetryAfter 是应重新触发重试的最早时间。
 	NextRetryAfter time.Time `json:"next_retry_after"`
-	// ModelStates tracks per-model runtime availability data.
+	// ModelStates 跟踪按模型划分的运行时可用性数据。
 	ModelStates map[string]*ModelState `json:"model_states,omitempty"`
 
-	// Runtime carries non-serialisable data used during execution (in-memory only).
+	// Runtime 携带执行期间使用的不可序列化数据（仅内存中）。
 	Runtime any `json:"-"`
 
-	// RejectedAccessToken tracks the access token rejected by upstream 401 until a refresh succeeds.
+	// RejectedAccessToken 跟踪被上游 401 拒绝的访问令牌，直到刷新成功。
 	RejectedAccessToken string `json:"-"`
 
 	Success int64 `json:"-"`
 	Failed  int64 `json:"-"`
 
-	// cooldownRecordedSeq is the execution sequence watermark captured when
-	// the current auth-level cooldown was recorded. Successes from executions
-	// stamped at or below it were dispatched before the cooldown existed and
-	// must not clear it. Runtime only: zero after restart so restored
-	// cooldowns can still be cleared by any success.
+	// cooldownRecordedSeq 是记录当前冷却时捕获的执行序列水位线。
+	// 记录当前 auth 级冷却时，序列号等于或低于它的执行
+	// 所产生的成功请求是在该冷却出现之前派发的，
+	// 因此不得清除该冷却。仅运行时：重启后归零，这样恢复的冷却
+	// 仍可被任意成功请求清除。
 	cooldownRecordedSeq uint64 `json:"-"`
 
 	recentRequests recentRequestRing `json:"-"`
@@ -126,7 +126,7 @@ const (
 	pluginVirtualAttrEnabled = "true"
 )
 
-// MarkPluginVirtualAuth marks an auth that was expanded from a plugin-owned source file.
+// MarkPluginVirtualAuth 标记由插件拥有的源文件展开而来的 auth。
 func MarkPluginVirtualAuth(auth *Auth, sourcePath string, ordinal int) {
 	if auth == nil {
 		return
@@ -154,7 +154,7 @@ func MarkPluginVirtualAuth(auth *Auth, sourcePath string, ordinal int) {
 	}, "|")
 }
 
-// IsPluginVirtualAuth reports whether an auth was expanded from a plugin-owned source file.
+// IsPluginVirtualAuth 报告某个 auth 是否由插件拥有的源文件展开而来。
 func IsPluginVirtualAuth(auth *Auth) bool {
 	if auth == nil || len(auth.Attributes) == 0 {
 		return false
@@ -183,28 +183,28 @@ type RecentRequestBucket struct {
 	Failed  int64  `json:"failed"`
 }
 
-// QuotaState contains limiter tracking data for a credential.
+// QuotaState 包含某个凭据的限流跟踪数据。
 type QuotaState struct {
-	// Exceeded indicates the credential recently hit a quota error.
+	// Exceeded 表示该凭据最近触发了额度错误。
 	Exceeded bool `json:"exceeded"`
-	// Reason provides an optional provider specific human readable description.
+	// Reason 提供可选的、供应商特定的人类可读描述。
 	Reason string `json:"reason,omitempty"`
-	// NextRecoverAt is when the credential may become available again.
+	// NextRecoverAt 是该凭据可能重新可用的时间。
 	NextRecoverAt time.Time `json:"next_recover_at"`
-	// BackoffLevel stores the progressive cooldown exponent used for rate limits.
+	// BackoffLevel 保存用于限流的渐进式冷却指数。
 	BackoffLevel int `json:"backoff_level,omitempty"`
-	// ObservedAt is the time the current Signals snapshot was observed.
+	// ObservedAt 是观察到当前 Signals 快照的时间。
 	ObservedAt time.Time `json:"observed_at,omitempty"`
-	// Signals stores bounded, provider-specific quota watermark values observed
-	// from upstream response headers or websocket quota events. It is a snapshot
-	// of one upstream response, not an accumulation across responses, so an
-	// expired watermark cannot linger after the response that produced it.
-	// Cooldown transitions must use applyCooldownFields so they cannot replace
-	// this snapshot.
+	// Signals 保存从上游响应头或 websocket 额度事件中观察到的、有界的
+	// 供应商特定额度水位值。它是单次上游响应的快照，
+	// 而不是跨响应的累积，因此过期水位不会在产生它的响应之后
+	// 残留。
+	// 冷却状态转换必须使用 applyCooldownFields，这样就不会替换
+	// 该快照。
 	Signals map[string]string `json:"signals,omitempty"`
 }
 
-// Clone returns an independent copy of the quota state.
+// Clone 返回额度状态的独立副本。
 func (q QuotaState) Clone() QuotaState {
 	copyQuota := q
 	if len(q.Signals) > 0 {
@@ -216,27 +216,27 @@ func (q QuotaState) Clone() QuotaState {
 	return copyQuota
 }
 
-// ModelState captures the execution state for a specific model under an auth entry.
+// ModelState 记录某个 auth 条目下特定模型的执行状态。
 type ModelState struct {
-	// Status reflects the lifecycle status for this model.
+	// Status 反映该模型的生命周期状态。
 	Status Status `json:"status"`
-	// StatusMessage provides an optional short description of the status.
+	// StatusMessage 提供该状态的可选简短描述。
 	StatusMessage string `json:"status_message,omitempty"`
-	// Unavailable mirrors whether the model is temporarily blocked for retries.
+	// Unavailable 反映该模型是否被临时阻止重试。
 	Unavailable bool `json:"unavailable"`
-	// NextRetryAfter defines the per-model retry time.
+	// NextRetryAfter 定义按模型划分的重试时间。
 	NextRetryAfter time.Time `json:"next_retry_after"`
-	// LastError records the latest error observed for this model.
+	// LastError 记录为该模型观察到的最新错误。
 	LastError *Error `json:"last_error,omitempty"`
-	// Quota retains quota information if this model hit rate limits.
+	// Quota 在该模型触发限流时保留额度信息。
 	Quota QuotaState `json:"quota"`
-	// UpdatedAt tracks the last update timestamp for this model state.
+	// UpdatedAt 跟踪该模型状态的最后更新时间戳。
 	UpdatedAt time.Time `json:"updated_at"`
-	// cooldownRecordedSeq is the execution sequence watermark captured when
-	// the current model cooldown was recorded. Successes from executions
-	// stamped at or below it were dispatched before the cooldown existed and
-	// must not clear it. Runtime only: zero after restart so restored
-	// cooldowns can still be cleared by any success.
+	// cooldownRecordedSeq 是记录当前冷却时捕获的执行序列水位线。
+	// 记录当前模型冷却时，序列号等于或低于它的执行
+	// 所产生的成功请求是在该冷却出现之前派发的，
+	// 因此不得清除该冷却。仅运行时：重启后归零，这样恢复的冷却
+	// 仍可被任意成功请求清除。
 	cooldownRecordedSeq uint64 `json:"-"`
 }
 
@@ -304,7 +304,7 @@ func (a *Auth) RecentRequestsSnapshot(now time.Time) []RecentRequestBucket {
 	return out
 }
 
-// Clone shallow copies the Auth structure, duplicating maps to avoid accidental mutation.
+// Clone 浅拷贝 Auth 结构，并复制 map 以避免意外修改。
 func (a *Auth) Clone() *Auth {
 	if a == nil {
 		return nil
@@ -444,7 +444,7 @@ func (a *Auth) indexSeed() string {
 	return ""
 }
 
-// EnsureIndex returns a stable index derived from the auth file name or credential identity.
+// EnsureIndex 返回由 auth 文件名或凭据身份派生的稳定索引。
 func (a *Auth) EnsureIndex() string {
 	if a == nil {
 		return ""
@@ -466,7 +466,7 @@ func (a *Auth) EnsureIndex() string {
 	return idx
 }
 
-// Clone duplicates a model state including nested error details.
+// Clone 复制模型状态，包括嵌套的错误详情。
 func (m *ModelState) Clone() *ModelState {
 	if m == nil {
 		return nil
@@ -498,9 +498,9 @@ func (a *Auth) ProxyInfo() string {
 	return "via proxy"
 }
 
-// DisableCoolingOverride returns the auth-scoped disable_cooling override when present.
-// The value is read from metadata key "disable_cooling" (or legacy "disable-cooling").
-// The second return value distinguishes explicit false from an absent override.
+// DisableCoolingOverride 返回 auth 作用域的 disable_cooling 覆盖值（如果存在）。
+// 该值从元数据键 "disable_cooling"（或旧版 "disable-cooling"）读取。
+// 第二个返回值用于区分显式的 false 与不存在覆盖值。
 func (a *Auth) DisableCoolingOverride() (bool, bool) {
 	if a == nil || a.Metadata == nil {
 		return false, false
@@ -518,9 +518,9 @@ func (a *Auth) DisableCoolingOverride() (bool, bool) {
 	return false, false
 }
 
-// ToolPrefixDisabled returns whether the proxy_ tool name prefix should be
-// skipped for this auth. When true, tool names are sent to Anthropic unchanged.
-// The value is read from metadata key "tool_prefix_disabled" (or "tool-prefix-disabled").
+// ToolPrefixDisabled 返回该 auth 是否应跳过 proxy_ 工具名前缀。
+// 为 true 时，工具名会原样发送给 Anthropic。
+// 该值从元数据键 "tool_prefix_disabled"（或 "tool-prefix-disabled"）读取。
 func (a *Auth) ToolPrefixDisabled() bool {
 	if a == nil || a.Metadata == nil {
 		return false
@@ -535,9 +535,9 @@ func (a *Auth) ToolPrefixDisabled() bool {
 	return false
 }
 
-// RequestRetryOverride returns the auth-scoped request_retry override when present.
-// The value is read from metadata key "request_retry" (or legacy "request-retry").
-// A negative value is treated as unset and falls back to the global request-retry.
+// RequestRetryOverride 返回 auth 作用域的 request_retry 覆盖值（如果存在）。
+// 该值从元数据键 "request_retry"（或旧版 "request-retry"）读取。
+// 负值视为未设置，并回退到全局 request-retry。
 func (a *Auth) RequestRetryOverride() (int, bool) {
 	if a == nil || a.Metadata == nil {
 		return 0, false
@@ -644,7 +644,7 @@ func (a *Auth) AccountInfo() (string, string) {
 	}
 }
 
-// IsCodexUseSIWC reports whether a Codex auth record is configured to use its nested "siwc" section.
+// IsCodexUseSIWC 报告某个 Codex auth 记录是否配置为使用其嵌套的 "siwc" 段。
 func IsCodexUseSIWC(a *Auth) bool {
 	if a == nil {
 		return false
@@ -665,7 +665,7 @@ func IsCodexUseSIWC(a *Auth) bool {
 	return enabled
 }
 
-// OuterExpirationTime extracts the outer credential expiration timestamp, ignoring the nested "siwc" section.
+// OuterExpirationTime 提取外层凭据的过期时间戳，忽略嵌套的 "siwc" 段。
 func (a *Auth) OuterExpirationTime() (time.Time, bool) {
 	if a == nil {
 		return time.Time{}, false
@@ -685,8 +685,8 @@ func (a *Auth) OuterExpirationTime() (time.Time, bool) {
 	return time.Time{}, false
 }
 
-// ExpirationTime attempts to extract the active credential expiration timestamp from metadata.
-// When use_siwc is enabled on a Codex credential, the active SIWC section expiration is returned.
+// ExpirationTime 尝试从元数据中提取当前生效凭据的过期时间戳。
+// 当 Codex 凭据启用 use_siwc 时，返回当前生效的 SIWC 段的过期时间。
 func (a *Auth) ExpirationTime() (time.Time, bool) {
 	if a == nil {
 		return time.Time{}, false
@@ -701,11 +701,11 @@ func (a *Auth) ExpirationTime() (time.Time, bool) {
 	return a.OuterExpirationTime()
 }
 
-// CodexSIWCRefreshLead is the minimum remaining validity required before refreshing
-// a Sign in with ChatGPT (SIWC) token, matching pi's DEFAULT_OAUTH_MINIMUM_VALIDITY_MS (5 minutes).
+// CodexSIWCRefreshLead 是刷新 Sign in with ChatGPT (SIWC) 令牌前所需的最短
+// 剩余有效期，与 pi 的 DEFAULT_OAUTH_MINIMUM_VALIDITY_MS（5 分钟）一致。
 const CodexSIWCRefreshLead = 5 * time.Minute
 
-// SIWCExpirationTime extracts the expiration timestamp from the nested "siwc" metadata section.
+// SIWCExpirationTime 从嵌套的 "siwc" 元数据段中提取过期时间戳。
 func (a *Auth) SIWCExpirationTime() (time.Time, bool) {
 	if a == nil || a.Metadata == nil {
 		return time.Time{}, false
@@ -725,7 +725,7 @@ func (a *Auth) SIWCExpirationTime() (time.Time, bool) {
 	return time.Time{}, false
 }
 
-// CodexOuterNeedsRefresh evaluates the outer credential refresh due time and whether it needs refresh at now.
+// CodexOuterNeedsRefresh 评估外层凭据的刷新到期时间以及当前是否需要刷新。
 func CodexOuterNeedsRefresh(a *Auth, now time.Time) (dueAt time.Time, hasRefresh bool, needsRefresh bool) {
 	if a == nil {
 		return time.Time{}, false, false
@@ -798,7 +798,7 @@ func CodexOuterNeedsRefresh(a *Auth, now time.Time) (dueAt time.Time, hasRefresh
 	return now, true, true
 }
 
-// CodexSIWCNeedsRefresh evaluates the nested "siwc" credential section refresh due time and whether it needs refresh at now.
+// CodexSIWCNeedsRefresh 评估嵌套 "siwc" 凭据段的刷新到期时间以及当前是否需要刷新。
 func CodexSIWCNeedsRefresh(a *Auth, now time.Time) (dueAt time.Time, hasRefresh bool, needsRefresh bool) {
 	if a == nil || a.Metadata == nil {
 		return time.Time{}, false, false
@@ -840,8 +840,8 @@ func CodexSIWCNeedsRefresh(a *Auth, now time.Time) (dueAt time.Time, hasRefresh 
 	return now, true, true
 }
 
-// AccessTokenExpirationTime returns the expiration time of the specific access_token.
-// If the access_token is a JWT, its exp claim takes strict precedence.
+// AccessTokenExpirationTime 返回特定 access_token 的过期时间。
+// 如果该 access_token 是 JWT，则其 exp 声明具有严格优先级。
 func (a *Auth) AccessTokenExpirationTime() (time.Time, bool) {
 	if a == nil {
 		return time.Time{}, false
@@ -859,7 +859,7 @@ func (a *Auth) AccessTokenExpirationTime() (time.Time, bool) {
 	return a.ExpirationTime()
 }
 
-// HasValidAccessToken returns whether the auth has a non-empty access token that is unexpired at the given time.
+// HasValidAccessToken 返回该 auth 是否具有在给定时间未过期的非空访问令牌。
 func (a *Auth) HasValidAccessToken(now time.Time) bool {
 	if a == nil {
 		return false
@@ -928,7 +928,7 @@ func expirationFromMap(meta map[string]any) (time.Time, bool) {
 	return time.Time{}, false
 }
 
-// parseJWTExp extracts the "exp" claim timestamp from a JWT token string without signature verification.
+// parseJWTExp 从不做签名校验的 JWT 令牌字符串中提取 "exp" 声明时间戳。
 func parseJWTExp(token string) (time.Time, bool) {
 	token = strings.TrimSpace(token)
 	if token == "" {
@@ -1075,7 +1075,7 @@ func normaliseUnix(raw int64) time.Time {
 	if raw <= 0 {
 		return time.Time{}
 	}
-	// Heuristic: treat values with millisecond precision (>1e12) accordingly.
+	// 启发式规则：对具有毫秒精度（>1e12）的值作相应处理。
 	if raw > 1_000_000_000_000 {
 		return time.UnixMilli(raw)
 	}

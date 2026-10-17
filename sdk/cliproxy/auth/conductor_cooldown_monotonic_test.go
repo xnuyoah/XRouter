@@ -9,8 +9,8 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
-// Later failure writes must never shorten a still-live cooldown; they may only
-// extend it (#5501). A deliberate zero write (disableCooling) still clears.
+// 后续的失败写入绝不能缩短仍然生效的冷却；它们只能延长它（#5501）。
+// 有意的零值写入（disableCooling）仍会清除冷却。
 
 func newCooldownMonotonicManager(t *testing.T, models ...string) (*Manager, *Auth) {
 	t.Helper()
@@ -37,7 +37,7 @@ func TestManager_MarkResult_CredentialScopeKeepsLongerSiblingDeadline(t *testing
 
 	m, auth := newCooldownMonotonicManager(t, "model-a", "model-b")
 
-	// Long per-model deadline on model-b: a 401 (~30m) or 404 (12h).
+	// model-b 上较长的按模型截止时间：401（约 30m）或 404（12h）。
 	m.MarkResult(context.Background(), Result{
 		AuthID: auth.ID, Provider: auth.Provider, Model: "model-b",
 		Success: false, Error: &Error{HTTPStatus: http.StatusUnauthorized, Message: "long 401"},
@@ -49,7 +49,7 @@ func TestManager_MarkResult_CredentialScopeKeepsLongerSiblingDeadline(t *testing
 		t.Fatalf("precondition failed: model-b long deadline missing: %+v", bState)
 	}
 
-	// Shorter credential-scoped 429 on model-a must not shorten model-b.
+	// model-a 上较短的凭据范围 429 不得缩短 model-b。
 	short := 5 * time.Minute
 	m.MarkResult(context.Background(), Result{
 		AuthID: auth.ID, Provider: auth.Provider, Model: "model-a",
@@ -66,7 +66,7 @@ func TestManager_MarkResult_CredentialScopeKeepsLongerSiblingDeadline(t *testing
 		t.Fatalf("credential-scoped failure shortened model-b deadline to %v", bStateAfter.NextRetryAfter.Sub(before))
 	}
 
-	// Model A should only be blocked for the 5-minute credential quota, not elevated to Model B's 30m deadline.
+	// Model A 只应因那 5 分钟的凭据额度而被阻止，而不应被提升到 Model B 的 30m 截止时间。
 	blockedA, _, _ := isAuthBlockedForModel(updated, "model-a", before.Add(6*time.Minute))
 	if blockedA {
 		t.Fatalf("model-a should have unblocked after its 5m credential quota, but is still blocked")
@@ -77,9 +77,9 @@ func TestManager_MarkResult_CredentialScopeKeepsLongerSiblingDeadline(t *testing
 	}
 }
 
-// Ensure that a sibling model's long non-quota deadline (such as a 12h 404) is NOT
-// promoted into its Quota.NextRecoverAt, which would cause subsequent credential-scoped
-// writes on that sibling to elevate other models to 12h.
+// 确保某个兄弟模型较长的非额度截止时间（例如 12h 的 404）不会被
+// 提升进它的 Quota.NextRecoverAt，否则会导致该兄弟模型上后续的凭据范围
+// 写入把其他模型提升到 12h。
 func TestManager_MarkResult_CredentialScope_DoesNotPromoteSiblingDeadlineToQuota(t *testing.T) {
 	previous := quotaCooldownDisabled.Load()
 	quotaCooldownDisabled.Store(false)
@@ -87,14 +87,14 @@ func TestManager_MarkResult_CredentialScope_DoesNotPromoteSiblingDeadlineToQuota
 
 	m, auth := newCooldownMonotonicManager(t, "model-a", "model-b")
 
-	// 1. Model B gets a 404 (12h deadline).
+	// 1. Model B 收到 404（12h 截止时间）。
 	m.MarkResult(context.Background(), Result{
 		AuthID: auth.ID, Provider: auth.Provider, Model: "model-b",
 		Success: false, Error: &Error{HTTPStatus: http.StatusNotFound, Message: "model not found"},
 	})
 	before := time.Now()
 
-	// 2. Model A gets a credential-scoped 429 (5m deadline).
+	// 2. Model A 收到凭据范围的 429（5m 截止时间）。
 	short := 5 * time.Minute
 	m.MarkResult(context.Background(), Result{
 		AuthID: auth.ID, Provider: auth.Provider, Model: "model-a",
@@ -107,16 +107,16 @@ func TestManager_MarkResult_CredentialScope_DoesNotPromoteSiblingDeadlineToQuota
 	if bState1 == nil {
 		t.Fatal("model-b state missing")
 	}
-	// Model B's NextRetryAfter should still be ~12h.
+	// Model B 的 NextRetryAfter 仍应约为 12h。
 	if bState1.NextRetryAfter.Before(before.Add(11 * time.Hour)) {
 		t.Fatalf("model-b NextRetryAfter shortened: %v", bState1.NextRetryAfter.Sub(before))
 	}
-	// Model B's Quota.NextRecoverAt must be ~5m, NOT 12h!
+	// Model B 的 Quota.NextRecoverAt 必须是约 5m，而不是 12h！
 	if bState1.Quota.NextRecoverAt.After(before.Add(10 * time.Minute)) {
 		t.Fatalf("model-b Quota.NextRecoverAt was incorrectly elevated to %v", bState1.Quota.NextRecoverAt.Sub(before))
 	}
 
-	// 3. A subsequent in-flight request on Model B also returns credential-scoped 429 (5m).
+	// 3. Model B 上一次后续的在途请求也返回凭据范围的 429（5m）。
 	m.MarkResult(context.Background(), Result{
 		AuthID: auth.ID, Provider: auth.Provider, Model: "model-b",
 		Success: false, RetryAfter: &short, CredentialScope: true,
@@ -124,7 +124,7 @@ func TestManager_MarkResult_CredentialScope_DoesNotPromoteSiblingDeadlineToQuota
 	})
 
 	snap2, _ := m.GetByID(auth.ID)
-	// Model A must NOT have been elevated to 12h!
+	// Model A 绝不能被提升到 12h！
 	aState2 := existingModelState(snap2, canonicalModelKey("model-a"))
 	if aState2 == nil {
 		t.Fatal("model-a state missing")
@@ -136,12 +136,12 @@ func TestManager_MarkResult_CredentialScope_DoesNotPromoteSiblingDeadlineToQuota
 		t.Fatalf("auth.Quota.NextRecoverAt was incorrectly elevated to 12h: %v", snap2.Quota.NextRecoverAt.Sub(before))
 	}
 
-	// Model A should unblock after 6 minutes.
+	// Model A 应在 6 分钟后解封。
 	blockedA, _, _ := isAuthBlockedForModel(snap2, "model-a", before.Add(6*time.Minute))
 	if blockedA {
 		t.Fatalf("model-a should be unblocked after 6m, but is blocked")
 	}
-	// Model B should still be blocked after 6 minutes.
+	// Model B 在 6 分钟后仍应被阻止。
 	blockedB, _, _ := isAuthBlockedForModel(snap2, "model-b", before.Add(6*time.Minute))
 	if !blockedB {
 		t.Fatalf("model-b should still be blocked after 6m")
@@ -206,9 +206,9 @@ func TestManager_MarkResult_LaterShorterFailureKeepsLongerModelDeadline(t *testi
 	}
 }
 
-// The client-facing projection must agree with scheduling: a live credential-wide
-// cooldown (auth.Unavailable + auth.NextRetryAfter) suspends models that carry no
-// per-model state (#5501).
+// 面向客户端的投影必须与调度一致：一个生效的凭据级
+// 冷却（auth.Unavailable + auth.NextRetryAfter）会暂停那些不携带
+// 按模型状态的模型（#5501）。
 func TestManager_ClientModelProjection_ReflectsAuthLevelCooldown(t *testing.T) {
 	previous := quotaCooldownDisabled.Load()
 	quotaCooldownDisabled.Store(false)
@@ -259,7 +259,7 @@ func TestManager_ApplyAuthFailureState_PreservesLongerCredentialDeadline(t *test
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			m, auth := newCooldownMonotonicManager(t, "model-a")
-			// Credential-wide 404 (12h deadline).
+			// 凭据级 404（12h 截止时间）。
 			m.MarkResult(context.Background(), Result{
 				AuthID: auth.ID, Provider: auth.Provider, Model: "",
 				Success: false, Error: &Error{HTTPStatus: http.StatusNotFound, Message: "credential not found"},
@@ -270,7 +270,7 @@ func TestManager_ApplyAuthFailureState_PreservesLongerCredentialDeadline(t *test
 				t.Fatalf("precondition failed: expected ~12h deadline, got: %v", snap.NextRetryAfter.Sub(before))
 			}
 
-			// Follow up with a shorter credential failure.
+			// 随后跟一个更短的凭据失败。
 			m.MarkResult(context.Background(), Result{
 				AuthID: auth.ID, Provider: auth.Provider, Model: "",
 				Success: false, Error: tc.second,

@@ -12,8 +12,8 @@ import (
 
 const homeResultExecutorType = "home-result"
 
-// ReportHomeUnauthorized publishes a result-only zero-token usage record for an
-// upstream 401 attempt that did not pass through an executor UsageReporter.
+// ReportHomeUnauthorized 为一次未经过执行器 UsageReporter 的
+// 上游 401 尝试发布仅含结果、token 数为零的用量记录。
 func (m *Manager) ReportHomeUnauthorized(ctx context.Context, auth *Auth, provider, model string, upstreamBody ...[]byte) {
 	failureBody := ""
 	if len(upstreamBody) > 0 {

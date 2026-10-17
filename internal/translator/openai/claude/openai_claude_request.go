@@ -1,8 +1,8 @@
-// Package claude provides request translation functionality for Anthropic to OpenAI API.
-// It handles parsing and transforming Anthropic API requests into OpenAI Chat Completions API format,
-// extracting model information, system instructions, message contents, and tool declarations.
-// The package performs JSON data transformation to ensure compatibility
-// between Anthropic API format and OpenAI API's expected format.
+// Package claude 提供 Anthropic 到 OpenAI API 的请求转换功能。
+// 它负责解析并转换 Anthropic API 请求为 OpenAI Chat Completions API 格式，
+// 提取模型信息、系统指令、消息内容和工具声明。
+// 本包执行 JSON 数据转换以确保
+// Anthropic API 格式与 OpenAI API 期望格式之间的兼容性。
 package claude
 
 import (
@@ -17,16 +17,16 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
-// ConvertClaudeRequestToOpenAI parses and transforms an Anthropic API request into OpenAI Chat Completions API format.
-// It extracts the model name, system instruction, message contents, and tool declarations
-// from the raw JSON request and returns them in the format expected by the OpenAI API.
+// ConvertClaudeRequestToOpenAI 解析并将 Anthropic API 请求转换为 OpenAI Chat Completions API 格式。
+// 它从原始 JSON 请求中提取模型名、系统指令、消息内容和工具声明，
+// 并按 OpenAI API 期望的格式返回它们。
 func ConvertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream bool) ([]byte, error) {
 	return convertClaudeRequestToOpenAI(modelName, inputRawJSON, stream, false)
 
 }
 
-// ConvertClaudeRequestToOpenAIWithCompat preserves assistant thinking text
-// for configured compatibility endpoints.
+// ConvertClaudeRequestToOpenAIWithCompat 为已配置的兼容端点
+// 保留 assistant 的 thinking 文本。
 func ConvertClaudeRequestToOpenAIWithCompat(modelName string, inputRawJSON []byte, stream bool) ([]byte, error) {
 	return convertClaudeRequestToOpenAI(modelName, inputRawJSON, stream, true)
 }
@@ -34,27 +34,27 @@ func ConvertClaudeRequestToOpenAIWithCompat(modelName string, inputRawJSON []byt
 func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream bool, preserveThinkingBlocks bool) ([]byte, error) {
 	rawJSON := inputRawJSON
 	var drops translatorcommon.UserTurnDrops
-	// Base OpenAI Chat Completions API template
+	// 基础 OpenAI Chat Completions API 模板
 	out := []byte(`{"model":"","messages":[]}`)
 
 	root := gjson.ParseBytes(rawJSON)
 
-	// Model mapping
+	// 模型映射
 	out, _ = sjson.SetBytes(out, "model", modelName)
 
-	// Max tokens
+	// 最大 token 数
 	if maxTokens := root.Get("max_tokens"); maxTokens.Exists() {
 		out, _ = sjson.SetBytes(out, "max_tokens", maxTokens.Int())
 	}
 
-	// Temperature
+	// 温度
 	if temp := root.Get("temperature"); temp.Exists() {
 		out, _ = sjson.SetBytes(out, "temperature", temp.Float())
 	} else if topP := root.Get("top_p"); topP.Exists() { // Top P
 		out, _ = sjson.SetBytes(out, "top_p", topP.Float())
 	}
 
-	// Stop sequences -> stop
+	// 停止序列 -> stop
 	if stopSequences := root.Get("stop_sequences"); stopSequences.Exists() {
 		if stopSequences.IsArray() {
 			var stops []string
@@ -68,10 +68,10 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 		}
 	}
 
-	// Stream
+	// 流式
 	out, _ = sjson.SetBytes(out, "stream", stream)
 
-	// Thinking: Convert Claude thinking.budget_tokens to OpenAI reasoning_effort
+	// Thinking：将 Claude thinking.budget_tokens 转换为 OpenAI reasoning_effort
 	if thinkingConfig := root.Get("thinking"); thinkingConfig.Exists() && thinkingConfig.IsObject() {
 		if thinkingType := thinkingConfig.Get("type"); thinkingType.Exists() {
 			switch thinkingType.String() {
@@ -82,18 +82,18 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 						out, _ = sjson.SetBytes(out, "reasoning_effort", effort)
 					}
 				} else if v := root.Get("output_config.effort"); v.Exists() && v.Type == gjson.String && strings.TrimSpace(v.String()) != "" {
-					// Some Claude-compatible clients pair manual thinking with output_config.effort.
-					// Preserve that explicit level when there is no legacy token budget to map.
+					// 部分兼容 Claude 的客户端会把手动 thinking 与 output_config.effort 搭配使用。
+					// 在没有旧的 token 预算可映射时保留该显式等级。
 					out, _ = sjson.SetBytes(out, "reasoning_effort", strings.ToLower(strings.TrimSpace(v.String())))
 				} else {
-					// No budget_tokens or explicit effort specified; preserve the enabled-thinking default.
+					// 未指定 budget_tokens 或显式力度；保留 enabled thinking 的默认值。
 					if effort, ok := thinking.ConvertBudgetToLevel(-1); ok && effort != "" {
 						out, _ = sjson.SetBytes(out, "reasoning_effort", effort)
 					}
 				}
 			case "adaptive", "auto":
-				// Adaptive thinking can carry an explicit effort in output_config.effort (Claude 4.6).
-				// Pass through directly; ApplyThinking handles clamping to target model's levels.
+				// 自适应 thinking 可以在 output_config.effort 中携带显式力度（Claude 4.6）。
+				// 直接透传；ApplyThinking 会负责向目标模型的等级裁剪。
 				effort := ""
 				if v := root.Get("output_config.effort"); v.Exists() && v.Type == gjson.String {
 					effort = strings.ToLower(strings.TrimSpace(v.String()))
@@ -111,14 +111,14 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 		}
 	}
 
-	// Process messages and system.
+	// 处理消息和 system。
 	messageCapacity := root.Get("messages.#").Int()
 	if root.Get("system").Exists() {
 		messageCapacity++
 	}
 	messageItems := translatorcommon.NewRawArrayItems(messageCapacity)
 
-	// Handle system message first.
+	// 先处理 system 消息。
 	systemContentItems := make([][]byte, 0, 2)
 	appendSystemContent := func(content gjson.Result) {
 		if !content.Exists() {
@@ -146,14 +146,14 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 	if system := root.Get("system"); system.Exists() {
 		appendSystemContent(system)
 	}
-	// Only add system message if it has content.
+	// 仅当 system 消息有内容时才添加。
 	if len(systemContentItems) > 0 {
 		systemMessage := []byte(`{"role":"system","content":[]}`)
 		systemMessage, _ = sjson.SetRawBytes(systemMessage, "content", translatorcommon.JoinRawArray(systemContentItems))
 		messageItems = append(messageItems, systemMessage)
 	}
 
-	// Process Anthropic messages
+	// 处理 Anthropic 消息
 	if messages := root.Get("messages"); messages.Exists() && messages.IsArray() {
 		var pendingToolUseIDs []string
 		var pendingSystemReminders [][]byte
@@ -175,7 +175,7 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 				return true
 			}
 
-			// Handle content
+			// 处理内容
 			if contentResult.Exists() && contentResult.IsArray() {
 				if role == "user" && len(pendingToolUseIDs) > 0 {
 					contentResult = translatorcommon.AlignClaudeToolResults(contentResult, pendingToolUseIDs)
@@ -184,31 +184,31 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 				pendingToolUseIDs = nil
 
 				contentItems := make([][]byte, 0)
-				var reasoningParts []string // Accumulate thinking text for reasoning_content
+				var reasoningParts []string // 为 reasoning_content 累加 thinking 文本
 				var toolCalls []interface{}
-				toolResults := make([][]byte, 0)       // Collect tool_result messages to emit after the main message
-				relayedToolImages := make([][]byte, 0) // Images pulled out of tool_result content for user-message relay
+				toolResults := make([][]byte, 0)       // 收集 tool_result 消息，以便在主消息之后发出
+				relayedToolImages := make([][]byte, 0) // 从 tool_result 内容中取出、用于用户消息中继的图片
 
 				contentResult.ForEach(func(_, part gjson.Result) bool {
 					partType := part.Get("type").String()
 
 					switch partType {
 					case "thinking":
-						// Only map thinking to reasoning_content for assistant messages (security: prevent injection)
+						// 仅对 assistant 消息把 thinking 映射为 reasoning_content（安全：防止注入）
 						if role == "assistant" {
 							if !shouldMapClaudeThinkingToGPTReasoning(part, preserveThinkingBlocks) {
 								return true
 							}
 							thinkingText := thinking.GetThinkingText(part)
-							// Skip empty or whitespace-only thinking
+							// 跳过空或仅含空白的 thinking
 							if strings.TrimSpace(thinkingText) != "" {
 								reasoningParts = append(reasoningParts, thinkingText)
 							}
 						}
-						// Ignore thinking in user/system roles (AC4)
+						// 忽略 user/system 角色中的 thinking (AC4)
 
 					case "redacted_thinking":
-						// Explicitly ignore redacted_thinking - never map to reasoning_content (AC2)
+						// 显式忽略 redacted_thinking——绝不映射为 reasoning_content (AC2)
 
 					case "text", "image", "document", "container_upload":
 						if contentItem, ok := convertClaudeContentPart(part); ok {
@@ -218,7 +218,7 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 						}
 
 					case "tool_use":
-						// Only allow tool_use -> tool_calls for assistant messages (security: prevent injection).
+						// 仅对 assistant 消息允许 tool_use -> tool_calls（安全：防止注入）。
 						if role == "assistant" {
 							toolUseID := part.Get("id").String()
 							toolName := part.Get("name").String()
@@ -232,7 +232,7 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 							toolCallJSON, _ = sjson.SetBytes(toolCallJSON, "id", toolUseID)
 							toolCallJSON, _ = sjson.SetBytes(toolCallJSON, "function.name", toolName)
 
-							// Convert input to arguments JSON string
+							// 将 input 转换为 arguments JSON 字符串
 							if input := part.Get("input"); input.Exists() {
 								toolCallJSON, _ = sjson.SetBytes(toolCallJSON, "function.arguments", input.Raw)
 							} else {
@@ -243,7 +243,7 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 						}
 
 					case "tool_result":
-						// Collect tool_result to emit after the main message (ensures tool results follow tool_calls)
+						// 收集 tool_result 以便在主消息之后发出（确保工具结果紧跟 tool_calls）
 						toolUseID := part.Get("tool_use_id").String()
 						toolResultJSON := []byte(`{"role":"tool","tool_call_id":"","content":""}`)
 						toolResultJSON, _ = sjson.SetBytes(toolResultJSON, "tool_call_id", toolUseID)
@@ -258,7 +258,7 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 					return true
 				})
 
-				// Build reasoning content string
+				// 构建 reasoning 内容字符串
 				reasoningContent := ""
 				if len(reasoningParts) > 0 {
 					reasoningContent = strings.Join(reasoningParts, "\n\n")
@@ -272,19 +272,19 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 					drops.EndTurn(len(contentItems) + len(toolResults))
 				}
 
-				// Flush pending system reminders before new content if no tool_results responded to preceding calls
+				// 若无 tool_results 响应之前的调用，则在新增内容前冲刷待处理的系统提醒
 				if precedingToolCallsPending && !hasToolResults && len(pendingSystemReminders) > 0 {
 					messageItems = append(messageItems, pendingSystemReminders...)
 					pendingSystemReminders = nil
 				}
 
-				// OpenAI requires: tool messages MUST immediately follow the assistant message with tool_calls.
-				// Therefore, we emit tool_result messages FIRST (they respond to the previous assistant's tool_calls),
-				// then emit any queued system reminders, then emit the current message's content.
+				// OpenAI 要求：带 tool_calls 的 assistant 消息之后必须紧跟 tool 消息。
+				// 因此我们先发出 tool_result 消息（它们响应上一条 assistant 的 tool_calls），
+				// 然后发出排队的系统提醒，最后发出当前消息的内容。
 				messageItems = append(messageItems, toolResults...)
 
-				// OpenAI tool messages cannot carry image parts, so images returned by a tool are
-				// replayed as a user message directly after the tool results.
+				// OpenAI 的 tool 消息不能携带图片部分，因此工具返回的图片会
+				// 作为 user 消息紧跟在 tool 结果之后重放。
 				if len(relayedToolImages) > 0 {
 					relayItems := make([][]byte, 0, len(relayedToolImages)+1)
 					noticeJSON := []byte(`{"type":"text","text":""}`)
@@ -293,7 +293,7 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 					relayItems = append(relayItems, relayedToolImages...)
 
 					if role == "user" && hasContent {
-						// Merge into the current user message so the request keeps a single user turn.
+						// 合并进当前 user 消息，使请求保持单个用户轮次。
 						contentItems = append(relayItems, contentItems...)
 					} else {
 						relayJSON := []byte(`{"role":"user"}`)
@@ -307,26 +307,26 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 					pendingSystemReminders = nil
 				}
 
-				// For assistant messages: emit a single unified message with content, tool_calls, and reasoning_content
-				// This avoids splitting into multiple assistant messages which breaks OpenAI tool-call adjacency
+				// 对 assistant 消息：发出包含 content、tool_calls 和 reasoning_content 的单个统一消息
+				// 这避免了拆成多条 assistant 消息，从而破坏 OpenAI 的工具调用相邻性
 				if role == "assistant" {
 					if hasContent || hasReasoning || hasToolCalls {
 						msgJSON := []byte(`{"role":"assistant"}`)
 
-						// Add content (as array if we have items, empty string if reasoning-only)
+						// 添加 content（有内容项时用数组，仅推理时用空字符串）
 						if hasContent {
 							msgJSON, _ = sjson.SetRawBytes(msgJSON, "content", translatorcommon.JoinRawArray(contentItems))
 						} else {
-							// Ensure content field exists for OpenAI compatibility
+							// 为保证 OpenAI 兼容性确保 content 字段存在
 							msgJSON, _ = sjson.SetBytes(msgJSON, "content", "")
 						}
 
-						// Add reasoning_content if present
+						// 若存在 reasoning_content 则添加
 						if hasReasoning {
 							msgJSON, _ = sjson.SetBytes(msgJSON, "reasoning_content", reasoningContent)
 						}
 
-						// Add tool_calls if present (in same message as content)
+						// 若存在 tool_calls 则添加（与 content 在同一消息中）
 						if hasToolCalls {
 							msgJSON, _ = sjson.SetBytes(msgJSON, "tool_calls", toolCalls)
 						}
@@ -334,8 +334,8 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 						messageItems = append(messageItems, msgJSON)
 					}
 				} else {
-					// For non-assistant roles: emit content message if we have content
-					// If the message only contains tool_results (no text/image), we still processed them above
+					// 非 assistant 角色：有内容时发出内容消息
+					// 若消息只包含 tool_results（无文本/图片），我们已在上面处理过它们
 					if hasContent {
 						msgJSON := []byte(`{"role":""}`)
 						msgJSON, _ = sjson.SetBytes(msgJSON, "role", role)
@@ -343,12 +343,12 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 						msgJSON, _ = sjson.SetRawBytes(msgJSON, "content", translatorcommon.JoinRawArray(contentItems))
 						messageItems = append(messageItems, msgJSON)
 					} else if hasToolResults && !hasContent {
-						// tool_results already emitted above, no additional user message needed
+						// tool_results 已在上面发出，无需额外的 user 消息
 					}
 				}
 
 			} else if contentResult.Exists() && contentResult.Type == gjson.String {
-				// Simple string content
+				// 简单的字符串内容
 				msgJSON := []byte(`{"role":"","content":""}`)
 				msgJSON, _ = sjson.SetBytes(msgJSON, "role", role)
 				msgJSON, _ = sjson.SetBytes(msgJSON, "content", contentResult.String())
@@ -362,13 +362,13 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 		}
 	}
 
-	// Set messages.
+	// 设置 messages。
 	if len(messageItems) > 0 {
 		messageItems = translatorcommon.AlignOpenAIToolCallMessages(messageItems)
 		out = translatorcommon.SetRawArrayItems(out, "messages", messageItems)
 	}
 
-	// Process tools - convert Anthropic tools to OpenAI functions
+	// 处理 tools——将 Anthropic 工具转换为 OpenAI 函数
 	if tools := root.Get("tools"); tools.Exists() && tools.IsArray() {
 		var toolItems [][]byte
 		tools.ForEach(func(_, tool gjson.Result) bool {
@@ -376,7 +376,7 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 			openAIToolJSON, _ = sjson.SetBytes(openAIToolJSON, "function.name", tool.Get("name").String())
 			openAIToolJSON, _ = sjson.SetBytes(openAIToolJSON, "function.description", tool.Get("description").String())
 
-			// Convert Anthropic input_schema to OpenAI function parameters
+			// 将 Anthropic 的 input_schema 转换为 OpenAI 函数参数
 			if inputSchema := tool.Get("input_schema"); inputSchema.Exists() && inputSchema.Type != gjson.Null {
 				openAIToolJSON, _ = sjson.SetBytes(openAIToolJSON, "function.parameters", normalizeObjectSchemaProperties(inputSchema.Value()))
 			} else {
@@ -392,7 +392,7 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 		}
 	}
 
-	// Tool choice mapping - convert Anthropic tool_choice to OpenAI format
+	// tool_choice 映射——将 Anthropic 的 tool_choice 转换为 OpenAI 格式
 	if toolChoice := root.Get("tool_choice"); toolChoice.Exists() && toolChoice.Type != gjson.Null {
 		choiceType := toolChoice.Get("type").String()
 		if choiceType == "" && toolChoice.Type == gjson.String {
@@ -406,7 +406,7 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 		case "none":
 			out, _ = sjson.SetBytes(out, "tool_choice", "none")
 		case "tool":
-			// Specific tool choice
+			// 指定具体的工具选择
 			toolName := toolChoice.Get("name").String()
 			if toolName != "" {
 				toolChoiceJSON := []byte(`{"type":"function","function":{"name":""}}`)
@@ -416,7 +416,7 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 				out, _ = sjson.SetBytes(out, "tool_choice", "none")
 			}
 		default:
-			// Fail closed: unrecognized tool_choice values must not turn into permission
+			// 失败关闭：无法识别的 tool_choice 值不得变成放行
 			out, _ = sjson.SetBytes(out, "tool_choice", "none")
 		}
 
@@ -425,7 +425,7 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 		}
 	}
 
-	// Handle user parameter (for tracking)
+	// 处理 user 参数（用于跟踪）
 	if user := root.Get("user"); user.Exists() {
 		out, _ = sjson.SetBytes(out, "user", user.String())
 	}
@@ -436,10 +436,10 @@ func convertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 func normalizeObjectSchemaProperties(schema any) any {
 	switch value := schema.(type) {
 	case bool:
-		// JSON Schema boolean subschemas (true/false) are valid, but strict OpenAPI 3.0
-		// upstream validators reject boolean subschemas.
-		// Normalize `true` (accept anything) to an empty object schema `{}`.
-		// Preserve `false` (reject all) to avoid turning rejection constraints into open schemas.
+		// JSON Schema 的布尔子模式（true/false）是合法的，但严格的 OpenAPI 3.0
+		// 上游校验器会拒绝布尔子模式。
+		// 将 `true`（接受任何内容）规范化为空对象模式 `{}`。
+		// 保留 `false`（拒绝一切），避免把拒绝约束变成开放模式。
 		if value {
 			return map[string]any{}
 		}
@@ -454,7 +454,7 @@ func normalizeObjectSchemaProperties(schema any) any {
 			delete(value, "pattern")
 		}
 
-		// Inspect regex keys under patternProperties
+		// 检查 patternProperties 下的正则键
 		if patternProps, ok := value["patternProperties"].(map[string]any); ok {
 			for patternKey, subSchema := range patternProps {
 				if util.HasUnsupportedUnicodePropertyEscape(patternKey) {
@@ -480,8 +480,8 @@ func normalizeObjectSchemaProperties(schema any) any {
 			if val, exists := value[valKey]; exists {
 				switch sub := val.(type) {
 				case bool:
-					// Normalize boolean subschemas (e.g. items: true), but preserve boolean
-					// additionalProperties (false/true) required by OpenAI structured outputs.
+					// 规范化布尔子模式（例如 items: true），但保留 OpenAI 结构化输出
+					// 所要求的布尔 additionalProperties（false/true）。
 					if valKey != "additionalProperties" && sub {
 						value[valKey] = map[string]any{}
 					}
@@ -573,8 +573,8 @@ func convertClaudeContentPart(part gjson.Result) (string, bool) {
 	}
 }
 
-// convertClaudeFilePartToOpenAI emits an OpenAI file part for inline base64 bytes.
-// A file id carries none, so it stays unconverted and the caller reports it.
+// convertClaudeFilePartToOpenAI 为内联 base64 字节发出 OpenAI file 部分。
+// 文件 id 不携带任何字节，因此保持不转换，由调用方上报。
 func convertClaudeFilePartToOpenAI(part gjson.Result) (string, bool) {
 	source := part.Get("source")
 	mimeType := source.Get("media_type").String()
@@ -601,11 +601,11 @@ func convertClaudeFilePartToOpenAI(part gjson.Result) (string, bool) {
 	return string(fileContent), true
 }
 
-// toolResultImagePlaceholder keeps the OpenAI tool message non-empty when a Claude
-// tool_result carried nothing but images.
+// toolResultImagePlaceholder 在 Claude 的 tool_result 只携带图片时，
+// 让 OpenAI tool 消息保持非空。
 const toolResultImagePlaceholder = "[Tool returned image content; the images follow in the next user message.]"
 
-// toolResultImageRelayNotice labels the user message that carries relayed tool images.
+// toolResultImageRelayNotice 为用户消息打标签，该消息承载中继的工具图片。
 const toolResultImageRelayNotice = "Images returned by the preceding tool call(s):"
 
 func convertClaudeToolResultContent(content gjson.Result) (string, [][]byte) {

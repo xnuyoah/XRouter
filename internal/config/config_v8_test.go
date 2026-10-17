@@ -157,7 +157,7 @@ openai-compatibility:
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Scope metadata is intentionally added when fields move under oauth.providers.
+	// 当字段迁移到 oauth.providers 下时，会有意添加作用域元数据。
 	after.OAuthOnlyFields = nil
 	if !reflect.DeepEqual(before, after) {
 		t.Fatal("migration changed effective config")
@@ -302,7 +302,7 @@ another-legacy-key:
 		t.Fatalf("expected warnings for all unmapped sections, found: %+v", foundSections)
 	}
 
-	// Repeated migration should not repeat warnings
+	// 重复迁移不应重复产生警告
 	hook.Reset()
 	remigrated, _, errRemigrate := NormalizeConfigLayout(migrated, true)
 	if errRemigrate != nil {
@@ -313,7 +313,7 @@ another-legacy-key:
 	}
 	_ = remigrated
 
-	// Test warning hook customization
+	// 测试警告钩子定制
 	var hookBuf bytes.Buffer
 	var hookMu sync.Mutex
 	SetV8MigrationWarnFunc(func(section, msg string) {
@@ -337,7 +337,7 @@ another-legacy-key:
 		t.Fatalf("expected custom hook to capture warnings, got: %s", hookOutput)
 	}
 
-	// Known-only config produces no warnings
+	// 仅含已知项的配置不产生警告
 	hook.Reset()
 	hookBuf.Reset()
 	knownRaw := []byte(`host: "127.0.0.1"

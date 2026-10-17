@@ -97,7 +97,7 @@ func TestOpenAICompatExecutor_ImageStreamChunkBoundaryObservability(t *testing.T
 				t.Fatalf("ExecuteStream error: %v", err)
 			}
 
-			// Verify verbatim forwarding: collect all streamed bytes
+			// 验证逐字转发：收集所有流式字节
 			var received bytes.Buffer
 			for chunk := range streamRes.Chunks {
 				if chunk.Err != nil {
@@ -111,7 +111,7 @@ func TestOpenAICompatExecutor_ImageStreamChunkBoundaryObservability(t *testing.T
 				t.Fatalf("forwarded payload mismatch: got %q, want %q", received.String(), expectedForwarded)
 			}
 
-			// Verify response model in recorded usage
+			// 验证记录的用量中的响应模型
 			record := capture.await(t)
 			if record.ResponseModel != tt.wantModel {
 				t.Fatalf("recorded ResponseModel = %q, want %q", record.ResponseModel, tt.wantModel)
@@ -146,7 +146,7 @@ func TestOpenAICompatExecutor_ImageEndpointPath_HonorsOverriddenRequestPath_Issu
 	}
 
 	payload := []byte(`{"model":"gpt-image-2.5","prompt":"a red apple"}`)
-	// Case 1: default inbound path is edits
+	// 情形 1：默认入站路径为 edits
 	optsEdits := cliproxyexecutor.Options{
 		SourceFormat: sdktranslator.FromString("openai-image"),
 		Metadata: map[string]any{
@@ -163,7 +163,7 @@ func TestOpenAICompatExecutor_ImageEndpointPath_HonorsOverriddenRequestPath_Issu
 		t.Fatalf("upstream path = %q, want /images/edits", requestedPath)
 	}
 
-	// Case 2: interceptor rewrites to generations
+	// 情形 2：拦截器改写为 generations
 	optsGenerations := cliproxyexecutor.Options{
 		SourceFormat: sdktranslator.FromString("openai-image"),
 		Metadata: map[string]any{

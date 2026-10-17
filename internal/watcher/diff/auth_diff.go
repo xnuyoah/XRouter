@@ -1,4 +1,4 @@
-// auth_diff.go computes human-readable diffs for auth file field changes.
+// auth_diff.go 计算认证文件字段变更的易读差异。
 package diff
 
 import (
@@ -8,12 +8,12 @@ import (
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
-// BuildAuthChangeDetails computes a redacted, human-readable list of auth field changes.
-// Only prefix, proxy_url, and disabled fields are tracked; sensitive data is never printed.
+// BuildAuthChangeDetails 计算经过脱敏、易读的认证字段变更列表。
+// 仅跟踪 prefix、proxy_url 和 disabled 字段；敏感数据绝不会被打印。
 func BuildAuthChangeDetails(oldAuth, newAuth *coreauth.Auth) []string {
 	changes := make([]string, 0, 3)
 
-	// Handle nil cases by using empty Auth as default
+	// 处理 nil 情况，默认使用空 Auth
 	if oldAuth == nil {
 		oldAuth = &coreauth.Auth{}
 	}
@@ -21,21 +21,21 @@ func BuildAuthChangeDetails(oldAuth, newAuth *coreauth.Auth) []string {
 		return changes
 	}
 
-	// Compare prefix
+	// 比较 prefix
 	oldPrefix := strings.TrimSpace(oldAuth.Prefix)
 	newPrefix := strings.TrimSpace(newAuth.Prefix)
 	if oldPrefix != newPrefix {
 		changes = append(changes, fmt.Sprintf("prefix: %s -> %s", oldPrefix, newPrefix))
 	}
 
-	// Compare proxy_url (redacted)
+	// 比较 proxy_url（脱敏）
 	oldProxy := strings.TrimSpace(oldAuth.ProxyURL)
 	newProxy := strings.TrimSpace(newAuth.ProxyURL)
 	if oldProxy != newProxy {
 		changes = append(changes, fmt.Sprintf("proxy_url: %s -> %s", formatProxyURL(oldProxy), formatProxyURL(newProxy)))
 	}
 
-	// Compare disabled
+	// 比较 disabled
 	if oldAuth.Disabled != newAuth.Disabled {
 		changes = append(changes, fmt.Sprintf("disabled: %t -> %t", oldAuth.Disabled, newAuth.Disabled))
 	}

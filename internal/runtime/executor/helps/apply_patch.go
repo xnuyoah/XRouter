@@ -10,11 +10,11 @@ import (
 	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
-// ApplyPatchUpstreamErrorMessage deliberately excludes upstream JSON and patch text.
+// ApplyPatchUpstreamErrorMessage 有意排除上游 JSON 和补丁文本。
 const ApplyPatchUpstreamErrorMessage = "Invalid apply_patch tool arguments received from upstream."
 
-// TranslatedClaudeErrorPayload returns the raw JSON payload when a non-streaming
-// translation to Claude format produced a terminal error object instead of a message.
+// TranslatedClaudeErrorPayload 在非流式转换为 Claude 格式产生的是终止性
+// 错误对象而非消息时，返回原始 JSON 载荷。
 func TranslatedClaudeErrorPayload(responseFormat sdktranslator.Format, out []byte) (string, bool) {
 	if responseFormat != sdktranslator.FormatClaude || len(out) == 0 {
 		return "", false
@@ -25,8 +25,8 @@ func TranslatedClaudeErrorPayload(responseFormat sdktranslator.Format, out []byt
 	return string(out), true
 }
 
-// TranslatedClaudeStreamErrorPayload returns the raw JSON data payload when a translated
-// Claude SSE chunk contains an error event.
+// TranslatedClaudeStreamErrorPayload 在转换后的 Claude SSE 分块包含错误事件时，
+// 返回原始 JSON 数据载荷。
 func TranslatedClaudeStreamErrorPayload(responseFormat sdktranslator.Format, lines [][]byte) (string, bool) {
 	if responseFormat != sdktranslator.FormatClaude {
 		return "", false
@@ -45,8 +45,8 @@ func TranslatedClaudeStreamErrorPayload(responseFormat sdktranslator.Format, lin
 	return "", false
 }
 
-// CaptureTranslatedClaudeStreamError retains the first SSE error event payload
-// so failure usage and terminal StreamChunk.Err can be emitted after any trailing usage chunk.
+// CaptureTranslatedClaudeStreamError 保留第一个 SSE 错误事件载荷，
+// 以便在任何末尾的 usage 分块之后发出失败 usage 和终止性 StreamChunk.Err。
 func CaptureTranslatedClaudeStreamError(responseFormat sdktranslator.Format, lines [][]byte, retainedErr *error, buildErr func(string) error) {
 	if retainedErr == nil || *retainedErr != nil {
 		return
@@ -60,8 +60,8 @@ func CaptureTranslatedClaudeStreamError(responseFormat sdktranslator.Format, lin
 	}
 }
 
-// PublishTranslatedClaudeStreamFailure publishes failure usage with buffered stream usage
-// when a translated Claude stream retained an SSE error event.
+// PublishTranslatedClaudeStreamFailure 在转换后的 Claude 流保留了 SSE 错误事件时，
+// 使用已缓冲的流式 usage 发布失败 usage。
 func PublishTranslatedClaudeStreamFailure(ctx context.Context, retainedErr error, reporter *UsageReporter, streamUsage *StreamUsageBuffer) bool {
 	if retainedErr == nil {
 		return false
@@ -75,8 +75,8 @@ func PublishTranslatedClaudeStreamFailure(ctx context.Context, retainedErr error
 	return true
 }
 
-// StopTranslatedClaudeStream publishes failure usage and propagates a terminal StreamChunk.Err
-// once after a translated Claude stream emitted an SSE error event.
+// StopTranslatedClaudeStream 在转换后的 Claude 流发出 SSE 错误事件后，
+// 发布失败 usage 并传播一次终止性 StreamChunk.Err。
 func StopTranslatedClaudeStream(ctx context.Context, retainedErr *error, reporter *UsageReporter, streamUsage *StreamUsageBuffer, out chan<- cliproxyexecutor.StreamChunk) bool {
 	if retainedErr == nil || *retainedErr == nil {
 		return false
@@ -96,7 +96,7 @@ func StopTranslatedClaudeStream(ctx context.Context, retainedErr *error, reporte
 	return true
 }
 
-// ApplyPatchTranslationError consumes only the optional translator error state.
+// ApplyPatchTranslationError 仅消费可选的转换器错误状态。
 func ApplyPatchTranslationError(param any) error {
 	state, okState := param.(interface{ ToolInputError() error })
 	if !okState {
@@ -105,8 +105,8 @@ func ApplyPatchTranslationError(param any) error {
 	return state.ToolInputError()
 }
 
-// FinalizeApplyPatchStream notifies request-local state of a transport ending.
-// It must never manufacture a successful protocol terminator.
+// FinalizeApplyPatchStream 将传输结束通知告知请求本地状态。
+// 它绝不能伪造成功的协议终止符。
 func FinalizeApplyPatchStream(param any) [][]byte {
 	state, okState := param.(interface{ FinalizeToolInput() [][]byte })
 	if !okState {
@@ -115,18 +115,18 @@ func FinalizeApplyPatchStream(param any) [][]byte {
 	return state.FinalizeToolInput()
 }
 
-// CanFinalizeResponseStream reports whether EOF can safely synthesize the source terminator.
+// CanFinalizeResponseStream 报告 EOF 是否可以安全地合成源终止符。
 func CanFinalizeResponseStream(param any) bool {
 	state, okState := param.(interface{ CanFinalizeResponseStream() bool })
 	return okState && state.CanFinalizeResponseStream()
 }
 
-// RecordApplyPatchStreamFailure records validation before delivery can be canceled.
+// RecordApplyPatchStreamFailure 在投递可被取消之前记录校验结果。
 func RecordApplyPatchStreamFailure(ctx context.Context, param any, reporter *UsageReporter, gatewayErr error) bool {
 	return RecordApplyPatchStreamFailureWithUsage(ctx, param, reporter, nil, gatewayErr)
 }
 
-// RecordApplyPatchStreamFailureWithUsage records validation with buffered upstream usage.
+// RecordApplyPatchStreamFailureWithUsage 结合已缓冲的上游 usage 记录校验结果。
 func RecordApplyPatchStreamFailureWithUsage(ctx context.Context, param any, reporter *UsageReporter, streamUsage *StreamUsageBuffer, gatewayErr error) bool {
 	if ApplyPatchTranslationError(param) == nil {
 		return false
@@ -138,13 +138,13 @@ func RecordApplyPatchStreamFailureWithUsage(ctx context.Context, param any, repo
 	return true
 }
 
-// StopApplyPatchStream propagates a retained failure after its one translated frame.
-// The caller supplies its existing sanitized gateway status error.
+// StopApplyPatchStream 在其唯一一个转换后的帧之后传播保留下来的失败。
+// 调用方需提供其现有的已清理网关状态错误。
 func StopApplyPatchStream(ctx context.Context, param any, reporter *UsageReporter, out chan<- cliproxyexecutor.StreamChunk, gatewayErr error) bool {
 	return StopApplyPatchStreamWithUsage(ctx, param, reporter, nil, out, gatewayErr)
 }
 
-// StopApplyPatchStreamWithUsage propagates a retained failure with buffered upstream usage.
+// StopApplyPatchStreamWithUsage 结合已缓冲的上游 usage 传播保留下来的失败。
 func StopApplyPatchStreamWithUsage(ctx context.Context, param any, reporter *UsageReporter, streamUsage *StreamUsageBuffer, out chan<- cliproxyexecutor.StreamChunk, gatewayErr error) bool {
 	if !RecordApplyPatchStreamFailureWithUsage(ctx, param, reporter, streamUsage, gatewayErr) {
 		return false
@@ -156,7 +156,7 @@ func StopApplyPatchStreamWithUsage(ctx context.Context, param any, reporter *Usa
 	return true
 }
 
-// EndApplyPatchStream checks EOF before any synthetic success or usage publication.
+// EndApplyPatchStream 在任何合成的成功或 usage 发布之前检查 EOF。
 func EndApplyPatchStream(ctx context.Context, param any, reporter *UsageReporter, out chan<- cliproxyexecutor.StreamChunk, gatewayErr error) bool {
 	chunks := FinalizeApplyPatchStream(param)
 	RecordApplyPatchStreamFailure(ctx, param, reporter, gatewayErr)
@@ -170,7 +170,7 @@ func EndApplyPatchStream(ctx context.Context, param any, reporter *UsageReporter
 	return StopApplyPatchStream(ctx, param, reporter, out, gatewayErr)
 }
 
-// ApplyPatchRequested resolves only original winning custom declarations.
+// ApplyPatchRequested 仅解析原始的胜出 custom 声明。
 func ApplyPatchRequested(original []byte) bool {
 	for _, identity := range util.ResponsesToolReverseIdentityMap(original) {
 		if identity.ApplyPatch {
@@ -180,13 +180,13 @@ func ApplyPatchRequested(original []byte) bool {
 	return false
 }
 
-// IsApplyPatchUpstreamTool preserves the original declaration's provenance.
+// IsApplyPatchUpstreamTool 保留原始声明的来源信息。
 func IsApplyPatchUpstreamTool(original []byte, name string) bool {
 	return util.ResponsesToolReverseIdentityMap(original)[name].ApplyPatch
 }
 
-// InitializeApplyPatchStream prepares optional canonical state even for an empty EOF.
-// An empty source has no progress events and does not opt native Codex into bridging.
+// InitializeApplyPatchStream 即使面对空 EOF 也会准备可选的规范状态。
+// 空来源没有进度事件，也不会让原生 Codex 加入桥接。
 func InitializeApplyPatchStream(ctx context.Context, from, to sdktranslator.Format, model string, original, effective []byte, param *any) {
 	if to != sdktranslator.FormatOpenAIResponse || !ApplyPatchRequested(original) {
 		return
@@ -194,7 +194,7 @@ func InitializeApplyPatchStream(ctx context.Context, from, to sdktranslator.Form
 	_ = sdktranslator.TranslateStream(ctx, from, to, model, original, effective, nil, param)
 }
 
-// ApplyPatchOriginalRequest retains source declarations when SDK callers omit OriginalRequest.
+// ApplyPatchOriginalRequest 在 SDK 调用方省略 OriginalRequest 时保留来源声明。
 func ApplyPatchOriginalRequest(req cliproxyexecutor.Request, opts cliproxyexecutor.Options) []byte {
 	if len(opts.OriginalRequest) > 0 {
 		return opts.OriginalRequest

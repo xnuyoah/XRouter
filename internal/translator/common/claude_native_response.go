@@ -8,8 +8,8 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-// ClaudeMessagesJSONToSSE adapts a native Messages response for the existing SSE
-// aggregators and returns its model. SSE and other payloads pass through unchanged.
+// ClaudeMessagesJSONToSSE 将原生 Messages 响应适配给现有的 SSE
+// 聚合器并返回其模型。SSE 及其他载荷原样透传。
 func ClaudeMessagesJSONToSSE(rawJSON []byte) ([]byte, string) {
 	if !gjson.ValidBytes(rawJSON) {
 		return rawJSON, ""
@@ -21,7 +21,7 @@ func ClaudeMessagesJSONToSSE(rawJSON []byte) ([]byte, string) {
 
 	var out bytes.Buffer
 	emit := func(event map[string]any) {
-		// All values are JSON primitives or validated raw JSON from the response.
+		// 所有值都是 JSON 原始类型或来自响应的、已校验的原始 JSON。
 		payload, _ := json.Marshal(event)
 		out.WriteString("data: ")
 		out.Write(payload)

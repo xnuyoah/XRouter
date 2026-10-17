@@ -9,45 +9,45 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// RequestScopedErrorRule configures custom classification and handling for upstream errors.
+// RequestScopedErrorRule 配置对上游错误的自定义分类与处理。
 type RequestScopedErrorRule struct {
-	// Status matches the HTTP status code of the upstream response (e.g. 400).
+	// Status 匹配上游响应的 HTTP 状态码（例如 400）。
 	Status int `yaml:"status,omitempty" json:"status,omitempty"`
-	// Match matches substrings in the upstream error body.
+	// Match 匹配上游错误体中的子串。
 	Match []string `yaml:"match,omitempty" json:"match,omitempty"`
-	// MatchRegexr matches regular expressions in the upstream error body.
+	// MatchRegexr 匹配上游错误体中的正则表达式。
 	MatchRegexr []string `yaml:"match-regexr,omitempty" json:"match-regexr,omitempty"`
-	// Action specifies the handling behavior: "stop", "stop-and-cooldown", "continue", "continue-and-cooldown".
+	// Action 指定处理行为："stop"、"stop-and-cooldown"、"continue"、"continue-and-cooldown"。
 	Action string `yaml:"action,omitempty" json:"action,omitempty"`
 }
 
-// PluginsConfig holds dynamic plugin system settings.
+// PluginsConfig 保存动态插件系统设置。
 type PluginsConfig struct {
-	// Enabled toggles dynamic plugin loading.
+	// Enabled 控制是否启用动态插件加载。
 	Enabled bool `yaml:"enabled" json:"enabled"`
-	// Dir is the plugin discovery directory.
+	// Dir 是插件发现目录。
 	Dir string `yaml:"dir" json:"dir"`
-	// StoreSources appends third-party plugin store registries to the built-in official source.
+	// StoreSources 将第三方插件商店注册表追加到内置官方源。
 	StoreSources []string `yaml:"store-sources,omitempty" json:"store-sources,omitempty"`
-	// StoreAuth defines optional auth rules for plugin store registry, metadata, and artifact requests.
+	// StoreAuth 为插件商店注册表、元数据和制品请求定义可选的认证规则。
 	StoreAuth []sdkpluginstore.AuthConfig `yaml:"store-auth,omitempty" json:"store-auth,omitempty"`
-	// AuthRevision changes when Home-managed plugin credentials change.
+	// AuthRevision 在 Home 管理的插件凭据变化时改变。
 	AuthRevision int64 `yaml:"auth-revision,omitempty" json:"auth-revision,omitempty"`
-	// Configs stores per-plugin instance configuration by plugin ID.
+	// Configs 按插件 ID 存储每个插件实例的配置。
 	Configs map[string]PluginInstanceConfig `yaml:"configs" json:"configs"`
 }
 
-// PluginInstanceConfig stores host-owned plugin settings and the original plugin YAML subtree.
+// PluginInstanceConfig 存储宿主所有的插件设置以及原始插件 YAML 子树。
 type PluginInstanceConfig struct {
-	// Enabled toggles this plugin instance. Nil is normalized to false during YAML parsing.
+	// Enabled 控制是否启用该插件实例。解析 YAML 时 nil 会被规范化为 false。
 	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
-	// Priority controls plugin startup and routing order.
+	// Priority 控制插件启动与路由顺序。
 	Priority int `yaml:"priority,omitempty" json:"priority,omitempty"`
-	// Raw preserves the full original plugin configuration YAML subtree.
+	// Raw 保留完整的原始插件配置 YAML 子树。
 	Raw yaml.Node `yaml:"-" json:"-"`
 }
 
-// UnmarshalYAML extracts host-owned fields while preserving the full original YAML node.
+// UnmarshalYAML 提取宿主所有的字段，同时保留完整的原始 YAML 节点。
 func (c *PluginInstanceConfig) UnmarshalYAML(value *yaml.Node) error {
 	if c == nil {
 		return nil
@@ -92,7 +92,7 @@ func (c *PluginInstanceConfig) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// MarshalYAML returns the preserved raw plugin YAML subtree for lossless config output.
+// MarshalYAML 返回所保留的原始插件 YAML 子树，以实现无损的配置输出。
 func (c PluginInstanceConfig) MarshalYAML() (any, error) {
 	if c.Raw.Kind == 0 {
 		return defaultPluginInstanceConfigNode(), nil
@@ -108,141 +108,141 @@ func defaultPluginInstanceConfigNode() *yaml.Node {
 	}
 }
 
-// TLSConfig holds HTTPS server settings.
+// TLSConfig 保存 HTTPS 服务器设置。
 type TLSConfig struct {
-	// Enable toggles HTTPS server mode.
+	// Enable 控制是否启用 HTTPS 服务器模式。
 	Enable bool `yaml:"enable" json:"enable"`
-	// Cert is the path to the TLS certificate file.
+	// Cert 是 TLS 证书文件的路径。
 	Cert string `yaml:"cert" json:"cert"`
-	// Key is the path to the TLS private key file.
+	// Key 是 TLS 私钥文件的路径。
 	Key string `yaml:"key" json:"key"`
 }
 
-// PprofConfig holds pprof HTTP server settings.
+// PprofConfig 保存 pprof HTTP 服务器设置。
 type PprofConfig struct {
-	// Enable toggles the pprof HTTP debug server.
+	// Enable 控制是否启用 pprof HTTP 调试服务器。
 	Enable bool `yaml:"enable" json:"enable"`
-	// Addr is the host:port address for the pprof HTTP server.
+	// Addr 是 pprof HTTP 服务器的 host:port 地址。
 	Addr string `yaml:"addr" json:"addr"`
 }
 
-// DiscoveryInterfacesConfig specifies interface inclusion and exclusion rules.
+// DiscoveryInterfacesConfig 指定网络接口的包含与排除规则。
 type DiscoveryInterfacesConfig struct {
 	Include []string `yaml:"include" json:"include"`
 	Exclude []string `yaml:"exclude" json:"exclude"`
 }
 
-// DiscoveryConfig controls local network mDNS / DNS-SD service advertising.
+// DiscoveryConfig 控制局域网 mDNS / DNS-SD 服务通告。
 type DiscoveryConfig struct {
-	// Enabled toggles mDNS service advertising on the local network (default: false).
+	// Enabled 控制是否在局域网中通告 mDNS 服务（默认：false）。
 	Enabled bool `yaml:"enabled" json:"enabled"`
 
-	// ServiceName is the optional custom instance name. When empty, defaults to CPA-<ShortID>.
+	// ServiceName 是可选的自定义实例名。为空时默认使用 CPA-<ShortID>。
 	ServiceName string `yaml:"service-name" json:"service-name"`
 
-	// ServiceType is the DNS-SD service type (default: _ai-gateway._tcp).
+	// ServiceType 是 DNS-SD 服务类型（默认：_ai-gateway._tcp）。
 	ServiceType string `yaml:"service-type" json:"service-type"`
 
-	// Subtypes specifies DNS-SD API protocol subtypes to advertise (e.g. _responses, _messages, _generate-content).
+	// Subtypes 指定要通告的 DNS-SD API 协议子类型（例如 _responses、_messages、_generate-content）。
 	Subtypes []string `yaml:"subtypes" json:"subtypes"`
 
-	// Interfaces specifies network interface filtering rules.
+	// Interfaces 指定网络接口过滤规则。
 	Interfaces DiscoveryInterfacesConfig `yaml:"interfaces" json:"interfaces"`
 
-	// AuthRequired indicates whether authentication is required for client calls (default: true).
+	// AuthRequired 指示客户端调用是否需要认证（默认：true）。
 	AuthRequired *bool `yaml:"auth-required" json:"auth-required"`
 
-	// AdvertiseManagement explicitly controls whether management endpoints are exposed (default: false).
+	// AdvertiseManagement 显式控制是否暴露管理端点（默认：false）。
 	AdvertiseManagement bool `yaml:"advertise-management" json:"advertise-management"`
 }
 
-// RemoteManagement holds management API configuration under 'remote-management'.
+// RemoteManagement 保存 'remote-management' 下的管理 API 配置。
 type RemoteManagement struct {
-	// AllowRemote toggles remote (non-localhost) access to management API.
+	// AllowRemote 控制是否允许远程（非 localhost）访问管理 API。
 	AllowRemote bool `yaml:"allow-remote"`
-	// SecretKey is the management key (plaintext or bcrypt hashed). YAML key intentionally 'secret-key'.
+	// SecretKey 是管理密钥（明文或 bcrypt 哈希）。YAML 键有意使用 'secret-key'。
 	SecretKey string `yaml:"secret-key"`
-	// DisableControlPanel skips serving the bundled management UI when true.
+	// DisableControlPanel 为 true 时跳过提供内置管理 UI。
 	DisableControlPanel bool `yaml:"disable-control-panel"`
-	// BaseURL records the base URL of the remote management API (e.g. "https://proxy.example.com").
+	// BaseURL 记录远程管理 API 的基础 URL（例如 "https://proxy.example.com"）。
 	BaseURL string `yaml:"base-url,omitempty" json:"base-url,omitempty"`
 }
 
-// QuotaExceeded defines the behavior when API quota limits are exceeded.
-// It provides configuration options for automatic failover mechanisms.
+// QuotaExceeded 定义 API 额度超限时的行为。
+// 它为自动故障转移机制提供配置选项。
 type QuotaExceeded struct {
-	// SwitchProject indicates whether to automatically switch to another project when a quota is exceeded.
+	// SwitchProject 指示额度超限时是否自动切换到另一个项目。
 	SwitchProject bool `yaml:"switch-project" json:"switch-project"`
 
-	// SwitchPreviewModel indicates whether to automatically switch to a preview model when a quota is exceeded.
+	// SwitchPreviewModel 指示额度超限时是否自动切换到预览模型。
 	SwitchPreviewModel bool `yaml:"switch-preview-model" json:"switch-preview-model"`
 }
 
-// RoutingConfig configures how credentials are selected for requests.
+// RoutingConfig 配置如何为请求选择凭据。
 type RoutingConfig struct {
-	// Strategy selects the credential selection strategy.
-	// Supported values: "round-robin" (default), "weighted-round-robin", "fill-first".
+	// Strategy 选择凭据选择策略。
+	// 支持的值："round-robin"（默认）、"weighted-round-robin"、"fill-first"。
 	Strategy string `yaml:"strategy,omitempty" json:"strategy,omitempty"`
 
-	// SessionAffinity enables universal session-sticky routing for all clients.
-	// Explicit Claude Code, Codex, OpenCode, and pi session headers are preferred,
-	// followed by prompt_cache_key, Responses conversation IDs, legacy body IDs,
-	// execution or derived session identity, and the existing message-content hash fallback.
-	// Automatic failover is always enabled when bound auth becomes unavailable.
+	// SessionAffinity 为所有客户端启用通用的会话粘性路由。
+	// 优先使用显式的 Claude Code、Codex、OpenCode 和 pi 会话头，
+	// 其次是 prompt_cache_key、Responses 会话 ID、旧式请求体 ID、
+	// 执行或派生的会话身份，以及现有的消息内容哈希回退。
+	// 当绑定的认证不可用时，自动故障转移始终启用。
 	SessionAffinity bool `yaml:"session-affinity,omitempty" json:"session-affinity,omitempty"`
 
-	// SessionAffinityTTL specifies how long session-to-auth bindings are retained.
-	// Default: 1h. Accepts duration strings like "30m", "1h", "2h30m".
+	// SessionAffinityTTL 指定会话到认证的绑定保留多长时间。
+	// 默认：1h。接受 "30m"、"1h"、"2h30m" 等时长字符串。
 	SessionAffinityTTL string `yaml:"session-affinity-ttl,omitempty" json:"session-affinity-ttl,omitempty"`
 
-	// SessionAffinitySubagents controls whether subagents (child sessions with parent references)
-	// inherit and bind to the parent's upstream credential across all providers (Claude, Codex,
-	// Antigravity), maximizing prompt and KV cache reuse.
-	// When false, subagents are distributed across the credential pool via the fallback selector.
-	// Default: true. Ignored when SessionAffinity is false.
+	// SessionAffinitySubagents 控制子代理（带父引用的子会话）是否
+	// 在所有供应商（Claude、Codex、
+	// Antigravity）间继承并绑定父级的上游凭据，从而最大化提示词与 KV 缓存复用。
+	// 为 false 时，子代理通过回退选择器在凭据池中分散分配。
+	// 默认：true。SessionAffinity 为 false 时忽略。
 	SessionAffinitySubagents *bool `yaml:"session-affinity-subagents,omitempty" json:"session-affinity-subagents,omitempty"`
 
-	// SessionAffinityRebindOn controls which credential failures rebind an established session
-	// to the failover credential.
-	// Supported values:
-	//   - "any" (default): any credential-attributed failure unbinds and rebinds on failover.
-	//   - "quota": transient errors (408, 5xx, empty stream, buffer limit) fail over for that
-	//     request only while keeping the session bound to its original credential; quota and
-	//     auth errors (429, 401/402/403, 404/model support, invalid_grant) rebind as normal.
-	// Ignored when SessionAffinity is false.
+	// SessionAffinityRebindOn 控制哪些凭据故障会将已建立的会话
+	// 重新绑定到故障转移凭据。
+	// 支持的值：
+	//   - "any"（默认）：任何归因于凭据的故障都会在故障转移时解绑并重新绑定。
+	//   - "quota"：瞬时错误（408、5xx、空流、缓冲区上限）仅对当前
+	//     请求进行故障转移，同时保持会话绑定到其原始凭据；额度和
+	//     认证错误（429、401/402/403、404/模型支持、invalid_grant）正常重新绑定。
+	// SessionAffinity 为 false 时忽略。
 	SessionAffinityRebindOn string `yaml:"session-affinity-rebind-on,omitempty" json:"session-affinity-rebind-on,omitempty"`
 }
 
-// OAuthModelAlias defines a model ID alias for a specific channel.
-// It maps the upstream model name (Name) to the client-visible alias (Alias).
-// When Fork is true, the alias is added as an additional model in listings while
-// keeping the original model ID available.
+// OAuthModelAlias 为特定渠道定义模型 ID 别名。
+// 它将上游模型名（Name）映射到客户端可见的别名（Alias）。
+// 当 Fork 为 true 时，该别名会作为附加模型加入列表，同时
+// 保持原始模型 ID 可用。
 type OAuthModelAlias struct {
 	Name  string `yaml:"name" json:"name"`
 	Alias string `yaml:"alias" json:"alias"`
 	Fork  bool   `yaml:"fork,omitempty" json:"fork,omitempty"`
 
-	// DisplayName is the optional human-readable name shown in model catalogs.
+	// DisplayName 是模型目录中显示的可选人类可读名称。
 	DisplayName string `yaml:"display-name,omitempty" json:"display-name,omitempty"`
 
 	ForceMapping bool `yaml:"force-mapping,omitempty" json:"force-mapping,omitempty"`
 }
 
-// OAuthModelSetting defines provider/channel model settings (such as context window overrides) for OAuth credentials.
+// OAuthModelSetting 为 OAuth 凭据定义供应商/渠道模型设置（例如上下文窗口覆盖）。
 type OAuthModelSetting struct {
 	Name  string `yaml:"name" json:"name"`
 	Alias string `yaml:"alias,omitempty" json:"alias,omitempty"`
 
-	// MaxContextLength overrides the context window advertised to Codex clients.
+	// MaxContextLength 覆盖向 Codex 客户端通告的上下文窗口。
 	MaxContextLength int `yaml:"max-context-length,omitempty" json:"max-context-length,omitempty"`
 }
 
-// GetMaxContextLength returns the configured maximum context length override.
+// GetMaxContextLength 返回配置的最大上下文长度覆盖值。
 func (s OAuthModelSetting) GetMaxContextLength() int { return s.MaxContextLength }
 
-// ResolveOAuthModelSetting finds the best matching OAuthModelSetting for a given model.
-// An exact Alias match on the model ID takes precedence over a general Name match.
-// Within the same match specificity, later entries in the slice override earlier ones.
+// ResolveOAuthModelSetting 为给定模型查找最佳匹配的 OAuthModelSetting。
+// 模型 ID 上精确的 Alias 匹配优先于一般的 Name 匹配。
+// 在相同的匹配精确度内，切片中靠后的条目会覆盖靠前的条目。
 func ResolveOAuthModelSetting(settings []OAuthModelSetting, modelID, metadataModelID, modelName string) *OAuthModelSetting {
 	if len(settings) == 0 {
 		return nil
@@ -275,151 +275,151 @@ func ResolveOAuthModelSetting(settings []OAuthModelSetting, modelID, metadataMod
 	return nameMatch
 }
 
-// PayloadConfig defines default and override parameter rules applied to provider payloads.
+// PayloadConfig 定义应用于供应商载荷的默认与覆盖参数规则。
 type PayloadConfig struct {
-	// Default defines rules that only set parameters when they are missing in the payload.
+	// Default 定义仅在载荷中缺少参数时才设置参数的规则。
 	Default []PayloadRule `yaml:"default" json:"default"`
-	// DefaultRaw defines rules that set raw JSON values only when they are missing.
+	// DefaultRaw 定义仅在缺失时才设置原始 JSON 值的规则。
 	DefaultRaw []PayloadRule `yaml:"default-raw" json:"default-raw"`
-	// Override defines rules that always set parameters, overwriting any existing values.
+	// Override 定义始终设置参数、覆盖任何现有值的规则。
 	Override []PayloadRule `yaml:"override" json:"override"`
-	// OverrideRaw defines rules that always set raw JSON values, overwriting any existing values.
+	// OverrideRaw 定义始终设置原始 JSON 值、覆盖任何现有值的规则。
 	OverrideRaw []PayloadRule `yaml:"override-raw" json:"override-raw"`
-	// Filter defines rules that remove parameters from the payload by JSON path.
+	// Filter 定义按 JSON 路径从载荷中移除参数的规则。
 	Filter []PayloadFilterRule `yaml:"filter" json:"filter"`
 }
 
-// PayloadFilterRule describes a rule to remove specific JSON paths from matching model payloads.
+// PayloadFilterRule 描述从匹配的模型载荷中移除特定 JSON 路径的规则。
 type PayloadFilterRule struct {
-	// Models lists model entries with name pattern and protocol constraint.
+	// Models 列出带名称模式与协议约束的模型条目。
 	Models []PayloadModelRule `yaml:"models" json:"models"`
-	// Params lists JSON paths (gjson/sjson syntax) to remove from the payload.
+	// Params 列出要从载荷中移除的 JSON 路径（gjson/sjson 语法）。
 	Params []string `yaml:"params" json:"params"`
 }
 
-// PayloadRule describes a single rule targeting a list of models with parameter updates.
+// PayloadRule 描述针对一组模型进行参数更新的单条规则。
 type PayloadRule struct {
-	// Models lists model entries with name pattern and protocol constraint.
+	// Models 列出带名称模式与协议约束的模型条目。
 	Models []PayloadModelRule `yaml:"models" json:"models"`
-	// Params maps JSON paths (gjson/sjson syntax) to values written into the payload.
-	// For *-raw rules, values are treated as raw JSON fragments (strings are used as-is).
+	// Params 将 JSON 路径（gjson/sjson 语法）映射到写入载荷的值。
+	// 对于 *-raw 规则，值会被视为原始 JSON 片段（字符串按原样使用）。
 	Params map[string]any `yaml:"params" json:"params"`
 }
 
-// PayloadModelRule ties a model name pattern to a specific translator protocol.
+// PayloadModelRule 将模型名称模式绑定到特定的转换器协议。
 type PayloadModelRule struct {
-	// Name is the model name or wildcard pattern (e.g., "gpt-*", "*-5", "claude-*-sonnet").
+	// Name 是模型名或通配符模式（例如 "gpt-*"、"*-5"、"claude-*-sonnet"）。
 	Name string `yaml:"name" json:"name"`
-	// Protocol restricts the rule to a specific translator format (e.g., "claude", "responses").
+	// Protocol 将规则限制到特定的转换器格式（例如 "claude"、"responses"）。
 	Protocol string `yaml:"protocol" json:"protocol"`
-	// Headers restricts the rule to requests whose headers match all configured wildcard patterns.
+	// Headers 将规则限制到头部匹配所有已配置通配符模式的请求。
 	Headers map[string]string `yaml:"headers" json:"headers"`
-	// FromProtocol restricts the rule to a specific source protocol (e.g., "claude", "responses").
+	// FromProtocol 将规则限制到特定的来源协议（例如 "claude"、"responses"）。
 	FromProtocol string `yaml:"from-protocol" json:"from-protocol"`
-	// Match requires payload JSON paths to equal the configured values.
+	// Match 要求载荷 JSON 路径等于配置的值。
 	Match []map[string]any `yaml:"match" json:"match"`
-	// NotMatch requires payload JSON paths to not equal the configured values.
+	// NotMatch 要求载荷 JSON 路径不等于配置的值。
 	NotMatch []map[string]any `yaml:"not-match" json:"not-match"`
-	// Exist requires payload JSON paths to exist and not be null.
+	// Exist 要求载荷 JSON 路径存在且不为 null。
 	Exist []string `yaml:"exist" json:"exist"`
-	// NotExist requires payload JSON paths to be missing or null.
+	// NotExist 要求载荷 JSON 路径缺失或为 null。
 	NotExist []string `yaml:"not-exist" json:"not-exist"`
 }
 
-// OpenAICompatibility represents the configuration for OpenAI API compatibility
-// with external providers, allowing model aliases to be routed through OpenAI API format.
+// OpenAICompatibility 表示 OpenAI API 兼容
+// 外部供应商的配置，允许模型别名通过 OpenAI API 格式路由。
 type OpenAICompatibility struct {
-	// Name is the identifier for this OpenAI compatibility configuration.
+	// Name 是此 OpenAI 兼容配置的标识符。
 	Name string `yaml:"name" json:"name"`
 
-	// Priority controls selection preference when multiple providers or credentials match.
-	// Higher values are preferred; defaults to 0.
+	// Priority 控制多个供应商或凭据匹配时的选择偏好。
+	// 值越高越优先；默认为 0。
 	Priority int `yaml:"priority,omitempty" json:"priority,omitempty"`
 
-	// Disabled prevents this provider from being used for routing.
+	// Disabled 阻止此供应商被用于路由。
 	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 
-	// Prefix optionally namespaces model aliases for this provider (e.g., "teamA/kimi-k2").
+	// Prefix 可选地为该供应商的模型别名添加命名空间（例如 "teamA/kimi-k2"）。
 	Prefix string `yaml:"prefix,omitempty" json:"prefix,omitempty"`
 
-	// BaseURL is the base URL for the external OpenAI-compatible API endpoint.
+	// BaseURL 是外部 OpenAI 兼容 API 端点的基础 URL。
 	BaseURL string `yaml:"base-url" json:"base-url"`
 
-	// APIKeyEntries defines API keys with optional per-key proxy configuration.
+	// APIKeyEntries 定义 API 密钥及可选的逐密钥代理配置。
 	APIKeyEntries []OpenAICompatibilityAPIKey `yaml:"api-key-entries,omitempty" json:"api-key-entries,omitempty"`
 
-	// Models defines the model configurations including aliases for routing.
+	// Models 定义模型配置，包括用于路由的别名。
 	Models []OpenAICompatibilityModel `yaml:"models" json:"models"`
 
-	// Headers optionally adds extra HTTP headers for requests sent to this provider.
+	// Headers 可选地为发往此供应商的请求添加额外 HTTP 头。
 	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
 
-	// SupportPromptCacheKey enables derived prompt_cache_key injection for supported requests.
+	// SupportPromptCacheKey 为受支持的请求启用派生 prompt_cache_key 注入。
 	SupportPromptCacheKey bool `yaml:"support-prompt-cache-key,omitempty" json:"support-prompt-cache-key,omitempty"`
 
-	// DisableCooling overrides the global cooling policy for this provider when set.
-	// True disables auth/model cooldowns; false explicitly enables them.
+	// DisableCooling 在设置时覆盖此供应商的全局冷却策略。
+	// true 禁用认证/模型冷却；false 显式启用它们。
 	DisableCooling *bool `yaml:"disable-cooling,omitempty" json:"disable-cooling,omitempty"`
 
-	// RequestRetry optionally overrides the global request-retry for this provider.
-	// Nil or a negative value means "use the global request-retry". 0 disables additional retry rounds.
+	// RequestRetry 可选地覆盖此供应商的全局 request-retry。
+	// nil 或负值表示 "使用全局 request-retry"。0 禁用额外的重试轮次。
 	RequestRetry *int `yaml:"request-retry,omitempty" json:"request-retry,omitempty"`
 
-	// RequestScopedErrors configures custom classification rules for upstream errors.
+	// RequestScopedErrors 配置上游错误的自定义分类规则。
 	RequestScopedErrors []RequestScopedErrorRule `yaml:"request-scoped-errors,omitempty" json:"request-scoped-errors,omitempty"`
 }
 
-// OpenAICompatibilityAPIKey represents an API key configuration with optional proxy setting.
+// OpenAICompatibilityAPIKey 表示带可选代理设置的 API 密钥配置。
 type OpenAICompatibilityAPIKey struct {
-	// APIKey is the authentication key for accessing the external API services.
+	// APIKey 是访问外部 API 服务的认证密钥。
 	APIKey string `yaml:"api-key" json:"api-key"`
 
-	// Weight controls proportional selection under weighted-round-robin.
-	// An omitted value defaults to 1; non-positive values exclude this credential; maximum 1,000,000.
+	// Weight 控制加权轮询下的按比例选择。
+	// 省略时默认为 1；非正值会排除该凭据；最大 1,000,000。
 	Weight *int `yaml:"weight,omitempty" json:"weight,omitempty"`
 
-	// ProxyURL overrides the global proxy setting for this API key if provided.
+	// ProxyURL 若提供则覆盖此 API 密钥的全局代理设置。
 	ProxyURL string `yaml:"proxy-url,omitempty" json:"proxy-url,omitempty"`
 }
 
-// OpenAICompatibilityModel represents a model configuration for OpenAI compatibility,
-// including the actual model name and its alias for API routing.
+// OpenAICompatibilityModel 表示 OpenAI 兼容的模型配置，
+// 包括实际模型名及其用于 API 路由的别名。
 type OpenAICompatibilityModel struct {
-	// Name is the actual model name used by the external provider.
+	// Name 是外部供应商使用的实际模型名。
 	Name string `yaml:"name" json:"name"`
 
-	// Alias is the model name alias that clients will use to reference this model.
+	// Alias 是客户端用来引用此模型的模型名别名。
 	Alias string `yaml:"alias" json:"alias"`
 
-	// DisplayName is the optional human-readable name shown in model catalogs.
+	// DisplayName 是模型目录中显示的可选人类可读名称。
 	DisplayName string `yaml:"display-name,omitempty" json:"display-name,omitempty"`
 
-	// MaxContextLength overrides the context window advertised to Codex clients.
+	// MaxContextLength 覆盖向 Codex 客户端通告的上下文窗口。
 	MaxContextLength int `yaml:"max-context-length,omitempty" json:"max-context-length,omitempty"`
 
-	// ForceMapping rewrites upstream response model fields back to Alias.
+	// ForceMapping 将上游响应的模型字段重写回 Alias。
 	ForceMapping bool `yaml:"force-mapping,omitempty" json:"force-mapping,omitempty"`
 
-	// Image marks this model as callable through /v1/images/generations and /v1/images/edits.
+	// Image 将此模型标记为可通过 /v1/images/generations 和 /v1/images/edits 调用。
 	Image bool `yaml:"image,omitempty" json:"image,omitempty"`
 
-	// InputModalities declares chat/responses input capabilities (e.g. text, image) for Codex and other clients.
-	// This is separate from Image, which only enables /v1/images/* endpoints.
+	// InputModalities 为 Codex 和其他客户端声明 chat/responses 输入能力（例如 text、image）。
+	// 这与 Image 相互独立，后者仅启用 /v1/images/* 端点。
 	InputModalities []string `yaml:"input-modalities,omitempty" json:"input-modalities,omitempty"`
 
-	// OutputModalities declares supported output modalities when known (e.g. text, image).
+	// OutputModalities 在已知时声明支持的输出模态（例如 text、image）。
 	OutputModalities []string `yaml:"output-modalities,omitempty" json:"output-modalities,omitempty"`
 
-	// IsCompat preserves Claude thinking blocks for compatible upstreams.
-	// Default false keeps the normal signature validation behavior.
+	// IsCompat 为兼容的上游保留 Claude thinking 块。
+	// 默认 false 保持正常的签名校验行为。
 	IsCompat bool `yaml:"is-compat,omitempty" json:"is-compat,omitempty"`
 
-	// UseMaxCompletionTokens emits max_completion_tokens instead of legacy max_tokens for this model.
-	// Default false preserves max_tokens for older compatible upstreams.
+	// UseMaxCompletionTokens 为此模型输出 max_completion_tokens 而非旧式 max_tokens。
+	// 默认 false 为较旧的兼容上游保留 max_tokens。
 	UseMaxCompletionTokens bool `yaml:"use-max-completion-tokens,omitempty" json:"use-max-completion-tokens,omitempty"`
 
-	// Thinking configures the thinking/reasoning capability for this model.
-	// If nil, the model defaults to level-based reasoning with levels ["low", "medium", "high"].
+	// Thinking 配置此模型的 thinking/reasoning 能力。
+	// 为 nil 时，模型默认为基于级别的 reasoning，级别为 ["low", "medium", "high"]。
 	Thinking *registry.ThinkingSupport `yaml:"thinking,omitempty" json:"thinking,omitempty"`
 }
 
@@ -435,7 +435,7 @@ func (m OpenAICompatibilityModel) GetUseMaxCompletionTokens() bool { return m.Us
 
 func (m OpenAICompatibilityModel) GetThinking() *registry.ThinkingSupport { return m.Thinking }
 
-// Default base URLs for the native OpenAI-wire API-key providers.
+// 原生 OpenAI-wire API 密钥供应商的默认基础 URL。
 const (
 	DefaultOpenAIBaseURL   = "https://api.openai.com/v1"
 	DefaultDeepseekBaseURL = "https://api.deepseek.com/v1"
@@ -443,55 +443,55 @@ const (
 	DefaultAgnesBaseURL    = "https://apihub.agnes-ai.com/v1"
 )
 
-// NativeAPIKey represents one credential of a native OpenAI-wire API-key
-// provider (openai, deepseek, nvidia). All three providers speak the OpenAI
-// chat-completions wire format and differ only by their default endpoint and
-// provider-specific request behavior.
+// NativeAPIKey 表示原生 OpenAI-wire API 密钥
+// 供应商（openai、deepseek、nvidia）的一个凭据。这三个供应商都使用 OpenAI
+// chat-completions 通信格式，仅在默认端点与
+// 供应商特定的请求行为上有所不同。
 type NativeAPIKey struct {
-	// APIKey is the authentication key for accessing the provider's API services.
+	// APIKey 是访问该供应商 API 服务的认证密钥。
 	APIKey string `yaml:"api-key" json:"api-key"`
 
-	// Disabled keeps the entry configured but excluded from routing.
+	// Disabled 保持该条目已配置但将其排除在路由之外。
 	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 
-	// Priority controls selection preference when multiple credentials match.
-	// Higher values are preferred; defaults to 0.
+	// Priority 控制多个凭据匹配时的选择偏好。
+	// 值越高越优先；默认为 0。
 	Priority int `yaml:"priority,omitempty" json:"priority,omitempty"`
 
-	// Weight controls proportional selection under weighted-round-robin.
-	// An omitted value defaults to 1; non-positive values exclude this credential; maximum 1,000,000.
+	// Weight 控制加权轮询下的按比例选择。
+	// 省略时默认为 1；非正值会排除该凭据；最大 1,000,000。
 	Weight *int `yaml:"weight,omitempty" json:"weight,omitempty"`
 
-	// Prefix optionally namespaces models for this credential (e.g., "teamA/gpt-5.2").
+	// Prefix 可选地为该凭据的模型添加命名空间（例如 "teamA/gpt-5.2"）。
 	Prefix string `yaml:"prefix,omitempty" json:"prefix,omitempty"`
 
-	// BaseURL optionally overrides the provider's default API endpoint.
+	// BaseURL 可选地覆盖供应商的默认 API 端点。
 	BaseURL string `yaml:"base-url,omitempty" json:"base-url,omitempty"`
 
-	// SupportPromptCacheKey enables derived prompt_cache_key injection for supported requests.
+	// SupportPromptCacheKey 为受支持的请求启用派生 prompt_cache_key 注入。
 	SupportPromptCacheKey bool `yaml:"support-prompt-cache-key,omitempty" json:"support-prompt-cache-key,omitempty"`
 
-	// ProxyURL overrides the global proxy setting for this API key if provided.
+	// ProxyURL 若提供则覆盖此 API 密钥的全局代理设置。
 	ProxyURL string `yaml:"proxy-url,omitempty" json:"proxy-url,omitempty"`
 
-	// Models defines upstream model names and aliases for request routing.
+	// Models 定义用于请求路由的上游模型名与别名。
 	Models []NativeAPIModel `yaml:"models,omitempty" json:"models,omitempty"`
 
-	// Headers optionally adds extra HTTP headers for requests sent with this key.
+	// Headers 可选地为使用此密钥发送的请求添加额外 HTTP 头。
 	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
 
-	// ExcludedModels lists model IDs that should be excluded for this provider.
+	// ExcludedModels 列出此供应商应排除的模型 ID。
 	ExcludedModels []string `yaml:"excluded-models,omitempty" json:"excluded-models,omitempty"`
 
-	// DisableCooling overrides the global cooling policy for this credential when set.
-	// True disables auth/model cooldowns; false explicitly enables them.
+	// DisableCooling 在设置时覆盖此凭据的全局冷却策略。
+	// true 禁用认证/模型冷却；false 显式启用它们。
 	DisableCooling *bool `yaml:"disable-cooling,omitempty" json:"disable-cooling,omitempty"`
 
-	// RequestRetry optionally overrides the global request-retry for this credential.
-	// Nil or a negative value means "use the global request-retry". 0 disables additional retry rounds.
+	// RequestRetry 可选地覆盖此凭据的全局 request-retry。
+	// nil 或负值表示 "使用全局 request-retry"。0 禁用额外的重试轮次。
 	RequestRetry *int `yaml:"request-retry,omitempty" json:"request-retry,omitempty"`
 
-	// RequestScopedErrors configures custom classification rules for upstream errors.
+	// RequestScopedErrors 配置上游错误的自定义分类规则。
 	RequestScopedErrors []RequestScopedErrorRule `yaml:"request-scoped-errors,omitempty" json:"request-scoped-errors,omitempty"`
 }
 
@@ -503,43 +503,43 @@ func (k NativeAPIKey) GetPrefix() string { return k.Prefix }
 
 func (k NativeAPIKey) GetProxyURL() string { return k.ProxyURL }
 
-// NativeAPIModel describes a mapping between an alias and the actual upstream
-// model name for the native OpenAI-wire API-key providers.
+// NativeAPIModel 描述原生 OpenAI-wire API 密钥供应商的
+// 别名与实际上游模型名之间的映射。
 type NativeAPIModel struct {
-	// Name is the upstream model identifier used when issuing requests.
+	// Name 是发出请求时使用的上游模型标识符。
 	Name string `yaml:"name" json:"name"`
 
-	// Alias is the client-facing model name that maps to Name.
+	// Alias 是映射到 Name 的客户端可见模型名。
 	Alias string `yaml:"alias" json:"alias"`
 
-	// DisplayName is the optional human-readable name shown in model catalogs.
+	// DisplayName 是模型目录中显示的可选人类可读名称。
 	DisplayName string `yaml:"display-name,omitempty" json:"display-name,omitempty"`
 
-	// MaxContextLength overrides the context window advertised to clients.
+	// MaxContextLength 覆盖向客户端通告的上下文窗口。
 	MaxContextLength int `yaml:"max-context-length,omitempty" json:"max-context-length,omitempty"`
 
-	// ForceMapping rewrites upstream response model fields back to Alias.
+	// ForceMapping 将上游响应的模型字段重写回 Alias。
 	ForceMapping bool `yaml:"force-mapping,omitempty" json:"force-mapping,omitempty"`
 
-	// IsCompat preserves thinking blocks for compatible upstreams.
-	// Default false keeps the normal behavior.
+	// IsCompat 为兼容的上游保留 thinking 块。
+	// 默认 false 保持正常行为。
 	IsCompat bool `yaml:"is-compat,omitempty" json:"is-compat,omitempty"`
 
-	// UseMaxCompletionTokens emits max_completion_tokens instead of legacy max_tokens for this model.
-	// Default false preserves max_tokens for older compatible upstreams.
+	// UseMaxCompletionTokens 为此模型输出 max_completion_tokens 而非旧式 max_tokens。
+	// 默认 false 为较旧的兼容上游保留 max_tokens。
 	UseMaxCompletionTokens bool `yaml:"use-max-completion-tokens,omitempty" json:"use-max-completion-tokens,omitempty"`
 
-	// Image marks this model as callable through /v1/images/generations and /v1/images/edits.
+	// Image 将此模型标记为可通过 /v1/images/generations 和 /v1/images/edits 调用。
 	Image bool `yaml:"image,omitempty" json:"image,omitempty"`
 
-	// InputModalities declares chat/responses input capabilities (e.g. text, image).
+	// InputModalities 声明 chat/responses 输入能力（例如 text、image）。
 	InputModalities []string `yaml:"input-modalities,omitempty" json:"input-modalities,omitempty"`
 
-	// OutputModalities declares supported output modalities when known (e.g. text, image).
+	// OutputModalities 在已知时声明支持的输出模态（例如 text、image）。
 	OutputModalities []string `yaml:"output-modalities,omitempty" json:"output-modalities,omitempty"`
 
-	// Thinking configures the thinking/reasoning capability for this model.
-	// If nil, the model defaults to level-based reasoning with levels ["low", "medium", "high"].
+	// Thinking 配置此模型的 thinking/reasoning 能力。
+	// 为 nil 时，模型默认为基于级别的 reasoning，级别为 ["low", "medium", "high"]。
 	Thinking *registry.ThinkingSupport `yaml:"thinking,omitempty" json:"thinking,omitempty"`
 }
 
@@ -555,7 +555,7 @@ func (m NativeAPIModel) GetUseMaxCompletionTokens() bool { return m.UseMaxComple
 
 func (m NativeAPIModel) GetThinking() *registry.ThinkingSupport { return m.Thinking }
 
-// OpenAIKey, DeepseekKey, NvidiaKey and AgnesKey share the native API-key credential shape.
+// OpenAIKey、DeepseekKey、NvidiaKey 和 AgnesKey 共享原生 API 密钥凭据形态。
 type (
 	OpenAIKey   = NativeAPIKey
 	DeepseekKey = NativeAPIKey

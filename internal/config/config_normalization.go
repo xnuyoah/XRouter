@@ -7,7 +7,7 @@ import (
 	sdkpluginstore "github.com/xnuyoah/XRouter/v8/sdk/pluginstore"
 )
 
-// NormalizePluginsConfig applies default plugin configuration values.
+// NormalizePluginsConfig 应用默认的插件配置值。
 func (cfg *Config) NormalizePluginsConfig() {
 	if cfg == nil {
 		return
@@ -33,10 +33,10 @@ func (cfg *Config) NormalizePluginsConfig() {
 	}
 }
 
-// SanitizeNativeAPIKeys normalizes the native OpenAI-wire API-key providers
-// (openai-api-key, deepseek-api-key, nvidia-api-key, agnes-api-key): it trims whitespace,
-// normalizes prefixes/headers/excluded models, and keeps only entries that
-// declare an API key or a base URL override, preserving order.
+// SanitizeNativeAPIKeys 规范化原生 OpenAI 线协议 API key 供应商
+// （openai-api-key、deepseek-api-key、nvidia-api-key、agnes-api-key）：它会去除空白，
+// 规范化前缀/报头/排除的模型，并且只保留声明了 API key
+// 或基础 URL 覆盖的条目，同时保持顺序。
 func (cfg *Config) SanitizeNativeAPIKeys() {
 	if cfg == nil {
 		return
@@ -68,9 +68,9 @@ func sanitizeNativeAPIKeyEntries(entries []NativeAPIKey) []NativeAPIKey {
 	return out
 }
 
-// SanitizeOAuthModelAlias normalizes and deduplicates global OAuth model name aliases.
-// It trims whitespace, normalizes channel keys to lower-case, drops empty entries,
-// allows multiple aliases per upstream name, and ensures aliases are unique within each channel.
+// SanitizeOAuthModelAlias 规范化并去重全局 OAuth 模型名别名。
+// 它会去除空白，将通道键规范化为小写，丢弃空条目，
+// 允许同一个上游名称有多个别名，并确保每个通道内的别名唯一。
 func (cfg *Config) SanitizeOAuthModelAlias() {
 	if cfg == nil || len(cfg.OAuthModelAlias) == 0 {
 		return
@@ -112,9 +112,9 @@ func (cfg *Config) SanitizeOAuthModelAlias() {
 	cfg.OAuthModelAlias = out
 }
 
-// SanitizeOAuthSettings normalizes and deduplicates global OAuth model settings.
-// It trims whitespace, normalizes channel keys to lower-case, drops empty entries,
-// and ensures entries are unique within each channel.
+// SanitizeOAuthSettings 规范化并去重全局 OAuth 模型设置。
+// 它会去除空白，将通道键规范化为小写，丢弃空条目，
+// 并确保每个通道内的条目唯一。
 func (cfg *Config) SanitizeOAuthSettings() {
 	if cfg == nil || len(cfg.OAuthSettings) == 0 {
 		return
@@ -156,8 +156,8 @@ func (cfg *Config) SanitizeOAuthSettings() {
 	cfg.OAuthSettings = out
 }
 
-// SanitizeOAuthRequestScopedErrors normalizes and validates global OAuth request-scoped error rules.
-// It trims whitespace, normalizes channel keys to lower-case, validates status/action, and drops invalid rules.
+// SanitizeOAuthRequestScopedErrors 规范化并校验全局 OAuth 请求范围错误规则。
+// 它会去除空白，将通道键规范化为小写，校验 status/action，并丢弃无效规则。
 func (cfg *Config) SanitizeOAuthRequestScopedErrors() {
 	if cfg == nil || len(cfg.OAuthRequestScopedErrors) == 0 {
 		return
@@ -204,9 +204,9 @@ func (cfg *Config) SanitizeOAuthRequestScopedErrors() {
 	cfg.OAuthRequestScopedErrors = out
 }
 
-// SanitizeOpenAICompatibility removes OpenAI-compatibility provider entries that are
-// not actionable, specifically those missing a BaseURL. It trims whitespace before
-// evaluation and preserves the relative order of remaining entries.
+// SanitizeOpenAICompatibility 移除不可用的 OpenAI 兼容供应商条目，
+// 具体指缺少 BaseURL 的条目。它在评估之前去除空白，
+// 并保持其余条目的相对顺序。
 func (cfg *Config) SanitizeOpenAICompatibility() {
 	if cfg == nil || len(cfg.OpenAICompatibility) == 0 {
 		return
@@ -219,7 +219,7 @@ func (cfg *Config) SanitizeOpenAICompatibility() {
 		e.BaseURL = strings.TrimSpace(e.BaseURL)
 		e.Headers = NormalizeHeaders(e.Headers)
 		if e.BaseURL == "" {
-			// Skip providers with no base-url; treated as removed
+			// 跳过没有 base-url 的供应商；视为已移除
 			continue
 		}
 		out = append(out, e)
@@ -227,7 +227,7 @@ func (cfg *Config) SanitizeOpenAICompatibility() {
 	cfg.OpenAICompatibility = out
 }
 
-// FormatSortedHeaders serializes headers deterministically with null byte separators.
+// FormatSortedHeaders 使用空字节分隔符以确定性的方式序列化报头。
 func FormatSortedHeaders(headers map[string]string) string {
 	if len(headers) == 0 {
 		return ""
@@ -259,7 +259,7 @@ func normalizeModelPrefix(prefix string) string {
 	return trimmed
 }
 
-// NormalizeHeaders trims header keys and values and removes empty pairs.
+// NormalizeHeaders 去除报头键与值的空白并移除空对。
 func NormalizeHeaders(headers map[string]string) map[string]string {
 	if len(headers) == 0 {
 		return nil
@@ -279,8 +279,8 @@ func NormalizeHeaders(headers map[string]string) map[string]string {
 	return clean
 }
 
-// NormalizeExcludedModels trims, lowercases, and deduplicates model exclusion patterns.
-// It preserves the order of first occurrences and drops empty entries.
+// NormalizeExcludedModels 去除空白、转为小写并去重模型排除模式。
+// 它保持首次出现的顺序并丢弃空条目。
 func NormalizeExcludedModels(models []string) []string {
 	if len(models) == 0 {
 		return nil
@@ -304,8 +304,8 @@ func NormalizeExcludedModels(models []string) []string {
 	return out
 }
 
-// NormalizeOAuthExcludedModels cleans provider -> excluded models mappings by normalizing provider keys
-// and applying model exclusion normalization to each entry.
+// NormalizeOAuthExcludedModels 通过规范化 provider 键并对每个条目
+// 应用模型排除规范化，来清理 provider -> 排除模型 的映射。
 func NormalizeOAuthExcludedModels(entries map[string][]string) map[string][]string {
 	if len(entries) == 0 {
 		return nil

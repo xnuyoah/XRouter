@@ -1,6 +1,6 @@
 package auth
 
-// IsConfigAPIKeyAuth reports whether the auth entry is synthesized from config *-api-key lists.
+// IsConfigAPIKeyAuth 报告该 auth 条目是否由配置中的 *-api-key 列表合成。
 func IsConfigAPIKeyAuth(auth *Auth) bool {
 	if auth == nil {
 		return false

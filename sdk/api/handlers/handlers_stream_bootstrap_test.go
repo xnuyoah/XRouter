@@ -1062,7 +1062,7 @@ func TestExecuteStreamWithAuthManager_ForwardsOverloadErrorWhenAllAuthsOverloade
 
 	handler := NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 
-	// First request tries all accounts, fails with overload, cooling both credentials down.
+	// 第一个请求尝试所有账号，因过载失败，使两个凭据都进入冷却。
 	_, _, errChan := handler.ExecuteStreamWithAuthManager(context.Background(), "openai", "gpt-5.6-sol", []byte(`{"model":"gpt-5.6-sol"}`), "")
 	var gotErr *interfaces.ErrorMessage
 	for msg := range errChan {
@@ -1077,7 +1077,7 @@ func TestExecuteStreamWithAuthManager_ForwardsOverloadErrorWhenAllAuthsOverloade
 		t.Fatalf("expected error message to contain overload details, got: %q", gotErr.Error.Error())
 	}
 
-	// Subsequent request (e.g. client reconnect) while credentials are in cooldown should still report the upstream error reason.
+	// 凭据处于冷却期间的后继请求（例如客户端重连）仍应报告上游错误原因。
 	_, _, errChan2 := handler.ExecuteStreamWithAuthManager(context.Background(), "openai", "gpt-5.6-sol", []byte(`{"model":"gpt-5.6-sol"}`), "")
 	var gotErr2 *interfaces.ErrorMessage
 	for msg := range errChan2 {

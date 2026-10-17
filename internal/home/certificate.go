@@ -50,7 +50,7 @@ type certificatePaths struct {
 	CACert     string
 }
 
-// ConfigFromJWT prepares a Home config from the JWT and ensures local mTLS files exist.
+// ConfigFromJWT 从 JWT 准备 Home 配置，并确保本地 mTLS 文件存在。
 func ConfigFromJWT(ctx context.Context, rawJWT string) (config.HomeConfig, error) {
 	claims, errClaims := parseHomeJWTClaims(rawJWT)
 	if errClaims != nil {

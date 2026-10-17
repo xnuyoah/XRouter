@@ -13,56 +13,56 @@ import (
 	internallogging "github.com/xnuyoah/XRouter/v8/internal/logging"
 )
 
-// DefaultServiceTier is retained for direct SDK and non-OpenAI usage callers.
+// DefaultServiceTier 为直接使用 SDK 和非 OpenAI 的使用方保留。
 const DefaultServiceTier = "default"
 
-// AutoServiceTier is the OpenAI request semantics when service_tier is omitted.
-// OpenAI HTTP handlers set it explicitly, without changing other providers'
-// historical direct-SDK default.
+// AutoServiceTier 是省略 service_tier 时的 OpenAI 请求语义。
+// OpenAI HTTP 处理器会显式设置它，而不改变其他供应商
+// 历史遗留的直接使用 SDK 的默认值。
 const AutoServiceTier = "auto"
 
-// Record contains the usage statistics captured for a single provider request.
+// Record 包含针对单个供应商请求捕获的使用统计数据。
 type Record struct {
-	// RequestID uniquely identifies this specific model execution instance (UUID v4).
+	// RequestID 唯一标识这个特定的模型执行实例（UUID v4）。
 	RequestID string
-	// TraceID identifies the parent inbound HTTP request when available (8-character hex).
+	// TraceID 在可用时标识父级入站 HTTP 请求（8 个字符的十六进制）。
 	TraceID  string
 	Provider string
-	// BaseURL stores the configured upstream base URL when available.
+	// BaseURL 在可用时存储已配置的上游基础 URL。
 	BaseURL string
-	// ExecutorType stores the concrete executor type that handled the request.
+	// ExecutorType 存储处理该请求的具体执行器类型。
 	ExecutorType string
 	Model        string
 	Alias        string
 	APIKey       string
-	// IsNativeKey reports whether the client API key was authenticated by CPA's native config provider.
+	// IsNativeKey 报告客户端 API 密钥是否由 CPA 的原生 config 供应商认证。
 	IsNativeKey bool
-	// AccessProvider identifies the client request authentication provider (e.g. "config-inline" or plugin ID).
+	// AccessProvider 标识客户端请求的认证供应商（例如 "config-inline" 或插件 ID）。
 	AccessProvider  string
 	SessionID       string
 	ParentSessionID string
 	AuthID          string
 	AuthIndex       string
-	// AccessTokenSHA256 identifies the OAuth token version without exposing the token.
+	// AccessTokenSHA256 在不暴露令牌的情况下标识 OAuth 令牌版本。
 	AccessTokenSHA256 string
 	AuthType          string
 	Source            string
-	// ReasoningEffort stores the translated upstream thinking level for request event logs.
+	// ReasoningEffort 为请求事件日志存储翻译后的上游思考级别。
 	ReasoningEffort string
-	// ServiceTier stores the client-requested service tier.
+	// ServiceTier 存储客户端请求的服务层级。
 	ServiceTier string
-	// RequestServiceTier is a deprecated input-only alias retained for existing
-	// plugin callers. It is normalized into ServiceTier and never emitted.
+	// RequestServiceTier 是仅为输入保留的已弃用别名，供现有
+	// 插件调用方使用。它会被归一化到 ServiceTier，并且永不输出。
 	RequestServiceTier string
-	// ResponseServiceTier stores the final tier reported by the upstream response.
+	// ResponseServiceTier 存储上游响应报告的最终层级。
 	ResponseServiceTier string
-	// ResponseModel stores the model name reported by the upstream response, empty when unknown.
+	// ResponseModel 存储上游响应报告的模型名称，未知时为空。
 	ResponseModel string
-	// Generate reports whether the client requested actual generation.
-	// nil or true means generation is enabled; only an explicit false disables generation.
-	// Use GenerateFlag to set the value and GenerateEnabled to read it with the default.
+	// Generate 报告客户端是否请求了实际生成。
+	// nil 或 true 表示启用生成；只有显式的 false 才会禁用生成。
+	// 使用 GenerateFlag 设置该值，使用 GenerateEnabled 读取该值及其默认值。
 	Generate *bool
-	// Stream reports whether the request was executed in streaming mode.
+	// Stream 报告请求是否以流式模式执行。
 	Stream      bool
 	RequestedAt time.Time
 	Latency     time.Duration
@@ -70,17 +70,17 @@ type Record struct {
 	Failed      bool
 	Fail        Failure
 	Detail      Detail
-	// ResponseHeaders stores a snapshot of upstream response headers for usage sinks.
+	// ResponseHeaders 为使用情况接收端存储上游响应头的快照。
 	ResponseHeaders http.Header
 }
 
-// Failure holds HTTP failure metadata for an upstream request attempt.
+// Failure 保存一次上游请求尝试的 HTTP 失败元数据。
 type Failure struct {
 	StatusCode int
 	Body       string
 }
 
-// Detail holds the token usage breakdown.
+// Detail 保存令牌使用情况的细分。
 type Detail struct {
 	InputTokens         int64
 	OutputTokens        int64
@@ -104,7 +104,7 @@ type apiKeyContextKey struct{}
 type accessProviderContextKey struct{}
 type isNativeKeyContextKey struct{}
 
-// WithExecutionRequestID attaches a specific execution instance request ID to the context.
+// WithExecutionRequestID 将特定的执行实例请求 ID 附加到上下文。
 func WithExecutionRequestID(ctx context.Context, requestID string) context.Context {
 	if ctx == nil {
 		return context.Background()
@@ -112,7 +112,7 @@ func WithExecutionRequestID(ctx context.Context, requestID string) context.Conte
 	return context.WithValue(ctx, executionRequestIDContextKey{}, strings.TrimSpace(requestID))
 }
 
-// ExecutionRequestIDFromContext retrieves the execution instance request ID from the context.
+// ExecutionRequestIDFromContext 从上下文检索执行实例请求 ID。
 func ExecutionRequestIDFromContext(ctx context.Context) string {
 	if ctx == nil {
 		return ""
@@ -123,7 +123,7 @@ func ExecutionRequestIDFromContext(ctx context.Context) string {
 	return ""
 }
 
-// WithTraceID attaches the parent inbound HTTP request ID to the context.
+// WithTraceID 将父级入站 HTTP 请求 ID 附加到上下文。
 func WithTraceID(ctx context.Context, traceID string) context.Context {
 	if ctx == nil {
 		return context.Background()
@@ -131,7 +131,7 @@ func WithTraceID(ctx context.Context, traceID string) context.Context {
 	return context.WithValue(ctx, executionTraceIDContextKey{}, strings.TrimSpace(traceID))
 }
 
-// TraceIDFromContext retrieves the parent inbound HTTP request ID from the context.
+// TraceIDFromContext 从上下文检索父级入站 HTTP 请求 ID。
 func TraceIDFromContext(ctx context.Context) string {
 	if ctx == nil {
 		return ""
@@ -142,7 +142,7 @@ func TraceIDFromContext(ctx context.Context) string {
 	return ""
 }
 
-// WithRequestedModelAlias stores the client-requested model name for usage sinks.
+// WithRequestedModelAlias 为使用情况接收端存储客户端请求的模型名称。
 func WithRequestedModelAlias(ctx context.Context, alias string) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -154,7 +154,7 @@ func WithRequestedModelAlias(ctx context.Context, alias string) context.Context 
 	return context.WithValue(ctx, requestedModelAliasContextKey{}, alias)
 }
 
-// RequestedModelAliasFromContext returns the client-requested model name stored in ctx.
+// RequestedModelAliasFromContext 返回存储在 ctx 中的客户端请求的模型名称。
 func RequestedModelAliasFromContext(ctx context.Context) string {
 	if ctx == nil {
 		return ""
@@ -170,7 +170,7 @@ func RequestedModelAliasFromContext(ctx context.Context) string {
 	}
 }
 
-// WithReasoningEffort stores the client-requested reasoning effort for usage sinks.
+// WithReasoningEffort 为使用情况接收端存储客户端请求的推理强度。
 func WithReasoningEffort(ctx context.Context, effort string) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -182,7 +182,7 @@ func WithReasoningEffort(ctx context.Context, effort string) context.Context {
 	return context.WithValue(ctx, reasoningEffortContextKey{}, effort)
 }
 
-// ReasoningEffortFromContext returns the client-requested reasoning effort stored in ctx.
+// ReasoningEffortFromContext 返回存储在 ctx 中的客户端请求的推理强度。
 func ReasoningEffortFromContext(ctx context.Context) string {
 	if ctx == nil {
 		return ""
@@ -198,7 +198,7 @@ func ReasoningEffortFromContext(ctx context.Context) string {
 	}
 }
 
-// WithServiceTier stores the client-requested service tier for usage sinks.
+// WithServiceTier 为使用情况接收端存储客户端请求的服务层级。
 func WithServiceTier(ctx context.Context, tier string) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -210,7 +210,7 @@ func WithServiceTier(ctx context.Context, tier string) context.Context {
 	return context.WithValue(ctx, serviceTierContextKey{}, tier)
 }
 
-// ServiceTierFromContext returns the client-requested service tier stored in ctx.
+// ServiceTierFromContext 返回存储在 ctx 中的客户端请求的服务层级。
 func ServiceTierFromContext(ctx context.Context) string {
 	if ctx == nil {
 		return DefaultServiceTier
@@ -234,8 +234,8 @@ func ServiceTierFromContext(ctx context.Context) string {
 	}
 }
 
-// WithGenerate stores whether the client requested actual generation for usage sinks.
-// Missing context values default to true; only an explicit false disables generation.
+// WithGenerate 为使用情况接收端存储客户端是否请求了实际生成。
+// 缺失的上下文值默认为 true；只有显式的 false 才会禁用生成。
 func WithGenerate(ctx context.Context, generate bool) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -243,8 +243,8 @@ func WithGenerate(ctx context.Context, generate bool) context.Context {
 	return context.WithValue(ctx, generateContextKey{}, generate)
 }
 
-// GenerateFromContext returns whether the client requested actual generation.
-// Missing values default to true.
+// GenerateFromContext 返回客户端是否请求了实际生成。
+// 缺失的值默认为 true。
 func GenerateFromContext(ctx context.Context) bool {
 	if ctx == nil {
 		return true
@@ -258,7 +258,7 @@ func GenerateFromContext(ctx context.Context) bool {
 	}
 }
 
-// WithStream stores whether the request was executed in streaming mode for usage sinks.
+// WithStream 为使用情况接收端存储请求是否以流式模式执行。
 func WithStream(ctx context.Context, stream bool) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -266,8 +266,8 @@ func WithStream(ctx context.Context, stream bool) context.Context {
 	return context.WithValue(ctx, streamContextKey{}, stream)
 }
 
-// StreamFromContext returns whether the request was executed in streaming mode.
-// Missing values default to false.
+// StreamFromContext 返回请求是否以流式模式执行。
+// 缺失的值默认为 false。
 func StreamFromContext(ctx context.Context) bool {
 	if ctx == nil {
 		return false
@@ -281,7 +281,7 @@ func StreamFromContext(ctx context.Context) bool {
 	}
 }
 
-// WithAccessProvider stores the client authentication provider identifier for usage sinks.
+// WithAccessProvider 为使用情况接收端存储客户端认证供应商标识。
 func WithAccessProvider(ctx context.Context, provider string) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -293,7 +293,7 @@ func WithAccessProvider(ctx context.Context, provider string) context.Context {
 	return context.WithValue(ctx, accessProviderContextKey{}, provider)
 }
 
-// WithAPIKey stores the client API key for usage sinks.
+// WithAPIKey 为使用情况接收端存储客户端 API 密钥。
 func WithAPIKey(ctx context.Context, apiKey string) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -305,7 +305,7 @@ func WithAPIKey(ctx context.Context, apiKey string) context.Context {
 	return context.WithValue(ctx, apiKeyContextKey{}, apiKey)
 }
 
-// APIKeyFromContext returns the client API key stored in ctx or gin.Context.
+// APIKeyFromContext 返回存储在 ctx 或 gin.Context 中的客户端 API 密钥。
 func APIKeyFromContext(ctx context.Context) string {
 	if ctx == nil {
 		return ""
@@ -332,7 +332,7 @@ func APIKeyFromContext(ctx context.Context) string {
 	return ""
 }
 
-// AccessProviderFromContext returns the client authentication provider stored in ctx.
+// AccessProviderFromContext 返回存储在 ctx 中的客户端认证供应商。
 func AccessProviderFromContext(ctx context.Context) string {
 	if ctx == nil {
 		return ""
@@ -357,7 +357,7 @@ func AccessProviderFromContext(ctx context.Context) string {
 	return ""
 }
 
-// WithIsNativeKey stores whether the client API key is native to CPA for usage sinks.
+// WithIsNativeKey 为使用情况接收端存储客户端 API 密钥是否原生属于 CPA。
 func WithIsNativeKey(ctx context.Context, isNative bool) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -365,7 +365,7 @@ func WithIsNativeKey(ctx context.Context, isNative bool) context.Context {
 	return context.WithValue(ctx, isNativeKeyContextKey{}, isNative)
 }
 
-// IsNativeKeyFromContext returns whether the client API key is native to CPA if explicitly set in ctx.
+// IsNativeKeyFromContext 在 ctx 中显式设置时返回客户端 API 密钥是否原生属于 CPA。
 func IsNativeKeyFromContext(ctx context.Context) (bool, bool) {
 	if ctx == nil {
 		return false, false
@@ -377,19 +377,19 @@ func IsNativeKeyFromContext(ctx context.Context) (bool, bool) {
 	return false, false
 }
 
-// IsNativeAccessProvider reports whether provider represents CPA's built-in inline key provider.
+// IsNativeAccessProvider 报告 provider 是否表示 CPA 内置的 inline 密钥供应商。
 func IsNativeAccessProvider(provider string) bool {
 	p := strings.TrimSpace(provider)
 	return strings.EqualFold(p, "config-inline") || strings.EqualFold(p, "config-api-key")
 }
 
-// GenerateFlag returns a pointer suitable for Record.Generate.
+// GenerateFlag 返回适合用于 Record.Generate 的指针。
 func GenerateFlag(generate bool) *bool {
 	return &generate
 }
 
-// GenerateEnabled reports whether generation is enabled for the record field.
-// A nil value defaults to true so legacy callers that omit Generate keep the historical behavior.
+// GenerateEnabled 报告记录字段的生成是否已启用。
+// nil 值默认为 true，因此省略 Generate 的旧版调用方会保持历史行为。
 func GenerateEnabled(generate *bool) bool {
 	if generate == nil {
 		return true
@@ -397,7 +397,7 @@ func GenerateEnabled(generate *bool) bool {
 	return *generate
 }
 
-// Plugin consumes usage records emitted by the proxy runtime.
+// Plugin 消费代理运行时发出的使用记录。
 type Plugin interface {
 	HandleUsage(ctx context.Context, record Record)
 }
@@ -407,7 +407,7 @@ type queueItem struct {
 	record Record
 }
 
-// Manager maintains a queue of usage records and delivers them to registered plugins.
+// Manager 维护使用记录队列并将其投递给已注册的插件。
 type Manager struct {
 	once     sync.Once
 	stopOnce sync.Once
@@ -423,14 +423,14 @@ type Manager struct {
 	named     map[string]int
 }
 
-// NewManager constructs a manager with a buffered queue.
+// NewManager 使用带缓冲的队列构造管理器。
 func NewManager(buffer int) *Manager {
 	m := &Manager{}
 	m.cond = sync.NewCond(&m.mu)
 	return m
 }
 
-// Start launches the background dispatcher. Calling Start multiple times is safe.
+// Start 启动后台调度器。多次调用 Start 是安全的。
 func (m *Manager) Start(ctx context.Context) {
 	if m == nil {
 		return
@@ -445,7 +445,7 @@ func (m *Manager) Start(ctx context.Context) {
 	})
 }
 
-// Stop stops the dispatcher and drains the queue.
+// Stop 停止调度器并排空队列。
 func (m *Manager) Stop() {
 	if m == nil {
 		return
@@ -461,7 +461,7 @@ func (m *Manager) Stop() {
 	})
 }
 
-// Register appends a plugin to the delivery list.
+// Register 将插件追加到投递列表。
 func (m *Manager) Register(plugin Plugin) {
 	if m == nil || plugin == nil {
 		return
@@ -471,7 +471,7 @@ func (m *Manager) Register(plugin Plugin) {
 	m.pluginsMu.Unlock()
 }
 
-// RegisterNamed registers or replaces a plugin by name.
+// RegisterNamed 按名称注册或替换插件。
 func (m *Manager) RegisterNamed(name string, plugin Plugin) {
 	if m == nil || plugin == nil {
 		return
@@ -495,8 +495,8 @@ func (m *Manager) RegisterNamed(name string, plugin Plugin) {
 	m.pluginsMu.Unlock()
 }
 
-// Publish enqueues a usage record for processing. If no plugin is registered
-// the record will be discarded downstream.
+// Publish 将使用记录入队以供处理。如果没有注册插件，
+// 该记录会在下游被丢弃。
 func (m *Manager) Publish(ctx context.Context, record Record) {
 	if m == nil {
 		return
@@ -532,7 +532,7 @@ func (m *Manager) Publish(ctx context.Context, record Record) {
 			record.IsNativeKey = IsNativeAccessProvider(record.AccessProvider)
 		}
 	}
-	// ensure worker is running even if Start was not called explicitly
+	// 确保即使未显式调用 Start，worker 也在运行
 	m.Start(context.Background())
 	m.mu.Lock()
 	if m.closed {
@@ -588,20 +588,20 @@ func safeInvoke(plugin Plugin, ctx context.Context, record Record) {
 
 var defaultManager = NewManager(512)
 
-// DefaultManager returns the global usage manager instance.
+// DefaultManager 返回全局使用管理器实例。
 func DefaultManager() *Manager { return defaultManager }
 
-// RegisterPlugin registers a plugin on the default manager.
+// RegisterPlugin 在默认管理器上注册插件。
 func RegisterPlugin(plugin Plugin) { DefaultManager().Register(plugin) }
 
-// RegisterNamedPlugin registers or replaces a named plugin on the default manager.
+// RegisterNamedPlugin 在默认管理器上按名称注册或替换插件。
 func RegisterNamedPlugin(name string, plugin Plugin) { DefaultManager().RegisterNamed(name, plugin) }
 
-// PublishRecord publishes a record using the default manager.
+// PublishRecord 使用默认管理器发布记录。
 func PublishRecord(ctx context.Context, record Record) { DefaultManager().Publish(ctx, record) }
 
-// StartDefault starts the default manager's dispatcher.
+// StartDefault 启动默认管理器的调度器。
 func StartDefault(ctx context.Context) { DefaultManager().Start(ctx) }
 
-// StopDefault stops the default manager's dispatcher.
+// StopDefault 停止默认管理器的调度器。
 func StopDefault() { DefaultManager().Stop() }

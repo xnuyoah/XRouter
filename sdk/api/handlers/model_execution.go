@@ -30,7 +30,7 @@ type modelExecutionOptions struct {
 	AllowSpeechModel        bool
 }
 
-// ProtocolExecutionRequest describes a route-level model execution request with explicit protocols.
+// ProtocolExecutionRequest 描述一次带显式协议的路由级模型执行请求。
 type ProtocolExecutionRequest struct {
 	EntryProtocol      string
 	ExitProtocol       string
@@ -45,7 +45,7 @@ type ProtocolExecutionRequest struct {
 	Path               string
 }
 
-// ModelExecutionRequest describes an internal model execution request.
+// ModelExecutionRequest 描述一次内部模型执行请求。
 type ModelExecutionRequest struct {
 	EntryProtocol           string
 	ExitProtocol            string
@@ -63,34 +63,34 @@ type ModelExecutionRequest struct {
 	Path                    string
 }
 
-// ModelExecutionResponse describes a non-streaming internal model execution response.
+// ModelExecutionResponse 描述一次非流式的内部模型执行响应。
 type ModelExecutionResponse struct {
 	StatusCode int
 	Headers    http.Header
 	Body       []byte
 }
 
-// ModelExecutionStream describes a streaming internal model execution response.
+// ModelExecutionStream 描述一次流式的内部模型执行响应。
 type ModelExecutionStream struct {
 	StatusCode int
 	Headers    http.Header
 	Chunks     <-chan ModelExecutionChunk
 }
 
-// ModelExecutionChunk carries either a streaming payload or a terminal stream error.
+// ModelExecutionChunk 携带流式载荷或终止性的流错误。
 type ModelExecutionChunk struct {
 	Payload []byte
 	Err     *ModelExecutionStreamError
 }
 
-// ModelExecutionStreamError carries a JSON-friendly terminal stream error.
+// ModelExecutionStreamError 携带对 JSON 友好的终止性流错误。
 type ModelExecutionStreamError struct {
 	StatusCode int         `json:"status_code"`
 	Message    string      `json:"message"`
 	Headers    http.Header `json:"headers"`
 }
 
-// Error returns the stream error message or the HTTP status text.
+// Error 返回流错误消息或 HTTP 状态文本。
 func (e *ModelExecutionStreamError) Error() string {
 	if e == nil {
 		return ""
@@ -101,10 +101,10 @@ func (e *ModelExecutionStreamError) Error() string {
 	return http.StatusText(e.StatusCode)
 }
 
-// ExecuteModel executes an internal non-streaming model request.
-// Host model callbacks are non-recursive for their caller: when
-// skip plugin IDs are set, that plugin's interceptors and router are skipped
-// for the nested model execution while other plugins may still run.
+// ExecuteModel 执行一次内部非流式模型请求。
+// 宿主模型回调对其调用方是非递归的：当设置了
+// skip 插件 ID 时，该插件的拦截器与路由器会在嵌套模型执行中
+// 被跳过，而其他插件仍可能运行。
 func (h *BaseAPIHandler) ExecuteModel(ctx context.Context, req ModelExecutionRequest) (ModelExecutionResponse, *interfaces.ErrorMessage) {
 	markNestedExecution(ctx)
 	ctx = usage.WithoutStreamDelivery(ctx)
@@ -138,10 +138,10 @@ func (h *BaseAPIHandler) ExecuteModel(ctx context.Context, req ModelExecutionReq
 	}, nil
 }
 
-// ExecuteModelStream executes an internal streaming model request.
-// Host model callbacks are non-recursive for their caller: when
-// skip plugin IDs are set, that plugin's interceptors and router are skipped
-// for the nested model execution while other plugins may still run.
+// ExecuteModelStream 执行一次内部流式模型请求。
+// 宿主模型回调对其调用方是非递归的：当设置了
+// skip 插件 ID 时，该插件的拦截器与路由器会在嵌套模型执行中
+// 被跳过，而其他插件仍可能运行。
 func (h *BaseAPIHandler) ExecuteModelStream(ctx context.Context, req ModelExecutionRequest) (ModelExecutionStream, *interfaces.ErrorMessage) {
 	markNestedExecution(ctx)
 	ctx = usage.WithoutStreamDelivery(ctx)
@@ -176,7 +176,7 @@ func (h *BaseAPIHandler) ExecuteModelStream(ctx context.Context, req ModelExecut
 	}, nil
 }
 
-// ExecuteProtocolWithAuthManager executes a route-level non-streaming request with explicit protocols.
+// ExecuteProtocolWithAuthManager 执行一次带显式协议的路由级非流式请求。
 func (h *BaseAPIHandler) ExecuteProtocolWithAuthManager(ctx context.Context, req ProtocolExecutionRequest) (ModelExecutionResponse, *interfaces.ErrorMessage) {
 	if req.Stream {
 		return ModelExecutionResponse{}, modelExecutionModeError("ExecuteProtocolWithAuthManager requires Stream=false")
@@ -199,7 +199,7 @@ func (h *BaseAPIHandler) ExecuteProtocolWithAuthManager(ctx context.Context, req
 	}, nil
 }
 
-// ExecuteProtocolStreamWithAuthManager executes a route-level streaming request with explicit protocols.
+// ExecuteProtocolStreamWithAuthManager 执行一次带显式协议的路由级流式请求。
 func (h *BaseAPIHandler) ExecuteProtocolStreamWithAuthManager(ctx context.Context, req ProtocolExecutionRequest) (ModelExecutionStream, *interfaces.ErrorMessage) {
 	if !req.Stream {
 		return ModelExecutionStream{}, modelExecutionModeError("ExecuteProtocolStreamWithAuthManager requires Stream=true")
@@ -260,10 +260,10 @@ func modelExecutionHeaders(ctx context.Context, headers http.Header) http.Header
 	return headersFromContext(ctx)
 }
 
-// modelExecutionQuery prefers an explicitly provided query and otherwise falls
-// back to the inbound query embedded in the request context. This lets model
-// routers observe query parameters for plain HTTP requests even when callers
-// do not populate execOptions.Query (mirrors modelExecutionHeaders).
+// modelExecutionQuery 优先使用显式提供的 query，否则回退到
+// 请求上下文中嵌入的入站 query。这使模型路由器即使在调用方
+// 未填充 execOptions.Query 时，也能观察到普通 HTTP 请求的查询参数
+// （与 modelExecutionHeaders 对应）。
 func modelExecutionQuery(ctx context.Context, query url.Values) url.Values {
 	if len(query) > 0 {
 		return cloneURLValues(query)

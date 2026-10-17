@@ -3,32 +3,32 @@ package pluginabi
 import "encoding/json"
 
 const (
-	// ABIVersion tracks the native C ABI shape (native plugin exports).
+	// ABIVersion 跟踪原生 C ABI 形态（原生插件导出）。
 	ABIVersion uint32 = 1
-	// SchemaVersion tracks the RPC JSON contract exchanged at plugin.register.
-	// Version 2 adds request lifecycle completion and active request termination.
-	// Version 3 omits OriginalRequest/RequestBody on payload stream chunks
-	// (ChunkIndex >= 0); those fields remain on StreamChunkHeaderInitIndex only.
-	// Plugins that still need per-chunk request bodies should keep schema_version < 3.
-	// Version 4 adds upstream WebSocket response event observation.
-	// Version 5 omits HistoryChunks on payload stream chunks (ChunkIndex >= 0);
-	// those fields remain on StreamChunkHeaderInitIndex only. Plugins that still need
-	// per-chunk history chunks should keep schema_version < 5.
-	// Version 6 preserves raw JSON bodies for plugin management responses.
-	// Plugins that still require HTML entity escaping on JSON response strings
-	// should keep schema_version < 6.
+	// SchemaVersion 跟踪在 plugin.register 处交换的 RPC JSON 契约。
+	// 版本 2 增加请求生命周期完成和活跃请求终止。
+	// 版本 3 在载荷流式分块（ChunkIndex >= 0）上省略 OriginalRequest/RequestBody；
+	// 这些字段仅保留在 StreamChunkHeaderInitIndex 上。
+	// 仍需要逐分块请求体的插件应保持 schema_version < 3。
+	// 版本 4 增加上游 WebSocket 响应事件观察。
+	// 版本 5 在载荷流式分块（ChunkIndex >= 0）上省略 HistoryChunks；
+	// 这些字段仅保留在 StreamChunkHeaderInitIndex 上。仍需要
+	// 逐分块历史分块的插件应保持 schema_version < 5。
+	// 版本 6 为插件管理响应保留原始 JSON 正文。
+	// 仍要求对 JSON 响应字符串进行 HTML 实体转义的插件
+	// 应保持 schema_version < 6。
 	SchemaVersion uint32 = 6
-	// SchemaVersionStreamChunkOmitRequestBody is the first schema version that omits
-	// request bodies on payload stream-chunk interceptor calls.
+	// SchemaVersionStreamChunkOmitRequestBody 是在载荷流式分块拦截器调用中
+	// 省略请求体的首个 schema 版本。
 	SchemaVersionStreamChunkOmitRequestBody uint32 = 3
-	// SchemaVersionWebSocketResponseObserver is the first schema version that supports
-	// upstream WebSocket response event observation.
+	// SchemaVersionWebSocketResponseObserver 是首个支持
+	// 上游 WebSocket 响应事件观察的 schema 版本。
 	SchemaVersionWebSocketResponseObserver uint32 = 4
-	// SchemaVersionStreamChunkOmitHistory is the first schema version that omits
-	// history chunks on payload stream-chunk interceptor calls.
+	// SchemaVersionStreamChunkOmitHistory 是在载荷流式分块拦截器调用中
+	// 省略历史分块的首个 schema 版本。
 	SchemaVersionStreamChunkOmitHistory uint32 = 5
-	// SchemaVersionRawManagementResponse is the first schema version where plugin
-	// management JSON responses are preserved without HTML-escaping strings.
+	// SchemaVersionRawManagementResponse 是插件管理 JSON 响应
+	// 在不对字符串做 HTML 转义的情况下被保留的首个 schema 版本。
 	SchemaVersionRawManagementResponse uint32 = 6
 )
 
@@ -51,9 +51,9 @@ const (
 	MethodFrontendAuthIdentifier   = "frontend_auth.identifier"
 	MethodFrontendAuthAuthenticate = "frontend_auth.authenticate"
 
-	// MethodSchedulerPick asks a scheduler plugin to select an auth candidate.
+	// MethodSchedulerPick 请求调度器插件选择一个 auth 候选。
 	MethodSchedulerPick = "scheduler.pick"
-	// MethodModelRoute asks a router plugin to select a plugin executor for a matching request.
+	// MethodModelRoute 请求路由插件为匹配的请求选择一个插件执行器。
 	MethodModelRoute = "model.route"
 
 	MethodExecutorIdentifier    = "executor.identifier"
@@ -124,12 +124,12 @@ type Error struct {
 	Code      string `json:"code"`
 	Message   string `json:"message"`
 	Retryable bool   `json:"retryable,omitempty"`
-	// HTTPStatus is the HTTP status code (e.g. 401, 403, 429) to surface to the client.
-	// When omitted or 0, CPA defaults to HTTP 500 (internal_server_error).
+	// HTTPStatus 是要返回给客户端的 HTTP 状态码（例如 401、403、429）。
+	// 省略或为 0 时，CPA 默认为 HTTP 500（internal_server_error）。
 	HTTPStatus int `json:"http_status,omitempty"`
 }
 
-// Error implements the error interface for Error.
+// Error 为 Error 实现 error 接口。
 func (e *Error) Error() string {
 	if e == nil {
 		return ""
@@ -137,7 +137,7 @@ func (e *Error) Error() string {
 	return e.Message
 }
 
-// StatusCode returns the HTTP status code embedded in the Error, or 0 if unset.
+// StatusCode 返回内嵌在 Error 中的 HTTP 状态码，未设置时返回 0。
 func (e *Error) StatusCode() int {
 	if e == nil {
 		return 0
@@ -145,7 +145,7 @@ func (e *Error) StatusCode() int {
 	return e.HTTPStatus
 }
 
-// NewError creates an Error instance with an optional HTTP status code.
+// NewError 创建一个带有可选 HTTP 状态码的 Error 实例。
 func NewError(code, message string, httpStatus ...int) *Error {
 	status := 0
 	if len(httpStatus) > 0 {
@@ -158,7 +158,7 @@ func NewError(code, message string, httpStatus ...int) *Error {
 	}
 }
 
-// NewErrorEnvelope serializes a failed RPC Envelope containing an Error with an optional HTTP status code.
+// NewErrorEnvelope 序列化一个包含 Error 的失败 RPC Envelope，并带有可选 HTTP 状态码。
 func NewErrorEnvelope(code, message string, httpStatus ...int) ([]byte, error) {
 	return json.Marshal(Envelope{
 		OK:    false,

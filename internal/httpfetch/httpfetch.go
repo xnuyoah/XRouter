@@ -10,14 +10,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Doer abstracts the HTTP client used to execute requests.
+// Doer 抽象出用于执行请求的 HTTP 客户端。
 type Doer interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-// GetBytes performs a GET request with the supplied headers, requires a
-// success status, and returns the response body. When maxSize is positive
-// the body is rejected once it exceeds maxSize bytes.
+// GetBytes 使用给定请求头执行 GET 请求，要求返回
+// 成功状态，并返回响应体。当 maxSize 为正数时，
+// 响应体一旦超过 maxSize 字节即被拒绝。
 func GetBytes(ctx context.Context, client Doer, requestURL string, headers map[string]string, maxSize int64) ([]byte, error) {
 	if client == nil {
 		client = http.DefaultClient

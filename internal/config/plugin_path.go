@@ -9,8 +9,8 @@ import (
 
 const defaultPluginsDir = "plugins"
 
-// ResolvePluginsDir normalizes the plugin directory for consistent use throughout the app.
-// It expands a leading tilde (~) to the user's home directory and defaults empty values to plugins.
+// ResolvePluginsDir 规范化插件目录，以便在整个应用中的使用保持一致。
+// 它会把开头的波浪号（~）展开为用户主目录，并将空值默认为 plugins。
 func ResolvePluginsDir(pluginsDir string) (string, error) {
 	pluginsDir = strings.TrimSpace(pluginsDir)
 	if pluginsDir == "" {
@@ -32,7 +32,7 @@ func ResolvePluginsDir(pluginsDir string) (string, error) {
 	return filepath.Clean(pluginsDir), nil
 }
 
-// ResolvePluginsDir resolves and stores the effective plugin directory.
+// ResolvePluginsDir 解析并保存生效的插件目录。
 func (cfg *Config) ResolvePluginsDir() error {
 	if cfg == nil {
 		return nil

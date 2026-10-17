@@ -25,9 +25,9 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-// utlsRoundTripper implements http.RoundTripper using a Chrome fingerprint for
-// providers that require browser-like TLS. The HTTP version follows ALPN. Each
-// request gets a dedicated connection that is closed with the response body.
+// utlsRoundTripper 使用 Chrome 指纹实现 http.RoundTripper，用于
+// 需要类浏览器 TLS 的供应商。HTTP 版本遵循 ALPN。每个
+// 请求都获得一条专用连接，随响应体一起关闭。
 type utlsRoundTripper struct {
 	dialer proxy.Dialer
 }
@@ -114,12 +114,12 @@ func (t *utlsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	return roundTripUtlsConnection(req, tlsConn)
 }
 
-// roundTripUtlsConnection selects the HTTP protocol before sending the request.
-// Empty ALPN is HTTP/1.1, including when a TLS-inspecting proxy omits ALPN.
+// roundTripUtlsConnection 在发送请求前选择 HTTP 协议。
+// 空的 ALPN 即 HTTP/1.1，包括 TLS 检查代理省略 ALPN 的情形。
 func roundTripUtlsConnection(req *http.Request, tlsConn *tls.UConn) (*http.Response, error) {
 	closeConnection := func() error {
-		// The HTTP/1.1 transport may already have closed its non-pooled
-		// connection after reading the response or canceling the request.
+		// HTTP/1.1 传输可能已在读取响应或取消请求后
+		// 关闭了其非池化连接。
 		if errClose := tlsConn.Close(); errClose != nil && !errors.Is(errClose, net.ErrClosed) {
 			return errClose
 		}
@@ -137,9 +137,9 @@ func roundTripUtlsConnection(req *http.Request, tlsConn *tls.UConn) (*http.Respo
 		closeConnection = h2Conn.Close
 		resp, err = h2Conn.RoundTrip(req)
 	case "", "http/1.1":
-		// Reuse the already-handshaken uTLS connection. A fresh, non-pooling
-		// transport retains net/http's cancellation and request-body handling
-		// without changing the TLS fingerprint or redialing through another path.
+		// 复用已经完成握手的 uTLS 连接。一个新建的、非池化的
+		// 传输保留了 net/http 的取消和请求体处理，
+		// 而不改变 TLS 指纹也不经由其他路径重拨。
 		transport := &http.Transport{
 			DisableKeepAlives: true,
 			DialTLSContext: func(context.Context, string, string) (net.Conn, error) {
@@ -173,16 +173,16 @@ func roundTripUtlsConnection(req *http.Request, tlsConn *tls.UConn) (*http.Respo
 	return resp, nil
 }
 
-// claudeCodeSessionCacheCapacity bounds the per-transport TLS session cache for
-// the Anthropic inference plane.
+// claudeCodeSessionCacheCapacity 为 Anthropic 推理面的
+// 每传输 TLS 会话缓存设限。
 const claudeCodeSessionCacheCapacity = 32
 
-// newClaudeCodeTLSConfig builds the uTLS config for one inference-plane dial.
+// newClaudeCodeTLSConfig 为一次推理面拨号构建 uTLS 配置。
 //
-// OmitEmptyPsk keeps the pre_shared_key extension silent until a session is
-// cached, so an unresumed ClientHello stays byte-identical to the captured
-// native handshake. PreferSkipResumptionOnNilExtension turns uTLS's HelloCustom
-// "resume without the matching extension" panic into a skipped resumption.
+// OmitEmptyPsk 让 pre_shared_key 扩展在会话被缓存之前保持静默，
+// 因此未恢复的 ClientHello 与捕获到的原生握手逐字节一致。
+// PreferSkipResumptionOnNilExtension 把 uTLS 的 HelloCustom
+// "在没有匹配扩展的情况下恢复"的 panic 转成跳过恢复。
 func newClaudeCodeTLSConfig(host string, sessionCache tls.ClientSessionCache) *tls.Config {
 	return newClaudeCodeTLSConfigWithRoots(host, sessionCache, nil)
 }
@@ -197,10 +197,10 @@ func newClaudeCodeTLSConfigWithRoots(host string, sessionCache tls.ClientSession
 	}
 }
 
-// claudeCodeTLSClientHelloSpec reproduces the deterministic Node/OpenSSL
-// ClientHello emitted by Claude Code 2.1.220 on macOS arm64. Keep this spec in
-// sync with a fresh native capture whenever the advertised Claude Code version
-// changes.
+// claudeCodeTLSClientHelloSpec 复现 Claude Code 2.1.220 在 macOS arm64 上
+// 发出的确定性 Node/OpenSSL ClientHello。每当对外声明的 Claude Code 版本
+// 发生变化时，都要让此 spec 与新的原生
+// 捕获保持同步。
 func claudeCodeTLSClientHelloSpec() *tls.ClientHelloSpec {
 	return &tls.ClientHelloSpec{
 		CipherSuites: []uint16{
@@ -248,8 +248,8 @@ func claudeCodeTLSClientHelloSpec() *tls.ClientHelloSpec {
 			&tls.PSKKeyExchangeModesExtension{Modes: []uint8{tls.PskModeDHE}},
 			&tls.SupportedVersionsExtension{Versions: []uint16{tls.VersionTLS13, tls.VersionTLS12}},
 			&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
-			// pre_shared_key MUST be the final extension (RFC 8446 4.2.11), after
-			// padding. It contributes zero bytes until a cached session exists.
+			// pre_shared_key 必须是最后一个扩展（RFC 8446 4.2.11），位于
+			// padding 之后。在缓存会话存在之前它贡献零字节。
 			&tls.UtlsPreSharedKeyExtension{},
 		},
 	}
@@ -341,16 +341,16 @@ func newClaudeCodeRoundTripper(proxyURL string) http.RoundTripper {
 	return newClaudeCodeRoundTripperForDialer(dialer)
 }
 
-// newClaudeCodeRoundTripperForDialer builds the Claude Code transport on top
-// of an already-resolved dialer. It is split out from
-// newClaudeCodeRoundTripper so tests can inject in-memory connections.
+// newClaudeCodeRoundTripperForDialer 在已解析好的 dialer 之上
+// 构建 Claude Code 传输。它从
+// newClaudeCodeRoundTripper 拆出，以便测试注入内存连接。
 func newClaudeCodeRoundTripperForDialer(dialer proxy.Dialer) *http.Transport {
 	return newClaudeCodeRoundTripperForDialerAndRoots(dialer, nil)
 }
 
 func newClaudeCodeRoundTripperForDialerAndRoots(dialer proxy.Dialer, roots *x509.CertPool) *http.Transport {
-	// The cache is scoped to this round tripper, which is already keyed by proxy,
-	// so resumption never crosses proxy boundaries.
+	// 该缓存的作用域限于此 round tripper，而它已按代理作为键，
+	// 因此恢复绝不会跨越代理边界。
 	sessionCache := tls.NewLRUClientSessionCache(claudeCodeSessionCacheCapacity)
 
 	transport := &http.Transport{
@@ -398,17 +398,17 @@ func newClaudeCodeRoundTripperForDialerAndRoots(dialer proxy.Dialer, roots *x509
 	return transport
 }
 
-// fallbackRoundTripper uses provider-specific TLS fingerprints for protected
-// HTTPS hosts and falls back to the standard transport for all other requests.
+// fallbackRoundTripper 对受保护的 HTTPS 主机使用供应商特定的
+// TLS 指纹，并对所有其他请求回退到标准传输。
 type fallbackRoundTripper struct {
 	anthropic http.RoundTripper
 	chrome    http.RoundTripper
 	fallback  http.RoundTripper
 }
 
-// IsAnthropicUpstreamURL reports whether a resolved request targets Anthropic's
-// first-party API origin. Claude-format upstream behavior must use this gate so
-// it cannot drift onto custom ports or userinfo URLs.
+// IsAnthropicUpstreamURL 报告一个已解析的请求是否指向 Anthropic 的
+// 一方 API 源。Claude 格式的上游行为必须使用此门控，
+// 使其不会漂移到自定义端口或包含 userinfo 的 URL。
 func IsAnthropicUpstreamURL(u *url.URL) bool {
 	if u == nil || u.User != nil || !strings.EqualFold(u.Scheme, "https") || !strings.EqualFold(u.Hostname(), "api.anthropic.com") {
 		return false
@@ -427,18 +427,18 @@ func (f *fallbackRoundTripper) RoundTrip(req *http.Request) (*http.Response, err
 	return f.fallback.RoundTrip(req)
 }
 
-// NewUtlsHTTPClient creates an HTTP client using provider-specific TLS
-// fingerprints for protected hosts. It uses Claude Code's Node/OpenSSL profile
-// for Anthropic and a Chrome profile for ChatGPT, with a standard-transport
-// fallback for other hosts.
+// NewUtlsHTTPClient 使用供应商特定的 TLS 指纹为受保护主机
+// 创建一个 HTTP 客户端。它对 Anthropic 使用 Claude Code 的 Node/OpenSSL
+// 配置文件，对 ChatGPT 使用 Chrome 配置文件，并对其他主机
+// 回退到标准传输。
 func NewUtlsHTTPClient(ctx context.Context, cfg *config.Config, auth *cliproxyauth.Auth, timeout time.Duration) (clientOut *http.Client) {
-	// Carry the opt-in TLS establishment bound (requests
-	// tls-handshake-timeout-seconds) on a request-scoped wrapper. This
-	// client is shared, so the bound intentionally reaches both the Claude
-	// Code Anthropic dial path and the Chrome ChatGPT/Codex dial path; the
-	// standard fallback transport ignores the context value. The uTLS dial
-	// paths read it per dial, so cached per-proxy transports need no rebuild
-	// when the value changes. A disabled bound (0) leaves requests untouched.
+	// 在请求作用域的包装器上携带可选的 TLS 建立时限（requests
+	// tls-handshake-timeout-seconds）。此客户端是共享的，
+	// 因此该时限有意同时作用于 Claude Code 的 Anthropic 拨号路径
+	// 和 Chrome 的 ChatGPT/Codex 拨号路径；标准回退传输
+	// 会忽略该上下文值。uTLS 拨号路径
+	// 每次拨号都会读取它，因此值变化时按代理缓存的传输无需重建。
+	// 禁用的时限（0）不改变请求。
 	var handshakeTimeout time.Duration
 	if cfg != nil {
 		handshakeTimeout = cfg.TLSHandshakeTimeout()

@@ -23,23 +23,23 @@ func TestSummaryIntentTranslation(t *testing.T) {
 		wantExists bool
 	}{
 		{name: "Chat effort leaves Claude display unspecified", from: sdktranslator.FormatOpenAI, to: sdktranslator.FormatClaude, body: `{"model":"claude-opus-5","reasoning_effort":"high","messages":[{"role":"user","content":"hi"}]}`, path: "thinking.display"},
-		// Anthropic rejects display next to a disabled thinking block, so a "none"
-		// effort must leave the field off rather than write "omitted".
+		// Anthropic 会拒绝在已禁用的 thinking 块旁出现 display，因此 "none"
+		// effort 必须让该字段保持缺省，而不是写入 "omitted"。
 		{name: "Chat none leaves disabled Claude thinking without display", from: sdktranslator.FormatOpenAI, to: sdktranslator.FormatClaude, body: `{"model":"claude-opus-5","reasoning_effort":"none","messages":[{"role":"user","content":"hi"}]}`, path: "thinking.display"},
-		// Anthropic requires thinking.type. For an unregistered target CPA cannot
-		// safely guess adaptive versus manual thinking, so it must not emit an
-		// invalid display-only object. Registered targets are covered below.
+		// Anthropic 要求 thinking.type。对于未注册的目标，CPA 无法
+		// 安全地猜测是自适应还是手动思考，因此它不得发出
+		// 无效的仅 display 对象。已注册的目标在下面覆盖。
 		{name: "Unknown Claude target does not get display only thinking", from: sdktranslator.FormatOpenAI, to: sdktranslator.FormatClaude, body: `{"model":"unregistered-claude-model","reasoning":{"exclude":false},"messages":[{"role":"user","content":"hi"}]}`, path: "thinking"},
 		{name: "Chat none omits Codex summary", from: sdktranslator.FormatOpenAI, to: sdktranslator.FormatCodex, body: `{"model":"gpt-5.4","reasoning_effort":"none","messages":[{"role":"user","content":"hi"}]}`, path: "reasoning.summary"},
-		// The Responses API makes reasoning.summary an explicit opt-in, so an
-		// absent source intent must remain absent when translated to Codex.
+		// Responses API 使 reasoning.summary 成为显式选用项，因此
+		// 源意图缺省时转换为 Codex 后也必须保持缺省。
 		{name: "Claude absent display leaves Codex summary absent", from: sdktranslator.FormatClaude, to: sdktranslator.FormatCodex, body: `{"model":"gpt-5.4","max_tokens":1024,"thinking":{"type":"adaptive"},"output_config":{"effort":"high"},"messages":[{"role":"user","content":"hi"}]}`, path: "reasoning.summary"},
 		{name: "Claude summarized enables Codex summary", from: sdktranslator.FormatClaude, to: sdktranslator.FormatCodex, body: `{"model":"gpt-5.4","max_tokens":1024,"thinking":{"type":"adaptive","display":"summarized"},"output_config":{"effort":"high"},"messages":[{"role":"user","content":"hi"}]}`, path: "reasoning.summary", want: "auto", wantExists: true},
 		{name: "Chat effort enables Codex summary", from: sdktranslator.FormatOpenAI, to: sdktranslator.FormatCodex, body: `{"model":"gpt-5.4","reasoning_effort":"high","messages":[{"role":"user","content":"hi"}]}`, path: "reasoning.summary", want: "auto", wantExists: true},
 		{name: "Responses summary only invents no Chat effort", from: sdktranslator.FormatOpenAIResponse, to: sdktranslator.FormatOpenAI, body: `{"model":"gpt-5.4","reasoning":{"summary":"auto"},"input":"hi"}`, path: "reasoning_effort"},
-		// Chat has no field for "reason but hide": OpenAI documents none and rejects
-		// unknown parameters, so a disabled summary must leave the requested effort
-		// alone instead of turning reasoning off upstream.
+		// Chat 没有表示“推理但隐藏”的字段：OpenAI 未记录该字段且会拒绝
+		// 未知参数，因此禁用 summary 必须保持所请求的 effort 不受影响，
+		// 而不是在上游关闭推理。
 		{name: "Responses disabled summary keeps Chat effort", from: sdktranslator.FormatOpenAIResponse, to: sdktranslator.FormatOpenAI, body: `{"model":"gpt-5.4","reasoning":{"effort":"high","summary":null},"input":"hi"}`, path: "reasoning_effort", want: "high", wantExists: true},
 		{name: "Claude omitted display keeps Chat effort", from: sdktranslator.FormatClaude, to: sdktranslator.FormatOpenAI, body: `{"model":"gpt-5.4","thinking":{"type":"adaptive","display":"omitted"},"output_config":{"effort":"high"},"messages":[{"role":"user","content":"hi"}]}`, path: "reasoning_effort", want: "high", wantExists: true},
 		{name: "Chat without effort leaves Claude display absent", from: sdktranslator.FormatOpenAI, to: sdktranslator.FormatClaude, body: `{"model":"claude-opus-5","messages":[{"role":"user","content":"hi"}]}`, path: "thinking.display"},
@@ -97,15 +97,15 @@ func TestSummaryIntentFinalPipeline(t *testing.T) {
 		wantExists bool
 	}{
 		{name: "Responses summary only activates visible Claude thinking", from: sdktranslator.FormatOpenAIResponse, to: sdktranslator.FormatClaude, model: "claude-sonnet-4-6-model", body: `{"model":"claude-sonnet-4-6-model","reasoning":{"summary":"auto"},"input":"hi"}`, path: "thinking.display", want: "summarized", wantExists: true},
-		// Summary visibility must not override Claude's per-model thinking default.
-		// Sonnet 4.6 defaults off; newer default-on models remain default-on without
-		// CPA injecting an explicit thinking block.
+		// summary 可见性不得覆盖 Claude 的按模型思考默认值。
+		// Sonnet 4.6 默认关闭；较新的默认开启模型保持默认开启，
+		// 且 CPA 不注入显式的 thinking 块。
 		{name: "Responses null summary alone preserves Claude thinking default", from: sdktranslator.FormatOpenAIResponse, to: sdktranslator.FormatClaude, model: "claude-sonnet-4-6-model", body: `{"model":"claude-sonnet-4-6-model","reasoning":{"summary":null},"input":"hi"}`, path: "thinking"},
 		{name: "Responses default keeps Claude display default", from: sdktranslator.FormatOpenAIResponse, to: sdktranslator.FormatClaude, model: "claude-sonnet-4-6-model", body: `{"model":"claude-sonnet-4-6-model","input":"hi"}`, path: "thinking.display"},
 		{name: "Chat summary alias only activates valid Claude thinking", from: sdktranslator.FormatOpenAI, to: sdktranslator.FormatClaude, model: "claude-sonnet-4-6-model", body: `{"model":"claude-sonnet-4-6-model","reasoning":{"exclude":false},"messages":[{"role":"user","content":"hi"}]}`, path: "thinking.display", want: "summarized", wantExists: true},
-		// Captured from isolated Claude Code 2.1.220 with
-		// alwaysThinkingEnabled:true. Sonnet uses adaptive thinking, while Haiku
-		// uses manual enabled thinking with a budget; both explicitly omit text.
+		// 捕获自隔离运行、带
+		// alwaysThinkingEnabled:true 的 Claude Code 2.1.220。Sonnet 使用自适应思考，而 Haiku
+		// 使用带预算的手动启用思考；两者都显式省略 text。
 		{name: "Deprecated Responses detail reaches Codex", from: sdktranslator.FormatOpenAIResponse, to: sdktranslator.FormatCodex, model: "level-model", body: `{"model":"level-model","reasoning":{"effort":"high","generate_summary":"detailed"},"input":"hi"}`, path: "reasoning.summary", want: "detailed", wantExists: true},
 	}
 
@@ -143,6 +143,6 @@ func TestNativeClaudeMissingDisplayPreservesSignatureOnlyHistory(t *testing.T) {
 	}
 }
 
-// Antigravity wraps Gemini generateContent, where includeThoughts is an
-// independent opt-in. Thinking level/budget changes must preserve explicit
-// booleans and leave an omitted visibility control omitted.
+// Antigravity 包装 Gemini generateContent，其中 includeThoughts 是
+// 独立的选用项。思考层级/预算的变更必须保留显式的
+// 布尔值，并让缺省的可见性控制保持缺省。

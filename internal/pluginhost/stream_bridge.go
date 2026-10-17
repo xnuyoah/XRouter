@@ -200,7 +200,7 @@ func (b *streamBridge) open(ctx context.Context) (string, <-chan pluginapi.Execu
 		stream.abortStream()
 	}
 	if ctx != nil && ctx.Done() != nil {
-		// Abort streams canceled before ExecuteStream can install cleanupWhenStreamDone.
+		// 中止在 ExecuteStream 来得及安装 cleanupWhenStreamDone 之前就被取消的流。
 		go func() {
 			<-ctx.Done()
 			cleanup()

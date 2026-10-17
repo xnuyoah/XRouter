@@ -6,20 +6,20 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
-// RequestEnvelope represents a request in the translation pipeline.
+// RequestEnvelope 表示转换流水线中的请求。
 type RequestEnvelope struct {
 	Format    Format
 	Model     string
 	Stream    bool
 	Body      []byte
 	ModelInfo *registry.ModelInfo
-	// ConfigurationUpdatesChanged reports that a plugin normalizer modified Responses updates.
+	// ConfigurationUpdatesChanged 报告插件规整器修改了 Responses 更新。
 	ConfigurationUpdatesChanged bool
-	// Err is a request-scoped translation failure. Callers must not send Body upstream when it is set.
+	// Err 是请求作用域的转换失败。当其被设置时，调用方不得将 Body 发送到上游。
 	Err error
 }
 
-// ResponseEnvelope represents a response in the translation pipeline.
+// ResponseEnvelope 表示转换流水线中的响应。
 type ResponseEnvelope struct {
 	Format Format
 	Model  string
@@ -28,26 +28,26 @@ type ResponseEnvelope struct {
 	Chunks [][]byte
 }
 
-// RequestMiddleware decorates request translation.
+// RequestMiddleware 装饰请求转换。
 type RequestMiddleware func(ctx context.Context, req RequestEnvelope, next RequestHandler) (RequestEnvelope, error)
 
-// ResponseMiddleware decorates response translation.
+// ResponseMiddleware 装饰响应转换。
 type ResponseMiddleware func(ctx context.Context, resp ResponseEnvelope, next ResponseHandler) (ResponseEnvelope, error)
 
-// RequestHandler performs request translation between formats.
+// RequestHandler 执行格式之间的请求转换。
 type RequestHandler func(ctx context.Context, req RequestEnvelope) (RequestEnvelope, error)
 
-// ResponseHandler performs response translation between formats.
+// ResponseHandler 执行格式之间的响应转换。
 type ResponseHandler func(ctx context.Context, resp ResponseEnvelope) (ResponseEnvelope, error)
 
-// Pipeline orchestrates request/response transformation with middleware support.
+// Pipeline 在支持中间件的情况下编排请求/响应转换。
 type Pipeline struct {
 	registry           *Registry
 	requestMiddleware  []RequestMiddleware
 	responseMiddleware []ResponseMiddleware
 }
 
-// NewPipeline constructs a pipeline bound to the provided registry.
+// NewPipeline 构造一个绑定到所提供注册表的流水线。
 func NewPipeline(registry *Registry) *Pipeline {
 	if registry == nil {
 		registry = Default()
@@ -55,21 +55,21 @@ func NewPipeline(registry *Registry) *Pipeline {
 	return &Pipeline{registry: registry}
 }
 
-// UseRequest adds request middleware executed in registration order.
+// UseRequest 添加按注册顺序执行的请求中间件。
 func (p *Pipeline) UseRequest(mw RequestMiddleware) {
 	if mw != nil {
 		p.requestMiddleware = append(p.requestMiddleware, mw)
 	}
 }
 
-// UseResponse adds response middleware executed in registration order.
+// UseResponse 添加按注册顺序执行的响应中间件。
 func (p *Pipeline) UseResponse(mw ResponseMiddleware) {
 	if mw != nil {
 		p.responseMiddleware = append(p.responseMiddleware, mw)
 	}
 }
 
-// TranslateRequest applies middleware and registry transformations.
+// TranslateRequest 应用中间件与注册表转换。
 func (p *Pipeline) TranslateRequest(ctx context.Context, from, to Format, req RequestEnvelope) (RequestEnvelope, error) {
 	terminal := func(ctx context.Context, input RequestEnvelope) (RequestEnvelope, error) {
 		return p.registry.TranslateRequestEnvelope(ctx, from, to, input), nil
@@ -87,7 +87,7 @@ func (p *Pipeline) TranslateRequest(ctx context.Context, from, to Format, req Re
 	return handler(ctx, req)
 }
 
-// TranslateResponse applies middleware and registry transformations.
+// TranslateResponse 应用中间件与注册表转换。
 func (p *Pipeline) TranslateResponse(ctx context.Context, from, to Format, resp ResponseEnvelope, originalReq, translatedReq []byte, param *any) (ResponseEnvelope, error) {
 	terminal := func(ctx context.Context, input ResponseEnvelope) (ResponseEnvelope, error) {
 		if input.Stream {

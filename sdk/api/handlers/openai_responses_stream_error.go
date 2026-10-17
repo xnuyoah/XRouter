@@ -25,16 +25,16 @@ type openAIResponsesStreamFailedResponse struct {
 	Error  map[string]any `json:"error"`
 }
 
-// openAIResponsesStreamErrorClass pairs the OpenAI error code and the OpenAI
-// error type that a given HTTP status is reported as.
+// openAIResponsesStreamErrorClass 将某个 HTTP 状态所报告出的 OpenAI 错误码
+// 与 OpenAI 错误类型配对。
 //
-// The two are kept together deliberately. They are halves of one classification
-// and a client reads both: the code names the condition, the type says whose
-// fault it was and therefore whether a retry is allowed. Deriving them in two
-// places let them contradict each other, which is how a Codex stream that was
-// cut in transit came to be reported with the retryable code "request_timeout"
-// alongside the type "invalid_request_error" — a type that tells every
-// downstream consumer the request was malformed and must not be replayed.
+// 二者被有意放在一起。它们是同一次分类的两半，客户端二者都会
+// 读取：code 指明具体状况，type 说明是谁的过错、因而是否
+// 允许重试。在两个地方分别推导它们曾使二者相互矛盾，这正是
+// 为何一次在传输中被截断的 Codex 流会被报告为可重试的
+// code "request_timeout" 与 type "invalid_request_error" 并存——
+// 而后者会告诉每一个下游消费方该请求格式错误、
+// 不得重放。
 type openAIResponsesStreamErrorClass struct {
 	code      string
 	errorType string
@@ -45,12 +45,12 @@ const (
 	openAIResponsesServerErrorType = "server_error"
 )
 
-// openAIResponsesStreamErrorClasses holds the statuses that do not follow the
-// plain "4xx is the caller's fault, 5xx is ours" split.
+// openAIResponsesStreamErrorClasses 保存那些不遵循
+// 简单「4xx 是调用方的错、5xx 是我们的错」划分的状态码。
 //
-// StatusRequestTimeout is the reason this table exists. A Codex stream that ends
-// before response.completed is surfaced with that status, and the request itself
-// was well formed: the connection failed, so the caller may replay it.
+// StatusRequestTimeout 正是这张表存在的原因。一次在 response.completed 之前
+// 结束的 Codex 流会以该状态暴露，而请求本身格式良好：是连接失败了，
+// 因此调用方可以重放它。
 var openAIResponsesStreamErrorClasses = map[int]openAIResponsesStreamErrorClass{
 	http.StatusUnauthorized:    {code: "invalid_api_key", errorType: openAIResponsesClientErrorType},
 	http.StatusForbidden:       {code: "insufficient_quota", errorType: openAIResponsesClientErrorType},
@@ -86,8 +86,8 @@ func unmarshalJSONWithNumber(data []byte, v any) error {
 	return dec.Decode(v)
 }
 
-// BuildOpenAIResponsesStreamErrorChunk builds an OpenAI Responses streaming error chunk.
-// It matches the official responses streaming event shape where the error details are nested.
+// BuildOpenAIResponsesStreamErrorChunk 构建一个 OpenAI Responses 流式错误分块。
+// 它匹配官方 responses 流式事件的结构，其中错误详情是嵌套的。
 func BuildOpenAIResponsesStreamErrorChunk(status int, errText string, sequenceNumber int) []byte {
 	if status <= 0 {
 		status = http.StatusInternalServerError
@@ -135,7 +135,7 @@ func BuildOpenAIResponsesStreamErrorChunk(status int, errText string, sequenceNu
 		return data
 	}
 
-	// Extremely defensive fallback.
+	// 极其防御性的回退。
 	fallbackDetail := map[string]any{
 		"type":    "server_error",
 		"code":    "internal_server_error",
@@ -201,8 +201,8 @@ func openAIResponsesStreamFailedErrorDetail(status int, errText, code, message s
 	return openAIResponsesStreamErrorDetail(status, errText, code, message)
 }
 
-// BuildOpenAIResponsesStreamFailedChunk builds the terminal Responses event used by official Codex clients.
-// It is intentionally separate from BuildOpenAIResponsesStreamErrorChunk so existing clients keep the legacy shape.
+// BuildOpenAIResponsesStreamFailedChunk 构建官方 Codex 客户端所使用的终止 Responses 事件。
+// 它被有意与 BuildOpenAIResponsesStreamErrorChunk 分开，以便现有客户端保持旧有结构。
 func BuildOpenAIResponsesStreamFailedChunk(status int, errText string, sequenceNumber int) []byte {
 	if status <= 0 {
 		status = http.StatusInternalServerError

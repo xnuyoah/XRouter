@@ -12,11 +12,11 @@ import (
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
-// ConfigSynthesizer generates Auth entries from configuration API keys.
-// It handles OpenAI, DeepSeek, NVIDIA, Agnes, and OpenAI-compat providers.
+// ConfigSynthesizer 从配置中的 API 密钥生成 Auth 条目。
+// 它处理 OpenAI、DeepSeek、NVIDIA、Agnes 以及 OpenAI 兼容供应商。
 type ConfigSynthesizer struct{}
 
-// NewConfigSynthesizer creates a new ConfigSynthesizer instance.
+// NewConfigSynthesizer 创建一个新的 ConfigSynthesizer 实例。
 func NewConfigSynthesizer() *ConfigSynthesizer {
 	return &ConfigSynthesizer{}
 }
@@ -32,7 +32,7 @@ func addWeightToAttrs(weight *int, attrs map[string]string) {
 	attrs[coreauth.AttributeWeight] = strconv.Itoa(normalized)
 }
 
-// Synthesize generates Auth entries from config API keys.
+// Synthesize 从配置中的 API 密钥生成 Auth 条目。
 func (s *ConfigSynthesizer) Synthesize(ctx *SynthesisContext) ([]*coreauth.Auth, error) {
 	out := make([]*coreauth.Auth, 0, 32)
 	if ctx == nil || ctx.Config == nil {
@@ -42,36 +42,36 @@ func (s *ConfigSynthesizer) Synthesize(ctx *SynthesisContext) ([]*coreauth.Auth,
 		return nil, fmt.Errorf("synthesize config API key auths: %w", errValidate)
 	}
 
-	// OpenAI API Keys
+	// OpenAI API 密钥
 	out = append(out, s.synthesizeOpenAIKeys(ctx)...)
-	// DeepSeek API Keys
+	// DeepSeek API 密钥
 	out = append(out, s.synthesizeDeepseekKeys(ctx)...)
-	// NVIDIA API Keys
+	// NVIDIA API 密钥
 	out = append(out, s.synthesizeNvidiaKeys(ctx)...)
-	// Agnes API Keys
+	// Agnes API 密钥
 	out = append(out, s.synthesizeAgnesKeys(ctx)...)
-	// OpenAI-compat
+	// OpenAI 兼容
 	out = append(out, s.synthesizeOpenAICompat(ctx)...)
 
 	return out, nil
 }
 
-// synthesizeOpenAIKeys creates Auth entries for native OpenAI API keys.
+// synthesizeOpenAIKeys 为原生 OpenAI API 密钥创建 Auth 条目。
 func (s *ConfigSynthesizer) synthesizeOpenAIKeys(ctx *SynthesisContext) []*coreauth.Auth {
 	return s.synthesizeNativeAPIKeyEntries(ctx, ctx.Config.OpenAIKey, "openai", config.DefaultOpenAIBaseURL)
 }
 
-// synthesizeDeepseekKeys creates Auth entries for native DeepSeek API keys.
+// synthesizeDeepseekKeys 为原生 DeepSeek API 密钥创建 Auth 条目。
 func (s *ConfigSynthesizer) synthesizeDeepseekKeys(ctx *SynthesisContext) []*coreauth.Auth {
 	return s.synthesizeNativeAPIKeyEntries(ctx, ctx.Config.DeepseekKey, "deepseek", config.DefaultDeepseekBaseURL)
 }
 
-// synthesizeNvidiaKeys creates Auth entries for native NVIDIA API keys.
+// synthesizeNvidiaKeys 为原生 NVIDIA API 密钥创建 Auth 条目。
 func (s *ConfigSynthesizer) synthesizeNvidiaKeys(ctx *SynthesisContext) []*coreauth.Auth {
 	return s.synthesizeNativeAPIKeyEntries(ctx, ctx.Config.NvidiaKey, constant.Nvidia, config.DefaultNvidiaBaseURL)
 }
 
-// synthesizeAgnesKeys creates Auth entries for native Agnes AI API keys.
+// synthesizeAgnesKeys 为原生 Agnes AI API 密钥创建 Auth 条目。
 func (s *ConfigSynthesizer) synthesizeAgnesKeys(ctx *SynthesisContext) []*coreauth.Auth {
 	return s.synthesizeNativeAPIKeyEntries(ctx, ctx.Config.AgnesKey, constant.Agnes, config.DefaultAgnesBaseURL)
 }
@@ -141,7 +141,7 @@ func (s *ConfigSynthesizer) synthesizeNativeAPIKeyEntries(ctx *SynthesisContext,
 	return out
 }
 
-// synthesizeOpenAICompat creates Auth entries for OpenAI-compatible providers.
+// synthesizeOpenAICompat 为 OpenAI 兼容供应商创建 Auth 条目。
 func (s *ConfigSynthesizer) synthesizeOpenAICompat(ctx *SynthesisContext) []*coreauth.Auth {
 	cfg := ctx.Config
 	now := ctx.Now
@@ -162,7 +162,7 @@ func (s *ConfigSynthesizer) synthesizeOpenAICompat(ctx *SynthesisContext) []*cor
 		base := strings.TrimSpace(compat.BaseURL)
 		disableCooling := compat.DisableCooling
 
-		// Handle new APIKeyEntries format (preferred)
+		// 处理新的 APIKeyEntries 格式（首选）
 		createdEntries := 0
 		for j := range compat.APIKeyEntries {
 			entry := &compat.APIKeyEntries[j]
@@ -212,7 +212,7 @@ func (s *ConfigSynthesizer) synthesizeOpenAICompat(ctx *SynthesisContext) []*cor
 			out = append(out, a)
 			createdEntries++
 		}
-		// Fallback: create entry without API key if no APIKeyEntries
+		// 回退：若没有 APIKeyEntries，则创建不带 API 密钥的条目
 		if createdEntries == 0 {
 			idKind := fmt.Sprintf("openai-compatibility:%s", providerName)
 			id, token := idGen.Next(idKind, base)

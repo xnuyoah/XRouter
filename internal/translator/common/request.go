@@ -9,10 +9,10 @@ import (
 
 const tooluLetters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-// GenerateClaudeToolCallID generates a random tool use ID prefixed with toolu_
-// using rejection sampling to guarantee a uniform distribution across the 62 alphanumeric characters.
+// GenerateClaudeToolCallID 生成以 toolu_ 为前缀的随机工具使用 ID，
+// 使用拒绝采样以保证在 62 个字母数字字符上均匀分布。
 func GenerateClaudeToolCallID() string {
-	const maxValidByte = 256 - (256 % len(tooluLetters)) // 248: exact multiple of 62
+	const maxValidByte = 256 - (256 % len(tooluLetters)) // 248：62 的整数倍
 	var b strings.Builder
 	b.Grow(len("toolu_") + 24)
 	b.WriteString("toolu_")
@@ -34,8 +34,8 @@ func GenerateClaudeToolCallID() string {
 	return b.String()
 }
 
-// RequestModelName returns the model name from the original request, falling
-// back to the translated request when the original request is unavailable.
+// RequestModelName 从原始请求返回模型名称，
+// 在原始请求不可用时回退到已转换的请求。
 func RequestModelName(originalRequestRawJSON, requestRawJSON []byte) string {
 	for _, rawJSON := range [][]byte{originalRequestRawJSON, requestRawJSON} {
 		if modelName := requestModelName(rawJSON); modelName != "" {

@@ -37,50 +37,50 @@ type apiCallResponse struct {
 	Body       string              `json:"body"`
 }
 
-// APICall makes a generic HTTP request on behalf of the management API caller.
-// It is protected by the management middleware.
+// APICall 代表管理 API 调用方发起通用的 HTTP 请求。
+// 它受管理中间件保护。
 //
-// Endpoint:
+// 端点：
 //
 //	POST /v0/management/api-call
 //
-// Authentication:
+// 认证：
 //
-//	Same as other management APIs (requires a management key and remote-management rules).
-//	You can provide the key via:
+//	与其他管理 API 相同（需要管理密钥与 remote-management 规则）。
+//	可通过以下方式提供密钥：
 //	- Authorization: Bearer <key>
 //	- X-Management-Key: <key>
 //
-// Request JSON:
-//   - auth_index / authIndex / AuthIndex (optional):
-//     The credential "auth_index" from GET /v0/management/auth-files (or other endpoints returning it).
-//     If omitted, credential-specific proxy selection is skipped.
-//     If "$TOKEN$" is present and the credential or token cannot be resolved, the request fails with HTTP 400.
-//   - method (required): HTTP method, e.g. GET, POST, PUT, PATCH, DELETE.
-//   - url (required): Absolute URL including scheme and host, e.g. "https://api.example.com/v1/ping".
-//   - proxy_url (optional): Proxy used for this request. Supports HTTP, HTTPS, SOCKS5, SOCKS5H,
-//     and "direct"/"none" to explicitly bypass proxies. When set, credential and global proxies are ignored.
-//   - header (optional): Request headers map.
-//     Supports magic variable "$TOKEN$" which is replaced using the selected credential:
+// 请求 JSON：
+//   - auth_index / authIndex / AuthIndex（可选）：
+//     来自 GET /v0/management/auth-files（或其他返回该字段的端点）的凭据 "auth_index"。
+//     若省略，则跳过针对特定凭据的代理选择。
+//     若存在 "$TOKEN$" 且凭据或令牌无法解析，请求会以 HTTP 400 失败。
+//   - method（必填）：HTTP 方法，例如 GET、POST、PUT、PATCH、DELETE。
+//   - url（必填）：包含 scheme 与 host 的绝对 URL，例如 "https://api.example.com/v1/ping"。
+//   - proxy_url（可选）：本次请求使用的代理。支持 HTTP、HTTPS、SOCKS5、SOCKS5H，
+//     以及 "direct"/"none" 以显式绕过代理。设置后，凭据代理与全局代理都会被忽略。
+//   - header（可选）：请求头映射。
+//     支持魔术变量 "$TOKEN$"，它会使用所选凭据进行替换：
 //     1) metadata.access_token
 //     2) attributes.api_key
 //     3) metadata.token / metadata.id_token / metadata.cookie
-//     Example: {"Authorization":"Bearer $TOKEN$"}.
-//     Note: if you need to override the HTTP Host header, set header["Host"].
-//   - data (optional): Raw request body as string (useful for POST/PUT/PATCH).
+//     示例：{"Authorization":"Bearer $TOKEN$"}。
+//     注意：如需覆盖 HTTP Host 请求头，请设置 header["Host"]。
+//   - data（可选）：字符串形式的原始请求体（适用于 POST/PUT/PATCH）。
 //
-// Proxy selection (highest priority first):
-//  1. Request proxy_url (when set, lower-priority proxy settings are ignored)
-//  2. Selected credential proxy_url
-//  3. Global config proxy-url
-//  4. Direct connect (environment proxies are not used)
+// 代理选择（优先级从高到低）：
+//  1. 请求的 proxy_url（设置后，低优先级的代理设置会被忽略）
+//  2. 所选凭据的 proxy_url
+//  3. 全局配置的 proxy-url
+//  4. 直连（不使用环境变量代理）
 //
-// Response JSON (returned with HTTP 200 when the APICall itself succeeds):
-//   - status_code: Upstream HTTP status code.
-//   - header: Upstream response headers.
-//   - body: Upstream response body as string.
+// 响应 JSON（当 APICall 本身成功时以 HTTP 200 返回）：
+//   - status_code：上游 HTTP 状态码。
+//   - header：上游响应头。
+//   - body：字符串形式的上游响应体。
 //
-// Example:
+// 示例：
 //
 //	curl -sS -X POST "http://127.0.0.1:11016/v0/management/api-call" \
 //	  -H "Authorization: Bearer <MANAGEMENT_KEY>" \

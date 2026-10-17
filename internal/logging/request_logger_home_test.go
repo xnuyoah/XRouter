@@ -442,20 +442,20 @@ func TestHomeStreamingLogWriter_CloseTerminatesWhenClientUnhealthy(t *testing.T)
 
 	hw.WriteChunkAsync([]byte("chunk-1"))
 
-	// Mark client unhealthy before calling Close()
+	// 在调用 Close() 之前将客户端标记为不健康
 	stub.heartbeatOK = false
 
 	done := make(chan struct{})
 	go func() {
 		_ = hw.Close()
-		// If Close properly closes chunkChan and waits for doneChan, doneChan must be closed.
+		// 如果 Close 正确关闭 chunkChan 并等待 doneChan，则 doneChan 必须已关闭。
 		<-hw.doneChan
 		close(done)
 	}()
 
 	select {
 	case <-done:
-		// Success
+		// 成功
 	case <-time.After(500 * time.Millisecond):
 		t.Fatalf("homeStreamingLogWriter leaked writer goroutine after Close with unhealthy client")
 	}
@@ -465,7 +465,7 @@ func TestFileRequestLogger_UsesShortRequestIDForLocalAndFullForHome(t *testing.T
 	fullUUID := "018f3a5b-1234-7abc-def0-12345678abcd"
 	expectedShortID := "5678abcd"
 
-	// 1. Local file log filename ends with short request ID
+	// 1. 本地文件日志名以短请求 ID 结尾
 	logsDir := t.TempDir()
 	logger := NewFileRequestLogger(true, logsDir, "", 0)
 
@@ -506,7 +506,7 @@ func TestFileRequestLogger_UsesShortRequestIDForLocalAndFullForHome(t *testing.T
 		t.Fatalf("filename %q should not contain full UUID", filename)
 	}
 
-	// 2. Home forwarded payload preserves full UUID across internal communication
+	// 2. Home 转发的载荷在内部通信中保留完整 UUID
 	original := currentHomeRequestLogClient
 	defer func() {
 		currentHomeRequestLogClient = original

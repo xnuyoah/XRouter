@@ -7,7 +7,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/credentialweight"
 )
 
-// ValidateAuthWeight validates every explicit credential weight source.
+// ValidateAuthWeight 校验每个显式的凭据权重来源。
 func ValidateAuthWeight(auth *Auth) error {
 	if auth == nil {
 		return nil
@@ -25,7 +25,7 @@ func ValidateAuthWeight(auth *Auth) error {
 	return nil
 }
 
-// ApplyAuthWeightMetadata validates the auth and applies a source metadata weight.
+// ApplyAuthWeightMetadata 校验 auth 并应用来源元数据权重。
 func ApplyAuthWeightMetadata(auth *Auth, metadata map[string]any) error {
 	if errWeight := ValidateAuthWeight(auth); errWeight != nil {
 		return errWeight

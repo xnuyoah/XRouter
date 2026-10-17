@@ -1,15 +1,15 @@
-// Package buildinfo exposes compile-time metadata shared across the server.
+// Package buildinfo 暴露服务端共享的编译期元数据。
 package buildinfo
 
-// The following variables are overridden via ldflags during release builds.
-// Defaults cover local development builds.
+// 以下变量在发布构建时通过 ldflags 覆盖。
+// 默认值覆盖本地开发构建。
 var (
-	// Version is the semantic version or git describe output of the binary.
+	// Version 是二进制文件的语义化版本或 git describe 输出。
 	Version = "dev"
 
-	// Commit is the git commit SHA baked into the binary.
+	// Commit 是打包进二进制文件的 git 提交 SHA。
 	Commit = "none"
 
-	// BuildDate records when the binary was built in UTC.
+	// BuildDate 记录二进制文件以 UTC 构建的时间。
 	BuildDate = "unknown"
 )

@@ -6,8 +6,8 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
-// levelToBudgetMap defines the standard Level → Budget mapping.
-// All keys are lowercase; lookups should use strings.ToLower.
+// levelToBudgetMap 定义标准的 Level → Budget 映射。
+// 所有键均为小写；查询时应使用 strings.ToLower。
 var levelToBudgetMap = map[string]int{
 	"none":    0,
 	"auto":    -1,
@@ -16,17 +16,17 @@ var levelToBudgetMap = map[string]int{
 	"medium":  8192,
 	"high":    24576,
 	"xhigh":   32768,
-	// "max" is used by Claude adaptive thinking effort. We map it to a large budget
-	// and rely on per-model clamping when converting to budget-only providers.
+	// "max" 用于 Claude 自适应 thinking 力度。我们将其映射为较大的预算，
+	// 并在转换为仅支持预算的供应商时依赖按模型裁剪。
 	"max": 128000,
 }
 
-// ConvertLevelToBudget converts a thinking level to a budget value.
+// ConvertLevelToBudget 把 thinking 等级转换为预算值。
 //
-// This is a semantic conversion that maps discrete levels to numeric budgets.
-// Level matching is case-insensitive.
+// 这是一个语义转换，将离散等级映射为数值预算。
+// 等级匹配不区分大小写。
 //
-// Level → Budget mapping:
+// Level → Budget 映射：
 //   - none    → 0
 //   - auto    → -1
 //   - minimal → 512
@@ -36,33 +36,33 @@ var levelToBudgetMap = map[string]int{
 //   - xhigh   → 32768
 //   - max     → 128000
 //
-// Returns:
-//   - budget: The converted budget value
-//   - ok: true if level is valid, false otherwise
+// 返回：
+//   - budget: 转换后的预算值
+//   - ok: 等级合法时为 true，否则为 false
 func ConvertLevelToBudget(level string) (int, bool) {
 	budget, ok := levelToBudgetMap[strings.ToLower(level)]
 	return budget, ok
 }
 
-// BudgetThreshold constants define the upper bounds for each thinking level.
-// These are used by ConvertBudgetToLevel for range-based mapping.
+// BudgetThreshold 常量定义各 thinking 等级的上界。
+// 它们被 ConvertBudgetToLevel 用于基于范围的映射。
 const (
-	// ThresholdMinimal is the upper bound for "minimal" level (1-512)
+	// ThresholdMinimal 是 "minimal" 等级的上界 (1-512)
 	ThresholdMinimal = 512
-	// ThresholdLow is the upper bound for "low" level (513-1024)
+	// ThresholdLow 是 "low" 等级的上界 (513-1024)
 	ThresholdLow = 1024
-	// ThresholdMedium is the upper bound for "medium" level (1025-8192)
+	// ThresholdMedium 是 "medium" 等级的上界 (1025-8192)
 	ThresholdMedium = 8192
-	// ThresholdHigh is the upper bound for "high" level (8193-24576)
+	// ThresholdHigh 是 "high" 等级的上界 (8193-24576)
 	ThresholdHigh = 24576
 )
 
-// ConvertBudgetToLevel converts a budget value to the nearest thinking level.
+// ConvertBudgetToLevel 把预算值转换为最接近的 thinking 等级。
 //
-// This is a semantic conversion that maps numeric budgets to discrete levels.
-// Uses threshold-based mapping for range conversion.
+// 这是一个语义转换，将数值预算映射为离散等级。
+// 使用基于阈值的映射完成范围转换。
 //
-// Budget → Level thresholds:
+// Budget → Level 阈值：
 //   - -1        → auto
 //   - 0         → none
 //   - 1-512     → minimal
@@ -71,13 +71,13 @@ const (
 //   - 8193-24576 → high
 //   - 24577+    → xhigh
 //
-// Returns:
-//   - level: The converted thinking level string
-//   - ok: true if budget is valid, false for invalid negatives (< -1)
+// 返回：
+//   - level: 转换后的 thinking 等级字符串
+//   - ok: 预算合法时为 true，非法负数（< -1）时为 false
 func ConvertBudgetToLevel(budget int) (string, bool) {
 	switch {
 	case budget < -1:
-		// Invalid negative values
+		// 非法的负数
 		return "", false
 	case budget == -1:
 		return string(LevelAuto), true
@@ -96,8 +96,8 @@ func ConvertBudgetToLevel(budget int) (string, bool) {
 	}
 }
 
-// HasLevel reports whether the given target level exists in the levels slice.
-// Matching is case-insensitive with leading/trailing whitespace trimmed.
+// HasLevel 报告给定目标等级是否存在于 levels 切片中。
+// 匹配不区分大小写，并会去除首尾空白。
 func HasLevel(levels []string, target string) bool {
 	for _, level := range levels {
 		if strings.EqualFold(strings.TrimSpace(level), target) {
@@ -107,11 +107,11 @@ func HasLevel(levels []string, target string) bool {
 	return false
 }
 
-// MapToClaudeEffort maps a generic thinking level string to a Claude adaptive
-// thinking effort value (low/medium/high/max).
+// MapToClaudeEffort 将通用 thinking 等级字符串映射为 Claude 自适应
+// thinking 力度值（low/medium/high/max）。
 //
-// supportsMax indicates whether the target model supports "max" effort.
-// Returns the mapped effort and true if the level is valid, or ("", false) otherwise.
+// supportsMax 表示目标模型是否支持 "max" 力度。
+// 等级合法时返回映射后的力度和 true，否则返回 ("", false)。
 func MapToClaudeEffort(level string, supportsMax bool) (string, bool) {
 	level = strings.ToLower(strings.TrimSpace(level))
 	switch level {
@@ -133,35 +133,35 @@ func MapToClaudeEffort(level string, supportsMax bool) (string, bool) {
 	}
 }
 
-// ModelCapability describes the thinking format support of a model.
+// ModelCapability 描述模型对 thinking 格式的支持情况。
 type ModelCapability int
 
 const (
-	// CapabilityUnknown indicates modelInfo is nil (passthrough behavior, internal use).
+	// CapabilityUnknown 表示 modelInfo 为 nil（透传行为，内部使用）。
 	CapabilityUnknown ModelCapability = iota - 1
-	// CapabilityNone indicates model doesn't support thinking (Thinking is nil).
+	// CapabilityNone 表示模型不支持 thinking（Thinking 为 nil）。
 	CapabilityNone
-	// CapabilityBudgetOnly indicates the model supports numeric budgets only.
+	// CapabilityBudgetOnly 表示模型仅支持数值预算。
 	CapabilityBudgetOnly
-	// CapabilityLevelOnly indicates the model supports discrete levels only.
+	// CapabilityLevelOnly 表示模型仅支持离散等级。
 	CapabilityLevelOnly
-	// CapabilityHybrid indicates the model supports both budgets and levels.
+	// CapabilityHybrid 表示模型同时支持预算和等级。
 	CapabilityHybrid
 )
 
-// detectModelCapability determines the thinking format capability of a model.
+// detectModelCapability 判断模型的 thinking 格式能力。
 //
-// This is an internal function used by validation and conversion helpers.
-// It analyzes the model's ThinkingSupport configuration to classify the model:
-//   - CapabilityNone: modelInfo.Thinking is nil (model doesn't support thinking)
-//   - CapabilityBudgetOnly: Has Min/Max but no Levels (Claude)
-//   - CapabilityLevelOnly: Has Levels but no Min/Max (OpenAI, Codex, Kimi)
-//   - CapabilityHybrid: Has both Min/Max and Levels
+// 这是供校验与转换辅助函数使用的内部函数。
+// 它分析模型的 ThinkingSupport 配置并分类：
+//   - CapabilityNone: modelInfo.Thinking 为 nil（模型不支持 thinking）
+//   - CapabilityBudgetOnly: 有 Min/Max 但没有 Levels（Claude）
+//   - CapabilityLevelOnly: 有 Levels 但没有 Min/Max（OpenAI、Codex、Kimi）
+//   - CapabilityHybrid: 同时有 Min/Max 和 Levels
 //
-// Note: Returns a special sentinel value when modelInfo itself is nil (unknown model).
+// 注意：当 modelInfo 本身为 nil（未知模型）时返回特殊哨兵值。
 func detectModelCapability(modelInfo *registry.ModelInfo) ModelCapability {
 	if modelInfo == nil {
-		return CapabilityUnknown // sentinel for "passthrough" behavior
+		return CapabilityUnknown // "透传" 行为的哨兵值
 	}
 	if modelInfo.Thinking == nil {
 		return CapabilityNone

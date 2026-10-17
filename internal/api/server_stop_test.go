@@ -14,7 +14,7 @@ import (
 func TestServerStop_ViolentShutdownImmediatelyClosesWithoutContextDeadlineError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Create a listener on a random available port.
+	// 在随机可用端口上创建监听器。
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("failed to listen: %v", err)
@@ -37,12 +37,12 @@ func TestServerStop_ViolentShutdownImmediatelyClosesWithoutContextDeadlineError(
 	})
 	server.server.Handler = engine
 
-	// Start the server with the listener.
+	// 使用该监听器启动服务器。
 	go func() {
 		_ = server.server.Serve(ln)
 	}()
 
-	// Start an in-flight request.
+	// 发起一个进行中的请求。
 	reqDone := make(chan error, 1)
 	go func() {
 		resp, errGet := http.Get("http://" + ln.Addr().String() + "/slow")
@@ -60,9 +60,9 @@ func TestServerStop_ViolentShutdownImmediatelyClosesWithoutContextDeadlineError(
 
 	<-reqStarted
 
-	// Call server.Stop with an expired context (simulating the expired shutdown deadline).
-	// Under violent shutdown (s.server.Close), the server should immediately close in-flight
-	// connections without waiting and without returning context deadline exceeded.
+	// 使用已过期的 context 调用 server.Stop（模拟已过期的关闭期限）。
+	// 在暴力关闭（s.server.Close）下，服务器应立即关闭进行中的
+	// 连接，既不需要等待，也不返回 context deadline exceeded。
 	expiredCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
 	defer cancel()
 
@@ -77,7 +77,7 @@ func TestServerStop_ViolentShutdownImmediatelyClosesWithoutContextDeadlineError(
 		t.Fatalf("server.Stop error = %v, want nil for violent shutdown", errStop)
 	}
 
-	// Verify the in-flight request was terminated / interrupted.
+	// 验证进行中的请求已被终止 / 中断。
 	select {
 	case errReq := <-reqDone:
 		if errReq == nil {

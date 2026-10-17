@@ -1,6 +1,6 @@
-// Package middleware provides Gin HTTP middleware for the XRouter server.
-// It includes a sophisticated response writer wrapper designed to capture and log request and response data,
-// including support for streaming responses, without impacting latency.
+// Package middleware 为 XRouter 服务器提供 Gin HTTP 中间件。
+// 它包含一个精心设计的响应写入器包装，用于捕获并记录请求和响应数据，
+// 支持流式响应，且不影响延迟。
 package middleware
 
 import (
@@ -23,44 +23,44 @@ const requestBodyOverrideContextKey = "REQUEST_BODY_OVERRIDE"
 const responseBodyOverrideContextKey = "RESPONSE_BODY_OVERRIDE"
 const websocketTimelineOverrideContextKey = "WEBSOCKET_TIMELINE_OVERRIDE"
 
-// RequestInfo holds essential details of an incoming HTTP request for logging purposes.
+// RequestInfo 保存用于日志记录的入站 HTTP 请求的关键细节。
 type RequestInfo struct {
-	URL                 string                      // URL is the request URL.
-	Method              string                      // Method is the HTTP method (e.g., GET or POST).
-	Headers             map[string][]string         // Headers contains the request headers.
-	Body                []byte                      // Body is the raw request body.
-	RequestID           string                      // RequestID is the unique identifier for the request.
-	Timestamp           time.Time                   // Timestamp is when the request was received.
-	deferredBodyCapture *deferredRequestBodyCapture // deferredBodyCapture spools large error-only request bodies.
+	URL                 string                      // URL 是请求 URL。
+	Method              string                      // Method 是 HTTP 方法（例如 GET 或 POST）。
+	Headers             map[string][]string         // Headers 包含请求头。
+	Body                []byte                      // Body 是原始请求体。
+	RequestID           string                      // RequestID 是请求的唯一标识符。
+	Timestamp           time.Time                   // Timestamp 是收到请求的时间。
+	deferredBodyCapture *deferredRequestBodyCapture // deferredBodyCapture 缓冲仅用于错误的大请求体。
 }
 
-// ResponseWriterWrapper wraps the standard gin.ResponseWriter to intercept and log response data.
-// It is designed to handle both standard and streaming responses, ensuring that logging operations do not block the client response.
+// ResponseWriterWrapper 包装标准 gin.ResponseWriter 以拦截并记录响应数据。
+// 它旨在同时处理标准和流式响应，确保日志记录操作不会阻塞客户端响应。
 type ResponseWriterWrapper struct {
 	gin.ResponseWriter
-	body                *bytes.Buffer              // body is a buffer to store the response body for non-streaming responses.
-	isStreaming         bool                       // isStreaming indicates whether the response is a streaming type (e.g., text/event-stream).
-	streamWriter        logging.StreamingLogWriter // streamWriter is a writer for handling streaming log entries.
-	chunkChannel        chan []byte                // chunkChannel is a channel for asynchronously passing response chunks to the logger.
-	streamDone          chan struct{}              // streamDone signals when the streaming goroutine completes.
-	logger              logging.RequestLogger      // logger is the instance of the request logger service.
-	requestInfo         *RequestInfo               // requestInfo holds the details of the original request.
-	statusCode          int                        // statusCode stores the HTTP status code of the response.
-	headers             map[string][]string        // headers stores the response headers.
-	logOnErrorOnly      bool                       // logOnErrorOnly enables logging only when an error response is detected.
-	firstChunkTimestamp time.Time                  // firstChunkTimestamp captures TTFB for streaming responses.
+	body                *bytes.Buffer              // body 是用于存储非流式响应响应体的缓冲区。
+	isStreaming         bool                       // isStreaming 表示响应是否为流式类型（例如 text/event-stream）。
+	streamWriter        logging.StreamingLogWriter // streamWriter 是用于处理流式日志条目的写入器。
+	chunkChannel        chan []byte                // chunkChannel 是用于将响应块异步传递给日志记录器的通道。
+	streamDone          chan struct{}              // streamDone 在流式 goroutine 完成时发出信号。
+	logger              logging.RequestLogger      // logger 是请求日志记录器服务的实例。
+	requestInfo         *RequestInfo               // requestInfo 保存原始请求的细节。
+	statusCode          int                        // statusCode 存储响应的 HTTP 状态码。
+	headers             map[string][]string        // headers 存储响应头。
+	logOnErrorOnly      bool                       // logOnErrorOnly 仅在检测到错误响应时启用日志记录。
+	firstChunkTimestamp time.Time                  // firstChunkTimestamp 为流式响应捕获 TTFB。
 }
 
-// NewResponseWriterWrapper creates and initializes a new ResponseWriterWrapper.
-// It takes the original gin.ResponseWriter, a logger instance, and request information.
+// NewResponseWriterWrapper 创建并初始化一个新的 ResponseWriterWrapper。
+// 它接收原始 gin.ResponseWriter、日志记录器实例和请求信息。
 //
-// Parameters:
-//   - w: The original gin.ResponseWriter to wrap.
-//   - logger: The logging service to use for recording requests.
-//   - requestInfo: The pre-captured information about the incoming request.
+// 参数：
+//   - w: 要包装的原始 gin.ResponseWriter。
+//   - logger: 用于记录请求的日志记录服务。
+//   - requestInfo: 关于入站请求的预先捕获的信息。
 //
-// Returns:
-//   - A pointer to a new ResponseWriterWrapper.
+// 返回：
+//   - 指向新 ResponseWriterWrapper 的指针。
 func NewResponseWriterWrapper(w gin.ResponseWriter, logger logging.RequestLogger, requestInfo *RequestInfo) *ResponseWriterWrapper {
 	return &ResponseWriterWrapper{
 		ResponseWriter: w,
@@ -71,29 +71,29 @@ func NewResponseWriterWrapper(w gin.ResponseWriter, logger logging.RequestLogger
 	}
 }
 
-// Write wraps the underlying ResponseWriter's Write method to capture response data.
-// For non-streaming responses, it writes to an internal buffer. For streaming responses,
-// it sends data chunks to a non-blocking channel for asynchronous logging.
-// CRITICAL: This method prioritizes writing to the client to ensure zero latency,
-// handling logging operations subsequently.
+// Write 包装底层 ResponseWriter 的 Write 方法以捕获响应数据。
+// 对于非流式响应，它写入内部缓冲区。对于流式响应，
+// 它将数据块发送到非阻塞通道以进行异步日志记录。
+// 关键：该方法优先写入客户端以确保零延迟，
+// 随后处理日志记录操作。
 func (w *ResponseWriterWrapper) Write(data []byte) (int, error) {
-	// Ensure headers are captured before first write
-	// This is critical because Write() may trigger WriteHeader() internally
+	// 确保在首次写入前捕获头部
+	// 这很关键，因为 Write() 可能会在内部触发 WriteHeader()
 	w.ensureHeadersCaptured()
 
-	// CRITICAL: Write to client first (zero latency)
+	// 关键：先写入客户端（零延迟）
 	n, err := w.ResponseWriter.Write(data)
 
-	// THEN: Handle logging based on response type
+	// 然后：根据响应类型处理日志记录
 	if w.isStreaming && w.chunkChannel != nil {
-		// Capture TTFB on first chunk (synchronous, before async channel send)
+		// 在首个数据块上捕获 TTFB（同步，在异步通道发送之前）
 		if w.firstChunkTimestamp.IsZero() {
 			w.firstChunkTimestamp = time.Now()
 		}
-		// For streaming responses: Send to async logging channel (non-blocking)
+		// 对于流式响应：发送到异步日志记录通道（非阻塞）
 		select {
-		case w.chunkChannel <- append([]byte(nil), data...): // Non-blocking send with copy
-		default: // Channel full, skip logging to avoid blocking
+		case w.chunkChannel <- append([]byte(nil), data...): // 带拷贝的非阻塞发送
+		default: // 通道已满，跳过日志记录以避免阻塞
 		}
 		return n, err
 	}
@@ -105,7 +105,7 @@ func (w *ResponseWriterWrapper) Write(data []byte) (int, error) {
 	return n, err
 }
 
-// FlushError forwards transport errors without bypassing inner middleware.
+// FlushError 转发传输错误，且不绕过内层中间件。
 func (w *ResponseWriterWrapper) FlushError() error {
 	return httpwire.FlushResponse(w.ResponseWriter)
 }
@@ -128,18 +128,18 @@ func (w *ResponseWriterWrapper) shouldBufferResponseBody() bool {
 	return status >= http.StatusBadRequest && status != clienterror.StatusClientClosedRequest
 }
 
-// WriteString wraps the underlying ResponseWriter's WriteString method to capture response data.
-// Some handlers (and fmt/io helpers) write via io.StringWriter; without this override, those writes
-// bypass Write() and would be missing from request logs.
+// WriteString 包装底层 ResponseWriter 的 WriteString 方法以捕获响应数据。
+// 某些处理器（以及 fmt/io 辅助函数）通过 io.StringWriter 写入；如果没有此重写，这些写入
+// 会绕过 Write()，从而在请求日志中缺失。
 func (w *ResponseWriterWrapper) WriteString(data string) (int, error) {
 	w.ensureHeadersCaptured()
 
-	// CRITICAL: Write to client first (zero latency)
+	// 关键：先写入客户端（零延迟）
 	n, err := w.ResponseWriter.WriteString(data)
 
-	// THEN: Capture for logging
+	// 然后：捕获用于日志记录
 	if w.isStreaming && w.chunkChannel != nil {
-		// Capture TTFB on first chunk (synchronous, before async channel send)
+		// 在首个数据块上捕获 TTFB（同步，在异步通道发送之前）
 		if w.firstChunkTimestamp.IsZero() {
 			w.firstChunkTimestamp = time.Now()
 		}
@@ -156,20 +156,20 @@ func (w *ResponseWriterWrapper) WriteString(data string) (int, error) {
 	return n, err
 }
 
-// WriteHeader wraps the underlying ResponseWriter's WriteHeader method.
-// It captures the status code, detects if the response is streaming based on the Content-Type header,
-// and initializes the appropriate logging mechanism (standard or streaming).
+// WriteHeader 包装底层 ResponseWriter 的 WriteHeader 方法。
+// 它捕获状态码，根据 Content-Type 头检测响应是否为流式，
+// 并初始化相应的日志记录机制（标准或流式）。
 func (w *ResponseWriterWrapper) WriteHeader(statusCode int) {
 	w.statusCode = statusCode
 
-	// Capture response headers using the new method
+	// 使用新方法捕获响应头
 	w.captureCurrentHeaders()
 
-	// Detect streaming based on Content-Type
+	// 根据 Content-Type 检测是否流式
 	contentType := w.ResponseWriter.Header().Get("Content-Type")
 	w.isStreaming = w.detectStreaming(contentType)
 
-	// If streaming, initialize streaming log writer
+	// 如果是流式，初始化流式日志写入器
 	if w.isStreaming && w.logger.IsEnabled() {
 		streamWriter, err := w.logger.LogStreamingRequest(
 			w.requestInfo.URL,
@@ -180,63 +180,63 @@ func (w *ResponseWriterWrapper) WriteHeader(statusCode int) {
 		)
 		if err == nil {
 			w.streamWriter = streamWriter
-			w.chunkChannel = make(chan []byte, 100) // Buffered channel for async writes
+			w.chunkChannel = make(chan []byte, 100) // 用于异步写入的带缓冲通道
 			doneChan := make(chan struct{})
 			w.streamDone = doneChan
 
-			// Start async chunk processor
+			// 启动异步数据块处理器
 			go w.processStreamingChunks(doneChan)
 
-			// Write status immediately
+			// 立即写入状态
 			_ = streamWriter.WriteStatus(statusCode, w.headers)
 		}
 	}
 
-	// Call original WriteHeader
+	// 调用原始 WriteHeader
 	w.ResponseWriter.WriteHeader(statusCode)
 }
 
-// ensureHeadersCaptured is a helper function to make sure response headers are captured.
-// It is safe to call this method multiple times; it will always refresh the headers
-// with the latest state from the underlying ResponseWriter.
+// ensureHeadersCaptured 是一个辅助函数，用于确保响应头已被捕获。
+// 多次调用该方法都是安全的；它总是会用底层 ResponseWriter 的
+// 最新状态刷新头部。
 func (w *ResponseWriterWrapper) ensureHeadersCaptured() {
-	// Always capture the current headers to ensure we have the latest state
+	// 始终捕获当前头部以确保获取最新状态
 	w.captureCurrentHeaders()
 }
 
-// captureCurrentHeaders reads all headers from the underlying ResponseWriter and stores them
-// in the wrapper's headers map. It creates copies of the header values to prevent race conditions.
+// captureCurrentHeaders 从底层 ResponseWriter 读取所有头部并将其
+// 存储在包装器的 headers map 中。它会创建头部值的副本以防止竞争条件。
 func (w *ResponseWriterWrapper) captureCurrentHeaders() {
-	// Initialize headers map if needed
+	// 如有需要，初始化 headers map
 	if w.headers == nil {
 		w.headers = make(map[string][]string)
 	}
 
-	// Capture all current headers from the underlying ResponseWriter
+	// 从底层 ResponseWriter 捕获所有当前头部
 	for key, values := range w.ResponseWriter.Header() {
-		// Make a copy of the values slice to avoid reference issues
+		// 复制 values 切片以避免引用问题
 		headerValues := make([]string, len(values))
 		copy(headerValues, values)
 		w.headers[key] = headerValues
 	}
 }
 
-// detectStreaming determines if a response should be treated as a streaming response.
-// It checks for a "text/event-stream" Content-Type or a '"stream": true'
-// field in the original request body.
+// detectStreaming 判断响应是否应被视为流式响应。
+// 它会检查 "text/event-stream" Content-Type，或原始请求体中的
+// '"stream": true' 字段。
 func (w *ResponseWriterWrapper) detectStreaming(contentType string) bool {
-	// Check Content-Type for Server-Sent Events
+	// 检查 Content-Type 是否为 Server-Sent Events
 	if strings.Contains(contentType, "text/event-stream") {
 		return true
 	}
 
-	// If a concrete Content-Type is already set (e.g., application/json for error responses),
-	// treat it as non-streaming instead of inferring from the request payload.
+	// 如果已设置具体的 Content-Type（例如错误响应的 application/json），
+	// 则将其视为非流式，而不是从请求载荷推断。
 	if strings.TrimSpace(contentType) != "" {
 		return false
 	}
 
-	// Only fall back to request payload hints when Content-Type is not set yet.
+	// 仅在 Content-Type 尚未设置时才回退到请求载荷提示。
 	if w.requestInfo != nil && len(w.requestInfo.Body) > 0 {
 		return bytes.Contains(w.requestInfo.Body, []byte(`"stream": true`)) ||
 			bytes.Contains(w.requestInfo.Body, []byte(`"stream":true`))
@@ -245,8 +245,8 @@ func (w *ResponseWriterWrapper) detectStreaming(contentType string) bool {
 	return false
 }
 
-// processStreamingChunks runs in a separate goroutine to process response chunks from the chunkChannel.
-// It asynchronously writes each chunk to the streaming log writer.
+// processStreamingChunks 在单独的 goroutine 中运行，以处理来自 chunkChannel 的响应块。
+// 它会将每个数据块异步写入流式日志写入器。
 func (w *ResponseWriterWrapper) processStreamingChunks(done chan struct{}) {
 	if done == nil {
 		return
@@ -263,10 +263,10 @@ func (w *ResponseWriterWrapper) processStreamingChunks(done chan struct{}) {
 	}
 }
 
-// Finalize completes the logging process for the request and response.
-// For streaming responses, it closes the chunk channel and the stream writer.
-// For non-streaming responses, it logs the complete request and response details,
-// including any API-specific request/response data stored in the Gin context.
+// Finalize 完成请求和响应的日志记录过程。
+// 对于流式响应，它会关闭数据块通道和流写入器。
+// 对于非流式响应，它会记录完整的请求和响应细节，
+// 包括存储在 Gin 上下文中的任何 API 特定请求/响应数据。
 func (w *ResponseWriterWrapper) Finalize(c *gin.Context) error {
 	if w.requestInfo != nil && w.requestInfo.deferredBodyCapture != nil {
 		defer w.requestInfo.deferredBodyCapture.Cleanup()
@@ -316,7 +316,7 @@ func (w *ResponseWriterWrapper) Finalize(c *gin.Context) error {
 
 		w.streamWriter.SetFirstChunkTimestamp(w.firstChunkTimestamp)
 
-		// Write API Request and Response to the streaming log before closing
+		// 在关闭之前将 API 请求和响应写入流式日志
 		apiRequest := w.extractAPIRequest(c)
 		apiResponse := w.extractAPIResponse(c)
 		if sourceWriter, ok := w.streamWriter.(interface {

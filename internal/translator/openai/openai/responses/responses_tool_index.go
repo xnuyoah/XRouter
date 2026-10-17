@@ -13,14 +13,14 @@ type responsesToolIdentity struct {
 	name      string
 }
 
-// responsesToolIndex is scoped to one request. History and declarations are
-// scanned once; replayed calls and streaming events only consult these maps.
+// responsesToolIndex 的作用域为单个请求。历史记录与声明
+// 只扫描一次；重放的调用与流式事件仅查询这些映射。
 type responsesToolIndex struct {
 	declarations []responsesToolDeclaration
 	byChat       map[string]responsesToolDeclaration
 	byIdentity   map[responsesToolIdentity]string
 	byRaw        map[string]string
-	byLocal      map[string]string // Empty means multiple distinct emitted tools.
+	byLocal      map[string]string // 为空表示存在多个不同的已发出工具。
 	custom       map[string]struct{}
 }
 

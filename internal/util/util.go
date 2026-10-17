@@ -1,6 +1,6 @@
-// Package util provides utility functions for the XRouter server.
-// It includes helper functions for logging configuration, file system operations,
-// and other common utilities used throughout the application.
+// Package util 为 XRouter 服务器提供工具函数。
+// 它包括日志配置、文件系统操作等辅助函数，
+// 以及应用中通用的其他工具。
 package util
 
 import (
@@ -17,28 +17,28 @@ import (
 
 var functionNameSanitizer = regexp.MustCompile(`[^a-zA-Z0-9_.:-]`)
 
-// SanitizeFunctionName ensures a function name matches the character-set and length
-// requirements of the providers that expose tools through the OpenAI Responses tool shim.
-// It replaces invalid characters with underscores, ensures it starts with a letter or underscore,
-// and truncates it to 64 characters if necessary.
-// Regex Rule: [^a-zA-Z0-9_.:-] replaced with _.
+// SanitizeFunctionName 确保函数名符合通过 OpenAI Responses 工具垫片
+// 暴露工具的供应商对字符集和长度的要求。
+// 它将无效字符替换为下划线，确保其以字母或下划线开头，
+// 并在必要时截断到 64 个字符。
+// 正则规则：[^a-zA-Z0-9_.:-] 替换为 _。
 func SanitizeFunctionName(name string) string {
 	if name == "" {
 		return ""
 	}
 
-	// Replace invalid characters with underscore
+	// 将无效字符替换为下划线
 	sanitized := functionNameSanitizer.ReplaceAllString(name, "_")
 
-	// Ensure it starts with a letter or underscore
-	// Re-reading requirements: Must start with a letter or an underscore.
+	// 确保其以字母或下划线开头
+	// 重读要求：必须以字母或下划线开头。
 	if len(sanitized) > 0 {
 		first := sanitized[0]
 		if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_') {
-			// If it starts with an allowed character but not allowed at the beginning (digit, dot, colon, dash),
-			// we must prepend an underscore.
+			// 如果它以允许的字符开头、但该字符不允许出现在开头（数字、点、冒号、短横线），
+			// 我们必须前置一个下划线。
 
-			// To stay within the 64-character limit while prepending, we must truncate first.
+			// 为了在前置后仍满足 64 字符限制，我们必须先截断。
 			if len(sanitized) >= 64 {
 				sanitized = sanitized[:63]
 			}
@@ -48,15 +48,15 @@ func SanitizeFunctionName(name string) string {
 		sanitized = "_"
 	}
 
-	// Truncate to 64 characters
+	// 截断到 64 个字符
 	if len(sanitized) > 64 {
 		sanitized = sanitized[:64]
 	}
 	return sanitized
 }
 
-// SetLogLevel configures the logrus log level based on the configuration.
-// It sets the log level to DebugLevel if debug mode is enabled, otherwise to InfoLevel.
+// SetLogLevel 根据配置设置 logrus 日志级别。
+// 若启用了调试模式则设为 DebugLevel，否则设为 InfoLevel。
 func SetLogLevel(cfg *config.Config) {
 	currentLevel := log.GetLevel()
 	var newLevel log.Level
@@ -72,10 +72,10 @@ func SetLogLevel(cfg *config.Config) {
 	}
 }
 
-// ResolveAuthDir normalizes the auth directory path for consistent reuse throughout the app.
-// It expands a leading tilde (~) to the user's home directory and returns a cleaned path.
-// If authDir is empty, it defaults to ~/.xrouter; a legacy ~/.cli-proxy-api directory,
-// when present, only triggers a migration hint.
+// ResolveAuthDir 规范化 auth 目录路径，以便在应用中一致复用。
+// 它将开头的波浪号（~）展开为用户主目录并返回清理后的路径。
+// 如果 authDir 为空，则默认为 ~/.xrouter；遗留的 ~/.cli-proxy-api 目录
+// 存在时只会触发一条迁移提示。
 func ResolveAuthDir(authDir string) (string, error) {
 	if authDir == "" {
 		authDir = config.DefaultAuthDir
@@ -88,7 +88,7 @@ func ResolveAuthDir(authDir string) (string, error) {
 	return resolved, nil
 }
 
-// expandTilde expands a leading tilde (~) to the user's home directory and cleans the path.
+// expandTilde 将开头的波浪号（~）展开为用户主目录并清理路径。
 func expandTilde(path string) (string, error) {
 	if strings.HasPrefix(path, "~") {
 		home, err := os.UserHomeDir()
@@ -106,8 +106,8 @@ func expandTilde(path string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
-// warnLegacyAuthDir logs a migration hint when the resolved directory is the new default
-// and the previous default ~/.cli-proxy-api still exists without the new one.
+// warnLegacyAuthDir 在解析出的目录为新的默认值、且旧默认目录
+// ~/.cli-proxy-api 仍然存在而新目录不存在时，记录一条迁移提示。
 func warnLegacyAuthDir(resolved string) {
 	defaultPath, err := expandTilde(config.DefaultAuthDir)
 	if err != nil || resolved != defaultPath {
@@ -126,8 +126,8 @@ func warnLegacyAuthDir(resolved string) {
 	log.Warnf("legacy data directory %s found; XRouter now stores auth files in %s. Move existing files or set auth-dir explicitly to keep using the old path.", legacyPath, resolved)
 }
 
-// CountAuthFiles returns the number of auth records available through the provided Store.
-// For filesystem-backed stores, this reflects the number of JSON auth files under the configured directory.
+// CountAuthFiles 返回通过给定 Store 可用的 auth 记录数量。
+// 对于基于文件系统的存储，这反映配置目录下 JSON auth 文件的数量。
 func CountAuthFiles[T any](ctx context.Context, store interface {
 	List(context.Context) ([]T, error)
 }) int {
@@ -145,8 +145,8 @@ func CountAuthFiles[T any](ctx context.Context, store interface {
 	return len(entries)
 }
 
-// WritablePath returns the cleaned WRITABLE_PATH environment variable when it is set.
-// It accepts both uppercase and lowercase variants for compatibility with existing conventions.
+// WritablePath 在 WRITABLE_PATH 环境变量已设置时返回其清理后的值。
+// 为兼容既有约定，它同时接受大写和小写两种写法。
 func WritablePath() string {
 	for _, key := range []string{"WRITABLE_PATH", "writable_path"} {
 		if value, ok := os.LookupEnv(key); ok {

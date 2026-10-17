@@ -338,7 +338,7 @@ func TestHomeDispatchSessionIDsExtractsParentSessionID(t *testing.T) {
 		Routing: internalconfig.RoutingConfig{SessionAffinityTTL: "1h"},
 	})
 
-	// 1. Root Claude session
+	// 1. 根 Claude 会话
 	rootOpts := cliproxyexecutor.Options{
 		Headers: http.Header{"X-Claude-Code-Session-Id": []string{"claude-root-1"}},
 	}
@@ -347,7 +347,7 @@ func TestHomeDispatchSessionIDsExtractsParentSessionID(t *testing.T) {
 		t.Fatalf("root session = (%q, %q), want (claude:claude-root-1, \"\")", sessionID, parentID)
 	}
 
-	// 2. Subagent Claude session
+	// 2. 子代理 Claude 会话
 	subOpts := cliproxyexecutor.Options{
 		Headers: http.Header{
 			"X-Claude-Code-Session-Id": []string{"claude-root-1"},
@@ -359,7 +359,7 @@ func TestHomeDispatchSessionIDsExtractsParentSessionID(t *testing.T) {
 		t.Fatalf("subagent session = (%q, %q), want (claude:claude-root-1:agent:sub-checker, claude:claude-root-1)", subSessionID, subParentID)
 	}
 
-	// 3. Pi slot session with parent
+	// 3. 带父级的 Pi slot 会话
 	piSubOpts := cliproxyexecutor.Options{
 		Headers: http.Header{
 			"X-Slot-Session-Id":   []string{"pi-slot-worker-1"},
@@ -371,7 +371,7 @@ func TestHomeDispatchSessionIDsExtractsParentSessionID(t *testing.T) {
 		t.Fatalf("pi subagent session = (%q, %q), want (slot:pi-slot-worker-1, slot:pi-slot-main-0)", piSessionID, piParentID)
 	}
 
-	// 4. LCP-derived session in metadata
+	// 4. 元数据中由 LCP 派生的会话
 	lcpOpts := cliproxyexecutor.Options{
 		Metadata: map[string]any{
 			cliproxyexecutor.CanonicalSessionIDMetadataKey: "lcp:v1:abc12345",
@@ -501,7 +501,7 @@ func TestHomeDispatchSessionIDsExtractsParentFromHeaderPlusBody(t *testing.T) {
 		Routing: internalconfig.RoutingConfig{SessionAffinityTTL: "1h"},
 	})
 
-	// 1. Header session + Body parent_session_id
+	// 1. 请求头会话 + Body parent_session_id
 	opts := cliproxyexecutor.Options{
 		Headers: http.Header{
 			"X-Claude-Code-Session-Id": []string{"child-session-001"},
@@ -516,7 +516,7 @@ func TestHomeDispatchSessionIDsExtractsParentFromHeaderPlusBody(t *testing.T) {
 		t.Fatalf("parentID = %q, want claude:parent-session-999", parentID)
 	}
 
-	// 2. Nested Claude metadata.user_id with parent_session_id
+	// 2. 嵌套的 Claude metadata.user_id 带 parent_session_id
 	nestedOpts := cliproxyexecutor.Options{
 		OriginalRequest: []byte(`{
 			"metadata": {
@@ -532,7 +532,7 @@ func TestHomeDispatchSessionIDsExtractsParentFromHeaderPlusBody(t *testing.T) {
 		t.Fatalf("nestedParentID = %q, want claude:parent-session-888", nestedParentID)
 	}
 
-	// 3. LCP metadata prioritization over msg-hash fallback
+	// 3. LCP 元数据优先于 msg-hash 回退
 	lcpOpts := cliproxyexecutor.Options{
 		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"hello world"}]}`),
 		Metadata: map[string]any{
@@ -547,7 +547,7 @@ func TestHomeDispatchSessionIDsExtractsParentFromHeaderPlusBody(t *testing.T) {
 		t.Fatalf("lcpParentID = %q, want empty", lcpParentID)
 	}
 
-	// 3b. LCP with metadata parent
+	// 3b. 带元数据父级的 LCP
 	lcpForkOpts := cliproxyexecutor.Options{
 		Metadata: map[string]any{
 			cliproxyexecutor.CanonicalSessionIDMetadataKey: "lcp:v1:fork-child-xyz",
@@ -559,7 +559,7 @@ func TestHomeDispatchSessionIDsExtractsParentFromHeaderPlusBody(t *testing.T) {
 		t.Fatalf("lcpFork = (%q, %q), want (lcp:v1:fork-child-xyz, lcp:v1:parent-root-abc)", lcpForkSessionID, lcpForkParentID)
 	}
 
-	// 3c. Self-referential parent is suppressed
+	// 3c. 自引用的父级被抑制
 	lcpSelfParentOpts := cliproxyexecutor.Options{
 		Metadata: map[string]any{
 			cliproxyexecutor.CanonicalSessionIDMetadataKey: "lcp:v1:same-session",
@@ -571,7 +571,7 @@ func TestHomeDispatchSessionIDsExtractsParentFromHeaderPlusBody(t *testing.T) {
 		t.Fatalf("self-referential parent = (%q, %q), want (%q, empty)", selfSessionID, selfParentID, "lcp:v1:same-session")
 	}
 
-	// 4. Antigravity hierarchy
+	// 4. Antigravity 层级
 	agyOpts := cliproxyexecutor.Options{
 		Headers: http.Header{
 			"X-Http-Session-Id":   []string{"agy-child-101"},
@@ -594,7 +594,7 @@ func TestHomeDispatchSessionIDsNestedRequestSubagent(t *testing.T) {
 		Routing: internalconfig.RoutingConfig{SessionAffinityTTL: "1h"},
 	})
 
-	// 1. Nested request with sessionId and agent_id
+	// 1. 带 sessionId 和 agent_id 的嵌套请求
 	nestedAgentOpts := cliproxyexecutor.Options{
 		OriginalRequest: []byte(`{
 			"request": {
@@ -613,7 +613,7 @@ func TestHomeDispatchSessionIDsNestedRequestSubagent(t *testing.T) {
 		t.Fatalf("parentID = %q, want session:root", parentID)
 	}
 
-	// 2. Nested request with sessionId and subagent_id
+	// 2. 带 sessionId 和 subagent_id 的嵌套请求
 	nestedSubagentOpts := cliproxyexecutor.Options{
 		OriginalRequest: []byte(`{
 			"request": {
@@ -678,7 +678,7 @@ func TestHomeDispatchSessionIDsMatchesLCPCompactionViaReportHomeResult(t *testin
 	defer selector.Stop()
 	manager := NewManager(nil, selector, nil)
 
-	// 1. Initial request in Home mode (without explicit session IDs).
+	// 1. Home 模式下的初始请求（不带显式会话 ID）。
 	initialOpts := cliproxyexecutor.Options{
 		SourceFormat:    sdktranslator.FormatOpenAI,
 		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"step 1"},{"role":"assistant","content":"ack 1"},{"role":"user","content":"step 2"},{"role":"assistant","content":"ack 2"},{"role":"user","content":"step 3"}]}`),
@@ -691,7 +691,7 @@ func TestHomeDispatchSessionIDsMatchesLCPCompactionViaReportHomeResult(t *testin
 	initialAuth := &Auth{ID: "auth-home-live-1"}
 	initialSessionID, _ := manager.homeDispatchSessionIDs(initialOpts)
 
-	// 2. Report execution result via reportHomeResult (ephemeral Home dispatch result, not manual BindWithResult).
+	// 2. 通过 reportHomeResult 上报执行结果（临时的 Home 调度结果，而非手动 BindWithResult）。
 	manager.reportHomeResult(context.Background(), Result{
 		AuthID:   initialAuth.ID,
 		Provider: "openai",
@@ -700,7 +700,7 @@ func TestHomeDispatchSessionIDsMatchesLCPCompactionViaReportHomeResult(t *testin
 		Success:  true,
 	}, initialAuth)
 
-	// 3. Post-compaction request in Home mode.
+	// 3. Home 模式下的压缩后请求。
 	compactedOpts := cliproxyexecutor.Options{
 		SourceFormat:    sdktranslator.FormatOpenAI,
 		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"<summary>Steps 1-2 compacted</summary>"},{"role":"assistant","content":"ack 2"},{"role":"user","content":"step 3"},{"role":"user","content":"step 4"}]}`),
@@ -725,7 +725,7 @@ func TestHomeDispatchSessionIDsMatchesLCPCompactionViaReportHomeResult(t *testin
 		t.Fatalf("expected is_compaction=true in metadata, got %v", compactedOpts.Metadata[cliproxyexecutor.IsCompactionMetadataKey])
 	}
 
-	// Verify that the initial placeholder "home-pending" was successfully updated to the real AuthID in the LCP matcher
+	// 验证初始占位符 "home-pending" 已成功更新为 LCP 匹配器中的真实 AuthID
 	boundAuths, _, okLookup := selector.matcher.LookupSession(initialSessionID)
 	if !okLookup || len(boundAuths) == 0 || boundAuths[0] != "auth-home-live-1" {
 		t.Fatalf("expected initial session bound to auth-home-live-1 after reportHomeResult, got ok=%v auths=%v", okLookup, boundAuths)
@@ -737,7 +737,7 @@ func TestHomeDispatchSessionIDsWithoutPresetProviderMetadata(t *testing.T) {
 	defer selector.Stop()
 	manager := NewManager(nil, selector, nil)
 
-	// 1. Initial request in Home mode without preset SessionAffinityProviderMetadataKey
+	// 1. Home 模式下的初始请求，未预设 SessionAffinityProviderMetadataKey
 	initialOpts := cliproxyexecutor.Options{
 		SourceFormat:    sdktranslator.FormatOpenAI,
 		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"step A"},{"role":"assistant","content":"ack A"},{"role":"user","content":"step B"},{"role":"assistant","content":"ack B"},{"role":"user","content":"step C"}]}`),
@@ -749,7 +749,7 @@ func TestHomeDispatchSessionIDsWithoutPresetProviderMetadata(t *testing.T) {
 	initialAuth := &Auth{ID: "auth-inferred-1"}
 	initialSessionID, _ := manager.homeDispatchSessionIDs(initialOpts)
 
-	// 2. Report result using the actual execution provider "openai"
+	// 2. 使用实际执行供应商 "openai" 上报结果
 	manager.reportHomeResult(context.Background(), Result{
 		AuthID:   initialAuth.ID,
 		Provider: "openai",
@@ -758,7 +758,7 @@ func TestHomeDispatchSessionIDsWithoutPresetProviderMetadata(t *testing.T) {
 		Success:  true,
 	}, initialAuth)
 
-	// 3. Compacted continuation request without preset provider metadata
+	// 3. 未预设供应商元数据的压缩后续请求
 	compactedOpts := cliproxyexecutor.Options{
 		SourceFormat:    sdktranslator.FormatOpenAI,
 		OriginalRequest: []byte(`{"messages":[{"role":"user","content":"<summary>Steps A-B compacted</summary>"},{"role":"assistant","content":"ack B"},{"role":"user","content":"step C"},{"role":"user","content":"step D"}]}`),

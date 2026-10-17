@@ -147,7 +147,7 @@ func TestServeManagementPreservesRawJSONOnSchemaVersion6(t *testing.T) {
 		capabilityRecord{
 			id: "legacy-json",
 			plugin: pluginapi.Plugin{
-				SchemaVersion: pluginabi.SchemaVersionStreamChunkOmitHistory, // schema_version 5 (legacy)
+				SchemaVersion: pluginabi.SchemaVersionStreamChunkOmitHistory, // schema_version 5（旧版）
 				Capabilities: pluginapi.Capabilities{
 					ManagementAPI: &managementPluginDouble{routes: []pluginapi.ManagementRoute{{
 						Method: http.MethodGet,
@@ -165,7 +165,7 @@ func TestServeManagementPreservesRawJSONOnSchemaVersion6(t *testing.T) {
 	)
 	host.RegisterManagementRoutes(context.Background(), nil)
 
-	// Schema version 6: raw JSON is preserved
+	// Schema 版本 6：保留原始 JSON
 	req := httptest.NewRequest(http.MethodGet, "/v0/management/plugins/raw-json/config", nil)
 	rec := httptest.NewRecorder()
 	if !host.ServeManagementHTTP(rec, req) {
@@ -178,7 +178,7 @@ func TestServeManagementPreservesRawJSONOnSchemaVersion6(t *testing.T) {
 		t.Fatalf("body = %q, want raw %q", rec.Body.String(), rawJSON)
 	}
 
-	// Schema version 5 (legacy): HTML escaping still applies for compatibility
+	// Schema 版本 5（旧版）：为兼容性仍应用 HTML 转义
 	req = httptest.NewRequest(http.MethodGet, "/v0/management/plugins/legacy-json/config", nil)
 	rec = httptest.NewRecorder()
 	if !host.ServeManagementHTTP(rec, req) {
@@ -239,7 +239,7 @@ func TestServeManagementGetPutRoundTripPreservesImmutableField(t *testing.T) {
 	})
 	host.RegisterManagementRoutes(context.Background(), nil)
 
-	// Step 1: GET the configuration
+	// 步骤 1：GET 配置
 	reqGet := httptest.NewRequest(http.MethodGet, "/v0/management/plugins/roundtrip-plugin/config", nil)
 	recGet := httptest.NewRecorder()
 	if !host.ServeManagementHTTP(recGet, reqGet) {
@@ -249,7 +249,7 @@ func TestServeManagementGetPutRoundTripPreservesImmutableField(t *testing.T) {
 		t.Fatalf("GET code = %d, want 200", recGet.Code)
 	}
 
-	// Step 2: PUT the unmodified configuration back
+	// 步骤 2：将未修改的配置 PUT 回去
 	reqPut := httptest.NewRequest(http.MethodPut, "/v0/management/plugins/roundtrip-plugin/config", recGet.Body)
 	reqPut.Header.Set("Content-Type", "application/json")
 	recPut := httptest.NewRecorder()

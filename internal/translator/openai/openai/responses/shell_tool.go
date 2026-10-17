@@ -32,13 +32,13 @@ func (idx *responsesToolIndex) shellName() string {
 	return ""
 }
 
-// Normalize shell history before the existing call grouping and output pairing.
-// Keep the entire output envelope as JSON text, including truncation metadata.
+// 在现有的调用分组与输出配对之前规范化 shell 历史。
+// 将整个输出信封保留为 JSON 文本，包括截断元数据。
 func (idx *responsesToolIndex) shellHistory(items []gjson.Result) []gjson.Result {
 	name := idx.shellName()
 	if name == "" {
-		// Historical calls remain meaningful after the client withdraws the tool.
-		// Reserve a replay-only name without adding an available declaration.
+		// 客户端撤回该工具后，历史调用仍有意义。
+		// 预留一个仅用于重放的名称，而不添加可用的声明。
 		reserved := make(map[string]bool)
 		for key := range idx.byChat {
 			reserved[key] = true

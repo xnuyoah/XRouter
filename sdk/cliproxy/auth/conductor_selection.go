@@ -53,8 +53,8 @@ func (m *Manager) pluginSchedulerWantsAcrossPrioritiesLocked() bool {
 	return false
 }
 
-// PluginSchedulerWantsAcrossPriorities reports whether the configured plugin scheduler
-// opted into receiving candidates across all priority tiers.
+// PluginSchedulerWantsAcrossPriorities 报告配置的插件调度器
+// 是否选择接收跨所有优先级层级的候选。
 func (m *Manager) PluginSchedulerWantsAcrossPriorities() bool {
 	if m == nil {
 		return false
@@ -155,11 +155,11 @@ func (m *Manager) snapshotAuths() []*Auth {
 	return out
 }
 
-// RefreshSchedulerEntry re-upserts a single auth into the scheduler so that its
-// supportedModelSet is rebuilt from the current global model registry state.
-// This must be called after models have been registered for a newly added auth,
-// because the initial scheduler.upsertAuth during Register/Update runs before
-// registerModelsForAuth and therefore snapshots an empty model set.
+// RefreshSchedulerEntry 把单个 auth 重新写入调度器，使其
+// supportedModelSet 依据当前全局模型注册表状态重建。
+// 必须在新添加的 auth 的模型注册完成之后调用，
+// 因为 Register/Update 期间的初始 scheduler.upsertAuth 运行在
+// registerModelsForAuth 之前，因此会把模型集合快照为空。
 func (m *Manager) RefreshSchedulerEntry(authID string) {
 	if m == nil || m.scheduler == nil || authID == "" {
 		return
@@ -176,7 +176,7 @@ func (m *Manager) RefreshSchedulerEntry(authID string) {
 	m.scheduler.upsertAuth(snapshot)
 }
 
-// RefreshSchedulerAll rebuilds scheduler entries for every known auth.
+// RefreshSchedulerAll 为每个已知 auth 重建调度器条目。
 func (m *Manager) RefreshSchedulerAll() {
 	if m == nil {
 		return
@@ -192,14 +192,14 @@ func (m *Manager) RefreshSchedulerAll() {
 	}
 }
 
-// ReconcileRegistryModelStates aligns per-model runtime state with the current
-// registry snapshot for one auth.
+// ReconcileRegistryModelStates 使某个 auth 的按模型运行时状态与当前
+// 注册表快照对齐。
 //
-// Active cooldown and quota states for supported models (including models
-// reachable via alias routes) are preserved, while stale/expired errors on
-// supported models are reset. ModelStates for models that are no longer
-// reachable either directly or via alias routes are pruned entirely so
-// renamed/removed models cannot keep auth-level status stale.
+// 受支持模型（包括可通过别名路由到达的模型）上处于生效状态的冷却和额度
+// 状态会被保留，而受支持模型上陈旧/已过期的错误会被重置。对于不再
+// 可直接或通过别名路由到达的模型，其 ModelStates 会被完全清除，
+// 这样被重命名/移除的模型就不会让 auth 级状态
+// 保持陈旧。
 func (m *Manager) ReconcileRegistryModelStates(ctx context.Context, authID string) {
 	if m == nil || authID == "" {
 		return
@@ -236,10 +236,10 @@ func (m *Manager) ReconcileRegistryModelStates(ctx context.Context, authID strin
 			}
 			candidateChanged := normalizeModelStates(candidateAuth)
 
-			// Historical alias migration:
-			// Migrate legacy alias state strictly based on registered route keys from supportedModels.
-			// Two-phase safe migration:
-			// Phase 1: Collect authoritative target keys and route-to-target mappings.
+			// 历史别名迁移：
+			// 严格依据 supportedModels 中已注册的路由键迁移遗留别名状态。
+			// 两阶段安全迁移：
+			// 阶段 1：收集权威目标键以及路由到目标的映射。
 			if len(candidateAuth.ModelStates) > 0 && len(supportedModels) > 0 {
 				authoritativeTargets := make(map[string]bool, len(supportedModels))
 				routeToTarget := make(map[string]string, len(supportedModels))
@@ -261,8 +261,8 @@ func (m *Manager) ReconcileRegistryModelStates(ctx context.Context, authID strin
 					}
 				}
 
-				// Phase 2: For each registered routeKey, migrate legacy state to target ONLY if
-				// routeKey != target AND routeKey is not itself an authoritative target for any route.
+				// 阶段 2：对每个已注册的 routeKey，仅当 routeKey != target
+				// 且 routeKey 本身不是任何路由的权威目标时，才把遗留状态迁移到 target。
 				for _, sm := range supportedModels {
 					if sm == nil || strings.TrimSpace(sm.ID) == "" {
 						continue
@@ -315,8 +315,8 @@ func (m *Manager) ReconcileRegistryModelStates(ctx context.Context, authID strin
 					baseModel = strings.TrimSpace(modelKey)
 				}
 				if _, isSupported := supported[baseModel]; !isSupported {
-					// Drop state for models that disappeared from the current registry
-					// snapshot and are not reachable via any alias route.
+					// 丢弃那些已从当前注册表快照中消失、且无法通过任何
+					// 别名路由到达的模型状态。
 					delete(candidateAuth.ModelStates, modelKey)
 					candidateChanged = true
 					continue
@@ -446,7 +446,7 @@ func (m *Manager) SetSelector(selector Selector) {
 	}
 }
 
-// Selector returns the current credential selector.
+// Selector 返回当前的凭据选择器。
 func (m *Manager) Selector() Selector {
 	if m == nil {
 		return nil
@@ -456,8 +456,8 @@ func (m *Manager) Selector() Selector {
 	return m.selector
 }
 
-// LookupSessionAffinity observes the current session affinity binding without side effects.
-// It returns (auth, status) where status can be "bound", "unbound", "ambiguous", or "unsupported".
+// LookupSessionAffinity 以无副作用的方式观察当前的会话亲和绑定。
+// 它返回 (auth, status)，其中 status 可以是 "bound"、"unbound"、"ambiguous" 或 "unsupported"。
 func (m *Manager) LookupSessionAffinity(provider, model, sessionID string) (*Auth, string) {
 	if m == nil {
 		return nil, "unsupported"
@@ -521,14 +521,14 @@ func (m *Manager) LookupSessionAffinity(provider, model, sessionID string) (*Aut
 	return snapshot, "bound"
 }
 
-// SetStore swaps the underlying persistence store.
+// SetStore 替换底层持久化存储。
 func (m *Manager) SetStore(store Store) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.store = store
 }
 
-// SetCooldownStateStore swaps the independent runtime cooldown state store.
+// SetCooldownStateStore 替换独立的运行时冷却状态存储。
 func (m *Manager) SetCooldownStateStore(store CooldownStateStore) {
 	if m == nil {
 		return
@@ -540,7 +540,7 @@ func (m *Manager) SetCooldownStateStore(store CooldownStateStore) {
 	m.cooldownStore = store
 }
 
-// SetRoundTripperProvider register a provider that returns a per-auth RoundTripper.
+// SetRoundTripperProvider 注册一个返回按 auth 划分的 RoundTripper 的提供者。
 func (m *Manager) SetRoundTripperProvider(p RoundTripperProvider) {
 	m.mu.Lock()
 	m.rtProvider = p
@@ -617,10 +617,10 @@ func (m *Manager) availableAuthsForRouteModelWithPriorityMode(auths []*Auth, pro
 	return availableAuthsFromPriorityBuckets(availableByPriority, allPriorities), nil
 }
 
-// availableAuthsForSelector reports the candidates handed to priority-scoped consumers such as
-// the plugin scheduler, plus the candidates handed to the configured selector. Both are equal
-// unless session affinity or an across-priorities scheduler is active, in which case the selector
-// or scheduler additionally receives lower priority tiers.
+// availableAuthsForSelector 报告交给按优先级划分的消费方（例如
+// 插件调度器）的候选，以及交给所配置选择器的候选。两者相同，
+// 除非会话亲和或跨优先级调度器处于激活状态，此时选择器
+// 或调度器会额外收到更低优先级的层级。
 func (m *Manager) availableAuthsForSelector(selector Selector, auths []*Auth, provider, routeModel string, now time.Time) (priorityAuths, selectorAuths []*Auth, err error) {
 	_, sessionAffinity := selector.(*SessionAffinitySelector)
 	schedulerAcross := m.pluginSchedulerWantsAcrossPrioritiesLocked()
@@ -634,8 +634,8 @@ func (m *Manager) availableAuthsForSelector(selector Selector, auths []*Auth, pr
 		return priorityAuths, priorityAuths, nil
 	}
 
-	// One availability pass and one clone pass serve both lists: the highest priority tier is a
-	// subset of the across-priority candidates, so it is narrowed from the same cloned auths.
+	// 一次可用性遍历和一次克隆遍历同时服务两个列表：最高优先级层级是
+	// 跨优先级候选的子集，因此从同一批克隆的 auth 中缩小得到。
 	allAuths, errAcross := m.availableAuthsForRouteModelAcrossPriorities(auths, provider, routeModel, now)
 	if errAcross != nil {
 		return nil, nil, errAcross
@@ -1056,12 +1056,12 @@ func (m *Manager) normalizeProviders(providers []string) []string {
 	return result
 }
 
-// AvailableProviders returns the set of provider keys that currently have at least one
-// registered auth record that is not disabled. It is a best-effort snapshot for routing
-// decisions and does not account for per-model cooldowns or transient runtime availability.
-// Disabled auths (Disabled flag or StatusDisabled) are excluded so routing does not target
-// providers that auth selection would refuse to use, which would otherwise cause execution
-// failures instead of falling back to lower-priority routers.
+// AvailableProviders 返回当前至少有一个未禁用 auth 记录
+// 注册的供应商标识集合。它是用于路由决策的
+// 尽力而为快照，不考虑按模型划分的冷却或临时运行时可用性。
+// 已禁用的 auth（Disabled 标志或 StatusDisabled）会被排除，这样路由就不会指向
+// auth 选择会拒绝使用的供应商，否则会造成执行失败
+// 而不是回退到更低优先级的路由器。
 func (m *Manager) AvailableProviders() []string {
 	if m == nil {
 		return nil
@@ -1087,9 +1087,9 @@ func (m *Manager) AvailableProviders() []string {
 	return out
 }
 
-// HasProviderAuth reports whether at least one non-disabled auth record is registered for
-// the provider. Disabled auths (Disabled flag or StatusDisabled) are excluded to match the
-// behavior of auth selection, which refuses to pick disabled credentials.
+// HasProviderAuth 报告该供应商是否至少注册了一个未禁用的
+// auth 记录。已禁用的 auth（Disabled 标志或 StatusDisabled）会被排除，以与
+// auth 选择的行为一致，后者拒绝挑选已禁用的凭据。
 func (m *Manager) HasProviderAuth(provider string) bool {
 	if m == nil {
 		return false
@@ -1274,8 +1274,8 @@ func (m *Manager) closestCooldownWaitWithAttempted(providers []string, model str
 			continue
 		}
 
-		// auth was already attempted in the round that just failed with 429,
-		// and cooling is enabled. It must not trigger an immediate zero-wait retry round.
+		// 该 auth 已在刚刚以 429 失败的轮次中尝试过，
+		// 且冷却已启用。它不得触发立即的零等待重试轮次。
 		var wait time.Duration
 		if next.IsZero() {
 			wait = minQuotaCooldownFloor
@@ -1353,11 +1353,11 @@ func (m *Manager) shouldRetryAfterError(err error, attempt int, providers []stri
 	return m.shouldRetryAfterErrorWithHomeRetryLimit(context.Background(), cliproxyexecutor.Options{}, err, attempt, providers, model, maxWait, -1, defaultRequestRetry)
 }
 
-// maxWait limits only positive cooldown waits between credential retry rounds.
-// A non-positive value means no waiting: it does not disable same-round
-// credential failover or an additional round that request-retry permits to start
-// immediately. If every eligible credential still needs a positive cooldown,
-// retry stops without waiting.
+// maxWait 只限制凭据重试轮次之间的正冷却等待。
+// 非正值表示不等待：它不会禁用同轮次的
+// 凭据故障转移，也不会禁用 request-retry 允许立即开始的额
+// 外轮次。如果每个符合条件的凭据仍需正冷却，
+// 重试会在不等待的情况下停止。
 func (m *Manager) shouldRetryAfterErrorWithHomeRetryLimit(ctx context.Context, opts cliproxyexecutor.Options, err error, attempt int, providers []string, model string, maxWait time.Duration, homeRetryLimit int, defaultRequestRetry int) (time.Duration, bool) {
 	return m.shouldRetryAfterErrorWithAttempted(ctx, opts, err, attempt, providers, model, maxWait, homeRetryLimit, defaultRequestRetry, nil)
 }
@@ -1397,8 +1397,8 @@ func (m *Manager) shouldRetryAfterErrorWithAttempted(ctx context.Context, opts c
 			}
 			return *retryAfter, true
 		}
-		// Home will provide a cooldown error on the next round if all
-		// credentials are still cooling down; otherwise retry immediately.
+		// 如果所有凭据仍在冷却中，Home 会在下一轮提供冷却错误；
+		// 否则立即重试。
 		return 0, true
 	}
 	if m.HomeEnabled() {
@@ -1499,15 +1499,15 @@ func isRequestRetryRoundError(err error) bool {
 	return isCredentialRetryRoundStatus(statusCodeFromError(err)) || isTransientTransportError(err)
 }
 
-// cooldownWaitJitterCap bounds the random jitter added to cooldown waits so a
-// long wait is never extended by more than this amount.
+// cooldownWaitJitterCap 限制加到冷却等待上的随机抖动，
+// 使长等待的延长量永远不会超过该值。
 const cooldownWaitJitterCap = 2 * time.Second
 
-// jitteredCooldownWait adds a small random delay to a cooldown wait so
-// concurrent requests waiting on the same recovery deadline do not wake in
-// lockstep and stampede the first credential that recovers. The jitter never
-// pushes the total wait past maxWait, which callers have already enforced as
-// the retry ceiling; maxWait <= 0 is reserved for immediate retries.
+// jitteredCooldownWait 为冷却等待加入少量随机延迟，使等待同一恢复
+// 截止时间的并发请求不会同步唤醒并涌向第一个恢复的
+// 凭据。该抖动永远不会把总等待推过 maxWait，调用方已把
+// maxWait 作为重试上限；maxWait <= 0 保留给
+// 立即重试。
 func jitteredCooldownWait(wait, maxWait time.Duration) time.Duration {
 	if wait <= 0 {
 		return wait
@@ -1539,7 +1539,7 @@ func waitForCooldown(ctx context.Context, wait, maxWait time.Duration) error {
 	}
 }
 
-// List returns all auth entries currently known by the manager.
+// List 返回管理器当前已知的所有 auth 条目。
 func (m *Manager) List() []*Auth {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -1550,7 +1550,7 @@ func (m *Manager) List() []*Auth {
 	return list
 }
 
-// GetByID retrieves an auth entry by its ID.
+// GetByID 按 ID 获取一个 auth 条目。
 func (m *Manager) GetByID(id string) (*Auth, bool) {
 	if id == "" {
 		return nil, false
@@ -1564,11 +1564,11 @@ func (m *Manager) GetByID(id string) (*Auth, bool) {
 	return auth.Clone(), true
 }
 
-// PublishIfRegistrationCurrent serializes the final model-registration
-// publication against identity mutations for this auth, then calls publish
-// only if the manager still holds auth with the same model-registration
-// inputs. It does not persist or clone auth state. publish must be fast and
-// must not re-enter the manager.
+// PublishIfRegistrationCurrent 把最终的模型注册
+// 发布与该 auth 的身份变更串行化，然后仅当管理器仍持有具有相同
+// 模型注册输入的 auth 时才调用 publish。它不会持久化或克隆
+// auth 状态。publish 必须很快，且
+// 不得重入管理器。
 func (m *Manager) PublishIfRegistrationCurrent(id string, registrationEpoch uint64, prefix, provider string, disabled bool, authKind string, attributes map[string]string, publish func() bool) bool {
 	if m == nil || id == "" || publish == nil {
 		return false
@@ -1585,11 +1585,11 @@ func (m *Manager) PublishIfRegistrationCurrent(id string, registrationEpoch uint
 	return publish()
 }
 
-// UpdateIfRegistrationCurrent applies a plugin-returned auth update only
-// while the manager still holds the exact registration inputs the plugin
-// computation started from. It prevents an old plugin result from adopting
-// a removed or re-registered identity merely because its zero registration
-// epoch would otherwise inherit the current epoch during Update.
+// UpdateIfRegistrationCurrent 仅在管理器仍持有插件
+// 计算开始时确切注册输入的情况下，才应用插件返回的 auth 更新。
+// 它防止旧的插件结果仅因其注册 epoch 为零而在 Update 期间
+// 继承当前 epoch，从而冒领已被移除或
+// 重新注册的身份。
 func (m *Manager) UpdateIfRegistrationCurrent(ctx context.Context, base *Auth, updated *Auth) (*Auth, bool, error) {
 	if m == nil || base == nil || updated == nil || base.ID == "" || updated.ID != base.ID {
 		return nil, false, nil
@@ -1627,7 +1627,7 @@ func modelRegistrationInputsMatch(current *Auth, registrationEpoch uint64, prefi
 		maps.Equal(current.Attributes, attributes)
 }
 
-// GetExecutionSessionAuthByID retrieves a Home runtime auth scoped to an execution session.
+// GetExecutionSessionAuthByID 获取作用域为某个执行会话的 Home 运行时 auth。
 func (m *Manager) GetExecutionSessionAuthByID(sessionID string, authID string) (*Auth, bool) {
 	sessionID = strings.TrimSpace(sessionID)
 	authID = strings.TrimSpace(authID)
@@ -1667,7 +1667,7 @@ func (m *Manager) executorLocked(provider string) (ProviderExecutor, bool) {
 	return executor, true
 }
 
-// Executor returns the registered provider executor for a provider key.
+// Executor 返回某个供应商标识已注册的执行器。
 func (m *Manager) Executor(provider string) (ProviderExecutor, bool) {
 	if m == nil {
 		return nil, false
@@ -1677,7 +1677,7 @@ func (m *Manager) Executor(provider string) (ProviderExecutor, bool) {
 	return m.executorLocked(provider)
 }
 
-// CloseExecutionSession asks all registered executors to release the supplied execution session.
+// CloseExecutionSession 请求所有已注册执行器释放所给执行会话。
 func (m *Manager) CloseExecutionSession(sessionID string) {
 	sessionID = strings.TrimSpace(sessionID)
 	if m == nil || sessionID == "" {
@@ -1735,7 +1735,7 @@ func (m *Manager) shouldRetrySchedulerPick(err error, beforeVersion uint64) bool
 	}
 	syncedVer := m.syncedVersion.Load()
 	if syncedVer > beforeVersion {
-		// A concurrent sync completed while this pick was in-flight; allow one bounded retry.
+		// 本次挑选进行期间有并发同步完成；允许一次有界重试。
 		return true
 	}
 	currentVer := m.currentVersion()
@@ -1757,7 +1757,7 @@ func (m *Manager) checkAndSyncScheduler() bool {
 	defer m.syncSchedulerMu.Unlock()
 	currentVer := m.currentVersion()
 	if currentVer == m.syncedVersion.Load() {
-		// Another goroutine already completed sync for this version; allow retry.
+		// 另一个 goroutine 已完成该版本的同步；允许重试。
 		return true
 	}
 	if !m.schedulerNeedsSync() {
@@ -1819,7 +1819,7 @@ func (m *Manager) pickNextLegacy(ctx context.Context, provider, model string, op
 	}
 	candidates := make([]*Auth, 0, len(m.auths))
 	modelKey := strings.TrimSpace(model)
-	// Always use base model name (without thinking suffix) for auth matching.
+	// 进行 auth 匹配时始终使用基础模型名（不含 thinking 后缀）。
 	if modelKey != "" {
 		parsed := thinking.ParseSuffix(modelKey)
 		if parsed.ModelName != "" {
@@ -1901,8 +1901,8 @@ func (m *Manager) pickNextLegacy(ctx context.Context, provider, model string, op
 	return authCopy, executor, nil
 }
 
-// SelectAuth selects one credential through the configured scheduling strategy.
-// It does not execute or alter the selected credential's result state.
+// SelectAuth 通过所配置的调度策略选择一个凭据。
+// 它不会执行或改变所选凭据的结果状态。
 func (m *Manager) SelectAuth(ctx context.Context, provider, model string, opts cliproxyexecutor.Options) (*Auth, error) {
 	if m != nil && m.HomeEnabled() {
 		return nil, &Error{Code: "home_unavailable", Message: "legacy auth selection is unavailable while Home is enabled", HTTPStatus: http.StatusServiceUnavailable}
@@ -1917,8 +1917,8 @@ func (m *Manager) SelectAuth(ctx context.Context, provider, model string, opts c
 	return selected, nil
 }
 
-// SelectAuthByKind selects one credential of the required kind through the
-// configured scheduling strategy. Credentials of other kinds are skipped.
+// SelectAuthByKind 通过所配置的调度策略选择所需类型的一个
+// 凭据。其他类型的凭据会被跳过。
 func (m *Manager) SelectAuthByKind(ctx context.Context, provider, model, requiredKind string, opts cliproxyexecutor.Options) (*Auth, error) {
 	if m != nil && m.HomeEnabled() {
 		return nil, &Error{Code: "home_unavailable", Message: "legacy auth selection is unavailable while Home is enabled", HTTPStatus: http.StatusServiceUnavailable}
@@ -1942,7 +1942,7 @@ func (m *Manager) SelectAuthByKind(ctx context.Context, provider, model, require
 	return selected, nil
 }
 
-// SelectAuthWithCredentialPolicy selects one local credential allowed by a fixed policy.
+// SelectAuthWithCredentialPolicy 选择一个由固定策略允许的本地凭据。
 func (m *Manager) SelectAuthWithCredentialPolicy(ctx context.Context, provider, model, policy string, opts cliproxyexecutor.Options) (*Auth, error) {
 	if m != nil && m.HomeEnabled() {
 		return nil, &Error{Code: "home_unavailable", Message: "legacy auth selection is unavailable while Home is enabled", HTTPStatus: http.StatusServiceUnavailable}
@@ -1968,7 +1968,7 @@ func (m *Manager) SelectAuthWithCredentialPolicy(ctx context.Context, provider, 
 	return selected, nil
 }
 
-// SelectHomeAuthWithCredentialPolicy selects a policy-constrained Home dispatch while retaining its execution scope.
+// SelectHomeAuthWithCredentialPolicy 选择受策略约束的 Home 派发，同时保留其执行作用域。
 func (m *Manager) SelectHomeAuthWithCredentialPolicy(ctx context.Context, provider, model, policy string, opts cliproxyexecutor.Options) (*HomeDispatchSelection, error) {
 	policy = normalizeCredentialPolicy(policy)
 	if policy == "" {
@@ -2018,7 +2018,7 @@ func (m *Manager) SelectHomeAuthWithCredentialPolicy(ctx context.Context, provid
 	}
 }
 
-// SelectHomeAuthByKind selects a Home dispatch while retaining its execution scope.
+// SelectHomeAuthByKind 选择 Home 派发，同时保留其执行作用域。
 func (m *Manager) SelectHomeAuthByKind(ctx context.Context, provider string, model string, requiredKind string, opts cliproxyexecutor.Options) (*HomeDispatchSelection, error) {
 	requiredKind = normalizeAuthKind(requiredKind)
 	if requiredKind == "" {
@@ -2156,7 +2156,7 @@ func (m *Manager) pickNextMixedLegacy(ctx context.Context, providers []string, m
 	pluginScheduler := m.pluginScheduler
 	candidates := make([]*Auth, 0, len(m.auths))
 	modelKey := strings.TrimSpace(model)
-	// Always use base model name (without thinking suffix) for auth matching.
+	// 进行 auth 匹配时始终使用基础模型名（不含 thinking 后缀）。
 	if modelKey != "" {
 		parsed := thinking.ParseSuffix(modelKey)
 		if parsed.ModelName != "" {

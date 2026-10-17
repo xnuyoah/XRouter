@@ -28,8 +28,8 @@ func requireUnsupportedPart(t *testing.T, label string, err error, wantType stri
 	}
 }
 
-// Only the working payload reaches the upstream, so only its translation error
-// may reject the request. The baseline serves payload rules and is never sent.
+// 只有实际工作的载荷会到达上游，因此只有它的转换错误
+// 才可能拒绝该请求。基线仅用于提供载荷规则，永远不会被发送。
 func TestPairTranslationReportsOnlyTheWorkingError(t *testing.T) {
 	file := []byte(pairFileOnlyClaude)
 	text := []byte(pairTextOnlyClaude)
@@ -75,8 +75,8 @@ func TestPairTranslationReportsOnlyTheWorkingError(t *testing.T) {
 	}
 }
 
-// A Responses request whose only user content is an input_file file id must be
-// refused with a named 400 on the default envelope path and on the compat path.
+// 仅含 input_file 文件 ID 作为用户内容的 Responses 请求必须
+// 在默认信封路径和兼容路径上均以具名 400 被拒绝。
 func TestResponsesFileIDOnlyReturns400OnEveryPath(t *testing.T) {
 	payload := []byte(`{"model":"claude-sonnet-4","input":[{"type":"message","role":"user","content":[{"type":"input_file","file_id":"file-1"}]}]}`)
 	for _, compat := range []bool{false, true} {

@@ -12,18 +12,18 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
-// ComputeOpenAICompatModelsHash returns a stable hash for OpenAI-compat models.
-// Used to detect model list changes during hot reload.
+// ComputeOpenAICompatModelsHash 返回 OpenAI 兼容模型的稳定哈希。
+// 用于在热重载期间检测模型列表变更。
 func ComputeOpenAICompatModelsHash(models []config.OpenAICompatibilityModel) string {
 	return modelconfig.ComputeOpenAICompatModelsHash(models)
 }
 
-// ComputeNativeAPIModelsHash returns a stable hash for native OpenAI-wire API-key models.
+// ComputeNativeAPIModelsHash 返回原生 OpenAI 线路 API-key 模型的稳定哈希。
 func ComputeNativeAPIModelsHash(models []config.NativeAPIModel) string {
 	return modelconfig.ComputeNativeAPIModelsHash(models)
 }
 
-// ComputeExcludedModelsHash returns a normalized hash for excluded model lists.
+// ComputeExcludedModelsHash 返回排除模型列表的规范化哈希。
 func ComputeExcludedModelsHash(excluded []string) string {
 	if len(excluded) == 0 {
 		return ""

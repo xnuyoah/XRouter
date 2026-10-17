@@ -345,7 +345,7 @@ func TestServePluginAuthURLPassesQueryParamsAsMetadata(t *testing.T) {
 		t.Fatalf("capturedReq.Metadata[scopes] = %#v, want [read write]", capturedReq.Metadata["scopes"])
 	}
 
-	// Verify no query parameters passes nil metadata
+	// 验证不带查询参数时会传递 nil 元数据
 	capturedReq = pluginapi.AuthLoginStartRequest{}
 	recNoQuery := httptest.NewRecorder()
 	ctxNoQuery, _ := gin.CreateTestContext(recNoQuery)

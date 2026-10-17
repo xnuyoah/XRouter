@@ -20,22 +20,22 @@ import (
 const (
 	homeAuthCountMetadataKey  = "__cliproxy_home_auth_count"
 	homeRetryRoundMetadataKey = "request_retry_round"
-	// ExcludedAuthIDsMetadataKey stores credential IDs already attempted in the
-	// current request retry round.
+	// ExcludedAuthIDsMetadataKey 存储当前请求重试轮次中
+	// 已尝试过的凭据 ID。
 	ExcludedAuthIDsMetadataKey = "excluded_auth_ids"
-	// CloseAllExecutionSessionsID asks an executor to release all active execution sessions.
-	// Executors that do not support this marker may ignore it.
+	// CloseAllExecutionSessionsID 请求执行器释放所有活跃的执行会话。
+	// 不支持该标记的执行器可以忽略它。
 	CloseAllExecutionSessionsID = "__all_execution_sessions__"
 )
 
-// HomeDispatchBundle is the immutable client and registry pair for one Home lifetime.
+// HomeDispatchBundle 是一个 Home 生命周期内不可变的 client 与 registry 组合。
 type HomeDispatchBundle struct {
 	client     homeAuthDispatcher
 	registry   *executionregistry.Registry
 	generation uint64
 }
 
-// PublishHomeDispatch publishes the selectable Home lifetime as one atomic bundle.
+// PublishHomeDispatch 将可选中的 Home 生命周期作为一个原子组合发布。
 func (m *Manager) PublishHomeDispatch(client homeAuthDispatcher, registry *executionregistry.Registry, generation uint64) *HomeDispatchBundle {
 	if m == nil || client == nil || registry == nil {
 		return nil
@@ -45,7 +45,7 @@ func (m *Manager) PublishHomeDispatch(client homeAuthDispatcher, registry *execu
 	return bundle
 }
 
-// ClearHomeDispatchBundle removes bundle only when it still belongs to the active lifetime.
+// ClearHomeDispatchBundle 仅在 bundle 仍属于活跃生命周期时将其移除。
 func (m *Manager) ClearHomeDispatchBundle(bundle *HomeDispatchBundle) bool {
 	if m == nil || bundle == nil {
 		return false
@@ -53,7 +53,7 @@ func (m *Manager) ClearHomeDispatchBundle(bundle *HomeDispatchBundle) bool {
 	return m.homeDispatchBundle.CompareAndSwap(bundle, nil)
 }
 
-// HomeDispatchBundle returns the active Home lifetime bundle.
+// HomeDispatchBundle 返回活跃的 Home 生命周期组合。
 func (m *Manager) HomeDispatchBundle() *HomeDispatchBundle {
 	if m == nil {
 		return nil
@@ -61,7 +61,7 @@ func (m *Manager) HomeDispatchBundle() *HomeDispatchBundle {
 	return m.homeDispatchBundle.Load()
 }
 
-// SetHomeExecutionRegistry preserves the legacy registry API for callers that also install the current dispatcher.
+// SetHomeExecutionRegistry 为同时安装当前调度器的调用方保留旧版 registry API。
 func (m *Manager) SetHomeExecutionRegistry(registry *executionregistry.Registry) {
 	if m == nil {
 		return
@@ -69,7 +69,7 @@ func (m *Manager) SetHomeExecutionRegistry(registry *executionregistry.Registry)
 	m.PublishHomeDispatch(currentHomeDispatcher(), registry, 0)
 }
 
-// ClearHomeExecutionRegistry removes a matching legacy registry bundle.
+// ClearHomeExecutionRegistry 移除匹配的旧版 registry 组合。
 func (m *Manager) ClearHomeExecutionRegistry(registry *executionregistry.Registry) bool {
 	bundle := m.HomeDispatchBundle()
 	if bundle == nil || bundle.registry != registry {
@@ -78,7 +78,7 @@ func (m *Manager) ClearHomeExecutionRegistry(registry *executionregistry.Registr
 	return m.ClearHomeDispatchBundle(bundle)
 }
 
-// HomeExecutionRegistry returns the registry from the active Home lifetime bundle.
+// HomeExecutionRegistry 返回活跃 Home 生命周期组合中的 registry。
 func (m *Manager) HomeExecutionRegistry() *executionregistry.Registry {
 	bundle := m.HomeDispatchBundle()
 	if bundle == nil {
@@ -87,7 +87,7 @@ func (m *Manager) HomeExecutionRegistry() *executionregistry.Registry {
 	return bundle.registry
 }
 
-// HomeEnabled reports whether the home control plane integration is enabled in the runtime config.
+// HomeEnabled 报告运行时配置中是否启用了 home 控制平面集成。
 func (m *Manager) HomeEnabled() bool {
 	if m == nil {
 		return false
@@ -133,9 +133,9 @@ type homeDispatchRetryAfterError struct {
 	hasRequestRetry bool
 }
 
-// homeRetryRoundExhaustedError marks a terminal error produced after the
-// current Home credential round has been exhausted. The wrapped error retains
-// its status and retry-after metadata for the outer request retry policy.
+// homeRetryRoundExhaustedError 标记在当前 Home 凭据轮次耗尽后
+// 产生的终态错误。被包装的错误会为外层请求重试策略
+// 保留其状态与 retry-after 元数据。
 type homeRetryRoundExhaustedError struct {
 	cause         error
 	retryAfter    time.Duration
@@ -1120,7 +1120,7 @@ func (m *Manager) pickHomeDispatchSelection(ctx context.Context, model string, o
 	}
 	auth := dispatch.Auth
 	if strings.TrimSpace(auth.ID) == "" {
-		// Backward compatibility: older Home instances returned the auth directly.
+		// 向后兼容：较旧的 Home 实例会直接返回 auth。
 		if errUnmarshal := json.Unmarshal(raw, &auth); errUnmarshal != nil {
 			endScope()
 			return nil, &Error{Code: "invalid_auth", Message: "home returned invalid auth payload", HTTPStatus: http.StatusBadGateway}

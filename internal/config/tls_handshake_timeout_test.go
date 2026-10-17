@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-// TestSDKConfigTLSHandshakeTimeout pins the Issue #6615 contract for the
-// opt-in upstream TLS handshake bound: a positive value in seconds enables
-// the bound, while zero or negative values disable it.
+// TestSDKConfigTLSHandshakeTimeout 固定 Issue #6615 关于
+// 可选启用的上游 TLS 握手时限约定：以秒为单位的正值启用
+// 该时限，零或负值则禁用它。
 func TestSDKConfigTLSHandshakeTimeout(t *testing.T) {
 	tests := []struct {
 		name string
@@ -30,8 +30,8 @@ func TestSDKConfigTLSHandshakeTimeout(t *testing.T) {
 	}
 }
 
-// TestParseConfigBytesRequestsTLSHandshakeTimeout ensures the canonical v8
-// layout exposes the setting under requests and parses as integer seconds.
+// TestParseConfigBytesRequestsTLSHandshakeTimeout 确保规范的 v8
+// 布局在 requests 下暴露该设置，并按整数秒解析。
 func TestParseConfigBytesRequestsTLSHandshakeTimeout(t *testing.T) {
 	cfg, errParse := ParseConfigBytes([]byte(`
 requests:
@@ -48,8 +48,8 @@ requests:
 	}
 }
 
-// TestParseConfigBytesRequestsTLSHandshakeTimeoutLegacyLayout ensures the
-// pre-v8 flat layout maps tls-handshake-timeout-seconds onto the same field.
+// TestParseConfigBytesRequestsTLSHandshakeTimeoutLegacyLayout 确保
+// v8 之前的扁平布局将 tls-handshake-timeout-seconds 映射到同一字段。
 func TestParseConfigBytesRequestsTLSHandshakeTimeoutLegacyLayout(t *testing.T) {
 	cfg, errParse := ParseConfigBytes([]byte(`
 tls-handshake-timeout-seconds: 7
@@ -65,9 +65,9 @@ tls-handshake-timeout-seconds: 7
 	}
 }
 
-// TestParseConfigBytesRequestsTLSHandshakeTimeoutPrecedence ensures the
-// canonical requests value, including explicit zero, wins over the flat
-// spelling when a partially migrated document contains both.
+// TestParseConfigBytesRequestsTLSHandshakeTimeoutPrecedence 确保在
+// 部分迁移的文档同时包含两者时，规范的 requests 值（包括显式零）
+// 优先于扁平拼写。
 func TestParseConfigBytesRequestsTLSHandshakeTimeoutPrecedence(t *testing.T) {
 	tests := []struct {
 		name string
@@ -98,9 +98,9 @@ func TestParseConfigBytesRequestsTLSHandshakeTimeoutPrecedence(t *testing.T) {
 	}
 }
 
-// TestParseConfigBytesUpstreamClaudeTLSHandshakeTimeoutIgnored pins the
-// relocation: the never-released upstream.claude spelling must not remain
-// a second functional entry point after moving to requests.
+// TestParseConfigBytesUpstreamClaudeTLSHandshakeTimeoutIgnored 固定该
+// 迁移：从未发布的 upstream.claude 拼写在迁移到 requests 之后
+// 不得继续作为第二个功能入口。
 func TestParseConfigBytesUpstreamClaudeTLSHandshakeTimeoutIgnored(t *testing.T) {
 	cfg, errParse := ParseConfigBytes([]byte(`
 upstream:

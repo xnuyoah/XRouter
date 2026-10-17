@@ -91,17 +91,17 @@ func normalizeResponseSubsequentRequest(rawJSON []byte, lastRequest []byte, last
 		}
 	}
 
-	// Compaction can cause clients to replace local websocket history with a new
-	// compact transcript on the next `response.create`. When the input already
-	// contains historical model output items, treating it as an incremental append
-	// duplicates stale turn-state and can leave late orphaned function_call items.
+	// 压缩可能使客户端在下一次 `response.create` 时用新的
+	// 紧凑记录替换本地 websocket 历史。当输入已经
+	// 包含历史模型输出条目时，将其视为增量追加
+	// 会重复过期的轮次状态，并可能留下迟到的孤立 function_call 条目。
 	if shouldReplaceWebsocketTranscript(rawJSON, nextInput) {
 		normalized := normalizeResponseTranscriptReplacement(rawJSON, lastRequest)
 		return normalized, bytes.Clone(normalized), nil
 	}
 
-	// Websocket v2 mode uses response.create with previous_response_id + incremental input.
-	// Do not expand it into a full input transcript; upstream expects the incremental payload.
+	// Websocket v2 模式使用带 previous_response_id + 增量输入的 response.create。
+	// 不要将其展开为完整的输入记录；上游期望的是增量载荷。
 	if allowIncrementalInputWithPreviousResponseID {
 		prev := strings.TrimSpace(gjson.GetBytes(rawJSON, "previous_response_id").String())
 		if prev == "" {
@@ -134,11 +134,11 @@ func normalizeResponseSubsequentRequest(rawJSON []byte, lastRequest []byte, last
 		}
 	}
 
-	// When the client sends a compact replay for a downstream that can consume it
-	// directly, the input already carries the canonical history. In that case,
-	// skip merging with stale lastRequest/lastResponseOutput to avoid breaking
-	// function_call / function_call_output pairings.
-	// See: https://github.com/xnuyoah/XRouter/issues/2207
+	// 当客户端为能够直接消费紧凑回放的下游发送紧凑回放时，
+	// 输入已经携带规范历史。此时应
+	// 跳过与过期的 lastRequest/lastResponseOutput 合并，以免破坏
+	// function_call / function_call_output 配对。
+	// 参见：https://github.com/xnuyoah/XRouter/issues/2207
 	var mergedInput []byte
 	if allowCompactionReplayBypass && inputContainsFullTranscript(nextInput) {
 		log.Infof("responses websocket: full transcript detected, skipping stale merge (input items=%d)", len(nextInput.Array()))
@@ -330,9 +330,9 @@ type responsesWebsocketInputItem struct {
 }
 
 type responsesWebsocketMergeInputItem struct {
-	// raw may reference a caller-owned request buffer. Merge items must remain
-	// local to mergeResponsesWebsocketInput, which copies every item into the
-	// owned output buffer before returning.
+	// raw 可能引用调用方拥有的请求缓冲区。合并条目必须仅限
+	// mergeResponsesWebsocketInput 内部使用，该函数会在返回前
+	// 将每个条目复制到自有输出缓冲区中。
 	raw      string
 	itemType string
 	id       string
@@ -394,10 +394,10 @@ func responsesWebsocketPreviousInputNoCopy(lastRequest []byte) (gjson.Result, er
 		if !strings.EqualFold(key.String(), "input") {
 			return true
 		}
-		// encoding/json processes matching duplicate fields in source order,
-		// retains the last value, and still reports a type error from any
-		// incompatible duplicate. Preserve those semantics without copying the
-		// selected array out of the caller-owned request buffer.
+		// encoding/json 按源顺序处理匹配的重复字段，
+		// 保留最后一个值，并且仍会报告来自任何
+		// 不兼容重复项的类型错误。在不从调用方拥有的请求缓冲区
+		// 复制所选数组的前提下保留这些语义。
 		inputFound = true
 		input = value
 		if value.Type != gjson.Null && !value.IsArray() {
@@ -536,8 +536,8 @@ func marshalResponsesWebsocketMergeInputItems(items []responsesWebsocketMergeInp
 		outputLength += len(item.raw)
 	}
 
-	// This allocation establishes ownership of the merged transcript and is the
-	// only large allocation the merge path retains after it returns.
+	// 这次分配确立了合并后记录的所有权，也是合并路径
+	// 在返回后所保留的唯一大块分配。
 	out := make([]byte, 0, outputLength)
 	out = append(out, '[')
 	for index, item := range items {
@@ -640,10 +640,10 @@ func dedupeResponsesWebsocketFunctionCalls(items []responsesWebsocketInputItem) 
 }
 
 func dedupeResponsesWebsocketInputItems(items []responsesWebsocketInputItem) []responsesWebsocketInputItem {
-	// Collect the call_ids that are still referenced by tool-call output
-	// items. When several input items share the same id, the one we keep must
-	// preserve any call_id that has a matching output; otherwise the upstream
-	// rejects the request with "No tool call found for function call output".
+	// 收集仍被工具调用输出条目引用的 call_id。
+	// 当多个输入条目共享同一 id 时，我们保留的那个必须
+	// 保留任何存在匹配输出的 call_id；否则上游会
+	// 以 "No tool call found for function call output" 拒绝该请求。
 	referencedCallIDs := make(map[string]struct{}, len(items))
 	for _, item := range items {
 		switch item.itemType {
@@ -654,9 +654,9 @@ func dedupeResponsesWebsocketInputItems(items []responsesWebsocketInputItem) []r
 		}
 	}
 
-	// For each id, choose the index to keep. The default is the last
-	// occurrence (matching the original dedupe behavior), but we never replace
-	// an item whose call_id still has a matching output with one that does not.
+	// 对每个 id 选择要保留的下标。默认保留最后一次
+	// 出现的项（与原去重行为一致），但我们绝不用没有匹配输出的项
+	// 替换其 call_id 仍有匹配输出的项。
 	keepIndexByID := make(map[string]int, len(items))
 	keepReferencedByID := make(map[string]bool, len(items))
 	for index, item := range items {

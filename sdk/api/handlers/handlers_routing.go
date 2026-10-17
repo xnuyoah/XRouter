@@ -16,8 +16,8 @@ import (
 	"golang.org/x/net/context"
 )
 
-// PluginModelRouterHost routes matching requests to a plugin executor, the router's own executor,
-// or a built-in provider before model-to-provider resolution and auth selection.
+// PluginModelRouterHost 在模型到供应商解析与认证选择之前，将匹配的请求路由到插件执行器、
+// 路由器自身的执行器或内置供应商。
 type PluginModelRouterHost interface {
 	RouteModel(context.Context, pluginapi.ModelRouteRequest) (pluginapi.ModelRouteResponse, bool)
 }
@@ -38,9 +38,9 @@ func (h *BaseAPIHandler) getRequestDetails(modelName string) (providers []string
 	return h.getRequestDetailsWithOptions(modelName, false, false)
 }
 
-// providersForExecution resolves the providers and normalized model for a request. When a model
-// router selected a built-in provider, it skips model->provider resolution and uses the router's
-// provider (with an optional target model); otherwise it falls back to the registry-based path.
+// providersForExecution 为请求解析供应商与规范化模型。当模型路由器
+// 选择了内置供应商时，它会跳过 模型->供应商 解析并使用路由器指定的
+// 供应商（可带可选的目标模型）；否则回退到基于注册表的路径。
 func (h *BaseAPIHandler) providersForExecution(modelName, originalRequestedModel string, allowImageModel bool, routeDecision modelRouteDecision, execOptions modelExecutionOptions) ([]string, string, *interfaces.ErrorMessage) {
 	forcedProvider := strings.ToLower(strings.TrimSpace(execOptions.ForcedProvider))
 	if forcedProvider != "" {
@@ -121,23 +121,23 @@ func (h *BaseAPIHandler) getRequestDetailsWithOptions(modelName string, allowIma
 	}
 
 	providers = util.GetProviderName(baseModel)
-	// Fallback: if baseModel has no provider but differs from resolvedModelName,
-	// try using the full model name. This handles edge cases where custom models
-	// may be registered with their full suffixed name (e.g., "my-model(8192)").
-	// Evaluated in Story 11.8: This fallback is intentionally preserved to support
-	// custom model registrations that include thinking suffixes.
+	// 回退：如果 baseModel 没有供应商但与 resolvedModelName 不同，
+	// 则尝试使用完整的模型名。这处理了自定义模型可能以其带后缀的完整名称
+	// 注册的边界情况（例如 "my-model(8192)"）。
+	// 在 Story 11.8 中评估：此回退被有意保留，以支持包含思考后缀的
+	// 自定义模型注册。
 	if len(providers) == 0 && baseModel != resolvedModelName {
 		providers = util.GetProviderName(resolvedModelName)
 	}
 
 	if len(providers) == 0 {
-		// The client asked for a model this proxy cannot route. Report it as a request
-		// error so streaming clients receive an actionable message instead of a
-		// gateway failure they would keep retrying. 400 is used rather than 404 to keep
-		// it distinguishable from an unregistered HTTP route.
-		// The model name is client supplied, so it is inserted through sjson rather
-		// than formatted into the JSON literal: an unescaped quote would otherwise
-		// corrupt the body or let the caller overwrite the error code.
+		// 客户端请求了此代理无法路由的模型。将其报告为请求错误，
+		// 使流式客户端收到可采取行动的消息，而不是一个会不断
+		// 重试的网关失败。这里使用 400 而非 404，以使其区别于
+		// 未注册的 HTTP 路由。
+		// 模型名由客户端提供，因此通过 sjson 插入，而不是格式化进
+		// JSON 字面量：否则一个未转义的引号会破坏响应体，
+		// 或让调用方覆盖错误码。
 		body := `{"error":{"message":"","type":"invalid_request_error","code":"model_not_found","param":"model"}}`
 		body, errSet := sjson.Set(body, "error.message", "unknown provider for model "+modelName)
 		if errSet != nil {
@@ -149,8 +149,8 @@ func (h *BaseAPIHandler) getRequestDetailsWithOptions(modelName string, allowIma
 		}
 	}
 
-	// The thinking suffix is preserved in the model name itself, so no
-	// metadata-based configuration passing is needed.
+	// 思考后缀保留在模型名本身中，
+	// 因此无需通过元数据传递配置。
 	return providers, resolvedModelName, nil
 }
 
@@ -177,8 +177,8 @@ func isOpenAIImageOnlyModel(model string) bool {
 	}
 }
 
-// validateSpeechOnlyModel rejects speech-only models outside the speech endpoints so they are
-// never sent to a chat upstream.
+// validateSpeechOnlyModel 拒绝 speech 端点之外的仅语音模型，
+// 以确保它们永远不会被发送到聊天上游。
 func (h *BaseAPIHandler) validateSpeechOnlyModel(modelName string, allowSpeechModel bool) *interfaces.ErrorMessage {
 	baseModel := strings.TrimSpace(thinking.ParseSuffix(modelName).ModelName)
 	if baseModel == "" {
@@ -276,8 +276,8 @@ func modelRoutersEnabled(host PluginModelRouterHost, skipPluginID string) bool {
 	if detector, ok := host.(modelRouterDetector); ok {
 		return detector.HasModelRouters()
 	}
-	// No detector: treat routing as disabled (same conservative default as before any
-	// ModelRouter existed). Hosts that route must implement HasModelRouters (pluginhost.Host does).
+	// 没有检测器：将路由视为已禁用（与任何 ModelRouter 出现之前的保守默认值相同）。
+	// 负责路由的宿主必须实现 HasModelRouters（pluginhost.Host 已实现）。
 	return false
 }
 

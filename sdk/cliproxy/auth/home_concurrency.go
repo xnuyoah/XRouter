@@ -20,13 +20,13 @@ const (
 
 var ErrMalformedHomeConcurrencyTuple = errors.New("malformed Home concurrency tuple")
 
-// HomeConcurrencyBusyError is a trusted, Home-originated concurrency admission failure.
+// HomeConcurrencyBusyError 是源自 Home 的可信并发准入失败。
 type HomeConcurrencyBusyError struct {
 	cause      *Error
 	retryAfter time.Duration
 }
 
-// NewHomeConcurrencyBusyError creates a typed Home concurrency busy error.
+// NewHomeConcurrencyBusyError 创建带类型的 Home 并发繁忙错误。
 func NewHomeConcurrencyBusyError(message string, retryAfter time.Duration) error {
 	message = strings.TrimSpace(message)
 	if message == "" {
@@ -51,7 +51,7 @@ func (e *HomeConcurrencyBusyError) Error() string {
 	return e.cause.Error()
 }
 
-// Unwrap preserves the Home error's code, retryability, and status for errors.As callers.
+// Unwrap 为使用 errors.As 的调用方保留 Home 错误的代码、可重试性与状态。
 func (e *HomeConcurrencyBusyError) Unwrap() error {
 	if e == nil {
 		return nil
@@ -95,7 +95,7 @@ func validateAccountedHomeConcurrencyTuple(tuple homeConcurrencyTuple) error {
 	return nil
 }
 
-// canonicalHomeConcurrencyModelKey removes recognized reasoning suffixes from a Home limiter model key.
+// canonicalHomeConcurrencyModelKey 从 Home 限流器模型键中移除可识别的推理后缀。
 func canonicalHomeConcurrencyModelKey(model string) string {
 	if !utf8.ValidString(model) {
 		return ""
@@ -278,8 +278,8 @@ func verifyAccountedHomeConcurrencyIdentity(tuple homeConcurrencyTuple, auth *Au
 	return nil
 }
 
-// SafeResponseHeaders returns trusted response headers only for concrete
-// retry/cooldown errors.
+// SafeResponseHeaders 仅为具体的重试/冷却错误
+// 返回可信响应头。
 func SafeResponseHeaders(err error) http.Header {
 	var busy *HomeConcurrencyBusyError
 	if errors.As(err, &busy) && busy != nil {

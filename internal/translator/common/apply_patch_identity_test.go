@@ -8,7 +8,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// A known name does not make either missing downstream ID safe to publish.
+// 已知名称并不能让缺失的下游 ID 变得可以安全发布。
 func TestApplyPatchResponsesNamedLateIdentity(t *testing.T) {
 	for _, first := range []string{"item", "call", "neither", "neither-item-first", "neither-call-first"} {
 		for _, boundary := range []string{"item", "terminal"} {

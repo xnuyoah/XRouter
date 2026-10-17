@@ -1,6 +1,6 @@
-// Package cmd provides command-line interface functionality for the XRouter server.
-// It includes authentication flows for various AI service providers, service startup,
-// and other command-line operations.
+// Package cmd 为 XRouter 服务器提供命令行界面功能。
+// 它包含各种 AI 服务供应商的认证流程、服务启动，
+// 以及其他命令行操作。
 package cmd
 
 import (
@@ -17,19 +17,19 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy"
 )
 
-// StartService builds and runs the proxy service using the exported SDK.
-// It creates a new proxy service instance, sets up signal handling for graceful shutdown,
-// and starts the service with the provided configuration.
+// StartService 使用导出的 SDK 构建并运行代理服务。
+// 它创建新的代理服务实例，设置用于优雅关闭的信号处理，
+// 并以提供的配置启动服务。
 //
-// Parameters:
-//   - cfg: The application configuration
-//   - configPath: The path to the configuration file
-//   - localPassword: Optional password accepted for local management requests
+// 参数：
+//   - cfg: 应用配置
+//   - configPath: 配置文件路径
+//   - localPassword: 本地管理请求可接受的可选密码
 func StartService(cfg *config.Config, configPath string, localPassword string) {
 	StartServiceWithPluginHost(cfg, configPath, localPassword, nil)
 }
 
-// StartServiceWithPluginHost builds and runs the proxy service with a shared plugin host.
+// StartServiceWithPluginHost 使用共享的插件宿主构建并运行代理服务。
 func StartServiceWithPluginHost(cfg *config.Config, configPath string, localPassword string, host *pluginhost.Host, serverOptions ...api.ServerOption) {
 	builder := cliproxy.NewBuilder().
 		WithConfig(cfg).
@@ -67,13 +67,13 @@ func StartServiceWithPluginHost(cfg *config.Config, configPath string, localPass
 	}
 }
 
-// StartServiceBackground starts the proxy service in a background goroutine
-// and returns a cancel function for shutdown and a done channel.
+// StartServiceBackground 在后台 goroutine 中启动代理服务，
+// 并返回用于关闭的 cancel 函数和一个 done channel。
 func StartServiceBackground(cfg *config.Config, configPath string, localPassword string) (cancel func(), done <-chan struct{}) {
 	return StartServiceBackgroundWithPluginHost(cfg, configPath, localPassword, nil)
 }
 
-// StartServiceBackgroundWithPluginHost starts the proxy service with a shared plugin host.
+// StartServiceBackgroundWithPluginHost 使用共享的插件宿主启动代理服务。
 func StartServiceBackgroundWithPluginHost(cfg *config.Config, configPath string, localPassword string, host *pluginhost.Host, serverOptions ...api.ServerOption) (cancel func(), done <-chan struct{}) {
 	builder := cliproxy.NewBuilder().
 		WithConfig(cfg).
@@ -106,16 +106,16 @@ func StartServiceBackgroundWithPluginHost(cfg *config.Config, configPath string,
 	return cancelFn, doneCh
 }
 
-// WaitForCloudDeploy waits indefinitely for shutdown signals in cloud deploy mode
-// when no configuration file is available.
+// WaitForCloudDeploy 在云部署模式下且没有可用配置文件时，
+// 无限期等待关闭信号。
 func WaitForCloudDeploy() {
-	// Clarify that we are intentionally idle for configuration and not running the API server.
+	// 说明我们是有意等待配置而保持空闲，并未运行 API 服务器。
 	log.Info("Cloud deploy mode: No config found; standing by for configuration. API server is not started. Press Ctrl+C to exit.")
 
 	ctxSignal, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	// Block until shutdown signal is received
+	// 阻塞直到收到关闭信号
 	<-ctxSignal.Done()
 	log.Info("Cloud deploy mode: Shutdown signal received; exiting")
 }

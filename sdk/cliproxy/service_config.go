@@ -126,9 +126,9 @@ func (s *Service) applyConfigUpdateWithAuthSynthesis(ctx context.Context, newCfg
 	return s.applyConfigRuntime(ctx, commit, synthesizeConfigAuths)
 }
 
-// commitConfigUpdate applies only in-memory configuration state. Runtime work that
-// may block on plugins, storage, or networking is deliberately deferred. Catalog
-// source generations change here so an older commit cannot restart stale readers.
+// commitConfigUpdate 只应用内存中的配置状态。可能在插件、存储或网络
+// 上阻塞的运行时工作被有意延后。Catalog 的
+// 来源代际在此变更，从而让较旧的提交无法重启过期的读取方。
 func (s *Service) commitConfigUpdate(newCfg *config.Config) configCommit {
 	if s == nil {
 		return configCommit{}

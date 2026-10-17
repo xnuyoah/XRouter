@@ -69,11 +69,11 @@ func TestInspectGrokEncryptedContent_RejectsAntigravityClaudeThinkingSignature(t
 	}
 }
 
-// TestInspectGrokEncryptedContent_RejectsClaudeCAISSignature covers the CAIS
-// envelope emitted by the newest Claude Code models. CAIS payloads are
-// high-entropy standard base64 and drop their padding whenever the decoded
-// length is a multiple of 3, so neither the padding gate nor the classic Claude
-// strict check excludes them on their own.
+// TestInspectGrokEncryptedContent_RejectsClaudeCAISSignature 覆盖
+// 最新 Claude Code 模型所发出的 CAIS 信封。CAIS 载荷是高熵的
+// 标准 base64，且当解码长度是 3 的倍数时会丢掉填充，
+// 因此无论是填充检查还是经典 Claude 严格校验
+// 都无法单独排除它们。
 func TestInspectGrokEncryptedContent_RejectsClaudeCAISSignature(t *testing.T) {
 	cases := []struct {
 		name   string
@@ -105,9 +105,9 @@ func TestInspectGrokEncryptedContent_RejectsClaudeCAISSignature(t *testing.T) {
 	}
 }
 
-// TestInspectGrokEncryptedContent_RejectsProviderCachePrefix keeps provenance
-// envelopes out of the residual class. A prefixed value belongs to whichever
-// provider the prefix names, and must never be replayed to xAI verbatim.
+// TestInspectGrokEncryptedContent_RejectsProviderCachePrefix 将来源信封
+// 排除在残余类别之外。带前缀的值属于该前缀所指明的那个供应商，
+// 绝不能原样重放给 xAI。
 func TestInspectGrokEncryptedContent_RejectsProviderCachePrefix(t *testing.T) {
 	for _, prefix := range []string{"claude#", "anthropic#", "openai#", "codex#"} {
 		sample := prefix + testUnpaddedClaudeCAISSignature()
@@ -117,10 +117,10 @@ func TestInspectGrokEncryptedContent_RejectsProviderCachePrefix(t *testing.T) {
 	}
 }
 
-// TestInspectGrokEncryptedContent_ThresholdMargins documents that neither
-// threshold sits on observed data. The shortest observed native payload is 50
-// decoded bytes and the lowest observed entropy ratio is 0.892, so both limits
-// keep headroom for future models rather than fitting the current corpus exactly.
+// TestInspectGrokEncryptedContent_ThresholdMargins 说明两个阈值
+// 都不落在观测数据之上。观测到的最短原生载荷为 50 个解码字节，
+// 最低熵比为 0.892，因此这两个限制都为未来模型保留了余量，
+// 而不是精确拟合当前语料。
 func TestInspectGrokEncryptedContent_ThresholdMargins(t *testing.T) {
 	const shortestObservedDecodedLen = 50
 	const lowestObservedEntropyRatio = 0.892
@@ -183,10 +183,10 @@ func testUnpaddedClaudeThinkingSignature() string {
 	return testClaudeThinkingSignatureWithOpaqueLen(35)
 }
 
-// testUnpaddedClaudeCAISSignature builds a CAIS signature whose base64 form
-// carries no "=" padding, which is the shape that used to slip past the Grok
-// unpadded-base64 gate. The model text length is varied because padding depends
-// on the encoded payload length.
+// testUnpaddedClaudeCAISSignature 构建一个 base64 形式不带
+// "=" 填充的 CAIS 签名，这正是过去能溜过 Grok 无填充 base64
+// 检查的形态。模型文本长度会变化，因为填充取决于
+// 编码后的载荷长度。
 func testUnpaddedClaudeCAISSignature() string {
 	for suffix := 0; suffix < 8; suffix++ {
 		parts := defaultClaudeCAISParts("claude-opus-5" + strings.Repeat("x", suffix))
@@ -241,11 +241,11 @@ func grokEncryptedContentSamplesPath() (string, bool) {
 	return path, true
 }
 
-// TestDetectSignatureProvider_NeverClassifiesGrok pins the contract that xAI is
-// a target-only family. Its ciphertext carries no envelope, no version byte and
-// no fixed length, so a positive detection rule would necessarily also claim
-// unrelated opaque payloads. Callers establish an xAI target from provenance and
-// then use InspectGrokEncryptedContent as a replay-safety check.
+// TestDetectSignatureProvider_NeverClassifiesGrok 固定这一契约：
+// xAI 是一个仅作为目标的族。其密文不携带信封、不含版本字节
+// 也没有固定长度，因此任何正向识别规则都必然会同时认领
+// 无关的不透明载荷。调用方从来源信息确定 xAI 目标，
+// 然后使用 InspectGrokEncryptedContent 作为重放安全检查。
 func TestDetectSignatureProvider_NeverClassifiesGrok(t *testing.T) {
 	path, ok := grokEncryptedContentSamplesPath()
 	if !ok {

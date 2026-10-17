@@ -20,7 +20,7 @@ func (r usageQueueRecord) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(r))
 }
 
-// GetUsageQueue pops queued usage records from the usage queue.
+// GetUsageQueue 从用量队列中弹出已排队的用量记录。
 func (h *Handler) GetUsageQueue(c *gin.Context) {
 	if h == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "handler unavailable"})

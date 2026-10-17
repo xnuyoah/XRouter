@@ -11,14 +11,14 @@ import (
 	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
-// executorPluginReady reports whether the named plugin can actually execute a
-// request right now: it must declare an executor capability AND resolve a
-// non-empty provider identifier (the same requirement enforced by
-// executorAdapterForPlugin at execution time), allow static execution without
-// selected auth, and declare formats compatible with the current request.
-// Routing pre-checks use this so that targets which would fail at execution are
-// treated as unhandled and fall through to lower-priority routers instead of
-// returning handled then 500ing.
+// executorPluginReady 报告指定插件当前是否真的能执行请求：
+// 它必须声明执行器能力，且能解析出
+// 非空供应商标识（这与执行时 executorAdapterForPlugin
+// 强制的要求相同），允许在没有选中认证的情况下静态执行，
+// 并声明与当前请求兼容的格式。
+// 路由预检查使用这一判断，使那些在执行时会失败的目标
+// 被视为未处理并落到更低优先级的路由器，而不是
+// 返回 handled 之后再报 500。
 func (h *Host) executorPluginReady(pluginID string, routeReq pluginapi.ModelRouteRequest) bool {
 	if h == nil {
 		return false
@@ -73,7 +73,7 @@ func (a *executorAdapter) supportsExecutorFormats(req coreexecutor.Request, opts
 	return errOutput == nil
 }
 
-// PluginExecutorRequestToFormat reports the executor input format selected for a direct plugin executor route.
+// PluginExecutorRequestToFormat 报告直接插件执行器路由所选的执行器输入格式。
 func (h *Host) PluginExecutorRequestToFormat(pluginID string, req coreexecutor.Request, opts coreexecutor.Options) sdktranslator.Format {
 	adapter, errAdapter := h.executorAdapterForPlugin(pluginID)
 	if errAdapter != nil {
@@ -82,7 +82,7 @@ func (h *Host) PluginExecutorRequestToFormat(pluginID string, req coreexecutor.R
 	return adapter.RequestToFormat(req, opts)
 }
 
-// ExecutePluginExecutor executes a request with the named plugin executor without changing the requested model.
+// ExecutePluginExecutor 使用指定插件执行器执行请求，且不改变请求的模型。
 func (h *Host) ExecutePluginExecutor(ctx context.Context, pluginID string, req coreexecutor.Request, opts coreexecutor.Options) (coreexecutor.Response, error) {
 	adapter, errAdapter := h.executorAdapterForPlugin(pluginID)
 	if errAdapter != nil {
@@ -91,7 +91,7 @@ func (h *Host) ExecutePluginExecutor(ctx context.Context, pluginID string, req c
 	return adapter.Execute(ctx, (*coreauth.Auth)(nil), req, opts)
 }
 
-// ExecutePluginExecutorStream executes a streaming request with the named plugin executor without changing the requested model.
+// ExecutePluginExecutorStream 使用指定插件执行器执行流式请求，且不改变请求的模型。
 func (h *Host) ExecutePluginExecutorStream(ctx context.Context, pluginID string, req coreexecutor.Request, opts coreexecutor.Options) (*coreexecutor.StreamResult, error) {
 	adapter, errAdapter := h.executorAdapterForPlugin(pluginID)
 	if errAdapter != nil {
@@ -100,7 +100,7 @@ func (h *Host) ExecutePluginExecutorStream(ctx context.Context, pluginID string,
 	return adapter.ExecuteStream(ctx, (*coreauth.Auth)(nil), req, opts)
 }
 
-// CountPluginExecutor executes a count-tokens request with the named plugin executor without changing the requested model.
+// CountPluginExecutor 使用指定插件执行器执行 count-tokens 请求，且不改变请求的模型。
 func (h *Host) CountPluginExecutor(ctx context.Context, pluginID string, req coreexecutor.Request, opts coreexecutor.Options) (coreexecutor.Response, error) {
 	adapter, errAdapter := h.executorAdapterForPlugin(pluginID)
 	if errAdapter != nil {

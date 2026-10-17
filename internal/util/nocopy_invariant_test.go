@@ -8,17 +8,17 @@ import (
 	"testing"
 )
 
-// inPlaceSJSONTokens are the sjson knobs that let a write reuse the caller's
-// backing array instead of allocating a new one.
+// inPlaceSJSONTokens 是那些让写操作复用调用方底层数组
+// 而不是分配新数组的 sjson 开关。
 var inPlaceSJSONTokens = []string{"ReplaceInPlace", "Optimistic"}
 
-// inPlaceSJSONAllowlist holds files that are allowed to opt into in-place
-// sjson writes. A file may only be added here once it is proven that no
-// no-copy GJSON result (GetGJSONBytesNoCopy / ParseGJSONBytesNoCopy) derived
-// from the same buffer can still be alive at that point.
+// inPlaceSJSONAllowlist 保存允许选择启用原地 sjson 写操作的
+// 文件。只有当证明在相应时点，从同一缓冲区派生出的
+// 无拷贝 GJSON 结果（GetGJSONBytesNoCopy / ParseGJSONBytesNoCopy）
+// 不可能仍然存活时，才能将文件加入此列表。
 var inPlaceSJSONAllowlist = map[string]struct{}{}
 
-// forEachSourceFile visits every non-test Go file in the repository.
+// forEachSourceFile 遍历仓库中每个非测试的 Go 文件。
 func forEachSourceFile(t *testing.T, root string, visit func(rel string, data []byte)) {
 	t.Helper()
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
@@ -54,16 +54,16 @@ func forEachSourceFile(t *testing.T, root string, visit func(rel string, data []
 	}
 }
 
-// TestNoInPlaceSJSONWrites protects the invariant that request payload buffers
-// stay immutable for their whole lifetime.
+// TestNoInPlaceSJSONWrites 保护这一不变量：请求载荷缓冲区
+// 在其整个生命周期内保持不可变。
 //
-// GetGJSONBytesNoCopy and ParseGJSONBytesNoCopy hand out gjson.Result values
-// whose Raw and Str alias the caller's []byte. Go strings must never change,
-// so any in-place mutation of that buffer turns already-derived results into
-// silently wrong data: re-parsing sees the new bytes, and strings that were
-// used as map keys keep a hash computed from the old ones. The race detector
-// cannot see this, and normal tests rarely trigger it, so the invariant is
-// enforced statically here instead.
+// GetGJSONBytesNoCopy 和 ParseGJSONBytesNoCopy 会交出 Raw 与 Str
+// 别名到调用方 []byte 的 gjson.Result 值。Go 字符串绝不能变化，
+// 因此对该缓冲区的任何原地修改都会让已经派生出的结果变成
+// 静默错误的数据：重新解析会看到新的字节，而那些
+// 曾用作 map key 的字符串保留着按旧字节计算出的哈希。竞态检测器
+// 看不到这一点，普通测试也很少触发它，因此这里改为
+// 以静态方式强制该不变量。
 func TestNoInPlaceSJSONWrites(t *testing.T) {
 	root := repoRoot(t)
 	var offenders []string
@@ -84,20 +84,20 @@ func TestNoInPlaceSJSONWrites(t *testing.T) {
 	}
 }
 
-// inPlaceByteWritePatterns match the realistic ways Go code overwrites bytes
-// of an existing buffer: copying into a slice expression, or zeroing elements
-// in a loop. They do not catch every possible form, so they are a tripwire for
-// new code rather than a proof of absence.
+// inPlaceByteWritePatterns 匹配 Go 代码覆盖已有缓冲区字节的
+// 现实方式：向切片表达式复制，或在循环中
+// 将元素清零。它们无法捕获所有可能的形式，因此只是针对
+// 新代码的报警线，而非不存在此类写法的证明。
 var inPlaceByteWritePatterns = []*regexp.Regexp{
 	regexp.MustCompile(`\bcopy\([a-zA-Z_][A-Za-z0-9_.]*\[`),
 	regexp.MustCompile(`^\s*[a-zA-Z_][A-Za-z0-9_.]*\[[a-zA-Z0-9_]+\] = 0\r?$`),
 }
 
-// reviewedInPlaceByteWrites records the reviewed in-place byte writes per file.
-// The count is part of the contract: a new write inside an already reviewed file
-// must be reviewed too, so the count must be updated deliberately. Each reason
-// states why the write cannot corrupt a no-copy GJSON result, either because the
-// buffer is private to the writer or because every reader copies out first.
+// reviewedInPlaceByteWrites 记录每个文件中已审查过的原地字节写操作。
+// 计数是约定的一部分：在已审查过的文件中新增写操作
+// 同样必须被审查，因此计数必须有意识地更新。每条理由
+// 说明该写操作为何不会破坏无拷贝 GJSON 结果，或者因为该
+// 缓冲区为写者私有，或者因为每个读取者都会先复制出来。
 type reviewedInPlaceByteWrite struct {
 	count  int
 	reason string
@@ -109,10 +109,10 @@ var reviewedInPlaceByteWrites = map[string]reviewedInPlaceByteWrite{
 	"internal/pluginstore/auth.go":                        {1, "zeroes a locally built credential buffer after base64 encoding copied it out"},
 }
 
-// TestInPlaceByteWritesAreReviewed keeps the set of in-place byte writes small
-// and justified. Any change to the set, including a new write in an already
-// reviewed file, fails until the author proves that no no-copy GJSON result
-// derived from that buffer can still be alive and records it above.
+// TestInPlaceByteWritesAreReviewed 使原地字节写操作集合保持小巧
+// 且有据可依。对该集合的任何改动，包括在已审查过的文件中
+// 新增写操作，都会失败，直到作者证明从该缓冲区派生出的
+// 无拷贝 GJSON 结果不可能仍然存活并将其记录在上方。
 func TestInPlaceByteWritesAreReviewed(t *testing.T) {
 	root := repoRoot(t)
 	found := make(map[string][]string)

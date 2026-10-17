@@ -5,8 +5,8 @@ import (
 	"net/http"
 )
 
-// UpstreamWebsocketReplayRequiredError indicates that an incremental request
-// cannot safely continue because its upstream websocket is no longer reusable.
+// UpstreamWebsocketReplayRequiredError 表示某个增量请求
+// 无法安全继续，因为其上游 websocket 已不可复用。
 type UpstreamWebsocketReplayRequiredError struct{}
 
 func (*UpstreamWebsocketReplayRequiredError) Error() string {
@@ -17,12 +17,12 @@ func (*UpstreamWebsocketReplayRequiredError) StatusCode() int { return http.Stat
 
 func (*UpstreamWebsocketReplayRequiredError) IsRequestScoped() bool { return true }
 
-// NewUpstreamWebsocketReplayRequiredError creates a request-scoped replay signal.
+// NewUpstreamWebsocketReplayRequiredError 创建请求级的重放信号。
 func NewUpstreamWebsocketReplayRequiredError() error {
 	return &UpstreamWebsocketReplayRequiredError{}
 }
 
-// IsUpstreamWebsocketReplayRequired reports whether err is the internal replay signal.
+// IsUpstreamWebsocketReplayRequired 报告 err 是否为内部重放信号。
 func IsUpstreamWebsocketReplayRequired(err error) bool {
 	var replayErr *UpstreamWebsocketReplayRequiredError
 	return errors.As(err, &replayErr)

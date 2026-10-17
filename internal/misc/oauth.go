@@ -8,12 +8,12 @@ import (
 	"strings"
 )
 
-// GenerateRandomState generates a cryptographically secure random state parameter
-// for OAuth2 flows to prevent CSRF attacks.
+// GenerateRandomState 生成密码学安全的随机 state 参数，
+// 用于 OAuth2 流程以防止 CSRF 攻击。
 //
-// Returns:
-//   - string: A hexadecimal encoded random state string
-//   - error: An error if the random generation fails, nil otherwise
+// 返回：
+//   - string: 十六进制编码的随机 state 字符串
+//   - error: 随机生成失败时返回错误，否则为 nil
 func GenerateRandomState() (string, error) {
 	bytes := make([]byte, 16)
 	if _, err := rand.Read(bytes); err != nil {
@@ -22,7 +22,7 @@ func GenerateRandomState() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-// OAuthCallback captures the parsed OAuth callback parameters.
+// OAuthCallback 保存解析后的 OAuth 回调参数。
 type OAuthCallback struct {
 	Code             string
 	State            string
@@ -31,9 +31,9 @@ type OAuthCallback struct {
 	ErrorDescription string
 }
 
-// AsyncPrompt runs a prompt function in a goroutine and returns channels for
-// the result. The returned channels are buffered (size 1) so the goroutine can
-// complete even if the caller abandons the channels.
+// AsyncPrompt 在 goroutine 中运行提示函数，并返回用于获取
+// 结果的 channel。返回的 channel 带缓冲（大小 1），因此即使调用方
+// 放弃这些 channel，goroutine 仍能完成。
 func AsyncPrompt(promptFn func(string) (string, error), message string) (<-chan string, <-chan error) {
 	inputCh := make(chan string, 1)
 	errCh := make(chan error, 1)
@@ -48,8 +48,8 @@ func AsyncPrompt(promptFn func(string) (string, error), message string) (<-chan 
 	return inputCh, errCh
 }
 
-// ParseOAuthCallback extracts OAuth parameters from a callback URL.
-// It returns nil when the input is empty.
+// ParseOAuthCallback 从回调 URL 中提取 OAuth 参数。
+// 输入为空时返回 nil。
 func ParseOAuthCallback(input string) (*OAuthCallback, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {

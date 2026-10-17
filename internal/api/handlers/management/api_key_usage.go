@@ -53,8 +53,8 @@ func apiKeyUsageProviderKey(auth *coreauth.Auth) string {
 	return provider
 }
 
-// GetAPIKeyUsage returns recent request buckets for all in-memory api_key auths,
-// grouped by provider and keyed by "base_url|api_key".
+// GetAPIKeyUsage 返回所有内存中 api_key auth 的近期请求桶，
+// 按供应商分组，并以 "base_url|api_key" 为键。
 func (h *Handler) GetAPIKeyUsage(c *gin.Context) {
 	if h == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "handler not initialized"})

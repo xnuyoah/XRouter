@@ -85,10 +85,10 @@ func TestManager_ShouldRetryAfterError_RetriesPreHTTPTransportFailure(t *testing
 	}
 }
 
-// TestConfiguredTLSHandshakeTimeoutIsRetryable pins the Issue #6615 retry
-// contract: an internal establishment deadline is a transient pre-HTTP
-// failure even though its chain contains context.DeadlineExceeded, while
-// caller-owned deadline and cancellation shapes remain non-retryable.
+// TestConfiguredTLSHandshakeTimeoutIsRetryable 固定 Issue #6615 的重试
+// 契约：内部建立连接截止时间是一种瞬时的 HTTP 之前
+// 失败，即使其错误链包含 context.DeadlineExceeded；而
+// 调用方拥有的截止时间和取消形态仍不可重试。
 func TestConfiguredTLSHandshakeTimeoutIsRetryable(t *testing.T) {
 	configuredClaudeErr := &url.Error{
 		Op:  "Post",
@@ -381,8 +381,8 @@ func TestExecuteDoesNotPoisonCredentialOnPreHTTPTransportFailure(t *testing.T) {
 	}
 }
 
-// alwaysFailExecutor is local to the configured-handshake retry-round test
-// because transportThenSuccessExecutor intentionally fails only once.
+// alwaysFailExecutor 是配置化握手重试轮次测试的局部实现，
+// 因为 transportThenSuccessExecutor 有意只失败一次。
 type alwaysFailExecutor struct {
 	identifier string
 	fail       error
@@ -417,9 +417,9 @@ func (*alwaysFailExecutor) HttpRequest(context.Context, *Auth, *http.Request) (*
 func (e *alwaysFailExecutor) callCount() int { return e.calls }
 
 // TestExecuteRetriesConfiguredClaudeHandshakeTimeoutToConfiguredRounds
-// verifies the complete request-retry round behavior with one credential:
-// request-retry 3 means the initial attempt plus three additional rounds,
-// and a caller deadline with the same retry setting still runs only once.
+// 验证单个凭据下的完整请求重试轮次行为：
+// request-retry 为 3 表示初始尝试加上三次额外的轮次，
+// 且带相同重试设置的调用方截止时间仍只运行一次。
 func TestExecuteRetriesConfiguredClaudeHandshakeTimeoutToConfiguredRounds(t *testing.T) {
 	previous := quotaCooldownDisabled.Load()
 	quotaCooldownDisabled.Store(false)

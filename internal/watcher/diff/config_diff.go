@@ -10,15 +10,15 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
-// BuildConfigChangeDetails computes a redacted, human-readable list of config changes.
-// Secrets are never printed; only structural or non-sensitive fields are surfaced.
+// BuildConfigChangeDetails 计算经过脱敏、易读的配置变更列表。
+// 密钥绝不会被打印；只会暴露结构性或非敏感字段。
 func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 	changes := make([]string, 0, 16)
 	if oldCfg == nil || newCfg == nil {
 		return changes
 	}
 
-	// Simple scalars
+	// 简单标量
 	if oldCfg.Port != newCfg.Port {
 		changes = append(changes, fmt.Sprintf("port: %d -> %d", oldCfg.Port, newCfg.Port))
 	}
@@ -86,7 +86,7 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 		changes = append(changes, fmt.Sprintf("nonstream-keepalive-interval: %d -> %d", oldCfg.NonStreamKeepAliveInterval, newCfg.NonStreamKeepAliveInterval))
 	}
 
-	// Quota-exceeded behavior
+	// 额度耗尽时的行为
 	if oldCfg.QuotaExceeded.SwitchProject != newCfg.QuotaExceeded.SwitchProject {
 		changes = append(changes, fmt.Sprintf("quota-exceeded.switch-project: %t -> %t", oldCfg.QuotaExceeded.SwitchProject, newCfg.QuotaExceeded.SwitchProject))
 	}
@@ -101,7 +101,7 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 		changes = appendPayloadConfigChanges(changes, oldCfg.Payload, newCfg.Payload)
 	}
 
-	// API keys (redacted) and counts
+	// API 密钥（脱敏）与计数
 	if len(oldCfg.APIKeys) != len(newCfg.APIKeys) {
 		changes = append(changes, fmt.Sprintf("api-keys count: %d -> %d", len(oldCfg.APIKeys), len(newCfg.APIKeys)))
 	} else if !reflect.DeepEqual(trimStrings(oldCfg.APIKeys), trimStrings(newCfg.APIKeys)) {
@@ -164,7 +164,7 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 		changes = append(changes, entries...)
 	}
 
-	// Remote management (never print the key)
+	// 远程管理（绝不打印密钥）
 	if oldCfg.RemoteManagement.AllowRemote != newCfg.RemoteManagement.AllowRemote {
 		changes = append(changes, fmt.Sprintf("remote-management.allow-remote: %t -> %t", oldCfg.RemoteManagement.AllowRemote, newCfg.RemoteManagement.AllowRemote))
 	}
@@ -187,7 +187,7 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 		}
 	}
 
-	// OpenAI compatibility providers (summarized)
+	// OpenAI 兼容供应商（概要）
 	if compat := DiffOpenAICompatibility(oldCfg.OpenAICompatibility, newCfg.OpenAICompatibility); len(compat) > 0 {
 		changes = append(changes, "openai-compatibility:")
 		for _, c := range compat {
@@ -305,7 +305,7 @@ func formatURL(raw string) string {
 	host := strings.TrimSpace(parsed.Host)
 	scheme := strings.TrimSpace(parsed.Scheme)
 	if host == "" {
-		// Allow host:port style without scheme.
+		// 允许不带 scheme 的 host:port 形式。
 		parsed2, err2 := url.Parse("http://" + trimmed)
 		if err2 == nil {
 			host = strings.TrimSpace(parsed2.Host)

@@ -42,7 +42,7 @@ func TestStreamResponseModelObserver_MultiEventChunk(t *testing.T) {
 }
 
 func TestStreamResponseModelObserver_EventPrefix(t *testing.T) {
-	// Chunks starting with event: prefix
+	// 以 event: 前缀开头的分块
 	reporter := newMultiProviderTestReporter(context.Background(), "openai-compat", "flux-pro", nil)
 	observer := NewStreamResponseModelObserver(reporter)
 
@@ -56,7 +56,7 @@ func TestStreamResponseModelObserver_EventPrefix(t *testing.T) {
 }
 
 func TestStreamResponseModelObserver_MultiLineDataEvent(t *testing.T) {
-	// Multi-line data fields within one SSE event
+	// 单个 SSE 事件内的多行 data 字段
 	reporter := newMultiProviderTestReporter(context.Background(), "openai-compat", "dall-e-3", nil)
 	observer := NewStreamResponseModelObserver(reporter)
 
@@ -70,14 +70,14 @@ func TestStreamResponseModelObserver_MultiLineDataEvent(t *testing.T) {
 }
 
 func TestStreamResponseModelObserver_OverflowProtection(t *testing.T) {
-	// A chunk larger than maxBound without newlines (e.g. huge base64 payload)
-	// must be discarded without growing unbounded, and the subsequent valid event must still be parsed.
+	// 不含换行符且大于 maxBound 的分块（例如巨大的 base64 载荷）
+	// 必须被丢弃而不能无限增长，且随后的合法事件仍必须能被解析。
 	reporter := newMultiProviderTestReporter(context.Background(), "openai-compat", "dall-e-3", nil)
 	observer := NewStreamResponseModelObserver(reporter)
 
 	hugeLine := "data: " + strings.Repeat("A", defaultMaxStreamModelBufferBound+1000)
 	observer.Feed([]byte(hugeLine))
-	// Feed end of huge line, then a valid event
+	// 输入超长行的结尾，然后输入一个合法事件
 	observer.Feed([]byte("\n\nevent: result\ndata: {\"model\":\"dall-e-3\"}\n\n"))
 	observer.Finish()
 
@@ -87,7 +87,7 @@ func TestStreamResponseModelObserver_OverflowProtection(t *testing.T) {
 }
 
 func TestStreamResponseModelObserver_FinishFlushesIncompleteLine(t *testing.T) {
-	// Non-SSE stream that ends without a trailing newline
+	// 结尾没有换行符的非 SSE 流
 	reporter := newMultiProviderTestReporter(context.Background(), "openai-compat", "dall-e-3", nil)
 	observer := NewStreamResponseModelObserver(reporter)
 
@@ -101,19 +101,19 @@ func TestStreamResponseModelObserver_FinishFlushesIncompleteLine(t *testing.T) {
 }
 
 func TestStreamResponseModelObserver_RepeatedEmptyDataBounded(t *testing.T) {
-	// Repeated "data:\n" without an empty line must not grow memory unbounded.
-	// The budget and line count limits must drop the event, keep frame bounded,
-	// and resume parsing normally after the event boundary.
+	// 重复的 "data:\n" 且没有空行时不得无限增长内存。
+	// 预算和行数限制必须丢弃该事件、保持帧有界，
+	// 并在事件边界之后恢复正常解析。
 	reporter := newMultiProviderTestReporter(context.Background(), "openai-compat", "dall-e-3", nil)
 	observer := NewStreamResponseModelObserver(reporter)
 
-	// Feed 5000 empty data lines in chunks
+	// 分块输入 5000 个空 data 行
 	emptyDataChunk := strings.Repeat("data:\n", 100)
 	for range 50 {
 		observer.Feed([]byte(emptyDataChunk))
 	}
 
-	// Frame must be cleared due to event overflow, keeping memory strictly bounded
+	// 由于事件溢出，帧必须被清空，从而严格限制内存
 	if len(observer.frame) > defaultMaxLinesPerStreamEvent {
 		t.Fatalf("frame len = %d, exceeded max lines per event %d", len(observer.frame), defaultMaxLinesPerStreamEvent)
 	}
@@ -121,7 +121,7 @@ func TestStreamResponseModelObserver_RepeatedEmptyDataBounded(t *testing.T) {
 		t.Fatalf("expected frame to be dropped after overflow, got len = %d", len(observer.frame))
 	}
 
-	// Terminate the overflowed event and feed a valid event
+	// 终止溢出的事件并输入一个合法事件
 	observer.Feed([]byte("\n\nevent: completion\ndata: {\"model\":\"dall-e-3\"}\n\n"))
 	observer.Finish()
 
@@ -131,11 +131,11 @@ func TestStreamResponseModelObserver_RepeatedEmptyDataBounded(t *testing.T) {
 }
 
 func TestStreamResponseModelObserver_EventOverflowDropsEventUntilBoundary(t *testing.T) {
-	// A multi-line event exceeding maxBound must be discarded up to the event boundary.
+	// 超过 maxBound 的多行事件必须被丢弃，直至事件边界。
 	reporter := newMultiProviderTestReporter(context.Background(), "openai-compat", "dall-e-3", nil)
 	observer := NewStreamResponseModelObserver(reporter)
 
-	// Send an event with lines totaling well over 64 KiB
+	// 发送一个各行总计远超 64 KiB 的事件
 	line := "data: " + strings.Repeat("x", 1024) + "\n"
 	for range 100 {
 		observer.Feed([]byte(line))
@@ -145,7 +145,7 @@ func TestStreamResponseModelObserver_EventOverflowDropsEventUntilBoundary(t *tes
 		t.Fatalf("expected frame to be dropped after overflow, got len = %d", len(observer.frame))
 	}
 
-	// Event boundary, followed by a valid event
+	// 事件边界，随后是一个合法事件
 	observer.Feed([]byte("\n\ndata: {\"model\":\"dall-e-3\"}\n\n"))
 	observer.Finish()
 

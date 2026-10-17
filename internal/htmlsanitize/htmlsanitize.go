@@ -9,12 +9,12 @@ import (
 	"strings"
 )
 
-// String escapes text before it is returned to browser-facing management clients.
+// String 在文本返回给面向浏览器的管理客户端之前对其进行转义。
 func String(value string) string {
 	return html.EscapeString(value)
 }
 
-// Strings escapes each string in values while preserving order.
+// Strings 转义 values 中的每个字符串，同时保持顺序。
 func Strings(values []string) []string {
 	out := make([]string, 0, len(values))
 	for _, value := range values {
@@ -23,7 +23,7 @@ func Strings(values []string) []string {
 	return out
 }
 
-// JSONBody escapes all string values in a JSON document.
+// JSONBody 转义 JSON 文档中的所有字符串值。
 func JSONBody(body []byte) ([]byte, bool) {
 	trimmed := bytes.TrimSpace(body)
 	if len(trimmed) == 0 {
@@ -50,7 +50,7 @@ func JSONBody(body []byte) ([]byte, bool) {
 	return bytes.TrimSuffix(buffer.Bytes(), []byte("\n")), true
 }
 
-// JSONBodyIfLikely escapes JSON bodies when the content type or body shape indicates JSON.
+// JSONBodyIfLikely 在内容类型或正文形态表明为 JSON 时转义 JSON 正文。
 func JSONBodyIfLikely(body []byte, contentType string) ([]byte, bool) {
 	if IsJSONContentType(contentType) || LooksLikeJSON(body) {
 		return JSONBody(body)
@@ -58,7 +58,7 @@ func JSONBodyIfLikely(body []byte, contentType string) ([]byte, bool) {
 	return body, false
 }
 
-// JSONValue recursively escapes string values in JSON-compatible data.
+// JSONValue 递归转义 JSON 兼容数据中的字符串值。
 func JSONValue(value any) any {
 	switch typed := value.(type) {
 	case string:
@@ -80,7 +80,7 @@ func JSONValue(value any) any {
 	}
 }
 
-// IsJSONContentType reports whether contentType is application/json or a +json type.
+// IsJSONContentType 报告 contentType 是否为 application/json 或 +json 类型。
 func IsJSONContentType(contentType string) bool {
 	mediaType, _, errParse := mime.ParseMediaType(strings.TrimSpace(contentType))
 	if errParse != nil {
@@ -90,7 +90,7 @@ func IsJSONContentType(contentType string) bool {
 	return mediaType == "application/json" || strings.HasSuffix(mediaType, "+json")
 }
 
-// LooksLikeJSON reports whether body starts with an object or array JSON marker.
+// LooksLikeJSON 报告 body 是否以对象或数组的 JSON 标记开头。
 func LooksLikeJSON(body []byte) bool {
 	trimmed := bytes.TrimSpace(body)
 	if len(trimmed) == 0 {

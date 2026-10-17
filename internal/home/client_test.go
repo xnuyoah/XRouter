@@ -742,8 +742,8 @@ func TestKVCompareAndSwapOmitsPXWithoutTTL(t *testing.T) {
 	if _, errCAS := client.KVCompareAndSwap(context.Background(), "key", nil, false, []byte("new"), 0); errCAS != nil {
 		t.Fatalf("KVCompareAndSwap() error = %v", errCAS)
 	}
-	// An absent expected value is sent as an empty bulk string, and no TTL means
-	// no PX, which tells Home to store the value without an expiry.
+	// 缺失的期望值会以空 bulk string 发送，而没有 TTL 意味着
+	// 不带 PX，这告诉 Home 存储该值且不设置过期。
 	want := []string{"CAS", "key", "0", "", "new"}
 	if lastCommand := commands.Last(); !reflect.DeepEqual(lastCommand, want) {
 		t.Fatalf("last command = %#v, want %#v", lastCommand, want)
@@ -1146,7 +1146,7 @@ func TestProcessPluginSyncCommandCancellationUnderTLSBackpressure(t *testing.T) 
 		case <-requestReceived:
 			cancel()
 		case errServer := <-serverDone:
-			// Push error back so post-test assertion can inspect it.
+			// 把错误回推，以便测试后的断言可以检查它。
 			serverDone <- errServer
 			cancel()
 		}

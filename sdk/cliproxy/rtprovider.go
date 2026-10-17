@@ -10,8 +10,8 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/proxyutil"
 )
 
-// defaultRoundTripperProvider returns a per-auth HTTP RoundTripper based on
-// the Auth.ProxyURL value. It caches transports per proxy URL string.
+// defaultRoundTripperProvider 根据 Auth.ProxyURL 的值返回按 auth 区分的
+// HTTP RoundTripper。它按代理 URL 字符串缓存传输对象。
 type defaultRoundTripperProvider struct {
 	mu    sync.RWMutex
 	cache map[string]http.RoundTripper
@@ -21,7 +21,7 @@ func newDefaultRoundTripperProvider() *defaultRoundTripperProvider {
 	return &defaultRoundTripperProvider{cache: make(map[string]http.RoundTripper)}
 }
 
-// RoundTripperFor implements coreauth.RoundTripperProvider.
+// RoundTripperFor 实现 coreauth.RoundTripperProvider。
 func (p *defaultRoundTripperProvider) RoundTripperFor(auth *coreauth.Auth) http.RoundTripper {
 	if auth == nil {
 		return nil

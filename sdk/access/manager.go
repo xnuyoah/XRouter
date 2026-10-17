@@ -6,18 +6,18 @@ import (
 	"sync"
 )
 
-// Manager coordinates authentication providers.
+// Manager 协调认证供应商。
 type Manager struct {
 	mu        sync.RWMutex
 	providers []Provider
 }
 
-// NewManager constructs an empty manager.
+// NewManager 构造一个空管理器。
 func NewManager() *Manager {
 	return &Manager{}
 }
 
-// SetProviders replaces the active provider list.
+// SetProviders 替换活动供应商列表。
 func (m *Manager) SetProviders(providers []Provider) {
 	if m == nil {
 		return
@@ -29,7 +29,7 @@ func (m *Manager) SetProviders(providers []Provider) {
 	m.mu.Unlock()
 }
 
-// Providers returns a snapshot of the active providers.
+// Providers 返回活动供应商的快照。
 func (m *Manager) Providers() []Provider {
 	if m == nil {
 		return nil
@@ -41,7 +41,7 @@ func (m *Manager) Providers() []Provider {
 	return snapshot
 }
 
-// Authenticate evaluates providers until one succeeds.
+// Authenticate 依次评估供应商，直到其中一个成功。
 func (m *Manager) Authenticate(ctx context.Context, r *http.Request) (*Result, *AuthError) {
 	if m == nil {
 		return nil, nil

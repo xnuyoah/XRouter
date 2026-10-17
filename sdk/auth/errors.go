@@ -1,6 +1,6 @@
 package auth
 
-// EmailRequiredError indicates that the calling context must provide an email or alias.
+// EmailRequiredError 表示调用上下文必须提供邮箱或别名。
 type EmailRequiredError struct {
 	Prompt string
 }

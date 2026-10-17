@@ -10,9 +10,9 @@ type boundedLRUEntry[K comparable, V any] struct {
 	value V
 }
 
-// BoundedLRU stores at most capacity values and evicts the least recently used
-// value when a new key crosses the bound. The optional eviction callback runs
-// after the cache lock is released.
+// BoundedLRU 最多存储 capacity 个值，并在新键超出上限时逐出
+// 最近最少使用的值。可选的逐出回调在
+// 缓存锁释放后运行。
 type BoundedLRU[K comparable, V any] struct {
 	mu       sync.Mutex
 	capacity int
@@ -33,8 +33,8 @@ func NewBoundedLRU[K comparable, V any](capacity int, onEvict func(K, V)) *Bound
 	}
 }
 
-// GetOrAdd returns the cached value or creates and stores one while holding the
-// cache lock. The create function must not call back into this cache.
+// GetOrAdd 返回缓存值，或在持有
+// 缓存锁期间创建并存储一个值。create 函数不得回调本缓存。
 func (cache *BoundedLRU[K, V]) GetOrAdd(key K, create func() V) V {
 	cache.mu.Lock()
 	if element, ok := cache.entries[key]; ok {

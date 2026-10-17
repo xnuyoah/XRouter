@@ -113,8 +113,8 @@ func TestNativeAPIExecutorSendsOpenAIWireRequestPerFamily(t *testing.T) {
 	}
 }
 
-// The payload rules must be the final semantic barrier: the request that
-// reaches the upstream carries the configured override and filter values.
+// 载荷规则必须是最终语义屏障：到达上游的请求
+// 携带配置的 override 和 filter 值。
 func TestNativeAPIExecutorAppliesPayloadRulesToUpstreamBody(t *testing.T) {
 	cfg := &config.Config{Payload: config.PayloadConfig{
 		Override: []config.PayloadRule{{
@@ -167,8 +167,8 @@ func TestNativeAPIExecutorHonorsConfiguredMaxCompletionTokens(t *testing.T) {
 	}
 }
 
-// Every native family must resolve its configured credential: an omitted family
-// silently drops per-model options such as use-max-completion-tokens.
+// 每个原生族都必须解析其配置的凭据：被省略的族
+// 会静默丢弃诸如 use-max-completion-tokens 之类的逐模型选项。
 func TestNativeAPIExecutorHonorsConfiguredOptionsPerFamily(t *testing.T) {
 	families := []struct {
 		provider string
@@ -228,8 +228,8 @@ func TestNativeAPIExecutorStreamsChatCompletion(t *testing.T) {
 	}
 }
 
-// A credential that declares no models serves the provider family's default
-// catalog, and the deepseek default alias maps the client model to the upstream name.
+// 未声明任何模型的凭据会提供供应商族的默认
+// 目录，且 deepseek 的默认别名会把客户端模型映射到上游名称。
 func TestNativeAPIExecutorServesFamilyDefaultCatalog(t *testing.T) {
 	cfg := &config.Config{
 		DeepseekKey: []config.DeepseekKey{{APIKey: "sk-deepseek"}},
@@ -244,7 +244,7 @@ func TestNativeAPIExecutorServesFamilyDefaultCatalog(t *testing.T) {
 	if base := config.NativeAPIEffectiveBaseURL(&cfg.DeepseekKey[0], "deepseek"); base != config.DefaultDeepseekBaseURL {
 		t.Fatalf("effective base url = %q, want %q", base, config.DefaultDeepseekBaseURL)
 	}
-	// An explicit override wins over the family default.
+	// 显式的 override 优先于族默认值。
 	override := &config.NativeAPIKey{APIKey: "sk", BaseURL: "https://gateway.example.com/v1", Models: []config.NativeAPIModel{{Name: "custom-model", Alias: "custom"}}}
 	if base := config.NativeAPIEffectiveBaseURL(override, "deepseek"); base != "https://gateway.example.com/v1" {
 		t.Fatalf("override base url = %q", base)

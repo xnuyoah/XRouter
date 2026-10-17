@@ -31,7 +31,7 @@ func TestGetRequestDetails_PreservesSuffix(t *testing.T) {
 		{ID: "claude-sonnet-4-5", Created: now + 5},
 	})
 
-	// Ensure cleanup of all test registrations.
+	// 确保清理所有测试注册。
 	clientIDs := []string{
 		"test-request-details-kimi",
 		"test-request-details-openai",
@@ -123,10 +123,10 @@ func TestGetRequestDetails_PreservesSuffix(t *testing.T) {
 	}
 }
 
-// TestGetRequestDetails_UnknownModelErrorResistsJSONInjection pins the unroutable
-// model error body against client-controlled model names. The name is echoed into
-// the body, so formatting it into a JSON literal would let a caller corrupt the
-// payload or overwrite the error code that clients branch on.
+// TestGetRequestDetails_UnknownModelErrorResistsJSONInjection 固定了不可路由
+// 模型错误响应体对客户端可控模型名的处理。该名称会被回显到
+// 响应体中，因此将其格式化为 JSON 字面量会让调用方破坏
+// 载荷或覆盖客户端据以分支的错误码。
 func TestGetRequestDetails_UnknownModelErrorResistsJSONInjection(t *testing.T) {
 	handler := NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, coreauth.NewManager(nil, nil, nil))
 

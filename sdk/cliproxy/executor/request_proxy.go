@@ -7,8 +7,8 @@ import (
 
 type requestProxyContextKey struct{}
 
-// WithRequestProxyURL replaces the execution-scoped proxy override.
-// An empty proxy clears any override inherited from the parent context.
+// WithRequestProxyURL 替换执行作用域的代理覆盖。
+// 空代理会清除从父上下文继承的任何覆盖。
 func WithRequestProxyURL(ctx context.Context, proxyURL string) context.Context {
 	proxyURL = strings.TrimSpace(proxyURL)
 	if ctx == nil {
@@ -17,8 +17,8 @@ func WithRequestProxyURL(ctx context.Context, proxyURL string) context.Context {
 	return context.WithValue(ctx, requestProxyContextKey{}, proxyURL)
 }
 
-// WithoutRequestProxyURL removes an execution-scoped proxy override.
-// Credential refresh uses this so token exchange keeps the account or global proxy.
+// WithoutRequestProxyURL 移除执行作用域的代理覆盖。
+// 凭据刷新使用它，使令牌交换保持账号代理或全局代理。
 func WithoutRequestProxyURL(ctx context.Context) context.Context {
 	if ctx == nil {
 		return context.Background()
@@ -26,7 +26,7 @@ func WithoutRequestProxyURL(ctx context.Context) context.Context {
 	return context.WithValue(ctx, requestProxyContextKey{}, "")
 }
 
-// RequestProxyURL returns the execution-scoped proxy override, or empty when unset.
+// RequestProxyURL 返回执行作用域的代理覆盖，未设置时为空。
 func RequestProxyURL(ctx context.Context) string {
 	if ctx == nil {
 		return ""

@@ -17,8 +17,8 @@ func init() {
 			NonStream: ConvertClaudeResponseToOpenAIResponsesNonStream,
 		},
 	)
-	// The envelope form receives the request context, which carries the
-	// upstream.claude.tool-search value the executor pinned for the request.
+	// 信封形式会接收请求上下文，其中携带执行器为该请求
+	// 固定的 upstream.claude.tool-search 值。
 	sdktranslator.RegisterRequestEnvelope(
 		sdktranslator.FormatOpenAIResponse,
 		sdktranslator.FormatClaude,

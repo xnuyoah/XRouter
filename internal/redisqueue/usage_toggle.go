@@ -8,9 +8,9 @@ func init() {
 	usageStatisticsEnabled.Store(true)
 }
 
-// SetUsageStatisticsEnabled toggles whether usage records are enqueued into the redisqueue payload buffer.
-// This is controlled by the config field `usage-statistics-enabled` and the corresponding management API.
+// SetUsageStatisticsEnabled 切换是否将用量记录入队到 redisqueue 载荷缓冲区。
+// 该行为由配置字段 `usage-statistics-enabled` 及对应的管理 API 控制。
 func SetUsageStatisticsEnabled(enabled bool) { usageStatisticsEnabled.Store(enabled) }
 
-// UsageStatisticsEnabled reports whether the usage queue plugin should publish records.
+// UsageStatisticsEnabled 报告用量队列插件是否应发布记录。
 func UsageStatisticsEnabled() bool { return usageStatisticsEnabled.Load() }

@@ -28,7 +28,7 @@ type homeAppLogPayload struct {
 	client    homeAppLogClient
 }
 
-// HomeAppLogForwarder forwards application logs to Home after the control connection is healthy.
+// HomeAppLogForwarder 在控制连接健康后把应用日志转发给 Home。
 type HomeAppLogForwarder struct {
 	formatter log.Formatter
 	queue     chan homeAppLogPayload
@@ -98,7 +98,7 @@ func registerHomeAppLogForwarder(forwarder *HomeAppLogForwarder) {
 	homeAppLogMuxHook.register(forwarder)
 }
 
-// StartHomeAppLogForwarder registers a Home log forwarding target with the process-wide logrus hook.
+// StartHomeAppLogForwarder 向进程级 logrus hook 注册一个 Home 日志转发目标。
 func StartHomeAppLogForwarder(queueSize int) *HomeAppLogForwarder {
 	if queueSize <= 0 {
 		queueSize = defaultHomeAppLogQueueSize
@@ -115,7 +115,7 @@ func StartHomeAppLogForwarder(queueSize int) *HomeAppLogForwarder {
 	return forwarder
 }
 
-// Stop disables forwarding and waits for the background sender to exit.
+// Stop 禁用转发并等待后台发送协程退出。
 func (f *HomeAppLogForwarder) Stop() {
 	if f == nil {
 		return
@@ -132,7 +132,7 @@ func (f *HomeAppLogForwarder) Stop() {
 	})
 }
 
-// Bind activates forwarding to client.
+// Bind 激活向 client 的转发。
 func (f *HomeAppLogForwarder) Bind(client *home.Client) {
 	f.bind(client)
 }
@@ -150,7 +150,7 @@ func (f *HomeAppLogForwarder) bind(client homeAppLogClient) {
 	f.enabled.Store(true)
 }
 
-// Deactivate stops forwarding only when client owns the forwarder.
+// Deactivate 仅在 client 拥有该转发器时停止转发。
 func (f *HomeAppLogForwarder) Deactivate(client *home.Client) {
 	f.deactivate(client)
 }
@@ -172,12 +172,12 @@ func (f *HomeAppLogForwarder) client() homeAppLogClient {
 	return f.owner
 }
 
-// Levels implements logrus.Hook.
+// Levels 实现 logrus.Hook。
 func (f *HomeAppLogForwarder) Levels() []log.Level {
 	return log.AllLevels
 }
 
-// Fire implements logrus.Hook.
+// Fire 实现 logrus.Hook。
 func (f *HomeAppLogForwarder) Fire(entry *log.Entry) error {
 	if f == nil || entry == nil || !f.enabled.Load() {
 		return nil

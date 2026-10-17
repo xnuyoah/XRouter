@@ -91,7 +91,7 @@ func TestBuildOpenAIResponsesStreamErrorChunkPreservesNestedError(t *testing.T) 
 }
 
 func TestBuildOpenAIResponsesStreamErrorChunkPreservesCustomAndEmptyFields(t *testing.T) {
-	// Preserves empty error object {}
+	// 保留空的 error 对象 {}
 	emptyChunk := BuildOpenAIResponsesStreamErrorChunk(http.StatusBadRequest, `{"error":{}}`, 0)
 	var emptyPayload struct {
 		Type           string         `json:"type"`
@@ -105,7 +105,7 @@ func TestBuildOpenAIResponsesStreamErrorChunkPreservesCustomAndEmptyFields(t *te
 		t.Fatalf("expected empty error object, got %v", emptyPayload.Error)
 	}
 
-	// Preserves custom fields and types without dropping
+	// 保留自定义字段和类型而不会丢弃
 	customText := `{"error":{"type":"custom_type","code":"custom_code","custom_key":"custom_val","is_flag":true,"count":42}}`
 	customChunk := BuildOpenAIResponsesStreamErrorChunk(http.StatusBadRequest, customText, 5)
 	var customPayload struct {

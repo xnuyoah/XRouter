@@ -1,9 +1,9 @@
-// Package openai provides HTTP handlers for OpenAIResponses API endpoints.
-// This package implements the OpenAIResponses-compatible API interface, including model listing
-// and chat completion functionality. It supports both streaming and non-streaming responses,
-// and manages a pool of clients to interact with backend services.
-// The handlers translate OpenAIResponses API requests to the appropriate backend format and
-// convert responses back to OpenAIResponses-compatible format.
+// Package openai 提供 OpenAIResponses API 端点的 HTTP 处理器。
+// 本包实现 OpenAIResponses 兼容的 API 接口，包括模型列表
+// 和聊天补全功能。它同时支持流式和非流式响应，
+// 并管理一组客户端以与后端服务交互。
+// 这些处理器将 OpenAIResponses API 请求转换为相应的后端格式，并
+// 将响应转换回 OpenAIResponses 兼容格式。
 package openai
 
 import (
@@ -55,7 +55,7 @@ func writeResponsesSSEChunk(w io.Writer, chunk []byte) error {
 	return nil
 }
 
-// flushResponsesSSE preserves middleware behavior and transport flush errors.
+// flushResponsesSSE 保留中间件行为和传输层 flush 错误。
 func flushResponsesSSE(w http.ResponseWriter) error {
 	return httpwire.FlushResponse(w)
 }
@@ -146,12 +146,12 @@ func (f *responsesSSEFramer) shouldFilterPrivateEvent(streamEvent, payloadType s
 			return false
 		}
 
-		// Always filter internal WebSocket timing telemetry from SSE streams.
+		// 始终从 SSE 流中过滤内部 WebSocket 计时遥测。
 		if strings.HasPrefix(name, "responsesapi.") {
 			return true
 		}
 
-		// If official Codex client, preserve codex.response.metadata but filter rate limits.
+		// 若是官方 Codex 客户端，则保留 codex.response.metadata 但过滤速率限制。
 		if f != nil && f.isCodexClient {
 			if name == "codex.rate_limits" {
 				return true
@@ -159,7 +159,7 @@ func (f *responsesSSEFramer) shouldFilterPrivateEvent(streamEvent, payloadType s
 			return false
 		}
 
-		// For standard Responses API clients: filter any codex.* private events.
+		// 对标准 Responses API 客户端：过滤所有 codex.* 私有事件。
 		if strings.HasPrefix(name, "codex.") {
 			return true
 		}
@@ -507,41 +507,41 @@ func responsesSSENeedsLineBreak(pending, chunk []byte) bool {
 	return false
 }
 
-// OpenAIResponsesAPIHandler contains the handlers for OpenAIResponses API endpoints.
-// It holds a pool of clients to interact with the backend service.
+// OpenAIResponsesAPIHandler 包含 OpenAIResponses API 端点的处理器。
+// 它持有一组客户端以与后端服务交互。
 type OpenAIResponsesAPIHandler struct {
 	*handlers.BaseAPIHandler
 }
 
-// NewOpenAIResponsesAPIHandler creates a new OpenAIResponses API handlers instance.
-// It takes an BaseAPIHandler instance as input and returns an OpenAIResponsesAPIHandler.
+// NewOpenAIResponsesAPIHandler 创建一个新的 OpenAIResponses API 处理器实例。
+// 它以 BaseAPIHandler 实例作为输入，并返回一个 OpenAIResponsesAPIHandler。
 //
-// Parameters:
-//   - apiHandlers: The base API handlers instance
+// 参数：
+//   - apiHandlers: 基础 API 处理器实例
 //
-// Returns:
-//   - *OpenAIResponsesAPIHandler: A new OpenAIResponses API handlers instance
+// 返回：
+//   - *OpenAIResponsesAPIHandler: 新的 OpenAIResponses API 处理器实例
 func NewOpenAIResponsesAPIHandler(apiHandlers *handlers.BaseAPIHandler) *OpenAIResponsesAPIHandler {
 	return &OpenAIResponsesAPIHandler{
 		BaseAPIHandler: apiHandlers,
 	}
 }
 
-// HandlerType returns the identifier for this handler implementation.
+// HandlerType 返回该处理器实现的标识符。
 func (h *OpenAIResponsesAPIHandler) HandlerType() string {
 	return OpenaiResponse
 }
 
-// Models returns the OpenAIResponses-compatible model metadata supported by this handler.
+// Models 返回该处理器支持的 OpenAIResponses 兼容模型元数据。
 func (h *OpenAIResponsesAPIHandler) Models() []map[string]any {
-	// Get dynamic models from the global registry
+	// 从全局注册表获取动态模型
 	modelRegistry := registry.GetGlobalRegistry()
 	return modelRegistry.GetAvailableModels("openai")
 }
 
-// OpenAIResponsesModels handles the /v1/models endpoint.
-// It returns a list of available AI models with their capabilities
-// and specifications in OpenAIResponses-compatible format.
+// OpenAIResponsesModels 处理 /v1/models 端点。
+// 它以 OpenAIResponses 兼容格式返回可用 AI 模型列表，
+// 包含其能力与规格。
 func (h *OpenAIResponsesAPIHandler) OpenAIResponsesModels(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"object": "list",
@@ -549,15 +549,15 @@ func (h *OpenAIResponsesAPIHandler) OpenAIResponsesModels(c *gin.Context) {
 	})
 }
 
-// Responses handles the /v1/responses endpoint.
-// It determines whether the request is for a streaming or non-streaming response
-// and calls the appropriate handler based on the model provider.
+// Responses 处理 /v1/responses 端点。
+// 它判断请求要求流式还是非流式响应，
+// 并根据模型供应商调用相应的处理器。
 //
-// Parameters:
-//   - c: The Gin context containing the HTTP request and response
+// 参数：
+//   - c: 包含 HTTP 请求和响应的 Gin 上下文
 func (h *OpenAIResponsesAPIHandler) Responses(c *gin.Context) {
 	rawJSON, err := handlers.ReadRequestBody(c)
-	// If data retrieval fails, return a 400 Bad Request error.
+	// 若数据读取失败，则返回 400 Bad Request 错误。
 	if err != nil {
 		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadRequest), handlers.ErrorResponse{
 			Error: handlers.ErrorDetail{
@@ -568,7 +568,7 @@ func (h *OpenAIResponsesAPIHandler) Responses(c *gin.Context) {
 		return
 	}
 
-	// Check if the client requested a streaming response.
+	// 检查客户端是否请求了流式响应。
 	streamResult := gjson.GetBytes(rawJSON, "stream")
 	if streamResult.Type == gjson.True {
 		h.handleStreamingResponse(c, rawJSON)
@@ -622,13 +622,13 @@ func (h *OpenAIResponsesAPIHandler) Compact(c *gin.Context) {
 	cliCancel()
 }
 
-// handleNonStreamingResponse handles non-streaming chat completion responses.
-// It selects a client from the pool, sends the request, and
-// aggregates the response before sending it back to the client in OpenAIResponses format.
+// handleNonStreamingResponse 处理非流式聊天补全响应。
+// 它从客户端池中选择一个客户端，发送请求，
+// 在聚合响应后再以 OpenAIResponses 格式返回给客户端。
 //
-// Parameters:
-//   - c: The Gin context containing the HTTP request and response
-//   - rawJSON: The raw JSON bytes of the OpenAIResponses-compatible request
+// 参数：
+//   - c: 包含 HTTP 请求和响应的 Gin 上下文
+//   - rawJSON: OpenAIResponses 兼容请求的原始 JSON 字节
 func (h *OpenAIResponsesAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSON []byte) {
 	c.Header("Content-Type", "application/json")
 
@@ -648,15 +648,15 @@ func (h *OpenAIResponsesAPIHandler) handleNonStreamingResponse(c *gin.Context, r
 	cliCancel()
 }
 
-// handleStreamingResponse handles streaming responses.
-// It establishes a streaming connection with the backend service and forwards
-// the response chunks to the client in real-time using Server-Sent Events.
+// handleStreamingResponse 处理流式响应。
+// 它与后端服务建立流式连接，并使用 Server-Sent Events
+// 将响应分块实时转发给客户端。
 //
-// Parameters:
-//   - c: The Gin context containing the HTTP request and response
-//   - rawJSON: The raw JSON bytes of the OpenAIResponses-compatible request
+// 参数：
+//   - c: 包含 HTTP 请求和响应的 Gin 上下文
+//   - rawJSON: OpenAIResponses 兼容请求的原始 JSON 字节
 func (h *OpenAIResponsesAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byte) {
-	// Get the http.Flusher interface to manually flush the response.
+	// 获取 http.Flusher 接口以便手动 flush 响应。
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, handlers.ErrorResponse{
@@ -668,7 +668,7 @@ func (h *OpenAIResponsesAPIHandler) handleStreamingResponse(c *gin.Context, rawJ
 		return
 	}
 
-	// New core execution path
+	// 新的核心执行路径
 	modelName := gjson.GetBytes(rawJSON, "model").String()
 	deliveryCtx, finishDelivery := usage.WithStreamDelivery(context.Background())
 	defer finishDelivery(context.Canceled)
@@ -724,7 +724,7 @@ func (h *OpenAIResponsesAPIHandler) handleStreamingResponse(c *gin.Context, rawJ
 	framer := &responsesSSEFramer{failureEvent: failureEvent, isCodexClient: isCodexClient, canComplete: func() bool { return usage.StreamDeliverySupported(cliCtx) }}
 	var initialOutput bytes.Buffer
 
-	// Peek at the first complete SSE data frame.
+	// 预读第一个完整的 SSE 数据帧。
 	for {
 		select {
 		case <-c.Request.Context().Done():
@@ -732,7 +732,7 @@ func (h *OpenAIResponsesAPIHandler) handleStreamingResponse(c *gin.Context, rawJ
 			return
 		case errMsg, ok := <-errChan:
 			if !ok {
-				// Err channel closed cleanly; wait for data channel.
+				// err 通道已正常关闭；等待 data 通道。
 				errChan = nil
 				continue
 			}
@@ -761,7 +761,7 @@ func (h *OpenAIResponsesAPIHandler) handleStreamingResponse(c *gin.Context, rawJ
 				h.forwardResponsesStream(c, flusher, func(err error) { cliCancel(err) }, make(chan []byte), pendingErrors, framer)
 				return
 			}
-			// Upstream failed before SSE was committed. Return JSON with HTTP status.
+			// 上游在 SSE 提交之前就失败了。以 HTTP 状态码返回 JSON。
 			safeErrMsg := sanitizeResponsesInitialErrorMessage(errMsg)
 			h.LoggingAPIResponseError(context.WithValue(context.Background(), "gin", c), safeErrMsg)
 			h.WriteErrorResponse(c, safeErrMsg)
@@ -858,7 +858,7 @@ func (h *OpenAIResponsesAPIHandler) handleStreamingResponse(c *gin.Context, rawJ
 	}
 }
 
-// isCodexResponsesClientRequest limits the alternate terminal event to official Codex clients.
+// isCodexResponsesClientRequest 将备用终态事件限制为官方 Codex 客户端。
 func isCodexResponsesClientRequest(c *gin.Context) bool {
 	if c == nil || c.Request == nil {
 		return false
@@ -875,7 +875,7 @@ func isCodexResponsesClientRequest(c *gin.Context) bool {
 	}
 }
 
-// isCodexClientUserAgent reports whether a User-Agent belongs to an official Codex client.
+// isCodexClientUserAgent 报告某个 User-Agent 是否属于官方 Codex 客户端。
 func isCodexClientUserAgent(userAgent string) bool {
 	userAgent = strings.TrimSpace(userAgent)
 	return strings.HasPrefix(userAgent, "Codex Desktop/") ||
@@ -1060,7 +1060,7 @@ func (h *OpenAIResponsesAPIHandler) forwardResponsesStream(c *gin.Context, flush
 		framer.failureEvent = "error"
 		framer.isCodexClient = false
 	}
-	// Initial frames have already been written and flushed by the caller.
+	// 调用方已经写入并 flush 了初始帧。
 	if framer.writeErr != nil {
 		cancel(framer.writeErr)
 		return

@@ -17,13 +17,13 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
-// PluginAuthParser parses auth JSON owned by plugin providers.
+// PluginAuthParser 解析由插件供应商持有的 auth JSON。
 type PluginAuthParser interface {
 	ParseAuth(context.Context, pluginapi.AuthParseRequest) (*cliproxyauth.Auth, bool, error)
 }
 
-// PluginMultiAuthParser expands one auth JSON payload into multiple plugin auth records.
-// Returning handled=true with an empty slice means the plugin intentionally suppresses built-in parsing.
+// PluginMultiAuthParser 将一个 auth JSON 载荷展开为多条插件 auth 记录。
+// 返回 handled=true 且空切片意味着该插件有意抑制内置解析。
 type PluginMultiAuthParser interface {
 	ParseAuths(context.Context, pluginapi.AuthParseRequest) ([]*cliproxyauth.Auth, bool, error)
 }
@@ -34,7 +34,7 @@ type pluginAuthParserHolder struct {
 
 var pluginAuthParserValue atomic.Value
 
-// RegisterPluginAuthParser registers the current plugin auth parser.
+// RegisterPluginAuthParser 注册当前的插件 auth 解析器。
 func RegisterPluginAuthParser(parser PluginAuthParser) {
 	pluginAuthParserValue.Store(pluginAuthParserHolder{parser: parser})
 }
@@ -51,27 +51,27 @@ func currentPluginAuthParser() PluginAuthParser {
 	return holder.parser
 }
 
-// FileTokenStore persists token records and auth metadata using the filesystem as backing storage.
+// FileTokenStore 以文件系统作为后端存储来持久化 token 记录和 auth 元数据。
 type FileTokenStore struct {
 	mu      sync.Mutex
 	dirLock sync.RWMutex
 	baseDir string
 }
 
-// NewFileTokenStore creates a token store that saves credentials to disk through the
-// TokenStorage implementation embedded in the token record.
+// NewFileTokenStore 创建一个 token 存储，通过
+// token 记录内嵌的 TokenStorage 实现将凭据保存到磁盘。
 func NewFileTokenStore() *FileTokenStore {
 	return &FileTokenStore{}
 }
 
-// SetBaseDir updates the default directory used for auth JSON persistence when no explicit path is provided.
+// SetBaseDir 更新在未提供显式路径时用于 auth JSON 持久化的默认目录。
 func (s *FileTokenStore) SetBaseDir(dir string) {
 	s.dirLock.Lock()
 	s.baseDir = strings.TrimSpace(dir)
 	s.dirLock.Unlock()
 }
 
-// Save persists token storage and metadata to the resolved auth file path.
+// Save 将 token 存储和元数据持久化到解析后的 auth 文件路径。
 func (s *FileTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (string, error) {
 	if auth == nil {
 		return "", fmt.Errorf("auth filestore: auth is nil")
@@ -89,9 +89,9 @@ func (s *FileTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (str
 		return "", fmt.Errorf("auth filestore: missing file path attribute for %s", auth.ID)
 	}
 
-	// Runtime updates must not recreate a disabled credential whose source file
-	// was deliberately removed. Login and migration callers explicitly mark the
-	// save when creating a missing disabled credential is intentional.
+	// 运行时更新不得重建其源文件已被有意移除的
+	// 禁用凭据。登录和迁移调用方在有意创建缺失的
+	// 禁用凭据时会显式标记该保存操作。
 	if auth.Disabled && !cliproxyauth.HasAuthCreationIntent(ctx) {
 		if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
 			return "", nil
@@ -105,7 +105,7 @@ func (s *FileTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (str
 		return "", fmt.Errorf("auth filestore: create dir failed: %w", err)
 	}
 
-	// metadataSetter is a private interface for TokenStorage implementations that support metadata injection.
+	// metadataSetter 是为支持元数据注入的 TokenStorage 实现准备的私有接口。
 	type metadataSetter interface {
 		SetMetadata(map[string]any)
 	}
@@ -170,7 +170,7 @@ func (s *FileTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (str
 	return path, nil
 }
 
-// List enumerates all auth JSON files under the configured directory.
+// List 枚举已配置目录下的所有 auth JSON 文件。
 func (s *FileTokenStore) List(ctx context.Context) ([]*cliproxyauth.Auth, error) {
 	dir := s.baseDirSnapshot()
 	if dir == "" {
@@ -202,7 +202,7 @@ func (s *FileTokenStore) List(ctx context.Context) ([]*cliproxyauth.Auth, error)
 	return entries, nil
 }
 
-// Delete removes the auth file.
+// Delete 删除 auth 文件。
 func (s *FileTokenStore) Delete(ctx context.Context, id string) error {
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -406,7 +406,7 @@ func (s *FileTokenStore) idFor(path, baseDir string) string {
 			id = rel
 		}
 	}
-	// On Windows, normalize ID casing to avoid duplicate auth entries caused by case-insensitive paths.
+	// 在 Windows 上规范化 ID 大小写，以避免大小写不敏感的路径导致重复的 auth 条目。
 	if runtime.GOOS == "windows" {
 		id = strings.ToLower(id)
 	}
@@ -482,7 +482,7 @@ func extractAccessToken(metadata map[string]any) string {
 	return ""
 }
 
-// jsonEqual compares two JSON blobs by parsing them into Go objects and deep comparing.
+// jsonEqual 通过将两个 JSON 数据块解析为 Go 对象并深度比较来比较它们。
 func jsonEqual(a, b []byte) bool {
 	var objA any
 	var objB any

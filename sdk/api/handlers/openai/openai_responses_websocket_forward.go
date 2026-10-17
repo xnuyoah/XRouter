@@ -128,8 +128,8 @@ func (h *OpenAIResponsesAPIHandler) forwardResponsesWebsocket(
 		case chunk, ok := <-data:
 			if !ok {
 				if opts.duplexStream != nil && opts.duplexStream() {
-					// A duplex stream ends with its socket, not an individual response.
-					// The data channel may close before select observes its final error.
+					// 双工流以其套接字结束，而非以单个响应结束。
+					// 数据通道可能在 select 观察到其最终错误之前就关闭。
 					_, errClose := writer.closeWithoutError()
 					cancel(nil)
 					if errClose != nil {
@@ -179,9 +179,9 @@ func (h *OpenAIResponsesAPIHandler) forwardResponsesWebsocket(
 				}
 				recordPendingToolCallIDsFromPayload(pendingToolCallIDs, payloads[i])
 				var payloadErrMsg *interfaces.ErrorMessage
-				// In Codex duplex mode the executor owns connection termination:
-				// payload errors after response.created are recoverable events;
-				// StreamChunk.Err still arrives through errs and closes the socket.
+				// 在 Codex 双工模式下，连接终止由执行器负责：
+				// response.created 之后的载荷错误是可恢复事件；
+				// StreamChunk.Err 仍会通过 errs 到达并关闭套接字。
 				preserveErrorEvent := responseStarted && opts.duplexStream != nil && opts.duplexStream()
 				if eventType == wsEventTypeError && !preserveErrorEvent {
 					payloadErrMsg = responsesWebsocketErrorMessageFromPayload(payloads[i])
@@ -193,9 +193,9 @@ func (h *OpenAIResponsesAPIHandler) forwardResponsesWebsocket(
 						return completedOutput, completedResponseID, sortedStringSet(pendingToolCallIDs), payloadErrMsg, nil
 					}
 				} else if isResponsesWebsocketCompletionEvent(eventType) || eventType == "response.incomplete" {
-					// response.incomplete ends the turn too. Codex uses it, with
-					// reason "interrupted", to acknowledge response.interrupt. Closing
-					// the client socket here would block the follow-up request.
+					// response.incomplete 也会结束该轮次。Codex 使用它并附上
+					// reason "interrupted" 来确认 response.interrupt。在这里关闭
+					// 客户端套接字会阻塞后续请求。
 					completed = true
 					completedOutput = responseCompletedOutputFromPayload(payloads[i], outputItemsByIndex, outputItemsFallback)
 					completedResponseID = responseCompletedIDFromPayload(payloads[i])
@@ -285,14 +285,14 @@ func responsesWebsocketErrorStatus(errMsg *interfaces.ErrorMessage) int {
 	return clienterror.HTTPStatusFromError(errMsg.Error)
 }
 
-// shouldExposeResponsesUpstreamError reports whether a terminal upstream error
-// must reach the downstream client.
+// shouldExposeResponsesUpstreamError 报告终止性上游错误
+// 是否必须传达给下游客户端。
 //
-// Only request-shape failures are exposed: the client can act on them and no
-// credential rotation or retry can make the request succeed. Credential, quota
-// and transport failures stay silent so the client simply reconnects and retries;
-// a fresh connection carries no server-side transcript, so reconnecting already
-// implies a full context resend.
+// 只有请求形态的失败会被暴露：客户端可以针对它们采取行动，且
+// 任何凭据轮换或重试都无法让请求成功。凭据、额度
+// 和传输失败保持静默，客户端只需重连并重试；
+// 新连接不携带服务端记录，因此重连本身
+// 就意味着完整重发上下文。
 func shouldExposeResponsesUpstreamError(errMsg *interfaces.ErrorMessage) bool {
 	if errMsg == nil {
 		return false
@@ -310,9 +310,9 @@ func writeResponsesWebsocketTerminalError(
 	payload []byte,
 ) ([]byte, bool, error) {
 	if !shouldExposeResponsesUpstreamError(errMsg) {
-		// Keep the upstream reason in the request-log timeline even though the client
-		// only observes a closed connection, otherwise silent failures are
-		// undiagnosable after the fact.
+		// 即使客户端只观察到连接被关闭，也要将上游原因保留在请求日志时间线中，
+		// 否则静默失败在事后将
+		// 无法诊断。
 		if wsTimelineLog != nil && errMsg != nil {
 			appendWebsocketTimelineDisconnect(wsTimelineLog, errMsg.Error, time.Now())
 		}

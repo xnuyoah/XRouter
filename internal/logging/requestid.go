@@ -9,20 +9,20 @@ import (
 	"github.com/google/uuid"
 )
 
-// requestIDKey is the context key for storing/retrieving request IDs.
+// requestIDKey 是用于存储/获取请求 ID 的上下文键。
 type requestIDKey struct{}
 
-// ginRequestIDKey is the Gin context key for request IDs.
+// ginRequestIDKey 是请求 ID 的 Gin 上下文键。
 const ginRequestIDKey = "__request_id__"
 
-// GenerateRequestID creates a new UUIDv7 request ID string using the default random source.
-// It returns an error if the underlying random source fails.
+// GenerateRequestID 使用默认随机源创建一个新的 UUIDv7 请求 ID 字符串。
+// 若底层随机源失败则返回错误。
 func GenerateRequestID() (string, error) {
 	return GenerateRequestIDFromReader(nil)
 }
 
-// GenerateRequestIDFromReader creates a new UUIDv7 request ID string using the provided reader.
-// If r is nil, the default crypto/rand source is used.
+// GenerateRequestIDFromReader 使用提供的 reader 创建一个新的 UUIDv7 请求 ID 字符串。
+// 若 r 为 nil，则使用默认的 crypto/rand 源。
 func GenerateRequestIDFromReader(r io.Reader) (string, error) {
 	var id uuid.UUID
 	var errNewV7 error
@@ -37,8 +37,8 @@ func GenerateRequestIDFromReader(r io.Reader) (string, error) {
 	return id.String(), nil
 }
 
-// ShortRequestID returns the trailing 8 characters of a request ID.
-// If requestID is 8 characters or shorter, it returns it unchanged.
+// ShortRequestID 返回请求 ID 末尾的 8 个字符。
+// 若 requestID 不超过 8 个字符，则原样返回。
 func ShortRequestID(requestID string) string {
 	requestID = strings.TrimSpace(requestID)
 	if len(requestID) > 8 {
@@ -47,13 +47,13 @@ func ShortRequestID(requestID string) string {
 	return requestID
 }
 
-// WithRequestID returns a new context with the request ID attached.
+// WithRequestID 返回附带请求 ID 的新上下文。
 func WithRequestID(ctx context.Context, requestID string) context.Context {
 	return context.WithValue(ctx, requestIDKey{}, requestID)
 }
 
-// GetRequestID retrieves the request ID from the context.
-// Returns empty string if not found.
+// GetRequestID 从上下文中获取请求 ID。
+// 若未找到则返回空字符串。
 func GetRequestID(ctx context.Context) string {
 	if ctx == nil {
 		return ""
@@ -64,14 +64,14 @@ func GetRequestID(ctx context.Context) string {
 	return ""
 }
 
-// SetGinRequestID stores the request ID in the Gin context.
+// SetGinRequestID 将请求 ID 存入 Gin 上下文。
 func SetGinRequestID(c *gin.Context, requestID string) {
 	if c != nil {
 		c.Set(ginRequestIDKey, requestID)
 	}
 }
 
-// GetGinRequestID retrieves the request ID from the Gin context.
+// GetGinRequestID 从 Gin 上下文中获取请求 ID。
 func GetGinRequestID(c *gin.Context) string {
 	if c == nil {
 		return ""

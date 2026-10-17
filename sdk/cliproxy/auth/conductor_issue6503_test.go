@@ -21,8 +21,8 @@ func (issue6503QuotaError) StatusCode() int              { return http.StatusToo
 func (issue6503QuotaError) IsCredentialScoped() bool     { return true }
 func (e issue6503QuotaError) RetryAfter() *time.Duration { return &e.retryAfter }
 
-// issue6503StreamExecutor cancels the request context before returning, which mirrors
-// the Codex websocket executor tearing down the downstream connection on an error frame.
+// issue6503StreamExecutor 在返回前取消请求 context，这模拟了
+// Codex websocket 执行器在收到错误帧时拆除下游连接的行为。
 type issue6503StreamExecutor struct {
 	cancel context.CancelFunc
 	err    error
@@ -100,9 +100,9 @@ func TestManagerExecuteStreamPlainCancellationDoesNotCoolCredential(t *testing.T
 	}
 }
 
-// issue6503BootstrapExecutor returns a stream whose first chunk is an upstream quota error
-// while the request context is already canceled, which is what the unbuffered Codex websocket
-// path produces after the downstream connection was closed for the same upstream error.
+// issue6503BootstrapExecutor 返回一个流，其首个分块是上游额度错误，
+// 而请求 context 已被取消，这正是无缓冲的 Codex websocket
+// 路径在因同一上游错误关闭下游连接后所产生的情形。
 type issue6503BootstrapExecutor struct {
 	issue6503StreamExecutor
 }
@@ -142,8 +142,8 @@ func TestManagerExecuteStreamRecordsQuotaCooldownFromCanceledBootstrapChunk(t *t
 	}
 }
 
-// issue6503RefreshExecutor fails the first stream with an unauthorized bootstrap chunk and, after
-// the credential is refreshed, cancels the request context while returning a quota error.
+// issue6503RefreshExecutor 使第一个流以未授权的引导分块失败，并在
+// 凭据刷新之后，在返回额度错误的同时取消请求 context。
 type issue6503RefreshExecutor struct {
 	issue6503StreamExecutor
 	calls int

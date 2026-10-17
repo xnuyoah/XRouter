@@ -7,7 +7,7 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-// SetResponsesToolCallIdentity writes a resolved Responses tool name and namespace.
+// SetResponsesToolCallIdentity 写入解析后的 Responses 工具名与命名空间。
 func SetResponsesToolCallIdentity(item []byte, name, namespace, itemPath string) []byte {
 	namePath := "name"
 	namespacePath := "namespace"
@@ -24,8 +24,8 @@ func SetResponsesToolCallIdentity(item []byte, name, namespace, itemPath string)
 	return item
 }
 
-// ExtractResponsesCallID extracts the tool call ID from a Responses API item,
-// prioritizing dedicated tool call references over generic item IDs:
+// ExtractResponsesCallID 从 Responses API 条目中提取工具调用 ID，
+// 优先使用专用工具调用引用而非通用条目 ID：
 // call_id -> tool_call_id -> callId -> id (excluding fco_ output item IDs)
 func ExtractResponsesCallID(node gjson.Result) string {
 	if callID := strings.TrimSpace(node.Get("call_id").String()); callID != "" {
@@ -44,14 +44,14 @@ func ExtractResponsesCallID(node gjson.Result) string {
 	return id
 }
 
-// NormalizeResponsesToolCallOutputs scans a slice of Responses input items,
-// pairs function_call_output / custom_tool_call_output with preceding pending tool calls,
-// and assigns missing call_ids to tool outputs using a multi-pass matching strategy:
-// 1. Exact explicit call ID match (reserving calls for outputs that explicitly reference them across the entire conversation).
-// 2. Function name match for outputs that omit a call ID (skipping pending calls reserved by future explicit outputs).
-// 3. FIFO queue fallback for remaining outputs that omit a call ID (skipping pending calls reserved by future explicit outputs).
-// Outputs that already carry an explicit call ID that does not match any pending call
-// are never rewritten or stolen.
+// NormalizeResponsesToolCallOutputs 扫描 Responses 输入条目切片，
+// 将 function_call_output / custom_tool_call_output 与其之前待处理的工具调用配对，
+// 并使用多轮匹配策略为工具输出分配缺失的 call_id：
+// 1. 显式 call ID 精确匹配（为整段对话中显式引用它们的输出保留调用）。
+// 2. 对省略 call ID 的输出按函数名匹配（跳过被后续显式输出保留的待处理调用）。
+// 3. 对其余省略 call ID 的输出使用 FIFO 队列回退（跳过被后续显式输出保留的待处理调用）。
+// 已携带显式 call ID 但该 call ID 不匹配任何待处理调用的输出
+// 永远不会被改写或抢占。
 func NormalizeResponsesToolCallOutputs(items []gjson.Result) []gjson.Result {
 	if len(items) == 0 {
 		return items
@@ -102,7 +102,7 @@ func NormalizeResponsesToolCallOutputs(items []gjson.Result) []gjson.Result {
 					matchedForPending[idx] = -1
 				}
 
-				// Pass 1: exact explicit call ID match
+				// 第 1 轮：显式 call ID 精确匹配
 				for pendingIdx, pendingID := range pendingCallIDs {
 					for outIdx, out := range outputs {
 						if !used[outIdx] && ExtractResponsesCallID(out) == pendingID {
@@ -114,7 +114,7 @@ func NormalizeResponsesToolCallOutputs(items []gjson.Result) []gjson.Result {
 					}
 				}
 
-				// Pass 2: match by function name for outputs with no explicit call ID (skipping pending IDs reserved by future explicit outputs)
+				// 第 2 轮：对无显式 call ID 的输出按函数名匹配（跳过被后续显式输出保留的待处理 ID）
 				for pendingIdx, pendingID := range pendingCallIDs {
 					if matchedForPending[pendingIdx] >= 0 || explicitOutputCounts[pendingID] > 0 {
 						continue
@@ -134,7 +134,7 @@ func NormalizeResponsesToolCallOutputs(items []gjson.Result) []gjson.Result {
 					}
 				}
 
-				// Pass 3: FIFO fallback for outputs with no explicit call ID (skipping pending IDs reserved by future explicit outputs)
+				// 第 3 轮：对无显式 call ID 的输出使用 FIFO 回退（跳过被后续显式输出保留的待处理 ID）
 				for pendingIdx := range pendingCallIDs {
 					pendingID := pendingCallIDs[pendingIdx]
 					if matchedForPending[pendingIdx] >= 0 || explicitOutputCounts[pendingID] > 0 {
@@ -153,7 +153,7 @@ func NormalizeResponsesToolCallOutputs(items []gjson.Result) []gjson.Result {
 					}
 				}
 
-				// Apply matched call_ids to outputs
+				// 将匹配到的 call_id 应用到输出
 				var remainingPending []string
 				for pendingIdx, pendingID := range pendingCallIDs {
 					outIdx := matchedForPending[pendingIdx]

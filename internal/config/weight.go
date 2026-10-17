@@ -7,10 +7,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// MaxCredentialWeight is the largest positive credential routing weight.
+// MaxCredentialWeight 是最大的正凭据路由权重。
 const MaxCredentialWeight = int(credentialweight.Max)
 
-// ValidateCredentialWeight validates one optional config credential weight.
+// ValidateCredentialWeight 校验单个可选的配置凭据权重。
 func ValidateCredentialWeight(weight *int) error {
 	if weight == nil {
 		return nil
@@ -108,7 +108,7 @@ func validateOpenAICompatibilityWeightNodes(sequence *yaml.Node) error {
 	return nil
 }
 
-// ValidateCredentialWeights validates weights for every API-key family.
+// ValidateCredentialWeights 校验每个 API-key 家族的权重。
 func (cfg *Config) ValidateCredentialWeights() error {
 	if cfg == nil {
 		return nil

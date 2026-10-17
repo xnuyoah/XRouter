@@ -37,8 +37,8 @@ var (
 	thinkPattern   = regexp.MustCompile(`(?is)\s*<(?:think|thinking)>.*?</(?:think|thinking)>\s*`)
 )
 
-// CanonicalPart is a normalized logical part of a conversation turn.
-// Large values are represented by a bounded sparse sample and retain their original size.
+// CanonicalPart 是对话轮次中经过归一化的逻辑部分。
+// 较大的值使用有界的稀疏采样表示，并保留其原始大小。
 type CanonicalPart struct {
 	Kind         string `json:"kind"`
 	MIME         string `json:"mime,omitempty"`
@@ -48,14 +48,14 @@ type CanonicalPart struct {
 	Sampled      bool   `json:"sampled,omitempty"`
 }
 
-// CanonicalTurn is a protocol-independent conversation turn.
+// CanonicalTurn 是与协议无关的对话轮次。
 type CanonicalTurn struct {
 	Role  string          `json:"role"`
 	Parts []CanonicalPart `json:"parts"`
 }
 
-// FastTurnFingerprint returns a deterministic, bounded fingerprint for one turn.
-// Values larger than 16 KiB are represented by a 12 KiB head/middle/tail sample and full digest.
+// FastTurnFingerprint 为单个轮次返回确定性的、有界的指纹。
+// 大于 16 KiB 的值使用 12 KiB 的首部/中部/尾部采样和完整摘要表示。
 func FastTurnFingerprint(turn CanonicalTurn) string {
 	turn = normalizeCanonicalTurn(turn)
 	hash := sha256.New()
@@ -84,8 +84,8 @@ func writeFingerprintField(hash interface{ Write([]byte) (int, error) }, value s
 	_, _ = hash.Write([]byte("\x00"))
 }
 
-// ExtractCanonicalTurns extracts all logical turns from the supported inbound protocols.
-// Invalid or empty payloads return an empty slice.
+// ExtractCanonicalTurns 从受支持的入站协议中提取所有逻辑轮次。
+// 无效或空的载荷返回空切片。
 func ExtractCanonicalTurns(format sdktranslator.Format, payload []byte) []CanonicalTurn {
 	if len(payload) == 0 {
 		return nil
@@ -307,10 +307,10 @@ func computeHexSHA256(data string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// limitCanonicalParts keeps a single turn bounded so a pathological payload with an
-// unbounded number of parts cannot blow up the fingerprint input. Dropped parts are
-// folded into one deterministic marker part that records their count, so the same
-// input still produces the same fingerprint.
+// limitCanonicalParts 保持单个轮次有界，使得具有无界数量部分的
+// 异常载荷不会撑爆指纹输入。被丢弃的部分会合并为一个确定性的
+// 标记部分来记录其数量，因此相同的输入仍然会产生
+// 相同的指纹。
 func limitCanonicalParts(parts, added []CanonicalPart) []CanonicalPart {
 	if len(added) == 0 {
 		return parts
@@ -501,7 +501,7 @@ func formatEqual(left, right sdktranslator.Format) bool {
 	return strings.EqualFold(strings.TrimSpace(left.String()), strings.TrimSpace(right.String()))
 }
 
-// MerklePrefixMatch describes the best known affinity match for a request.
+// MerklePrefixMatch 描述请求的最佳已知亲和匹配。
 type MerklePrefixMatch struct {
 	AuthID          string
 	SessionID       string
@@ -513,21 +513,21 @@ type MerklePrefixMatch struct {
 	AccessNumber    uint64
 }
 
-// MerklePrefixMatcherConfig controls the bounded in-memory LCP index.
+// MerklePrefixMatcherConfig 控制有界的内存内 LCP 索引。
 type MerklePrefixMatcherConfig struct {
 	TTL       time.Duration
 	MaxTurns  int
 	MaxGroups int
-	// MaxPrefixes bounds group-to-prefix index entries, not just groups.
+	// MaxPrefixes 限制组到前缀索引的条目数，而不仅仅是组的数量。
 	MaxPrefixes int
-	// NowFunc provides a mockable clock for deterministic TTL/expiration tests.
+	// NowFunc 提供可 mock 的时钟，用于确定性的 TTL/过期测试。
 	NowFunc func() time.Time
 }
 
-// MerklePrefixMatcher stores rolling Merkle prefixes and their selected auth bindings.
-// It ignores prefixes that contain only system instructions, because a shared system
-// prompt is not enough evidence that two requests belong to the same conversation.
-// It is safe for concurrent use and has no background goroutine.
+// MerklePrefixMatcher 存储滚动 Merkle 前缀及其选定的 auth 绑定。
+// 它会忽略仅包含系统指令的前缀，因为共享的系统提示不足以证明
+// 两个请求属于同一会话。
+// 它可安全并发使用，且没有后台 goroutine。
 type MerklePrefixMatcher struct {
 	mu            sync.Mutex
 	ttl           time.Duration
@@ -568,12 +568,12 @@ type lcpGroup struct {
 	lastAccessNumber  uint64
 }
 
-// NewMerklePrefixMatcher creates a bounded matcher with a one-hour default TTL.
+// NewMerklePrefixMatcher 创建一个默认 TTL 为一小时的有界匹配器。
 func NewMerklePrefixMatcher(ttl time.Duration) *MerklePrefixMatcher {
 	return NewMerklePrefixMatcherWithConfig(MerklePrefixMatcherConfig{TTL: ttl})
 }
 
-// NewMerklePrefixMatcherWithConfig creates a matcher with explicit resource bounds.
+// NewMerklePrefixMatcherWithConfig 使用显式资源上限创建匹配器。
 func NewMerklePrefixMatcherWithConfig(cfg MerklePrefixMatcherConfig) *MerklePrefixMatcher {
 	if cfg.TTL <= 0 {
 		cfg.TTL = time.Hour
@@ -613,8 +613,8 @@ func (m *MerklePrefixMatcher) now() time.Time {
 	return time.Now()
 }
 
-// Prepare returns bounded turn fingerprints and the first eligible prefix boundary.
-// The returned fingerprints can be retained in request-scoped metadata.
+// Prepare 返回有界的轮次指纹和第一个合格的前缀边界。
+// 返回的指纹可以保留在请求级元数据中。
 func (m *MerklePrefixMatcher) Prepare(turns []CanonicalTurn) ([]string, int) {
 	if m == nil {
 		return nil, 0
@@ -622,8 +622,8 @@ func (m *MerklePrefixMatcher) Prepare(turns []CanonicalTurn) ([]string, int) {
 	return m.fingerprints(turns), minimumAffinityPrefixLength(turns)
 }
 
-// PrepareExt returns bounded turn fingerprints, the first eligible prefix boundary,
-// actual trailing turn fingerprints, and the environment digest across all system turns.
+// PrepareExt 返回有界的轮次指纹、第一个合格的前缀边界、
+// 实际的尾部轮次指纹，以及所有系统轮次的环境摘要。
 func (m *MerklePrefixMatcher) PrepareExt(turns []CanonicalTurn) (fingerprints []string, minPrefixLength int, tailFingerprints []string, envDigest string) {
 	if m == nil {
 		return nil, 0, nil, ""
@@ -631,7 +631,7 @@ func (m *MerklePrefixMatcher) PrepareExt(turns []CanonicalTurn) (fingerprints []
 	return m.fingerprints(turns), minimumAffinityPrefixLength(turns), m.tailFingerprints(turns), EnvironmentDigest(turns)
 }
 
-// EnvironmentDigest computes a deterministic SHA-256 digest across all system and developer turns in a conversation.
+// EnvironmentDigest 计算一次会话中所有 system 和 developer 轮次的确定性 SHA-256 摘要。
 func EnvironmentDigest(turns []CanonicalTurn) string {
 	hash := sha256.New()
 	hasSystem := false
@@ -689,7 +689,7 @@ func extractTailFingerprints(fingerprints []string) []string {
 	return append([]string(nil), fingerprints[start:]...)
 }
 
-// Match returns the longest known prefix match for a request namespace.
+// Match 返回请求命名空间已知的最长前缀匹配。
 func (m *MerklePrefixMatcher) Match(namespace string, turns []CanonicalTurn) (MerklePrefixMatch, bool) {
 	fingerprints, minPrefixLength, tailFingerprints, envDigest := m.PrepareExt(turns)
 	return m.MatchFingerprintsWithContext(namespace, fingerprints, tailFingerprints, envDigest, minPrefixLength)
@@ -712,12 +712,12 @@ func (m *MerklePrefixMatcher) sanitizeFingerprints(fingerprints []string, minPre
 	return fingerprints, minPrefixLength, true
 }
 
-// MatchFingerprints returns the longest known prefix match without reparsing turns.
+// MatchFingerprints 返回已知的最长前缀匹配，无需重新解析轮次。
 func (m *MerklePrefixMatcher) MatchFingerprints(namespace string, fingerprints []string, minPrefixLength int) (MerklePrefixMatch, bool) {
 	return m.MatchFingerprintsWithContext(namespace, fingerprints, extractTailFingerprints(fingerprints), fallbackEnvironmentDigest(fingerprints, minPrefixLength), minPrefixLength)
 }
 
-// MatchFingerprintsWithContext returns the longest known prefix match or compaction continuation with explicit tail and environment context.
+// MatchFingerprintsWithContext 在显式的尾部和环境上下文下返回已知的最长前缀匹配或压缩延续。
 func (m *MerklePrefixMatcher) MatchFingerprintsWithContext(namespace string, fingerprints, tailFingerprints []string, envDigest string, minPrefixLength int) (MerklePrefixMatch, bool) {
 	if m == nil || namespace == "" {
 		return MerklePrefixMatch{}, false
@@ -742,19 +742,19 @@ func (m *MerklePrefixMatcher) MatchFingerprintsWithContext(namespace string, fin
 	return match, true
 }
 
-// Bind records a request sequence for an auth and returns its stable LCP session identity.
+// Bind 为某个 auth 记录请求序列，并返回其稳定的 LCP 会话标识。
 func (m *MerklePrefixMatcher) Bind(namespace string, turns []CanonicalTurn, authID string) string {
 	fingerprints, minPrefixLength, tailFingerprints, envDigest := m.PrepareExt(turns)
 	return m.BindFingerprintsWithContext(namespace, fingerprints, tailFingerprints, envDigest, minPrefixLength, authID).SessionID
 }
 
-// BindWithResult records a request sequence for an auth and returns detailed session identities.
+// BindWithResult 为某个 auth 记录请求序列，并返回详细的会话标识。
 func (m *MerklePrefixMatcher) BindWithResult(namespace string, turns []CanonicalTurn, authID string) MerklePrefixBindResult {
 	fingerprints, minPrefixLength, tailFingerprints, envDigest := m.PrepareExt(turns)
 	return m.BindFingerprintsWithContext(namespace, fingerprints, tailFingerprints, envDigest, minPrefixLength, authID)
 }
 
-// MerklePrefixBindResult describes the session identities produced by binding an LCP sequence.
+// MerklePrefixBindResult 描述绑定 LCP 序列后产生的会话标识。
 type MerklePrefixBindResult struct {
 	SessionID       string
 	ParentSessionID string
@@ -764,17 +764,17 @@ type MerklePrefixBindResult struct {
 	AccessNumber    uint64
 }
 
-// BindFingerprints records a precomputed request sequence for an auth.
+// BindFingerprints 为某个 auth 记录预先计算好的请求序列。
 func (m *MerklePrefixMatcher) BindFingerprints(namespace string, fingerprints []string, minPrefixLength int, authID string) string {
 	return m.BindFingerprintsWithResult(namespace, fingerprints, minPrefixLength, authID).SessionID
 }
 
-// BindFingerprintsWithResult records a precomputed request sequence for an auth and returns detailed session identities.
+// BindFingerprintsWithResult 为某个 auth 记录预先计算好的请求序列，并返回详细的会话标识。
 func (m *MerklePrefixMatcher) BindFingerprintsWithResult(namespace string, fingerprints []string, minPrefixLength int, authID string) MerklePrefixBindResult {
 	return m.BindFingerprintsWithContext(namespace, fingerprints, extractTailFingerprints(fingerprints), fallbackEnvironmentDigest(fingerprints, minPrefixLength), minPrefixLength, authID)
 }
 
-// BindFingerprintsWithContext records a precomputed request sequence for an auth with explicit tail and environment context.
+// BindFingerprintsWithContext 在显式的尾部和环境上下文下为某个 auth 记录预先计算好的请求序列。
 func (m *MerklePrefixMatcher) BindFingerprintsWithContext(namespace string, fingerprints, tailFingerprints []string, envDigest string, minPrefixLength int, authID string) MerklePrefixBindResult {
 	if m == nil || strings.TrimSpace(namespace) == "" || strings.TrimSpace(authID) == "" {
 		return MerklePrefixBindResult{}
@@ -795,18 +795,18 @@ func (m *MerklePrefixMatcher) BindFingerprintsWithContext(namespace string, fing
 	return m.bindLocked(namespace, fingerprints, tailFingerprints, envDigest, minPrefixLength, strings.TrimSpace(authID), m.now())
 }
 
-// Touch refreshes an existing sequence or binds it to authID when it is a new extension.
+// Touch 刷新已有序列，或在它是新的扩展时将其绑定到 authID。
 func (m *MerklePrefixMatcher) Touch(namespace string, turns []CanonicalTurn, authID string) bool {
 	fingerprints, minPrefixLength, tailFingerprints, envDigest := m.PrepareExt(turns)
 	return m.TouchFingerprintsWithContext(namespace, fingerprints, tailFingerprints, envDigest, minPrefixLength, authID)
 }
 
-// TouchFingerprints refreshes or binds a precomputed request sequence.
+// TouchFingerprints 刷新或绑定预先计算好的请求序列。
 func (m *MerklePrefixMatcher) TouchFingerprints(namespace string, fingerprints []string, minPrefixLength int, authID string) bool {
 	return m.TouchFingerprintsWithContext(namespace, fingerprints, extractTailFingerprints(fingerprints), fallbackEnvironmentDigest(fingerprints, minPrefixLength), minPrefixLength, authID)
 }
 
-// TouchFingerprintsWithContext refreshes or binds a precomputed request sequence with explicit tail and environment context.
+// TouchFingerprintsWithContext 在显式的尾部和环境上下文下刷新或绑定预先计算好的请求序列。
 func (m *MerklePrefixMatcher) TouchFingerprintsWithContext(namespace string, fingerprints, tailFingerprints []string, envDigest string, minPrefixLength int, authID string) bool {
 	if m == nil || strings.TrimSpace(namespace) == "" || strings.TrimSpace(authID) == "" {
 		return false
@@ -827,19 +827,19 @@ func (m *MerklePrefixMatcher) TouchFingerprintsWithContext(namespace string, fin
 	return m.touchLocked(namespace, fingerprints, tailFingerprints, envDigest, minPrefixLength, strings.TrimSpace(authID), m.now())
 }
 
-// Remove removes the exact request sequence when it is still bound to authID.
+// Remove 在精确的请求序列仍绑定到 authID 时将其移除。
 func (m *MerklePrefixMatcher) Remove(namespace string, turns []CanonicalTurn, authID string) bool {
 	fingerprints, _ := m.Prepare(turns)
 	return m.RemoveFingerprints(namespace, fingerprints, authID)
 }
 
-// RemoveFingerprints removes an exact precomputed request sequence.
+// RemoveFingerprints 移除精确的预先计算好的请求序列。
 func (m *MerklePrefixMatcher) RemoveFingerprints(namespace string, fingerprints []string, authID string) bool {
 	return m.RemoveFingerprintsBefore(namespace, fingerprints, authID, 0)
 }
 
-// RemoveFingerprintsBefore removes an exact precomputed request sequence only if it has not
-// been refreshed after maxGeneration. If maxGeneration is 0, it removes the sequence unconditionally.
+// RemoveFingerprintsBefore 仅在精确的预先计算好的请求序列未在 maxGeneration 之后
+// 被刷新时将其移除。如果 maxGeneration 为 0，则无条件移除该序列。
 func (m *MerklePrefixMatcher) RemoveFingerprintsBefore(namespace string, fingerprints []string, authID string, maxGeneration uint64) bool {
 	if m == nil || namespace == "" || authID == "" || len(fingerprints) == 0 {
 		return false
@@ -867,15 +867,15 @@ func (m *MerklePrefixMatcher) RemoveFingerprintsBefore(namespace string, fingerp
 		return false
 	}
 	if maxGeneration > 0 && group.lastAccessNumber > maxGeneration {
-		// Entry was refreshed/touched by a newer concurrent request; preserve the active binding.
+		// 该条目已被更新的并发请求刷新/触碰；保留当前活动绑定。
 		return false
 	}
 	m.removeGroupLocked(group)
 	return true
 }
 
-// RemoveSessionBefore removes groups for sessionID bound to authID in namespace
-// that have not been refreshed after maxGeneration.
+// RemoveSessionBefore 移除 namespace 中绑定到 authID 的 sessionID 对应的组，
+// 这些组未在 maxGeneration 之后被刷新。
 func (m *MerklePrefixMatcher) RemoveSessionBefore(namespace, sessionID, authID string, maxGeneration uint64) bool {
 	if m == nil || namespace == "" || sessionID == "" || authID == "" {
 		return false
@@ -903,7 +903,7 @@ func (m *MerklePrefixMatcher) RemoveSessionBefore(namespace, sessionID, authID s
 	return len(toRemove) > 0
 }
 
-// InvalidateAuth removes every LCP binding owned by authID.
+// InvalidateAuth 移除 authID 拥有的所有 LCP 绑定。
 func (m *MerklePrefixMatcher) InvalidateAuth(authID string) {
 	if m == nil || authID == "" {
 		return
@@ -919,7 +919,7 @@ func (m *MerklePrefixMatcher) InvalidateAuth(authID string) {
 	}
 }
 
-// Clear removes all remembered prefix bindings.
+// Clear 移除所有已记忆的前缀绑定。
 func (m *MerklePrefixMatcher) Clear() {
 	if m == nil {
 		return
@@ -930,14 +930,14 @@ func (m *MerklePrefixMatcher) Clear() {
 	m.lruElements = make(map[*lcpGroup]*list.Element)
 	m.groupCount = 0
 	m.prefixCount = 0
-	// Do NOT reset accessCounter to 0. Keeping accessCounter monotonically increasing
-	// across Clear() ensures that in-flight requests with pre-clear generations cannot
-	// accidentally evict newly created post-clear bindings.
+	// 不要将 accessCounter 重置为 0。保持 accessCounter 在 Clear() 前后单调递增，
+	// 可确保带有清空前代际的在途请求不会意外地
+	// 驱逐清空后新建的绑定。
 	m.mu.Unlock()
 }
 
-// LookupSession observes the bound authIDs for an LCP sessionID without side effects or TTL refresh.
-// It skips expired groups and cleans them up, returning all distinct active authIDs.
+// LookupSession 观察某个 LCP sessionID 绑定的 authID，不产生副作用也不刷新 TTL。
+// 它会跳过并清理已过期的组，返回所有不同的活动 authID。
 func (m *MerklePrefixMatcher) LookupSession(sessionID string) (authIDs []string, namespace string, ok bool) {
 	if m == nil || sessionID == "" {
 		return nil, "", false
@@ -1035,7 +1035,7 @@ func (m *MerklePrefixMatcher) touchLocked(namespace string, fingerprints, tailFi
 	key := sequenceKey(fingerprints)
 	if existing := ns.groups[key]; existing != nil {
 		if !now.Before(existing.expiresAt) {
-			// Entry is expired; remove it and re-bind.
+			// 条目已过期；将其移除并重新绑定。
 			m.removeGroupLocked(existing)
 			m.bindLocked(namespace, fingerprints, tailFingerprints, envDigest, minPrefixLength, authID, now)
 			return true
@@ -1044,8 +1044,8 @@ func (m *MerklePrefixMatcher) touchLocked(namespace string, fingerprints, tailFi
 			if existing.authID == "home-pending" || existing.authID == "" {
 				existing.authID = authID
 			} else {
-				// Sequence was already rebound to a different auth (e.g. after failover).
-				// Delayed success must not overwrite the active binding.
+				// 该序列已重新绑定到另一个 auth（例如故障转移之后）。
+				// 延迟的成功结果不得覆盖当前活动绑定。
 				return false
 			}
 		}
@@ -1299,12 +1299,12 @@ func (m *MerklePrefixMatcher) matchLocked(namespace string, fingerprints, tailFi
 		isFork := false
 		nodeKind := best.nodeKind
 
-		// Divergence check:
-		// A request represents a true fork if the longest matched common prefix is strictly
-		// shorter than the matched group's trajectory, and the request extends past that prefix.
+		// 分叉检查：
+		// 如果最长匹配的公共前缀严格短于匹配组的轨迹，且请求延伸到
+		// 该前缀之外，则该请求表示真正的分叉。
 		if bestLength < len(best.fingerprints) && len(fingerprints) > bestLength {
-			// Before declaring this a divergent fork, check if the candidate request preserves
-			// a trailing subsequence of the parent trajectory (in-place compaction milestone).
+			// 在判定这是分叉之前，检查候选请求是否保留了
+			// 父轨迹的一段尾随子序列（原地压缩里程碑）。
 			if compactionMatch, okCompaction := m.matchCompactionLocked(ns, namespace, fingerprints, tailFingerprints, envDigest, prefixKeys, minPrefixLength, bestLength, now); okCompaction {
 				return compactionMatch, true
 			}
@@ -1351,7 +1351,7 @@ func (m *MerklePrefixMatcher) matchCompactionLocked(ns *lcpNamespace, namespace 
 		if len(candidateGroups) == 0 {
 			continue
 		}
-		// Lazy prune expired entries from the bucket and count live active groups
+		// 惰性清理桶中已过期的条目，并统计存活的活跃组数量
 		activeCount := 0
 		for group := range candidateGroups {
 			if group == nil || !now.Before(group.expiresAt) {
@@ -1405,7 +1405,7 @@ func (m *MerklePrefixMatcher) matchCompactionLocked(ns *lcpNamespace, namespace 
 		return MerklePrefixMatch{}, false
 	}
 
-	// Filter out any candidate that is an ancestor of another candidate in maxCandidates
+	// 过滤掉 maxCandidates 中作为其他候选祖先的候选
 	var leaves []*lcpGroup
 	for _, c1 := range maxCandidates {
 		isAncestor := false
@@ -1421,7 +1421,7 @@ func (m *MerklePrefixMatcher) matchCompactionLocked(ns *lcpNamespace, namespace 
 	}
 
 	if len(leaves) != 1 {
-		// Ambiguous: multiple distinct lineage leaves share the exact same tail overlap
+		// 有歧义：多个不同的谱系叶子共享完全相同的尾部重叠
 		return MerklePrefixMatch{}, false
 	}
 
@@ -1507,9 +1507,9 @@ func isCompactionOverlap(fullCandLen, candTailLen, candEnd int, fullParentLen, p
 		}
 	}
 
-	// Must exhibit history reduction:
-	// either early candidate turns were collapsed into a summary,
-	// or early parent turns were truncated away (parentStart > 0).
+	// 必须体现历史缩减：
+	// 要么早期的候选轮次被折叠为摘要，
+	// 要么早期的父轮次被截断移除（parentStart > 0）。
 	return (candEnd-overlap+1 > 0) || parentStart > 0
 }
 
@@ -1535,8 +1535,8 @@ func newestMatchingGroup(bucket map[string]*lcpGroup, fingerprints []string, now
 		if group == nil || !now.Before(group.expiresAt) || group.minPrefixLength > len(fingerprints) || len(group.fingerprints) < len(fingerprints) || !equalStrings(group.fingerprints[:len(fingerprints)], fingerprints) {
 			continue
 		}
-		// Prefer the longest known trajectory so an exact prefix match on an earlier turn
-		// does not mask a deeper divergent fork. Break ties by recency of access.
+		// 优先选择已知的最长轨迹，以免较早轮次上的精确前缀匹配
+		// 掩盖更深的分叉。按访问的新近程度打破平局。
 		if best == nil || len(group.fingerprints) > len(best.fingerprints) ||
 			(len(group.fingerprints) == len(best.fingerprints) &&
 				(group.lastAccessNumber > best.lastAccessNumber ||

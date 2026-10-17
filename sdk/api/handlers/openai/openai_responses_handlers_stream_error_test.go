@@ -454,8 +454,8 @@ func TestResponsesHandlerDoesNotLoseErrorBeforeFirstPayload(t *testing.T) {
 	}
 }
 
-// TestForwardResponsesStreamExposesTerminalErrors pins the SSE side: once a
-// Responses stream has started, every terminal upstream error reaches the client.
+// TestForwardResponsesStreamExposesTerminalErrors 固定 SSE 一侧：一旦
+// Responses 流已开始，每个终止性上游错误都会到达客户端。
 func TestForwardResponsesStreamExposesTerminalErrors(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -472,8 +472,8 @@ func TestForwardResponsesStreamExposesTerminalErrors(t *testing.T) {
 			wantExposed: true,
 		},
 		{
-			// Observed in production: the same cyber_policy rejection arrives with 502
-			// when it is surfaced through the websocket disconnect channel.
+			// 生产环境观察到的现象：同样的 cyber_policy 拒绝在通过
+			// websocket 断开通道上报时会以 502 到达。
 			name:        "cyber policy behind bad gateway status",
 			status:      http.StatusBadGateway,
 			message:     `{"error":{"type":"invalid_request","code":"cyber_policy","message":"This content was flagged for possible cybersecurity risk.","param":null}}`,

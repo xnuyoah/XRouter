@@ -12,51 +12,51 @@ import (
 	applypatch "github.com/xnuyoah/XRouter/v8/internal/client/codex/apply-patch"
 )
 
-// ResponsesToolIdentity represents the resolved identity of a tool in OpenAI Responses format.
+// ResponsesToolIdentity 表示工具在 OpenAI Responses 格式中解析后的身份。
 type ResponsesToolIdentity struct {
 	Name       string
 	Namespace  string
 	Custom     bool
-	ApplyPatch bool // Resolved from the winning original declaration, never from the upstream name.
-	ToolSearch bool // Marks the function shim standing in for a client-executed tool_search declaration.
+	ApplyPatch bool // 解析自胜出的原始声明，绝不来自上游名称。
+	ToolSearch bool // 标记替代客户端执行的 tool_search 声明的函数垫片。
 }
 
 const (
-	// ResponsesToolSearchType is the Responses tool type for deferred tool discovery.
+	// ResponsesToolSearchType 是用于延迟工具发现的 Responses 工具类型。
 	ResponsesToolSearchType = "tool_search"
-	// ResponsesToolSearchExecutionClient marks a tool_search that the client executes itself.
+	// ResponsesToolSearchExecutionClient 标记由客户端自行执行的 tool_search。
 	ResponsesToolSearchExecutionClient = "client"
-	// ResponsesToolSearchFunctionName is the function name exposed to providers
-	// that have no native tool_search support.
+	// ResponsesToolSearchFunctionName 是暴露给不支持原生 tool_search
+	// 的供应商所使用的函数名。
 	ResponsesToolSearchFunctionName = "tool_search"
-	// ResponsesClientToolSearchKey is the internal forwardMap key for the
-	// client-executed tool_search shim. The leading NUL byte cannot appear in a
-	// JSON identifier, preventing collisions with user-declared tool names.
+	// ResponsesClientToolSearchKey 是客户端执行的 tool_search 垫片
+	// 所用的内部 forwardMap 键。前导 NUL 字节不会出现在
+	// JSON 标识符中，从而避免与用户声明的工具名冲突。
 	ResponsesClientToolSearchKey = "\x00client_tool_search"
-	// ResponsesToolSearchCallType is the Responses item type for a tool_search invocation.
+	// ResponsesToolSearchCallType 是 tool_search 调用的 Responses 条目类型。
 	ResponsesToolSearchCallType = "tool_search_call"
-	// ResponsesToolSearchOutputType is the Responses input item carrying discovered tools.
+	// ResponsesToolSearchOutputType 是携带已发现工具的 Responses 输入条目。
 	ResponsesToolSearchOutputType = "tool_search_output"
-	// ResponsesDiscoveredToolPriority ranks tools loaded by tool_search_output after declared tools.
+	// ResponsesDiscoveredToolPriority 将 tool_search_output 加载的工具排在已声明工具之后。
 	ResponsesDiscoveredToolPriority = 2
 
 	responsesToolSearchDefaultParameters = `{"type":"object","properties":{"query":{"type":"string","description":"Search query for deferred tools."},"limit":{"type":"number","description":"Maximum number of tools to return."}},"required":["query"],"additionalProperties":false}`
 )
 
-// ResponsesToolDescriptor is an internal representation of a tool declaration in a Responses request.
+// ResponsesToolDescriptor 是 Responses 请求中工具声明的内部表示。
 type ResponsesToolDescriptor struct {
-	Name           string // Qualified name (e.g. "functions__exec" or "exec")
-	LocalName      string // Local name without namespace (e.g. "exec")
-	Namespace      string // Namespace if any (e.g. "functions")
-	ToolType       string // "function", "custom", etc.
+	Name           string // 限定名（例如 "functions__exec" 或 "exec"）
+	LocalName      string // 不含命名空间的本地名（例如 "exec"）
+	Namespace      string // 命名空间（如有，例如 "functions"）
+	ToolType       string // "function"、"custom" 等。
 	Tool           gjson.Result
-	SourcePriority int  // 0 for top-level tools, 1 for additional_tools, 2 for tool_search_output
-	Direct         bool // true if declared directly, false if declared as namespace child
-	Order          int  // original discovery order
-	ClientSearch   bool // true for a client-executed tool_search declaration
+	SourcePriority int  // 顶层工具为 0，additional_tools 为 1，tool_search_output 为 2
+	Direct         bool // 直接声明为 true，作为命名空间子项声明为 false
+	Order          int  // 原始的发现顺序
+	ClientSearch   bool // 客户端执行的 tool_search 声明为 true
 }
 
-// QualifyResponsesNamespaceToolName qualifies a child tool name with its namespace.
+// QualifyResponsesNamespaceToolName 为子工具名加上其命名空间限定。
 func QualifyResponsesNamespaceToolName(namespaceName, childName string) string {
 	childName = strings.TrimSpace(childName)
 	namespaceName = strings.TrimSpace(namespaceName)
@@ -108,16 +108,16 @@ func responsesToolSources(root gjson.Result, includeClientToolSearch bool) []str
 	return sources
 }
 
-// IsResponsesClientToolSearchDeclaration reports whether a tool declaration is
-// a client-executed Responses tool_search.
+// IsResponsesClientToolSearchDeclaration 报告某个工具声明是否为
+// 客户端执行的 Responses tool_search。
 func IsResponsesClientToolSearchDeclaration(tool gjson.Result) bool {
 	return strings.TrimSpace(tool.Get("type").String()) == ResponsesToolSearchType &&
 		strings.TrimSpace(tool.Get("execution").String()) == ResponsesToolSearchExecutionClient
 }
 
-// IsResponsesClientToolSearchItem reports whether a tool_search_call or
-// tool_search_output input item belongs to client-executed tool search.
-// Hosted server search explicitly sets execution to "server".
+// IsResponsesClientToolSearchItem 报告某个 tool_search_call 或
+// tool_search_output 输入条目是否属于客户端执行的 tool search。
+// 托管服务器搜索会显式将 execution 设为 "server"。
 func IsResponsesClientToolSearchItem(item gjson.Result) bool {
 	execution := strings.TrimSpace(item.Get("execution").String())
 	return execution == "" || execution == ResponsesToolSearchExecutionClient
@@ -130,7 +130,7 @@ func responsesToolName(tool gjson.Result) string {
 	return strings.TrimSpace(tool.Get("function.name").String())
 }
 
-// ResponsesToolDescription extracts the description from a tool or function object.
+// ResponsesToolDescription 从工具或 function 对象中提取描述。
 func ResponsesToolDescription(tool gjson.Result) string {
 	if description := tool.Get("description").String(); description != "" {
 		return description
@@ -142,7 +142,7 @@ func responsesToolDescription(tool gjson.Result) string {
 	return ResponsesToolDescription(tool)
 }
 
-// ResponsesToolParameters extracts the schema/parameters from a tool or function object.
+// ResponsesToolParameters 从工具或 function 对象中提取 schema/parameters。
 func ResponsesToolParameters(tool gjson.Result) gjson.Result {
 	for _, path := range []string{
 		"parameters",
@@ -162,7 +162,7 @@ func responsesToolParameters(tool gjson.Result) gjson.Result {
 	return ResponsesToolParameters(tool)
 }
 
-// CollectResponsesToolDescriptors extracts all tool descriptors from a Responses request root.
+// CollectResponsesToolDescriptors 从 Responses 请求根对象中提取所有工具描述符。
 func CollectResponsesToolDescriptors(root gjson.Result) []ResponsesToolDescriptor {
 	return collectResponsesToolDescriptors(root, false)
 }
@@ -263,7 +263,7 @@ func responsesToolDescriptorPrecedes(left, right ResponsesToolDescriptor) bool {
 	return left.Order < right.Order
 }
 
-// CollectResponsesToolWinners collects deduplicated winning descriptors for each qualified tool name.
+// CollectResponsesToolWinners 为每个限定工具名收集去重后的胜出描述符。
 func CollectResponsesToolWinners(root gjson.Result) map[string]ResponsesToolDescriptor {
 	return collectResponsesToolWinnersFromDescriptors(CollectResponsesToolDescriptors(root))
 }
@@ -337,7 +337,7 @@ type responsesToolWinnerKey struct {
 	clientSearch bool
 }
 
-// BuildGeminiFunctionDeclarations builds Gemini function declarations, forward name mapping, and reverse identity mapping.
+// BuildGeminiFunctionDeclarations 构建 Gemini 函数声明、正向名称映射和反向身份映射。
 func BuildGeminiFunctionDeclarations(root gjson.Result) ([][]byte, map[string]string, map[string]ResponsesToolIdentity) {
 	descriptors := collectResponsesToolDescriptors(root, true)
 	winners := make(map[responsesToolWinnerKey]ResponsesToolDescriptor, len(descriptors))
@@ -418,8 +418,8 @@ func BuildGeminiFunctionDeclarations(root gjson.Result) ([][]byte, map[string]st
 			used[mappedName] = origName
 		}
 		if !userOwnsExactToolSearch {
-			// Reserve "tool_search" for the client tool_search shim and
-			// disambiguate any non-exact tool (e.g. "tool.search") that sanitized to it.
+			// 为客户端的 tool_search 垫片保留 "tool_search"，
+			// 并为任何清理后得到该名的非精确工具（例如 "tool.search"）消歧。
 			if collidingOrig, taken := used[ResponsesToolSearchFunctionName]; taken && collidingOrig != ResponsesToolSearchFunctionName {
 				used[ResponsesToolSearchFunctionName] = ResponsesClientToolSearchKey
 				newMapped := disambiguateResponsesSanitizedName(ResponsesToolSearchFunctionName, collidingOrig, used)
@@ -499,8 +499,8 @@ func BuildGeminiFunctionDeclarations(root gjson.Result) ([][]byte, map[string]st
 		declarations = append(declarations, funcDecl)
 	}
 
-	// Populate local-name aliases after all direct/qualified names are registered
-	// so a namespace child's local name never shadows a direct tool or the search shim.
+	// 在所有直接名/限定名注册完成后再填充本地名别名，
+	// 这样命名空间子项的本地名绝不会遮蔽直接工具或搜索垫片。
 	for _, desc := range winningList {
 		if !desc.ClientSearch && desc.LocalName != "" && desc.LocalName != desc.Name {
 			if _, exists := forwardMap[desc.LocalName]; !exists {
@@ -522,7 +522,7 @@ func buildGeminiToolSearchParametersSchema(tool gjson.Result) []byte {
 	return []byte(responsesToolSearchDefaultParameters)
 }
 
-// ResponsesToolReverseIdentityMap builds a Gemini function name -> ResponsesToolIdentity map from a Responses request raw JSON.
+// ResponsesToolReverseIdentityMap 从 Responses 请求的原始 JSON 构建 Gemini 函数名 -> ResponsesToolIdentity 的映射。
 func ResponsesToolReverseIdentityMap(rawJSON []byte) map[string]ResponsesToolIdentity {
 	if len(rawJSON) == 0 || !gjson.ValidBytes(rawJSON) {
 		return nil
@@ -535,7 +535,7 @@ func ResponsesToolReverseIdentityMap(rawJSON []byte) map[string]ResponsesToolIde
 	return reverseMap
 }
 
-// UnwrapResponsesCustomToolInput extracts the raw input string from custom tool arguments JSON or plain string.
+// UnwrapResponsesCustomToolInput 从 custom 工具实参 JSON 或普通字符串中提取原始输入字符串。
 func UnwrapResponsesCustomToolInput(arguments string) string {
 	arguments = strings.TrimSpace(arguments)
 	if arguments == "" || arguments == "{}" {

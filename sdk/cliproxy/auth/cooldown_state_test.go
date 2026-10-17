@@ -278,7 +278,7 @@ func TestManager_Update_ClearsPersistedCooldownWhenCredentialsChange(t *testing.
 		t.Fatalf("Register() returned error: %v", errRegister)
 	}
 
-	// 1. Fail with 401 unauthorized
+	// 1. 以 401 unauthorized 失败
 	manager.MarkResult(context.Background(), Result{
 		AuthID:   auth.ID,
 		Provider: "codex",
@@ -290,7 +290,7 @@ func TestManager_Update_ClearsPersistedCooldownWhenCredentialsChange(t *testing.
 		t.Fatal("expected cooldown record to be saved after unauthorized failure")
 	}
 
-	// 2. Update without credential change (e.g. metadata note update)
+	// 2. 在不改变凭据的情况下更新（例如更新元数据备注）
 	sameCredAuth := &Auth{
 		ID:       auth.ID,
 		Provider: "codex",
@@ -307,7 +307,7 @@ func TestManager_Update_ClearsPersistedCooldownWhenCredentialsChange(t *testing.
 		t.Fatal("expected cooldown record to remain when credentials did not change")
 	}
 
-	// 3. Update with credential change (new access_token)
+	// 3. 在凭据变化时更新（新的 access_token）
 	newCredAuth := &Auth{
 		ID:       auth.ID,
 		Provider: "codex",

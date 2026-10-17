@@ -198,7 +198,7 @@ func TestListAuthFiles_ExpiredCooldownReconciledToActive(t *testing.T) {
 	cfg := &config.Config{AuthDir: t.TempDir()}
 	manager.SetConfig(cfg)
 
-	// Credential-level expired cooldown (e.g. Codex quota exhaustion in Issue 5964)
+	// 凭据级已过期冷却（例如 Issue 5964 中的 Codex 额度耗尽）
 	registerAuthForLookupTest(t, manager, &coreauth.Auth{
 		ID:             "codex-expired",
 		Index:          "idx-codex-expired",
@@ -217,7 +217,7 @@ func TestListAuthFiles_ExpiredCooldownReconciledToActive(t *testing.T) {
 		Attributes: map[string]string{"runtime_only": "true"},
 	})
 
-	// Model-level expired cooldown where all model cooldowns have elapsed
+	// 模型级已过期冷却：所有模型冷却均已结束
 	registerAuthForLookupTest(t, manager, &coreauth.Auth{
 		ID:             "model-expired",
 		Index:          "idx-model-expired",
@@ -273,7 +273,7 @@ func TestListAuthFiles_ExpiredCooldownWithSubsequentTokenFailure(t *testing.T) {
 	cfg := &config.Config{AuthDir: t.TempDir()}
 	manager.SetConfig(cfg)
 
-	// An OAuth auth that had a cooldown, but subsequently had its access token expire / refresh fail.
+	// 一个曾进入冷却的 OAuth auth，但其访问令牌随后过期 / 刷新失败。
 	registerAuthForLookupTest(t, manager, &coreauth.Auth{
 		ID:             "codex-token-expired",
 		Index:          "idx-codex-token-expired",
@@ -322,7 +322,7 @@ func TestListAuthFiles_PartialModelCooldownWithAuthFailure(t *testing.T) {
 	cfg := &config.Config{AuthDir: t.TempDir()}
 	manager.SetConfig(cfg)
 
-	// Auth has an independent auth error ("unauthorized"), but only one of its models is in cooldown.
+	// Auth 存在独立的认证错误（"unauthorized"），但它的模型中只有一个处于冷却。
 	registerAuthForLookupTest(t, manager, &coreauth.Auth{
 		ID:            "auth-unauthorized-partial-model",
 		Index:         "idx-auth-unauthorized",
@@ -374,8 +374,8 @@ func TestListAuthFiles_UnexpiredTokenWithRefresh401_NoCooldown(t *testing.T) {
 	cfg := &config.Config{AuthDir: t.TempDir()}
 	manager.SetConfig(cfg)
 
-	// An OAuth credential whose access token is still valid (+48h), but background refresh failed with 401
-	// and scheduled a retry backoff. The credential itself is still active and usable.
+	// 一个访问令牌仍然有效（+48h）的 OAuth 凭据，但后台刷新因 401 失败
+	// 并安排了重试退避。凭据本身仍处于活动状态且可用。
 	registerAuthForLookupTest(t, manager, &coreauth.Auth{
 		ID:               "auth-valid-token-refresh-401",
 		Index:            "idx-valid-token",
@@ -420,8 +420,8 @@ func TestListAuthFiles_UnexpiredTokenWithRefresh401_ExpiredCooldown(t *testing.T
 	cfg := &config.Config{AuthDir: t.TempDir()}
 	manager.SetConfig(cfg)
 
-	// An OAuth credential with a valid access token (+48h) that previously entered quota cooldown (now expired),
-	// and has a pending refresh retry after a 401 refresh error.
+	// 一个访问令牌有效（+48h）的 OAuth 凭据，它此前进入过额度冷却（现已过期），
+	// 并且在一次 401 刷新错误后有一次待处理的重试。
 	registerAuthForLookupTest(t, manager, &coreauth.Auth{
 		ID:               "auth-valid-token-expired-cooldown",
 		Index:            "idx-valid-token-exp-cool",
@@ -477,8 +477,8 @@ func TestListAuthFiles_ModelLevel403CooldownExpired(t *testing.T) {
 	cfg := &config.Config{AuthDir: t.TempDir()}
 	manager.SetConfig(cfg)
 
-	// An auth whose model failed with 403 (forbidden) and the conductor copied the error to auth-level,
-	// but the model-level cooldown has now elapsed.
+	// 一个 auth，其模型以 403（forbidden）失败且协调器将错误复制到了 auth 级别，
+	// 但模型级冷却现已结束。
 	registerAuthForLookupTest(t, manager, &coreauth.Auth{
 		ID:             "auth-model-403-expired",
 		Index:          "idx-model-403-exp",
@@ -532,7 +532,7 @@ func TestListAuthFiles_SingleModel403Cooling_OtherModelActive(t *testing.T) {
 	cfg := &config.Config{AuthDir: t.TempDir()}
 	manager.SetConfig(cfg)
 
-	// An auth where Model A is in a 403 cooldown, but Model B is active and healthy.
+	// 一个 auth，其中 Model A 处于 403 冷却，但 Model B 处于活动且健康状态。
 	registerAuthForLookupTest(t, manager, &coreauth.Auth{
 		ID:            "auth-single-403-other-active",
 		Index:         "idx-single-403",
@@ -583,9 +583,9 @@ func TestListAuthFiles_ExpiredCooldown_ExpiredToken_InFlightRefresh(t *testing.T
 	cfg := &config.Config{AuthDir: t.TempDir()}
 	manager.SetConfig(cfg)
 
-	// An OAuth credential whose quota cooldown expired, but its access token is expired,
-	// and a background refresh is currently in-flight/scheduled (NextRefreshAfter in future).
-	// Because the access token is expired, selector blocks it and it must NOT be reported as active.
+	// 一个 OAuth 凭据，其额度冷却已过期，但其访问令牌已过期，
+	// 且当前有一次后台刷新正在进行/已安排（NextRefreshAfter 在未来）。
+	// 由于访问令牌已过期，选择器会阻止它，因此绝不能将其报告为活动状态。
 	registerAuthForLookupTest(t, manager, &coreauth.Auth{
 		ID:               "auth-expired-cooldown-expired-token",
 		Index:            "idx-exp-cool-exp-tok",
@@ -637,9 +637,9 @@ func TestListAuthFiles_ActiveAuth_InactiveFutureTimestamp(t *testing.T) {
 	cfg := &config.Config{AuthDir: t.TempDir()}
 	manager.SetConfig(cfg)
 
-	// An active, healthy auth that has an inactive future NextRetryAfter timestamp
-	// (Unavailable=false, Quota.Exceeded=false). Matching selector.availabilityBlock,
-	// an inactive timestamp does not block the credential or report it as in error.
+	// 一个活动且健康的 auth，它有一个非生效的未来 NextRetryAfter 时间戳
+	// （Unavailable=false、Quota.Exceeded=false）。与 selector.availabilityBlock 一致，
+	// 非生效的时间戳不会阻止该凭据，也不会将其报告为错误。
 	registerAuthForLookupTest(t, manager, &coreauth.Auth{
 		ID:             "auth-active-inactive-future-timestamp",
 		Index:          "idx-active-inactive-future",
@@ -676,9 +676,9 @@ func TestListAuthFiles_ModelCooling_OtherModelPermanentBlocked(t *testing.T) {
 	cfg := &config.Config{AuthDir: t.TempDir()}
 	manager.SetConfig(cfg)
 
-	// Model A is in active cooldown (+30m).
-	// Model B has a permanent failure with no recovery time (Unavailable=true, NextRetryAfter=zero).
-	// Because all schedulable models are blocked, the credential as a whole cannot serve any model.
+	// Model A 处于活动冷却中（+30m）。
+	// Model B 存在无恢复时间的永久性失败（Unavailable=true、NextRetryAfter 为零）。
+	// 由于所有可调度的模型都被阻止，该凭据整体无法服务任何模型。
 	registerAuthForLookupTest(t, manager, &coreauth.Auth{
 		ID:            "auth-all-blocked-cooling-and-perm",
 		Index:         "idx-all-blocked",
@@ -726,9 +726,9 @@ func TestListAuthFiles_SparseModelState_BlockedModelDoesNotMakeAuthUnavailable(t
 	cfg := &config.Config{AuthDir: t.TempDir()}
 	manager.SetConfig(cfg)
 
-	// An auth where Model A has an active cooldown in ModelStates, but Model B has no entry in the sparse map yet.
-	// Because other supported models are schedulable and auth.Unavailable is false, the credential as a whole
-	// must NOT be reported as unavailable.
+	// 一个 auth，其中 Model A 在 ModelStates 中处于活动冷却，但 Model B 在此稀疏映射中尚无条目。
+	// 由于其他受支持的模型仍可调度且 auth.Unavailable 为 false，该凭据整体
+	// 不得被报告为不可用。
 	registerAuthForLookupTest(t, manager, &coreauth.Auth{
 		ID:          "auth-sparse-models",
 		Index:       "idx-sparse-models",

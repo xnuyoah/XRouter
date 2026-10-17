@@ -82,7 +82,7 @@ func TestManager_MarkResult_ConnectionLifecycleAuthLevelDoesNotCooldown(t *testi
 	m.MarkResult(context.Background(), Result{
 		AuthID:   auth.ID,
 		Provider: auth.Provider,
-		// Empty model exercises the auth-level failure path.
+		// 空模型用于走 auth 级别的失败路径。
 		Success: false,
 		Error:   &Error{Message: "websocket: close 1006 (abnormal closure): unexpected EOF"},
 	})
@@ -168,7 +168,7 @@ func TestManager_MarkResult_HTTPStatusWithLifecycleTextStillCooldowns(t *testing
 		name       string
 		httpStatus int
 		message    string
-		wantAuth   bool // true => long auth-style suspension reason expected via model state
+		wantAuth   bool // true => 预期经由模型状态给出长时 auth 风格的暂停原因
 	}{
 		{name: "401 unexpected EOF", httpStatus: http.StatusUnauthorized, message: "unexpected EOF", wantAuth: true},
 		{name: "429 context canceled", httpStatus: http.StatusTooManyRequests, message: "context canceled", wantAuth: true},
@@ -334,7 +334,7 @@ func TestIsConnectionLifecycleError_StatusBearingErrorsStayCoolable(t *testing.T
 }
 
 func TestIsConnectionLifecycleError_TypedCloseWins(t *testing.T) {
-	// Typed websocket close is unambiguous even when an outer status is attached.
+	// 即使附加了外层状态，带类型的 websocket 关闭也是明确无歧义的。
 	err := &statusBearingCloseError{
 		status: http.StatusBadGateway,
 		close:  &websocket.CloseError{Code: websocket.CloseAbnormalClosure, Text: "unexpected EOF"},

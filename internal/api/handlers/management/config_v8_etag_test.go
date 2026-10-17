@@ -12,9 +12,9 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
-// TestConfigV8ETagIfMatch covers issue #6666: the v8 config endpoints must
-// support optimistic concurrency so a stale whole-document write cannot
-// resurrect a change another writer already saved (e.g. a revoked API key).
+// TestConfigV8ETagIfMatch 覆盖 issue #6666：v8 配置端点必须支持
+// 乐观并发，以免一次陈旧的整文档写入复活另一个写入者
+// 已经保存的更改（例如一个已被吊销的 API key）。
 func TestConfigV8ETagIfMatch(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	path := filepath.Join(t.TempDir(), "config.yaml")
@@ -60,14 +60,14 @@ func TestConfigV8ETagIfMatch(t *testing.T) {
 	}
 	fileETag := func() string { return `"` + config.ComputeSourceHash(fileBytes()) + `"` }
 
-	// PATCH at the root with a stale ETag fails fast with 412, so PATCH is
-	// fenced by the same precondition instead of merging blindly.
+	// 在根路径使用陈旧 ETag 的 PATCH 会快速失败并返回 412，因此 PATCH 受到
+	// 相同前置条件的约束，而不是盲目地合并。
 	recorder := do(http.MethodPatch, "/v8/management/config", `{"server":{"port":8319}}`, `"stale"`)
 	wantStatus(recorder, http.StatusPreconditionFailed)
 	if string(fileBytes()) != raw {
 		t.Fatal("stale PATCH changed the file")
 	}
-	// PATCH with the current ETag goes through and returns the new one.
+	// 使用当前 ETag 的 PATCH 会通过并返回新的 ETag。
 	recorder = do(http.MethodPatch, "/v8/management/config", `{"server":{"port":8319}}`, fileETag())
 	wantStatus(recorder, http.StatusOK)
 	if got := recorder.Header().Get("ETag"); got != fileETag() {
@@ -78,7 +78,7 @@ func TestConfigV8ETagIfMatch(t *testing.T) {
 		t.Fatalf("PATCH with matching If-Match not applied: port=%d err=%v", loaded.Port, err)
 	}
 
-	// GET responses advertise the on-disk version as a strong ETag.
+	// GET 响应将以磁盘上的版本作为强 ETag 进行通告。
 	get := do(http.MethodGet, "/v8/management/config.yaml", "", "")
 	wantStatus(get, http.StatusOK)
 	etag := get.Header().Get("ETag")
@@ -91,14 +91,14 @@ func TestConfigV8ETagIfMatch(t *testing.T) {
 		t.Fatalf("GET sub-path ETag=%q want %q", got, etag)
 	}
 
-	// Another writer revokes the API key between the read above and our write.
+	// 另一个写入者在上述读取与我们的写入之间吊销了该 API key。
 	revoked := do(http.MethodPut, "/v8/management/config/access/api-keys", `["other-key"]`, "")
 	wantStatus(revoked, http.StatusOK)
 	if got := revoked.Header().Get("ETag"); got != fileETag() {
 		t.Fatalf("PUT response ETag=%q want %q", got, fileETag())
 	}
 
-	// A whole-document PUT based on the stale read must not resurrect the key.
+	// 基于陈旧读取的整文档 PUT 不得复活该 key。
 	before := string(fileBytes())
 	stale := do(http.MethodPut, "/v8/management/config.yaml", raw, etag)
 	wantStatus(stale, http.StatusPreconditionFailed)
@@ -116,23 +116,23 @@ func TestConfigV8ETagIfMatch(t *testing.T) {
 		t.Fatalf("stale PUT resurrected revoked key: %v", loaded.APIKeys)
 	}
 
-	// DELETE with a stale ETag is rejected the same way.
+	// 使用陈旧 ETag 的 DELETE 会以相同方式被拒绝。
 	staleDelete := do(http.MethodDelete, "/v8/management/config/access/api-keys", "", etag)
 	wantStatus(staleDelete, http.StatusPreconditionFailed)
 	if string(fileBytes()) != before {
 		t.Fatal("stale DELETE changed the file")
 	}
 
-	// Weak and malformed validators never match under strong comparison. A
-	// comma inside quotes is tag content, not a list separator: neither a
-	// quoted nor a weakly quoted "stale,*,tag" may be mistaken for the
-	// wildcard, and only the whole field can be the wildcard.
+	// 弱校验器和格式错误的校验器在强比较下永不匹配。引号内的
+	// 逗号是标签内容，而非列表分隔符：无论是带引号还是弱引号的
+	// "stale,*,tag" 都不得被误认为通配符，且只有整个字段
+	// 可以是通配符。
 	for _, ifMatch := range []string{"W/" + fileETag(), "not-an-etag", `"unterminated`, `"a"b"`, `"stale,*,tag"`, `W/"stale,*,tag"`, `"stale", *`} {
 		recorder = do(http.MethodPut, "/v8/management/config.yaml", before, ifMatch)
 		wantStatus(recorder, http.StatusPreconditionFailed)
 	}
 
-	// Entity tags split across repeated header lines are one list.
+	// 分散在多个重复报头行中的实体标签属于同一个列表。
 	recorder = httptest.NewRecorder()
 	splitReq := httptest.NewRequest(http.MethodPut, "/v8/management/config/server/port", strings.NewReader(`8318`))
 	splitReq.Header.Add("If-Match", `"stale"`)
@@ -140,15 +140,15 @@ func TestConfigV8ETagIfMatch(t *testing.T) {
 	router.ServeHTTP(recorder, splitReq)
 	wantStatus(recorder, http.StatusOK)
 
-	// A quoted current hash with a trailing comma inside the quotes is a
-	// different (stale) tag, not the current one.
+	// 引号内带有尾随逗号的当前哈希是一个不同的（陈旧的）
+	// 标签，而非当前标签。
 	quotedComma := `"` + config.ComputeSourceHash(fileBytes()) + `,"`
 	recorder = do(http.MethodPut, "/v8/management/config/server/port", `11016`, quotedComma)
 	wantStatus(recorder, http.StatusPreconditionFailed)
 
-	// An explicitly present but empty/blank If-Match carries no tag and fails;
-	// only a fully absent header stays unconditional. (The do helper cannot
-	// express an empty header, so add it directly.)
+	// 显式存在但为空/空白的 If-Match 不携带任何标签并会失败；
+	// 只有完全缺失该报头时才保持无条件。（do 辅助函数无法
+	// 表示空报头，因此直接添加它。）
 	for _, blank := range []string{"", "  \t  "} {
 		recorder = httptest.NewRecorder()
 		blankReq := httptest.NewRequest(http.MethodPut, "/v8/management/config/server/port", strings.NewReader(`11016`))
@@ -157,7 +157,7 @@ func TestConfigV8ETagIfMatch(t *testing.T) {
 		wantStatus(recorder, http.StatusPreconditionFailed)
 	}
 
-	// A list containing the current tag (with whitespace and weak members) passes.
+	// 包含当前标签（带有空白和弱成员）的列表会通过。
 	current := fileETag()
 	listed := do(http.MethodDelete, "/v8/management/config/access/api-keys", "", `"stale", `+current+` , W/`+current)
 	wantStatus(listed, http.StatusOK)
@@ -169,11 +169,11 @@ func TestConfigV8ETagIfMatch(t *testing.T) {
 		t.Fatalf("DELETE with matching If-Match list not applied: %v", loaded.APIKeys)
 	}
 
-	// Star matches any existing version.
+	// 星号匹配任何已存在的版本。
 	star := do(http.MethodPut, "/v8/management/config/server/port", `8320`, "*")
 	wantStatus(star, http.StatusOK)
 
-	// A matching ETag chains: reuse the PUT response ETag without re-reading.
+	// 匹配的 ETag 可以链式使用：复用 PUT 响应的 ETag，无需重新读取。
 	first := do(http.MethodPut, "/v8/management/config/server/port", `8321`, fileETag())
 	wantStatus(first, http.StatusOK)
 	nextETag := first.Header().Get("ETag")
@@ -183,11 +183,11 @@ func TestConfigV8ETagIfMatch(t *testing.T) {
 	second := do(http.MethodPut, "/v8/management/config/server/port", `8322`, nextETag)
 	wantStatus(second, http.StatusOK)
 
-	// Without If-Match the behaviour is unchanged.
+	// 不带 If-Match 时行为保持不变。
 	unconditional := do(http.MethodPut, "/v8/management/config/server/port", `8323`, "")
 	wantStatus(unconditional, http.StatusOK)
 
-	// GET 404 responses do not advertise an ETag.
+	// GET 404 响应不通告 ETag。
 	missing := do(http.MethodGet, "/v8/management/config/no-such-key", "", "")
 	wantStatus(missing, http.StatusNotFound)
 	if got := missing.Header().Get("ETag"); got != "" {

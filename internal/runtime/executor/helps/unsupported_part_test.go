@@ -9,8 +9,8 @@ import (
 	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
-// A turn that only holds a file the target cannot receive is refused with a named
-// 400, through both the single and the pair translation, with and without compat.
+// 仅包含目标无法接收的文件的一轮会被以具名
+// 400 拒绝，无论是单个还是成对转换、有无兼容模式。
 func TestClaudeContainerUploadReturns400(t *testing.T) {
 	payload := []byte(`{"messages":[{"role":"user","content":[{"type":"container_upload","file_id":"file-example"}]}]}`)
 	for _, to := range []sdktranslator.Format{sdktranslator.FormatOpenAI, sdktranslator.FormatCodex} {
@@ -26,8 +26,8 @@ func TestClaudeContainerUploadReturns400(t *testing.T) {
 	}
 }
 
-// TestByteWrappersKeepAJSONBodyForAnUnsendableFile guards the executors that still
-// ignore the error: they must get a request body, never an empty one.
+// TestByteWrappersKeepAJSONBodyForAnUnsendableFile 守护那些仍
+// 忽略该错误的执行器：它们必须获得请求体，绝不能为空。
 func TestByteWrappersKeepAJSONBodyForAnUnsendableFile(t *testing.T) {
 	payload := []byte(`{"model":"m","messages":[{"role":"user","content":[{"type":"container_upload","file_id":"file-absent"}]}]}`)
 	for _, to := range []sdktranslator.Format{sdktranslator.FormatOpenAI, sdktranslator.FormatCodex} {

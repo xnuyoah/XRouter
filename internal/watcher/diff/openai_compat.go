@@ -10,7 +10,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
-// DiffOpenAICompatibility produces human-readable change descriptions.
+// DiffOpenAICompatibility 生成人类可读的变更描述。
 func DiffOpenAICompatibility(oldList, newList []config.OpenAICompatibility) []string {
 	changes := make([]string, 0)
 	oldMap := make(map[string]config.OpenAICompatibility, len(oldList))
@@ -193,7 +193,7 @@ func openAICompatSignature(entry config.OpenAICompatibility) string {
 		}
 	}
 
-	// Intentionally exclude API key material; only count non-empty entries.
+	// 有意排除 API key 材料；只统计非空条目。
 	if count := countAPIKeys(entry); count > 0 {
 		parts = append(parts, fmt.Sprintf("api_keys=%d", count))
 	}

@@ -1,9 +1,9 @@
-// Package openai provides utilities to translate OpenAI Chat Completions
-// request JSON into OpenAI Responses API request JSON using gjson/sjson.
-// It supports tools, multimodal text/image inputs, and Structured Outputs.
-// The package handles the conversion of OpenAI API requests into the format
-// expected by the OpenAI Responses API, including proper mapping of messages,
-// tools, and generation parameters.
+// Package openai 提供将 OpenAI Chat Completions 请求 JSON
+// 转换为 OpenAI Responses API 请求 JSON 的工具，基于 gjson/sjson。
+// 它支持工具、多模态文本/图片输入以及结构化输出（Structured Outputs）。
+// 该包负责将 OpenAI API 请求转换为
+// OpenAI Responses API 所期望的格式，包括消息、
+// 工具和生成参数的正确映射。
 package chat_completions
 
 import (
@@ -18,38 +18,38 @@ import (
 	translatorcommon "github.com/xnuyoah/XRouter/v8/internal/translator/common"
 )
 
-// ConvertOpenAIRequestToCodex converts an OpenAI Chat Completions request JSON
-// into an OpenAI Responses API request JSON. The transformation follows the
-// examples defined in docs/2.md exactly, including tools, multi-turn dialog,
-// multimodal text/image handling, and Structured Outputs mapping.
+// ConvertOpenAIRequestToCodex 将 OpenAI Chat Completions 请求 JSON
+// 转换为 OpenAI Responses API 请求 JSON。该转换严格遵循
+// docs/2.md 中定义的示例，包括工具、多轮对话、
+// 多模态文本/图片处理以及结构化输出映射。
 //
-// Parameters:
-//   - modelName: The name of the model to use for the request
-//   - rawJSON: The raw JSON request data from the OpenAI Chat Completions API
-//   - stream: A boolean indicating if the request is for a streaming response
+// 参数：
+//   - modelName: 请求使用的模型名称
+//   - rawJSON: 来自 OpenAI Chat Completions API 的原始 JSON 请求数据
+//   - stream: 表示请求是否为流式响应的布尔值
 //
-// Returns:
-//   - []byte: The transformed request data in OpenAI Responses API format
+// 返回：
+//   - []byte: 以 OpenAI Responses API 格式表示的转换后请求数据
 func ConvertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream bool) ([]byte, error) {
 	return convertOpenAIRequestToCodex(modelName, inputRawJSON, stream)
 
 }
 
-// convertOpenAIRequestToCodex also reports a file or audio part Responses cannot
-// receive when it leaves a user turn with nothing to send.
+// convertOpenAIRequestToCodex 还会报告 Responses 无法接收、且会导致用户轮次
+// 没有任何内容可发送的 file 或 audio 部分。
 func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream bool) ([]byte, error) {
 	rawJSON := inputRawJSON
 	var drops translatorcommon.UserTurnDrops
 	root := gjson.ParseBytes(rawJSON)
 	tools := root.Get("tools")
 	toolResults := tools.Array()
-	// Start with empty JSON object
+	// 以空 JSON 对象开始
 	out := []byte(`{"instructions":""}`)
 
-	// Stream must be set to true
+	// stream 必须设为 true
 	out, _ = sjson.SetBytes(out, "stream", stream)
 
-	// Codex not support temperature, top_p, top_k, max_output_tokens, so comment them
+	// Codex 不支持 temperature、top_p、top_k、max_output_tokens，因此将其注释掉
 	// if v := gjson.GetBytes(rawJSON, "temperature"); v.Exists() {
 	// 	out, _ = sjson.SetBytes(out, "temperature", v.Value())
 	// }
@@ -60,7 +60,7 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 	// 	out, _ = sjson.SetBytes(out, "top_k", v.Value())
 	// }
 
-	// Map token limits
+	// 映射 token 上限
 	// if v := gjson.GetBytes(rawJSON, "max_tokens"); v.Exists() {
 	// 	out, _ = sjson.SetBytes(out, "max_output_tokens", v.Value())
 	// }
@@ -68,7 +68,7 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 	// 	out, _ = sjson.SetBytes(out, "max_output_tokens", v.Value())
 	// }
 
-	// Map reasoning effort
+	// 映射推理强度
 	if v := gjson.GetBytes(rawJSON, "reasoning_effort"); v.Exists() {
 		out, _ = sjson.SetBytes(out, "reasoning.effort", v.Value())
 	} else {
@@ -78,15 +78,15 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 		out, _ = sjson.SetBytes(out, "service_tier", serviceTier)
 	}
 	out, _ = sjson.SetBytes(out, "parallel_tool_calls", true)
-	// OpenAI documents reasoning summaries as explicit opt-in output. Leave
-	// reasoning.summary to the source request's canonical summary intent instead
-	// of coupling it to reasoning effort.
+	// OpenAI 将推理摘要记录为显式选择启用的输出。请将
+	// reasoning.summary 交由源请求的规范摘要意图决定，而不要
+	// 将其与推理强度耦合。
 	out, _ = sjson.SetBytes(out, "include", []string{"reasoning.encrypted_content"})
 
-	// Model
+	// 模型
 	out, _ = sjson.SetBytes(out, "model", modelName)
 
-	// Build request-local tool metadata and name shortening map.
+	// 构建请求本地的工具元数据和名称缩短映射。
 	originalToolNameMap := map[string]string{}
 	customToolNames := map[string]struct{}{}
 	functionToolNames := map[string]struct{}{}
@@ -100,8 +100,8 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 					customToolNames[tool.Get("name").String()] = struct{}{}
 				}
 			}
-			// A normalized function envelope cannot disambiguate declarations that share a name.
-			// Preserve function behavior for such ambiguous names.
+			// 规范化后的 function 信封无法区分同名声明。
+			// 对此类有歧义的名称保留 function 行为。
 			for name := range functionToolNames {
 				delete(customToolNames, name)
 			}
@@ -124,7 +124,7 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 			}
 			input = toolCall.Get("function.arguments").String()
 			if callType == "custom" && strings.TrimSpace(name) == "apply_patch" {
-				// Only normalized function history carries the JSON envelope. Explicit custom input is raw.
+				// 只有规范化的 function 历史会携带 JSON 信封；显式 custom 输入是原始内容。
 				if unwrapped, errUnwrap := applypatch.UnwrapInput(input); errUnwrap == nil {
 					input = unwrapped
 				}
@@ -135,7 +135,7 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 		}
 	}
 
-	// Extract system instructions from first system message (string or text object)
+	// 从第一条 system 消息（字符串或 text 对象）中提取系统指令
 	messages := gjson.GetBytes(rawJSON, "messages")
 	type pendingToolCall struct {
 		callID       string
@@ -161,7 +161,7 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 	// 	}
 	// }
 
-	// Build input from messages, handling all message types including tool calls
+	// 从消息构建 input，处理包括工具调用在内的所有消息类型
 	out, _ = sjson.SetRawBytes(out, "input", []byte(`[]`))
 	inputItems := translatorcommon.NewRawArrayItems(messages.Get("#").Int())
 	if messages.IsArray() {
@@ -172,7 +172,7 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 
 			switch role {
 			case "tool":
-				// Handle tool response messages as top-level tool call output objects.
+				// 将工具响应消息作为顶层工具调用输出对象处理。
 				toolCallID := m.Get("tool_call_id").String()
 				if _, ambiguous := ambiguousToolCallIDs[toolCallID]; toolCallID != "" && ambiguous {
 					continue
@@ -208,11 +208,11 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 				inputItems = append(inputItems, toolOutput)
 
 			default:
-				// A new conversational message starts a new tool-call batch.
+				// 新的对话消息会开启新的工具调用批次。
 				pendingToolCalls = nil
 				ambiguousToolCallIDs = map[string]struct{}{}
 
-				// Handle regular messages
+				// 处理常规消息
 				msg := []byte(`{}`)
 				msg, _ = sjson.SetBytes(msg, "type", "message")
 				if role == "system" {
@@ -222,14 +222,14 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 				}
 
 				contentItems := make([][]byte, 0, 4)
-				// Counts the parts this user turn really sends; an empty text part does not.
+				// 统计该用户轮次实际发送的部分数量；空的文本部分不计入。
 				turnSendable := 0
 
-				// Handle regular content
+				// 处理常规内容
 				c := m.Get("content")
 				if c.Exists() && c.Type == gjson.String && c.String() != "" {
 					turnSendable++
-					// Single string content
+					// 单一字符串内容
 					partType := "input_text"
 					if role == "assistant" {
 						partType = "output_text"
@@ -257,7 +257,7 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 								turnSendable++
 							}
 						case "image_url":
-							// Map image inputs to input_image for Responses API
+							// 将图片输入映射为 Responses API 的 input_image
 							if role == "user" {
 								part := []byte(`{}`)
 								part, _ = sjson.SetBytes(part, "type", "input_image")
@@ -300,15 +300,15 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 					drops.EndTurn(turnSendable)
 				}
 
-				// Don't emit empty assistant messages when only tool_calls
-				// are present — Responses API needs function_call items
-				// directly, otherwise call_id matching fails (#2132).
+				// 当只有 tool_calls 时，不要输出空的 assistant 消息
+				// —— Responses API 需要 function_call 条目
+				// 直接存在，否则 call_id 匹配会失败（#2132）。
 				if role != "assistant" || len(contentItems) > 0 {
 					msg, _ = sjson.SetRawBytes(msg, "content", translatorcommon.JoinRawArray(contentItems))
 					inputItems = append(inputItems, msg)
 				}
 
-				// Handle tool calls for assistant messages as separate top-level objects
+				// 将 assistant 消息的工具调用作为独立的顶层对象处理
 				if role == "assistant" {
 					toolCalls := m.Get("tool_calls")
 					if toolCalls.Exists() && toolCalls.IsArray() {
@@ -351,7 +351,7 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 								}
 								usedCallIDs[callID] = struct{}{}
 							}
-							// Codex rejects call_id values longer than 64 characters.
+							// Codex 会拒绝长度超过 64 个字符的 call_id 值。
 							if shortID := shortenCodexCallIDIfNeeded(callID); shortID != callID {
 								for attempt := 1; ; attempt++ {
 									if _, used := usedCallIDs[shortID]; !used {
@@ -370,7 +370,7 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 
 							switch toolCallType {
 							case "function":
-								// Create function_call as top-level object
+								// 创建作为顶层对象的 function_call
 								funcCall := []byte(`{}`)
 								funcCall, _ = sjson.SetBytes(funcCall, "type", "function_call")
 								funcCall, _ = sjson.SetBytes(funcCall, "call_id", callID)
@@ -403,11 +403,11 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 	}
 	out = translatorcommon.SetRawArrayItems(out, "input", inputItems)
 
-	// Map response_format and text settings to Responses API text.format
+	// 将 response_format 和 text 设置映射为 Responses API 的 text.format
 	rf := gjson.GetBytes(rawJSON, "response_format")
 	text := gjson.GetBytes(rawJSON, "text")
 	if rf.Exists() {
-		// Always create text object when response_format provided
+		// 提供 response_format 时始终创建 text 对象
 		if !gjson.GetBytes(out, "text").Exists() {
 			out, _ = sjson.SetRawBytes(out, "text", []byte(`{}`))
 		}
@@ -432,14 +432,14 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 			}
 		}
 
-		// Map verbosity if provided
+		// 如果提供则映射 verbosity
 		if text.Exists() {
 			if v := text.Get("verbosity"); v.Exists() {
 				out, _ = sjson.SetBytes(out, "text.verbosity", v.Value())
 			}
 		}
 	} else if text.Exists() {
-		// If only text.verbosity present (no response_format), map verbosity
+		// 如果仅存在 text.verbosity（没有 response_format），则映射 verbosity
 		if v := text.Get("verbosity"); v.Exists() {
 			if !gjson.GetBytes(out, "text").Exists() {
 				out, _ = sjson.SetRawBytes(out, "text", []byte(`{}`))
@@ -448,7 +448,7 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 		}
 	}
 
-	// Map tools (flatten function fields)
+	// 映射 tools（展平 function 字段）
 	if tools.IsArray() && len(toolResults) > 0 {
 		toolItems := make([][]byte, 0, len(toolResults))
 		arr := toolResults
@@ -468,8 +468,8 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 				continue
 			}
 
-			// Pass through built-in tools (e.g. {"type":"web_search"}) directly for the Responses API.
-			// Only function and custom tools need structural conversion.
+			// 对于 Responses API，直接透传内置工具（例如 {"type":"web_search"}）。
+			// 只有 function 和 custom 工具需要结构化转换。
 			if toolType != "" && toolType != "function" && t.IsObject() {
 				toolItems = append(toolItems, []byte(t.Raw))
 				continue
@@ -498,8 +498,8 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 					if v := fn.Get("strict"); v.Exists() {
 						item, _ = sjson.SetBytes(item, "strict", v.Value())
 					} else {
-						// Chat Completions defaults strict to false while the Responses API
-						// defaults it to true, so an omitted value must be forwarded explicitly.
+						// Chat Completions 将 strict 默认为 false，而 Responses API
+						// 将其默认为 true，因此省略该值时必须显式传递。
 						item, _ = sjson.SetBytes(item, "strict", false)
 					}
 				}
@@ -509,9 +509,9 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 		out, _ = sjson.SetRawBytes(out, "tools", translatorcommon.JoinRawArray(toolItems))
 	}
 
-	// Map tool_choice when present.
-	// Chat Completions: "tool_choice" can be a string ("auto"/"none") or an object (e.g. {"type":"function","function":{"name":"..."}}).
-	// Responses API: keep built-in tool choices as-is and flatten named choices to {"type":"...","name":"..."}.
+	// 当存在时映射 tool_choice。
+	// Chat Completions："tool_choice" 可以是字符串（"auto"/"none"）或对象（例如 {"type":"function","function":{"name":"..."}}）。
+	// Responses API：内置工具选择保持原样，具名选择展平为 {"type":"...","name":"..."}。
 	if tc := gjson.GetBytes(rawJSON, "tool_choice"); tc.Exists() {
 		switch {
 		case tc.Type == gjson.String:
@@ -540,7 +540,7 @@ func convertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 				}
 				out, _ = sjson.SetRawBytes(out, "tool_choice", choice)
 			} else if tcType != "" {
-				// Built-in tool choices (e.g. {"type":"web_search"}) are already Responses-compatible.
+				// 内置工具选择（例如 {"type":"web_search"}）已与 Responses 兼容。
 				out, _ = sjson.SetRawBytes(out, "tool_choice", []byte(tc.Raw))
 			}
 		}
@@ -618,8 +618,8 @@ func toolOutputContentPart(item gjson.Result) []byte {
 	}
 }
 
-// codexInputFilePart maps a Chat Completions file part onto a Responses input_file
-// part. It reports false when the part names no file id, bytes or url.
+// codexInputFilePart 将 Chat Completions 的 file 部分映射为 Responses 的 input_file
+// 部分。当该部分未指定 file id、bytes 或 url 时返回 false。
 func codexInputFilePart(item gjson.Result) ([]byte, bool) {
 	fileID := item.Get("file.file_id").String()
 	fileData := item.Get("file.file_data").String()
@@ -674,8 +674,8 @@ func toolOutputFallbackPart(item gjson.Result) []byte {
 	return part
 }
 
-// sanitizeToolName normalizes a tool name by replacing any character outside
-// [a-zA-Z0-9_-] with an underscore so it conforms to Codex upstream requirements.
+// sanitizeToolName 通过将 [a-zA-Z0-9_-] 之外的任意字符替换为
+// 下划线来规范化工具名，以满足 Codex 上游要求。
 func sanitizeToolName(name string) string {
 	if name == "" {
 		return ""
@@ -691,9 +691,9 @@ func sanitizeToolName(name string) string {
 	return sb.String()
 }
 
-// shortenNameIfNeeded normalizes invalid characters and applies the shortening rule for a single name.
-// If the name length exceeds 64, it will try to preserve the "mcp__" prefix and last segment.
-// Otherwise it truncates to 64 characters.
+// shortenNameIfNeeded 规范化非法字符并对单个名称应用缩短规则。
+// 如果名称长度超过 64，它会尝试保留 "mcp__" 前缀和最后一段。
+// 否则截断到 64 个字符。
 func shortenNameIfNeeded(name string) string {
 	const limit = 64
 	sanitized := sanitizeToolName(name)
@@ -701,7 +701,7 @@ func shortenNameIfNeeded(name string) string {
 		return sanitized
 	}
 	if strings.HasPrefix(sanitized, "mcp__") {
-		// Keep prefix and last segment after '__'
+		// 保留前缀以及 '__' 之后的最后一段
 		idx := strings.LastIndex(sanitized, "__")
 		if idx > 0 {
 			candidate := "mcp__" + sanitized[idx+2:]
@@ -714,8 +714,8 @@ func shortenNameIfNeeded(name string) string {
 	return sanitized[:limit]
 }
 
-// collectRequestToolNames extracts unique tool names across tools declarations,
-// tool_choice, and historical assistant tool_calls in a deterministic order.
+// collectRequestToolNames 以确定性顺序从 tools 声明、
+// tool_choice 以及历史 assistant tool_calls 中提取唯一的工具名。
 func collectRequestToolNames(rawJSON []byte) []string {
 	var names []string
 	seen := map[string]struct{}{}
@@ -729,7 +729,7 @@ func collectRequestToolNames(rawJSON []byte) []string {
 		}
 	}
 
-	// 1. tools declarations
+	// 1. tools 声明
 	tools := gjson.GetBytes(rawJSON, "tools")
 	if tools.IsArray() {
 		for _, tool := range tools.Array() {
@@ -757,7 +757,7 @@ func collectRequestToolNames(rawJSON []byte) []string {
 		}
 	}
 
-	// 3. assistant tool_calls in messages
+	// 3. 消息中的 assistant tool_calls
 	messages := gjson.GetBytes(rawJSON, "messages")
 	if messages.IsArray() {
 		for _, msg := range messages.Array() {
@@ -780,9 +780,9 @@ func collectRequestToolNames(rawJSON []byte) []string {
 	return names
 }
 
-// buildShortNameMap generates unique short names (<=64) for the given list of names.
-// It preserves the "mcp__" prefix with the last segment when possible and ensures uniqueness
-// by appending suffixes like "_1", "_2" if needed.
+// buildShortNameMap 为给定名称列表生成唯一的短名称（<=64）。
+// 它尽可能保留 "mcp__" 前缀和最后一段，并通过在需要时追加
+// 类似 "_1"、"_2" 的后缀来确保唯一性。
 func buildShortNameMap(names []string) map[string]string {
 	const limit = 64
 	used := map[string]struct{}{}
@@ -838,8 +838,8 @@ func normalizeCodexServiceTier(result gjson.Result) string {
 	}
 }
 
-// shortenCodexCallIDIfNeeded keeps client tool call IDs within the Codex
-// call_id limit with a deterministic, low-collision mapping.
+// shortenCodexCallIDIfNeeded 通过确定性的、低冲突的映射让客户端工具调用 ID
+// 保持在 Codex 的 call_id 长度限制内。
 func shortenCodexCallIDIfNeeded(id string) string {
 	const limit = 64
 	if len(id) <= limit {

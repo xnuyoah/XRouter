@@ -13,8 +13,8 @@ const (
 	responsesHistory = `{"type":"message","role":"user","content":[{"type":"input_text","text":"hello"}]},{"type":"message","role":"assistant","content":[{"type":"output_text","text":"hi"}]}`
 )
 
-// Every executor reaches the translators through these helpers, so the refusal
-// must survive the registry, the multi-agent wrapper and the compat switch.
+// 每个执行器都通过这些辅助函数到达转换器，因此该拒绝行为
+// 必须能穿过注册表、多代理包装层和兼容开关。
 func TestTranslateRequestReturningErrorRefusesEmptiedAttachmentTurns(t *testing.T) {
 	ctx := context.Background()
 	routes := []struct {

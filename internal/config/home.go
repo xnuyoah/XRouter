@@ -1,6 +1,6 @@
 package config
 
-// HomeConfig stores runtime-only Home control plane settings from -home-jwt.
+// HomeConfig 存储来自 -home-jwt 的仅运行时 Home 控制平面设置。
 type HomeConfig struct {
 	Enabled                 bool          `yaml:"enabled" json:"enabled"`
 	NodeID                  string        `yaml:"-" json:"-"`
@@ -10,7 +10,7 @@ type HomeConfig struct {
 	TLS                     HomeTLSConfig `yaml:"tls" json:"-"`
 }
 
-// HomeTLSConfig configures client-side TLS for the home Redis connection.
+// HomeTLSConfig 配置 home Redis 连接的客户端 TLS。
 type HomeTLSConfig struct {
 	Enable              bool   `yaml:"enable" json:"-"`
 	ServerName          string `yaml:"server-name" json:"-"`
@@ -21,8 +21,8 @@ type HomeTLSConfig struct {
 	UseTargetServerName bool   `yaml:"-" json:"-"`
 }
 
-// NormalizeHomePort ensures that the CPA server port received from Home is valid,
-// defaulting to 11016 when omitted or non-positive.
+// NormalizeHomePort 确保从 Home 收到的 CPA 服务器端口有效，
+// 在缺失或非正数时默认为 11016。
 func NormalizeHomePort(port int) int {
 	if port <= 0 {
 		return 11016

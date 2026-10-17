@@ -40,7 +40,7 @@ func TestPatchPriorityForEveryProvider(t *testing.T) {
 			configFile := writeTestConfigFile(t)
 			h := &Handler{cfg: cfg, configFilePath: configFile}
 
-			// Update priority to 7
+			// 将优先级更新为 7
 			rec := httptest.NewRecorder()
 			ctx, _ := gin.CreateTestContext(rec)
 			ctx.Request = httptest.NewRequest(http.MethodPatch, test.endpoint, strings.NewReader(`{"index":0,"value":{"priority":7}}`))
@@ -54,7 +54,7 @@ func TestPatchPriorityForEveryProvider(t *testing.T) {
 				t.Fatalf("priority = %d, want 7", got)
 			}
 
-			// Verify priority persisted to YAML
+			// 验证优先级已持久化到 YAML
 			savedBytes, errRead := os.ReadFile(configFile)
 			if errRead != nil {
 				t.Fatalf("os.ReadFile() error = %v", errRead)
@@ -63,7 +63,7 @@ func TestPatchPriorityForEveryProvider(t *testing.T) {
 				t.Fatalf("saved YAML missing 'priority: 7':\n%s", string(savedBytes))
 			}
 
-			// Omitting priority preserves existing priority
+			// 省略 priority 时保留现有优先级
 			rec = httptest.NewRecorder()
 			ctx, _ = gin.CreateTestContext(rec)
 			ctx.Request = httptest.NewRequest(http.MethodPatch, test.endpoint, strings.NewReader(`{"index":0,"value":{"prefix":"team-a"}}`))
@@ -77,7 +77,7 @@ func TestPatchPriorityForEveryProvider(t *testing.T) {
 				t.Fatalf("preserved priority = %d, want 7", got)
 			}
 
-			// Reset priority to 0 explicitly
+			// 显式将优先级重置为 0
 			rec = httptest.NewRecorder()
 			ctx, _ = gin.CreateTestContext(rec)
 			ctx.Request = httptest.NewRequest(http.MethodPatch, test.endpoint, strings.NewReader(`{"index":0,"value":{"priority":0}}`))

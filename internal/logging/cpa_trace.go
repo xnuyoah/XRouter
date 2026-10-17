@@ -9,12 +9,12 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/httpwire"
 )
 
-// CPATraceIDHeader is the downstream response header used to correlate requests with selected credentials.
+// CPATraceIDHeader 是用于将请求与所选凭据关联起来的下游响应头。
 const CPATraceIDHeader = "X-CPA-TRACE-ID"
 
 const ginCPATraceStateKey = "__cpa_trace_state__"
 
-// FormatCPATraceID builds a CPA trace ID from the selection time, auth index, and request ID.
+// FormatCPATraceID 根据选择时间、认证索引和请求 ID 构建 CPA 追踪 ID。
 func FormatCPATraceID(selectedAt time.Time, authIndex, requestID string) string {
 	authIndex = strings.TrimSpace(authIndex)
 	requestID = strings.TrimSpace(requestID)
@@ -62,7 +62,7 @@ func ginCPATraceState(c *gin.Context) *cpaTraceState {
 	return state
 }
 
-// GinCPATraceIDCallback returns a callback that is safe to invoke after the Gin context is released.
+// GinCPATraceIDCallback 返回一个回调，在 Gin 上下文释放后调用它是安全的。
 func GinCPATraceIDCallback(c *gin.Context) func(string) {
 	state := ginCPATraceState(c)
 	if state == nil {
@@ -83,14 +83,14 @@ func GinCPATraceIDCallback(c *gin.Context) func(string) {
 	}
 }
 
-// SetGinCPATraceID stores the trace ID until the downstream response headers are committed.
+// SetGinCPATraceID 存储追踪 ID，直到下游响应头被提交。
 func SetGinCPATraceID(c *gin.Context, authIndex string) {
 	if callback := GinCPATraceIDCallback(c); callback != nil {
 		callback(authIndex)
 	}
 }
 
-// GetGinCPATraceID returns the trace ID stored for the current request.
+// GetGinCPATraceID 返回为当前请求存储的追踪 ID。
 func GetGinCPATraceID(c *gin.Context) string {
 	if c == nil {
 		return ""
@@ -103,7 +103,7 @@ func GetGinCPATraceID(c *gin.Context) string {
 	return state.get()
 }
 
-// CPATraceIDMiddleware injects a stored trace ID immediately before response headers are committed.
+// CPATraceIDMiddleware 在响应头提交之前立即注入已存储的追踪 ID。
 func CPATraceIDMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		state := ginCPATraceState(c)
@@ -141,7 +141,7 @@ func (w *cpaTraceResponseWriter) Flush() {
 	_ = w.FlushError()
 }
 
-// FlushError preserves trace headers while forwarding transport errors.
+// FlushError 在转发传输错误的同时保留追踪头。
 func (w *cpaTraceResponseWriter) FlushError() error {
 	w.applyTraceHeader()
 	return httpwire.FlushResponse(w.ResponseWriter)

@@ -6,21 +6,21 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// IsChatTokenEvent reports whether the given OpenAI-compatible Chat Completions SSE or JSON chunk
-// carries substantive output token content (such as text delta, reasoning content, or tool call arguments).
-// It filters out container metadata, role announcements, and empty delta frames.
+// IsChatTokenEvent 报告给定的 OpenAI 兼容 Chat Completions SSE 或 JSON 分块
+// 是否携带实质性的输出 token 内容（如文本增量、推理内容或工具调用参数）。
+// 它会过滤掉容器元数据、role 公告以及空的 delta 帧。
 func IsChatTokenEvent(payload []byte) bool {
 	payload = bytes.TrimSpace(payload)
 	if len(payload) == 0 {
 		return false
 	}
 
-	// Handle SSE stream terminal marker
+	// 处理 SSE 流的终止标记
 	if bytes.Equal(payload, []byte("data: [DONE]")) || bytes.Equal(payload, []byte("[DONE]")) {
 		return true
 	}
 
-	// Handle SSE line format (e.g., "data: {...}")
+	// 处理 SSE 行格式（例如 "data: {...}"）
 	if bytes.HasPrefix(payload, []byte("data:")) {
 		prefixLen := len("data:")
 		if bytes.HasPrefix(payload, []byte("data: ")) {
@@ -35,7 +35,7 @@ func IsChatTokenEvent(payload []byte) bool {
 		}
 	}
 
-	// Terminal error envelope fallback
+	// 终止错误封装的回退
 	if gjson.GetBytes(payload, "error.message").Exists() || gjson.GetBytes(payload, "error").Exists() {
 		return true
 	}
@@ -46,7 +46,7 @@ func IsChatTokenEvent(payload []byte) bool {
 	}
 
 	for _, choice := range choices {
-		// Streaming delta checks
+		// 流式增量检查
 		delta := choice.Get("delta")
 		if delta.Exists() {
 			if len(delta.Get("content").String()) > 0 {
@@ -71,7 +71,7 @@ func IsChatTokenEvent(payload []byte) bool {
 			}
 		}
 
-		// Non-streaming / completed message fallback
+		// 非流式 / 已完成消息回退
 		message := choice.Get("message")
 		if message.Exists() {
 			if len(message.Get("content").String()) > 0 {
@@ -90,7 +90,7 @@ func IsChatTokenEvent(payload []byte) bool {
 			}
 		}
 
-		// Finish reason terminal fallback
+		// finish reason 终止回退
 		if len(choice.Get("finish_reason").String()) > 0 {
 			return true
 		}
@@ -99,9 +99,9 @@ func IsChatTokenEvent(payload []byte) bool {
 	return false
 }
 
-// ObserveChatTokenEvent inspects an OpenAI Chat Completions chunk and records TTFT if the frame
-// represents the first meaningful token event. It records first-packet arrival time as fallback
-// and returns immediately with zero allocations once effective token TTFT is set.
+// ObserveChatTokenEvent 检查 OpenAI Chat Completions 分块，如果该帧
+// 代表首个有意义的 token 事件，则记录 TTFT。它会把首包到达时间作为回退
+// 记录，并在有效 token 的 TTFT 确定后以零分配立即返回。
 func ObserveChatTokenEvent(reporter *UsageReporter, payload []byte) {
 	if reporter != nil && len(payload) > 0 {
 		reporter.ObserveResponseModel(payload)

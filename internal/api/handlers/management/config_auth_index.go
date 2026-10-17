@@ -43,7 +43,7 @@ func liveAuthIndexFromManager(manager *coreauth.Manager) map[string]string {
 	if manager == nil {
 		return out
 	}
-	// authManager.List() returns clones, so EnsureIndex only affects these copies.
+	// authManager.List() 返回副本，因此 EnsureIndex 只影响这些副本。
 	for _, auth := range manager.List() {
 		if auth == nil {
 			continue
@@ -383,10 +383,10 @@ func (h *Handler) injectV8APIKeyAuthIndexesLocked(root *yaml.Node, data []byte) 
 		}
 
 		if providerName == "openai" || providerName == "deepseek" || providerName == "nvidia" || providerName == "agnes" {
-			// Sanitization drops credential entries without an api-key and base-url, so
-			// positional counting cannot address the synthesized auths reliably. Sanitized
-			// entries keep their relative order, so each credential tuple consumes the
-			// next matching sanitized index in YAML order; duplicates stay aligned.
+			// 净化过程会丢弃缺少 api-key 和 base-url 的凭据条目，因此
+			// 按位置计数无法可靠地定位合成出的 auth。净化后的
+			// 条目保持相对顺序，因此每个凭据元组按 YAML 顺序消耗
+			// 下一个匹配的净化后索引；重复项保持对齐。
 			indexQueues := make(map[string][]int)
 			addFamily := func(entries []config.NativeAPIKey) {
 				for i := range entries {

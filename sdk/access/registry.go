@@ -7,13 +7,13 @@ import (
 	"sync"
 )
 
-// Provider validates credentials for incoming requests.
+// Provider 校验传入请求的凭据。
 type Provider interface {
 	Identifier() string
 	Authenticate(ctx context.Context, r *http.Request) (*Result, *AuthError)
 }
 
-// Result conveys authentication outcome.
+// Result 表示认证结果。
 type Result struct {
 	Provider  string
 	Principal string
@@ -27,7 +27,7 @@ var (
 	exclusiveProvider string
 )
 
-// RegisterProvider registers a pre-built provider instance for a given type identifier.
+// RegisterProvider 为给定的类型标识符注册一个预构建的供应商实例。
 func RegisterProvider(typ string, provider Provider) {
 	normalizedType := strings.TrimSpace(typ)
 	if normalizedType == "" || provider == nil {
@@ -42,7 +42,7 @@ func RegisterProvider(typ string, provider Provider) {
 	registryMu.Unlock()
 }
 
-// UnregisterProvider removes a provider by type identifier.
+// UnregisterProvider 按类型标识符移除供应商。
 func UnregisterProvider(typ string) {
 	normalizedType := strings.TrimSpace(typ)
 	if normalizedType == "" {
@@ -64,7 +64,7 @@ func UnregisterProvider(typ string) {
 	registryMu.Unlock()
 }
 
-// SetExclusiveProvider restricts RegisteredProviders to a single provider key when present.
+// SetExclusiveProvider 在存在时将 RegisteredProviders 限制为单个供应商键。
 func SetExclusiveProvider(typ string) {
 	normalizedType := strings.TrimSpace(typ)
 	registryMu.Lock()
@@ -72,14 +72,14 @@ func SetExclusiveProvider(typ string) {
 	registryMu.Unlock()
 }
 
-// ClearExclusiveProvider removes any active provider restriction.
+// ClearExclusiveProvider 移除任何生效的供应商限制。
 func ClearExclusiveProvider() {
 	registryMu.Lock()
 	exclusiveProvider = ""
 	registryMu.Unlock()
 }
 
-// RegisteredProviders returns the global provider instances in registration order.
+// RegisteredProviders 按注册顺序返回全局供应商实例。
 func RegisteredProviders() []Provider {
 	registryMu.RLock()
 	if len(order) == 0 {

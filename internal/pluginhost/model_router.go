@@ -128,8 +128,8 @@ func cloneModelRouteRequest(req pluginapi.ModelRouteRequest) pluginapi.ModelRout
 	return req
 }
 
-// HasBuiltinProvider reports whether a built-in provider currently has at least one
-// registered auth record.
+// HasBuiltinProvider 报告某个内置供应商当前是否至少有一个
+// 已注册的 auth 记录。
 func (h *Host) HasBuiltinProvider(provider string) bool {
 	if h == nil || h.authManager == nil {
 		return false
@@ -137,7 +137,7 @@ func (h *Host) HasBuiltinProvider(provider string) bool {
 	return h.authManager.HasProviderAuth(provider)
 }
 
-// BuiltinProviders returns built-in provider keys that currently have auth registered.
+// BuiltinProviders 返回当前已注册 auth 的内置供应商键。
 func (h *Host) BuiltinProviders() []string {
 	if h == nil || h.authManager == nil {
 		return nil
@@ -145,7 +145,7 @@ func (h *Host) BuiltinProviders() []string {
 	return h.authManager.AvailableProviders()
 }
 
-// availableProvidersSnapshot returns a defensive copy of BuiltinProviders for routing input.
+// availableProvidersSnapshot 返回 BuiltinProviders 的防御性副本，供路由输入使用。
 func (h *Host) availableProvidersSnapshot() []string {
 	providers := h.BuiltinProviders()
 	if len(providers) == 0 {

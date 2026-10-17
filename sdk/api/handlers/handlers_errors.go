@@ -84,7 +84,7 @@ func enrichAuthSelectionError(err error, providers []string, model string) error
 		detail = fmt.Sprintf("%s (providers=%s, model=%s)", baseMessage, providerText, modelText)
 	}
 
-	// Clarify the most common alias confusion between Anthropic route names and internal provider keys.
+	// 澄清 Anthropic 路由名与内部供应商键之间最常见的别名混淆。
 	if strings.Contains(","+providerText+",", ",claude,") {
 		detail += "; check Claude auth/key session and cooldown state via /v0/management/auth-files"
 	}
@@ -113,7 +113,7 @@ func enrichAuthSelectionError(err error, providers []string, model string) error
 	return enriched
 }
 
-// WriteErrorResponse writes an error message to the response writer using the HTTP status embedded in the message.
+// WriteErrorResponse 使用消息中内嵌的 HTTP 状态将错误消息写入响应写入器。
 func (h *BaseAPIHandler) WriteErrorResponse(c *gin.Context, msg *interfaces.ErrorMessage) {
 	status := http.StatusInternalServerError
 	if msg != nil && msg.StatusCode > 0 {
@@ -152,7 +152,7 @@ func (h *BaseAPIHandler) WriteErrorResponse(c *gin.Context, msg *interfaces.Erro
 		errCause = msg.Error
 	}
 	body := BuildErrorResponseBodyWithError(status, errText, errCause)
-	// Append first to preserve upstream response logs, then drop duplicate payloads if already recorded.
+	// 先追加以保留上游响应日志，若已记录则再丢弃重复载荷。
 	var previous []byte
 	if existing, exists := c.Get("API_RESPONSE"); exists {
 		if existingBytes, ok := existing.([]byte); ok && len(existingBytes) > 0 {
@@ -204,7 +204,7 @@ func (h *BaseAPIHandler) LoggingAPIResponseError(ctx context.Context, err *inter
 					ginContext.Set("API_RESPONSE_ERROR", slicesAPIResponseError)
 				}
 			} else {
-				// Create new response data entry
+				// 创建新的响应数据条目
 				ginContext.Set("API_RESPONSE_ERROR", []*interfaces.ErrorMessage{err})
 			}
 		}

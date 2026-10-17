@@ -1,7 +1,7 @@
 package auth
 
-// CanonicalCredentialMetadataKey returns the canonical snake_case name for
-// credential metadata keys that previously also accepted config-style aliases.
+// CanonicalCredentialMetadataKey 返回凭据元数据键的规范 snake_case 名称，
+// 这些键此前也接受配置风格的别名。
 func CanonicalCredentialMetadataKey(key string) string {
 	switch key {
 	case "api-key":
@@ -29,8 +29,8 @@ func CanonicalCredentialMetadataKey(key string) string {
 	}
 }
 
-// NormalizeCredentialMetadata rewrites recognized legacy keys to their
-// canonical snake_case names. An explicitly present canonical value wins.
+// NormalizeCredentialMetadata 将可识别的旧版键改写为其
+// 规范的 snake_case 名称。显式存在的规范值优先。
 func NormalizeCredentialMetadata(metadata map[string]any) {
 	for key, value := range metadata {
 		canonical := CanonicalCredentialMetadataKey(key)

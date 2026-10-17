@@ -9,14 +9,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// SaveConfigPreserveComments writes the config back to YAML while preserving existing comments
-// and key ordering by loading the original file into a yaml.Node tree and updating values in-place.
-// Existing v8 documents are saved in the latest layout. Successful migration
-// also synchronizes cfg's OAuth scope for runtime snapshots.
+// SaveConfigPreserveComments 将配置写回 YAML，同时通过把原始文件加载为
+// yaml.Node 树并就地更新值来保留已有注释和键顺序。
+// 已有的 v8 文档会以最新布局保存。迁移成功时
+// 还会为运行时快照同步 cfg 的 OAuth 作用域。
 func SaveConfigPreserveComments(configFile string, cfg *Config, migrateV8 ...bool) error {
 	persistCfg := cfg
 	migrating := len(migrateV8) > 0 && migrateV8[0]
-	// Load original YAML as a node tree to preserve comments and ordering.
+	// 将原始 YAML 加载为节点树，以保留注释和顺序。
 	data, err := os.ReadFile(configFile)
 	if err != nil {
 		return err
@@ -41,7 +41,7 @@ func SaveConfigPreserveComments(configFile string, cfg *Config, migrateV8 ...boo
 	layout = expandConfigAliases(layout)
 	migrating = migrating || IsV8ConfigLayout(layout)
 
-	// Marshal the current cfg to YAML, then unmarshal to a yaml.Node we can merge from.
+	// 将当前 cfg 序列化为 YAML，再反序列化为可供合并的 yaml.Node。
 	rendered, err := yaml.Marshal((*legacyConfig)(persistCfg))
 	if err != nil {
 		return err
@@ -57,7 +57,7 @@ func SaveConfigPreserveComments(configFile string, cfg *Config, migrateV8 ...boo
 		return fmt.Errorf("expected generated root mapping node")
 	}
 
-	// Keep obsolete roots until v8 migration can preserve them as comments.
+	// 在 v8 迁移能够将其保留为注释之前，保留已废弃的根节点。
 	if !migrating {
 		removeLegacyAuthBlock(original.Content[0])
 		removeRemovedIntegrationKeys(original.Content[0])
@@ -71,14 +71,14 @@ func SaveConfigPreserveComments(configFile string, cfg *Config, migrateV8 ...boo
 	pruneMappingToGeneratedKeys(original.Content[0], generated.Content[0], "oauth-settings")
 	replacePluginConfigsSubtree(original.Content[0], generated.Content[0])
 
-	// Merge generated into original in-place, preserving comments/order of existing nodes.
+	// 将生成内容就地合并到原始文档，保留已有节点的注释/顺序。
 	mergeMappingPreserve(original.Content[0], generated.Content[0])
 	if err = restoreV8Layout(original.Content[0], layout, data, generated.Content[0]); err != nil {
 		return err
 	}
 	if !migrating {
-		// Keep historical client fields at their original legacy paths. Otherwise
-		// the generated client path makes the next v0 save look like a v8 file.
+		// 将历史客户端字段保留在其原始旧版路径上。否则
+		// 生成的客户端路径会让下一次 v0 保存看起来像 v8 文件。
 		for _, alias := range v8ClientPaths {
 			if yamlPath(layout, alias.old) == nil || yamlPath(layout, alias.current) != nil || yamlPath(original.Content[0], alias.current) == nil {
 				continue
@@ -90,7 +90,7 @@ func SaveConfigPreserveComments(configFile string, cfg *Config, migrateV8 ...boo
 	}
 	NormalizeCollectionNodeStyles(original.Content[0])
 
-	// Encode and validate the layout before opening the destination for writing.
+	// 在打开目标文件写入之前，对布局进行编码并校验。
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
 	enc.SetIndent(2)
@@ -117,14 +117,14 @@ func SaveConfigPreserveComments(configFile string, cfg *Config, migrateV8 ...boo
 		return err
 	}
 	if migrated != nil {
-		// Keep runtime-only values intact and publish scope only after the write succeeds.
+		// 保持仅运行时的值不变，仅在写入成功后才发布作用域。
 		cfg.OAuthOnlyFields = migrated.OAuthOnlyFields
 	}
 	return nil
 }
 
-// SaveConfigPreserveCommentsUpdateNestedScalar updates a nested scalar key path like ["a","b"]
-// while preserving comments and positions.
+// SaveConfigPreserveCommentsUpdateNestedScalar 更新形如 ["a","b"] 的嵌套标量键路径，
+// 同时保留注释和位置。
 func SaveConfigPreserveCommentsUpdateNestedScalar(configFile string, path []string, value string) error {
 	data, err := os.ReadFile(configFile)
 	if err != nil {
@@ -137,8 +137,8 @@ func SaveConfigPreserveCommentsUpdateNestedScalar(configFile string, path []stri
 	return os.WriteFile(configFile, data, 0600)
 }
 
-// updateNestedScalarYAML returns data with the nested scalar key path like ["a","b"] set to
-// value, preserving comments and positions.
+// updateNestedScalarYAML 返回把形如 ["a","b"] 的嵌套标量键路径设置为
+// value 后的 data，同时保留注释和位置。
 func updateNestedScalarYAML(data []byte, path []string, value string) ([]byte, error) {
 	var root yaml.Node
 	if errUnmarshal := yaml.Unmarshal(data, &root); errUnmarshal != nil {
@@ -147,18 +147,18 @@ func updateNestedScalarYAML(data []byte, path []string, value string) ([]byte, e
 	if root.Kind != yaml.DocumentNode || len(root.Content) == 0 {
 		return nil, fmt.Errorf("invalid yaml document structure")
 	}
-	// Resolve aliases and merge keys before updating a path. Otherwise replacing
-	// an alias with a mapping drops inherited siblings or mutates a shared anchor.
+	// 在更新路径之前解析别名和合并键。否则用映射替换
+	// 别名会丢失继承的兄弟键或修改共享锚点。
 	var decoded map[string]any
 	if errDecode := root.Decode(&decoded); errDecode != nil {
 		return nil, errDecode
 	}
 	root.Content[0] = expandConfigAliases(root.Content[0])
 	node := root.Content[0]
-	// descend mapping nodes following path
+	// 沿 path 逐层向下进入映射节点
 	for i, key := range path {
 		if i == len(path)-1 {
-			// set final scalar
+			// 设置最终的标量
 			v := getOrCreateMapValue(node, key)
 			v.Kind = yaml.ScalarNode
 			v.Tag = "!!str"
@@ -185,7 +185,7 @@ func updateNestedScalarYAML(data []byte, path []string, value string) ([]byte, e
 	return NormalizeCommentIndentation(buf.Bytes()), nil
 }
 
-// NormalizeCommentIndentation removes indentation from standalone YAML comment lines to keep them left aligned.
+// NormalizeCommentIndentation 移除独立 YAML 注释行的缩进，使其保持左对齐。
 func NormalizeCommentIndentation(data []byte) []byte {
 	lines := bytes.Split(data, []byte("\n"))
 	changed := false
@@ -206,8 +206,8 @@ func NormalizeCommentIndentation(data []byte) []byte {
 	return bytes.Join(lines, []byte("\n"))
 }
 
-// getOrCreateMapValue finds the value node for a given key in a mapping node.
-// If not found, it appends a new key/value pair and returns the new value node.
+// getOrCreateMapValue 在映射节点中查找给定键对应的值节点。
+// 如果未找到，则追加新的键/值对并返回新的值节点。
 func getOrCreateMapValue(mapNode *yaml.Node, key string) *yaml.Node {
 	if mapNode.Kind != yaml.MappingNode {
 		mapNode.Kind = yaml.MappingNode
@@ -220,16 +220,16 @@ func getOrCreateMapValue(mapNode *yaml.Node, key string) *yaml.Node {
 			return mapNode.Content[i+1]
 		}
 	}
-	// append new key/value
+	// 追加新的键/值
 	mapNode.Content = append(mapNode.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key})
 	val := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: ""}
 	mapNode.Content = append(mapNode.Content, val)
 	return val
 }
 
-// mergeMappingPreserve merges keys from src into dst mapping node while preserving
-// key order and comments of existing keys in dst. New keys are only added if their
-// value is non-zero and not a known default to avoid polluting the config with defaults.
+// mergeMappingPreserve 将 src 中的键合并到 dst 映射节点，同时保留
+// dst 中已有键的顺序和注释。仅当新键的值非零且不是已知默认值时才添加，
+// 以避免用默认值污染配置。
 func mergeMappingPreserve(dst, src *yaml.Node, path ...[]string) {
 	var currentPath []string
 	if len(path) > 0 {
@@ -240,8 +240,8 @@ func mergeMappingPreserve(dst, src *yaml.Node, path ...[]string) {
 		return
 	}
 	if dst.Kind != yaml.MappingNode || src.Kind != yaml.MappingNode {
-		// If kinds do not match, prefer replacing dst with src semantics in-place
-		// but keep dst node object to preserve any attached comments at the parent level.
+		// 如果类型不匹配，优先就地用 src 的语义替换 dst，
+		// 但保留 dst 节点对象，以保留父级上附着的注释。
 		copyNodeShallow(dst, src)
 		return
 	}
@@ -254,11 +254,11 @@ func mergeMappingPreserve(dst, src *yaml.Node, path ...[]string) {
 			continue
 		}
 		if idx >= 0 {
-			// Merge into existing value node (always update, even to zero values)
+			// 合并到已有的值节点（始终更新，即使更新为零值）
 			dv := dst.Content[idx+1]
 			mergeNodePreserve(dv, sv, childPath)
 		} else {
-			// New key: only add if value is non-zero and not a known default
+			// 新键：仅当值非零且不是已知默认值时才添加
 			candidate := deepCopyNode(sv)
 			pruneKnownDefaultsInNewNode(childPath, candidate)
 			if isKnownDefaultValue(childPath, candidate) {
@@ -269,9 +269,9 @@ func mergeMappingPreserve(dst, src *yaml.Node, path ...[]string) {
 	}
 }
 
-// mergeNodePreserve merges src into dst for scalars, mappings and sequences while
-// reusing destination nodes to keep comments and anchors. For sequences, it updates
-// in-place by index.
+// mergeNodePreserve 对标量、映射和序列将 src 合并到 dst，同时
+// 复用目标节点以保留注释和锚点。对于序列，它按索引
+// 就地更新。
 func mergeNodePreserve(dst, src *yaml.Node, path ...[]string) {
 	var currentPath []string
 	if len(path) > 0 {
@@ -291,9 +291,9 @@ func mergeNodePreserve(dst, src *yaml.Node, path ...[]string) {
 			pruneMissingMapKeys(dst, src)
 		}
 	case yaml.SequenceNode:
-		// Preserve explicit null style if dst was null and src is empty sequence
+		// 如果 dst 为 null 且 src 为空序列，则保留显式的 null 风格
 		if dst.Kind == yaml.ScalarNode && dst.Tag == "!!null" && len(src.Content) == 0 {
-			// Keep as null to preserve original style
+			// 保持为 null 以保留原始风格
 			return
 		}
 		if dst.Kind != yaml.SequenceNode {
@@ -302,7 +302,7 @@ func mergeNodePreserve(dst, src *yaml.Node, path ...[]string) {
 			dst.Content = nil
 		}
 		reorderSequenceForMerge(dst, src)
-		// Update elements in place
+		// 就地更新元素
 		minContent := len(dst.Content)
 		if len(src.Content) < minContent {
 			minContent = len(src.Content)
@@ -318,30 +318,30 @@ func mergeNodePreserve(dst, src *yaml.Node, path ...[]string) {
 				pruneMissingMapKeys(dst.Content[i], src.Content[i])
 			}
 		}
-		// Append any extra items from src
+		// 追加 src 中多出的条目
 		for i := len(dst.Content); i < len(src.Content); i++ {
 			dst.Content = append(dst.Content, deepCopyNode(src.Content[i]))
 		}
-		// Truncate if dst has extra items not in src
+		// 如果 dst 有多余的、src 中不存在的条目，则截断
 		if len(src.Content) < len(dst.Content) {
 			dst.Content = dst.Content[:len(src.Content)]
 		}
 	case yaml.ScalarNode, yaml.AliasNode:
-		// For scalars, update Tag and Value but keep Style from dst to preserve quoting
+		// 对于标量，更新 Tag 和 Value，但保留 dst 的 Style 以保留引号风格
 		dst.Kind = src.Kind
 		dst.Tag = src.Tag
 		dst.Value = src.Value
-		// Keep dst.Style as-is intentionally
+		// 有意保持 dst.Style 不变
 	case 0:
-		// Unknown/empty kind; do nothing
+		// 未知/空的 kind；不做任何处理
 	default:
-		// Fallback: replace shallowly
+		// 回退：浅替换
 		copyNodeShallow(dst, src)
 	}
 }
 
-// findMapKeyIndex returns the index of key node in dst mapping (index of key, not value).
-// Returns -1 when not found.
+// findMapKeyIndex 返回 dst 映射中键节点的索引（键的索引，不是值的）。
+// 未找到时返回 -1。
 func findMapKeyIndex(mapNode *yaml.Node, key string) int {
 	if mapNode == nil || mapNode.Kind != yaml.MappingNode {
 		return -1
@@ -354,7 +354,7 @@ func findMapKeyIndex(mapNode *yaml.Node, key string) int {
 	return -1
 }
 
-// appendPath appends a key to the path, returning a new slice to avoid modifying the original.
+// appendPath 向路径追加一个键，返回新切片以避免修改原路径。
 func appendPath(path []string, key string) []string {
 	if len(path) == 0 {
 		return []string{key}
@@ -365,9 +365,9 @@ func appendPath(path []string, key string) []string {
 	return newPath
 }
 
-// isKnownDefaultValue returns true if the given node at the specified path
-// represents a known default value that should not be written to the config file.
-// This prevents non-zero defaults from polluting the config.
+// isKnownDefaultValue 返回指定路径上的给定节点是否
+// 表示不应写入配置文件的已知默认值。
+// 这可以防止非零默认值污染配置。
 func isKnownDefaultValue(path []string, node *yaml.Node) bool {
 	if isPluginConfigsSubtreePath(path) {
 		return false
@@ -382,29 +382,29 @@ func isKnownDefaultValue(path []string, node *yaml.Node) bool {
 		}
 	}
 
-	// Credential weights and retry overrides are pointer-backed: zero is explicit.
+	// 凭据权重和重试覆盖由指针支撑：零值是显式的。
 	if len(path) > 0 && (path[len(path)-1] == "weight" || path[len(path)-1] == "request-retry") && node != nil && node.Kind == yaml.ScalarNode && node.Tag == "!!int" {
 		return false
 	}
 
-	// Pointer-backed booleans (such as cache-user-id and disable-cooling): explicit false is meaningful and must be preserved.
+	// 指针支撑的布尔值（如 cache-user-id 和 disable-cooling）：显式的 false 有意义，必须保留。
 	if len(path) > 0 && (path[len(path)-1] == "cache-user-id" || path[len(path)-1] == "disable-cooling") && node != nil && node.Kind == yaml.ScalarNode && node.Tag == "!!bool" {
 		return false
 	}
 
-	// First check if it's a zero value
+	// 首先检查是否为零值
 	if isZeroValueNode(node) {
 		return true
 	}
 
-	// Match known non-zero defaults by exact dotted path.
+	// 按精确的点号路径匹配已知的非零默认值。
 	if len(path) == 0 {
 		return false
 	}
 
 	fullPath := strings.Join(path, ".")
 
-	// Check string defaults
+	// 检查字符串默认值
 	if node.Kind == yaml.ScalarNode && node.Tag == "!!str" {
 		switch fullPath {
 		case "pprof.addr":
@@ -416,7 +416,7 @@ func isKnownDefaultValue(path []string, node *yaml.Node) bool {
 		}
 	}
 
-	// Check integer defaults
+	// 检查整数默认值
 	if node.Kind == yaml.ScalarNode && node.Tag == "!!int" {
 		switch fullPath {
 		case "error-logs-max-files":
@@ -427,8 +427,8 @@ func isKnownDefaultValue(path []string, node *yaml.Node) bool {
 	return false
 }
 
-// pruneKnownDefaultsInNewNode removes default-valued descendants from a new node
-// before it is appended into the destination YAML tree.
+// pruneKnownDefaultsInNewNode 在将新节点追加到目标 YAML 树之前，
+// 从中移除取默认值的后代节点。
 func pruneKnownDefaultsInNewNode(path []string, node *yaml.Node) {
 	if node == nil || isPluginConfigsSubtreePath(path) {
 		return
@@ -465,9 +465,9 @@ func pruneKnownDefaultsInNewNode(path []string, node *yaml.Node) {
 	}
 }
 
-// isZeroValueNode returns true if the YAML node represents a zero/default value
-// that should not be written as a new key to preserve config cleanliness.
-// For mappings and sequences, recursively checks if all children are zero values.
+// isZeroValueNode 返回该 YAML 节点是否表示零值/默认值，
+// 这类值不应作为新键写入，以保持配置整洁。
+// 对于映射和序列，递归检查所有子节点是否都为零值。
 func isZeroValueNode(node *yaml.Node) bool {
 	if node == nil {
 		return true
@@ -488,7 +488,7 @@ func isZeroValueNode(node *yaml.Node) bool {
 		if len(node.Content) == 0 {
 			return true
 		}
-		// Check if all elements are zero values
+		// 检查所有元素是否都为零值
 		for _, child := range node.Content {
 			if !isZeroValueNode(child) {
 				return false
@@ -499,7 +499,7 @@ func isZeroValueNode(node *yaml.Node) bool {
 		if len(node.Content) == 0 {
 			return true
 		}
-		// Check if all values are zero values (values are at odd indices)
+		// 检查所有值是否都为零值（值位于奇数索引处）
 		for i := 1; i < len(node.Content); i += 2 {
 			if !isZeroValueNode(node.Content[i]) {
 				return false
@@ -510,7 +510,7 @@ func isZeroValueNode(node *yaml.Node) bool {
 	return false
 }
 
-// deepCopyNode creates a deep copy of a yaml.Node graph.
+// deepCopyNode 创建 yaml.Node 图的深拷贝。
 func deepCopyNode(n *yaml.Node) *yaml.Node {
 	return deepCopyNodeSeen(n, map[*yaml.Node]*yaml.Node{})
 }
@@ -536,8 +536,8 @@ func deepCopyNodeSeen(n *yaml.Node, seen map[*yaml.Node]*yaml.Node) *yaml.Node {
 	return &cp
 }
 
-// copyNodeShallow copies type/tag/value and resets content to match src, but
-// keeps the same destination node pointer to preserve parent relations/comments.
+// copyNodeShallow 复制 type/tag/value 并将 content 重置为与 src 一致，
+// 但保持相同的目标节点指针，以保留父级关系/注释。
 func copyNodeShallow(dst, src *yaml.Node) {
 	if dst == nil || src == nil {
 		return
@@ -545,7 +545,7 @@ func copyNodeShallow(dst, src *yaml.Node) {
 	dst.Kind = src.Kind
 	dst.Tag = src.Tag
 	dst.Value = src.Value
-	// Replace content with deep copy from src
+	// 用来自 src 的深拷贝替换 content
 	if len(src.Content) > 0 {
 		dst.Content = make([]*yaml.Node, len(src.Content))
 		for i := range src.Content {
@@ -609,7 +609,7 @@ func matchSequenceElement(original []*yaml.Node, used []bool, target *yaml.Node)
 		}
 	default:
 	}
-	// Fallback to structural equality to preserve nodes lacking explicit identifiers.
+	// 回退到结构相等比较，以保留缺少显式标识符的节点。
 	for i := range original {
 		if used[i] || original[i] == nil {
 			continue
@@ -761,8 +761,8 @@ func pruneMappingToGeneratedKeys(dstRoot, srcRoot *yaml.Node, keyPath ...string)
 	}
 	srcIdx := findMapKeyIndex(srcRoot, key)
 	if srcIdx < 0 {
-		// Keep explicit OAuth maps when the last channel is removed. Their presence
-		// must survive saves and override legacy fields when restored to the v8 layout.
+		// 当最后一个渠道被移除时，保留显式的 OAuth 映射。它们的存在
+		// 必须在保存后仍然保留，并在恢复到 v8 布局时覆盖旧版字段。
 		if key == "oauth-excluded-models" || key == "oauth-model-alias" || key == "oauth-request-scoped-errors" || key == "oauth-settings" {
 			dstRoot.Content[dstIdx+1] = &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
 			return
@@ -821,10 +821,10 @@ func pruneMissingMapKeys(dstMap, srcMap *yaml.Node) {
 	}
 }
 
-// shouldPruneNestedMappingKeys reports whether keys missing from src should be pruned from dst.
-// This is strictly scoped to credential-nested mappings such as "cloak" and "headers" under
-// known credential sequence paths to prevent stale deleted keys from persisting while leaving
-// all other mappings and root sections unaffected.
+// shouldPruneNestedMappingKeys 报告是否应从 dst 中剪除 src 中缺失的键。
+// 其作用范围严格限定在已知凭据序列路径下的凭据嵌套映射（如 "cloak" 和 "headers"），
+// 以防止已删除的陈旧键残留，同时不影响
+// 其他所有映射和根节点区段。
 func shouldPruneNestedMappingKeys(path []string) bool {
 	if len(path) < 2 {
 		return false
@@ -839,10 +839,10 @@ func shouldPruneNestedMappingKeys(path []string) bool {
 	}
 }
 
-// NormalizeCollectionNodeStyles forces YAML collections to use block notation, keeping
-// lists and maps readable. Empty sequences retain flow style ([]) so empty list markers
-// remain compact. It also clears double quotes from string mapping keys so JSON-derived
-// keys render as standard unquoted YAML keys.
+// NormalizeCollectionNodeStyles 强制 YAML 集合使用块状表示法，使
+// 列表和映射保持可读。空序列保留流式风格（[]），使空列表标记
+// 保持紧凑。它还会清除字符串映射键上的双引号，使来自 JSON 的
+// 键渲染为标准的不带引号的 YAML 键。
 func NormalizeCollectionNodeStyles(node *yaml.Node) {
 	if node == nil {
 		return
@@ -874,7 +874,7 @@ func NormalizeCollectionNodeStyles(node *yaml.Node) {
 			NormalizeCollectionNodeStyles(node.Content[i])
 		}
 	default:
-		// Scalars keep their existing style to preserve quoting
+		// 标量保留其现有风格以保留引号
 	}
 }
 

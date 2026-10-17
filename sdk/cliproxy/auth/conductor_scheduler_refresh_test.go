@@ -145,7 +145,7 @@ func TestManager_TerminalOAuthFailure_ReturnsTerminalAuthError(t *testing.T) {
 				t.Fatalf("status = %d, want %d", authErr.StatusCode(), http.StatusServiceUnavailable)
 			}
 
-			// Negative case: adding a healthy credential allows selection to succeed.
+			// 反面情形：加入一个健康的凭据后选择能够成功。
 			healthy := &Auth{ID: healthyID, Provider: "codex", Status: StatusActive}
 			if _, errRegisterHealthy := manager.Register(ctx, healthy); errRegisterHealthy != nil {
 				t.Fatalf("register healthy auth: %v", errRegisterHealthy)
@@ -232,7 +232,7 @@ func TestManager_TerminalOAuthFailure_OverridesPreexistingModelStateError(t *tes
 				registry.GetGlobalRegistry().UnregisterClient(authID)
 			})
 
-			// Trigger unauthorized refresh failure.
+			// 触发未授权刷新失败。
 			manager.refreshAuth(ctx, auth.ID)
 
 			_, _, _, errPick := manager.pickNextMixed(ctx, []string{"codex"}, "any-model", cliproxyexecutor.Options{}, nil)
@@ -579,10 +579,10 @@ func TestManager_RefreshAuth_PreservesConcurrentCooldownMutationDuringRefresh(t 
 		close(refreshDone)
 	}()
 
-	// Wait for refresh to start
+	// 等待刷新开始
 	<-executor.started
 
-	// Concurrently simulate a 503 / rate limit cooldown on the auth record
+	// 并发地模拟对该 auth 记录的 503 / 限流冷却
 	manager.mu.Lock()
 	if current := manager.auths[auth.ID]; current != nil {
 		current.Unavailable = true
@@ -591,7 +591,7 @@ func TestManager_RefreshAuth_PreservesConcurrentCooldownMutationDuringRefresh(t 
 	}
 	manager.mu.Unlock()
 
-	// Release refresh to complete with failure
+	// 放行刷新使其以失败完成
 	close(executor.release)
 	<-refreshDone
 
@@ -631,7 +631,7 @@ func TestScheduler_ReadyAuthDemotedWhenTokenExpires(t *testing.T) {
 		t.Fatalf("register auth: %v", errRegister)
 	}
 
-	// First pick immediately: should succeed because token is unexpired
+	// 立即第一次选取：应成功，因为令牌未过期
 	got, errPick := manager.scheduler.pickSingle(ctx, "codex", "gpt-5-short-test", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickSingle() before expiry error = %v", errPick)
@@ -640,7 +640,7 @@ func TestScheduler_ReadyAuthDemotedWhenTokenExpires(t *testing.T) {
 		t.Fatalf("pickSingle() got = %v, want %q", got, auth.ID)
 	}
 
-	// Explicitly mutate the internal auth metadata timestamp to the past without re-upserting
+	// 显式把内部 auth 元数据的时间戳改到过去，而不重新 upsert
 	pastExpiry := time.Now().Add(-10 * time.Minute).Format(time.RFC3339)
 	manager.mu.Lock()
 	if current := manager.auths[auth.ID]; current != nil {
@@ -660,7 +660,7 @@ func TestScheduler_ReadyAuthDemotedWhenTokenExpires(t *testing.T) {
 	manager.scheduler.mu.Unlock()
 	manager.mu.Unlock()
 
-	// Second pick: scheduler dynamic check must demote the expired token and reject pick
+	// 第二次选取：调度器的动态检查必须降级过期的令牌并拒绝选取
 	gotAfter, errPickAfter := manager.scheduler.pickSingle(ctx, "codex", "gpt-5-short-test", cliproxyexecutor.Options{}, nil)
 	if errPickAfter == nil && gotAfter != nil {
 		t.Fatalf("pickSingle() after expiry should fail, but got auth %v", gotAfter.ID)
@@ -715,11 +715,11 @@ func TestManager_RefreshAuth_PreservesConcurrentProxyURLAndMetadata(t *testing.T
 		close(refreshDone)
 	}()
 
-	// Wait for refresh to start
+	// 等待刷新开始
 	<-executor.started
 
-	// Concurrently simulate a PATCH /v0/management/auth-files/fields or file watcher update:
-	// injecting proxy_url and custom metadata while refresh is in flight.
+	// 并发地模拟一次 PATCH /v0/management/auth-files/fields 或文件监听器更新：
+	// 在刷新进行中注入 proxy_url 和自定义元数据。
 	currentAuth, ok := manager.GetByID(auth.ID)
 	if !ok {
 		t.Fatalf("auth not found: %s", auth.ID)
@@ -731,7 +731,7 @@ func TestManager_RefreshAuth_PreservesConcurrentProxyURLAndMetadata(t *testing.T
 		t.Fatalf("concurrent update failed: %v", errUpdate)
 	}
 
-	// Release refresh to complete successfully
+	// 放行刷新使其成功完成
 	close(executor.release)
 	<-refreshDone
 
@@ -740,12 +740,12 @@ func TestManager_RefreshAuth_PreservesConcurrentProxyURLAndMetadata(t *testing.T
 		t.Fatalf("expected auth %q after refresh", auth.ID)
 	}
 
-	// Verify refreshed token fields exist
+	// 验证刷新后的令牌字段存在
 	if gotToken, _ := updated.Metadata["access_token"].(string); gotToken != "refreshed-access-token" {
 		t.Fatalf("access_token = %q, want refreshed-access-token", gotToken)
 	}
 
-	// Verify concurrent proxy_url and metadata were preserved
+	// 验证并发的 proxy_url 和元数据被保留
 	if updated.ProxyURL != "http://127.0.0.1:7890" {
 		t.Fatalf("ProxyURL = %q, want http://127.0.0.1:7890", updated.ProxyURL)
 	}
@@ -756,7 +756,7 @@ func TestManager_RefreshAuth_PreservesConcurrentProxyURLAndMetadata(t *testing.T
 		t.Fatalf("Metadata[custom_field] = %q, want custom_value", gotCustom)
 	}
 
-	// Verify persisted store also has proxy_url preserved
+	// 验证持久化存储也保留了 proxy_url
 	mockStore.mu.Lock()
 	persisted := mockStore.auths[auth.ID]
 	mockStore.mu.Unlock()
@@ -780,7 +780,7 @@ type inPlaceMutatingRefreshExecutor struct {
 func (e *inPlaceMutatingRefreshExecutor) Refresh(ctx context.Context, auth *Auth) (*Auth, error) {
 	close(e.started)
 	<-e.release
-	// In-place mutation of the passed Auth object (common behavior in executors)
+	// 对所传入 Auth 对象的原地修改（执行器中常见的行为）
 	if auth.Metadata == nil {
 		auth.Metadata = make(map[string]any)
 	}
@@ -842,18 +842,18 @@ func TestManager_RefreshAuth_InPlaceMutatingExecutorNonTokenMetadataAndConcurren
 		t.Fatalf("expected auth %q after refresh", auth.ID)
 	}
 
-	// Verify token updated
+	// 验证令牌已更新
 	if gotToken, _ := updated.Metadata["access_token"].(string); gotToken != "new-access-token" {
 		t.Fatalf("access_token = %q, want new-access-token", gotToken)
 	}
-	// Verify non-token metadata added by executor is preserved
+	// 验证执行器添加的非令牌元数据被保留
 	if gotAccount, _ := updated.Metadata["account_id"].(string); gotAccount != "acc-456" {
 		t.Fatalf("account_id = %q, want acc-456", gotAccount)
 	}
 	if gotProject, _ := updated.Metadata["project_id"].(string); gotProject != "proj-789" {
 		t.Fatalf("project_id = %q, want proj-789", gotProject)
 	}
-	// Verify concurrent proxy_url is preserved
+	// 验证并发的 proxy_url 被保留
 	if updated.ProxyURL != "http://10.0.0.1:8888" {
 		t.Fatalf("ProxyURL = %q, want http://10.0.0.1:8888", updated.ProxyURL)
 	}
@@ -897,7 +897,7 @@ func TestManager_RefreshAuth_ConcurrentlyClearedProxyNotResurrected(t *testing.T
 
 	<-executor.started
 
-	// Concurrently CLEAR proxy_url
+	// 并发地清除 proxy_url
 	currentAuth, ok := manager.GetByID(auth.ID)
 	if !ok {
 		t.Fatalf("auth not found: %s", auth.ID)
@@ -916,14 +916,14 @@ func TestManager_RefreshAuth_ConcurrentlyClearedProxyNotResurrected(t *testing.T
 		t.Fatalf("expected auth %q after refresh", auth.ID)
 	}
 
-	// Verify proxy_url was NOT resurrected
+	// 验证 proxy_url 没有被复活
 	if updated.ProxyURL != "" {
 		t.Fatalf("ProxyURL = %q, want empty string", updated.ProxyURL)
 	}
 	if _, exists := updated.Metadata["proxy_url"]; exists {
 		t.Fatalf("Metadata[proxy_url] should not exist, got %v", updated.Metadata["proxy_url"])
 	}
-	// Token should still be updated
+	// 令牌仍应被更新
 	if gotToken, _ := updated.Metadata["access_token"].(string); gotToken != "refreshed-access-token" {
 		t.Fatalf("access_token = %q, want refreshed-access-token", gotToken)
 	}
@@ -962,7 +962,7 @@ func TestManager_RefreshAuth_StaleRegistrationEpochDiscarded(t *testing.T) {
 
 	<-executor.started
 
-	// Unregister and re-register with same ID, new credentials
+	// 注销并以相同 ID、新凭据重新注册
 	manager.Remove(ctx, auth.ID)
 	newAuth := &Auth{
 		ID:       "re-register-auth",
@@ -985,7 +985,7 @@ func TestManager_RefreshAuth_StaleRegistrationEpochDiscarded(t *testing.T) {
 	if !ok {
 		t.Fatalf("auth not found: %s", auth.ID)
 	}
-	// The new registration token must remain intact and NOT overwritten by the old refresh
+	// 新注册的令牌必须保持完好，不被旧的刷新覆盖
 	if gotToken, _ := current.Metadata["access_token"].(string); gotToken != "freshly-registered-different-token" {
 		t.Fatalf("access_token = %q, want freshly-registered-different-token (stale refresh should be discarded)", gotToken)
 	}
@@ -1001,7 +1001,7 @@ func TestManager_RefreshAuth_RestoresStatusFromErrorToActive(t *testing.T) {
 	}
 	manager.RegisterExecutor(executor)
 
-	// Auth is currently in StatusError and Unavailable due to a previous 401/failure
+	// 由于先前的 401/失败，auth 当前处于 StatusError 和 Unavailable
 	auth := &Auth{
 		ID:            "error-status-auth",
 		Provider:      "antigravity",
@@ -1102,7 +1102,7 @@ func TestManager_PrepareRequestAuth_DoesNotRollbackConcurrentlyRefreshedToken(t 
 
 	<-executor.started
 
-	// While prepare is in-flight, a background token refresh completes and sets a new token
+	// 在 prepare 进行中的同时，一次后台令牌刷新完成并设置了新令牌
 	current, ok := manager.GetByID(auth.ID)
 	if !ok {
 		t.Fatalf("auth not found: %s", auth.ID)
@@ -1119,11 +1119,11 @@ func TestManager_PrepareRequestAuth_DoesNotRollbackConcurrentlyRefreshedToken(t 
 	if !ok {
 		t.Fatalf("auth not found: %s", auth.ID)
 	}
-	// The brand-new-refreshed-token must NOT be rolled back to original-token
+	// 全新的已刷新令牌绝不能被回滚为原始令牌
 	if gotToken, _ := finalAuth.Metadata["access_token"].(string); gotToken != "brand-new-refreshed-token" {
 		t.Fatalf("access_token = %q, want brand-new-refreshed-token (prepare should not roll back token)", gotToken)
 	}
-	// Project ID should be added
+	// 应添加项目 ID
 	if gotProj, _ := finalAuth.Metadata["project_id"].(string); gotProj != "discovered-project-id" {
 		t.Fatalf("project_id = %q, want discovered-project-id", gotProj)
 	}
@@ -1148,11 +1148,11 @@ func TestManager_Persist_SkipPersistAdvancesWatermarkAndBlocksOlderGeneration(t 
 		t.Fatalf("register auth: %v", errRegister)
 	}
 
-	// Capture generation 1 snapshot and inject a unique sentinel that would only appear if persisted
+	// 捕获第 1 代快照并注入一个只有在被持久化时才会出现的唯一哨兵
 	gen1Auth, _ := manager.GetByID(auth.ID)
 	gen1Auth.Metadata["stale_sentinel"] = "must_not_persist"
 
-	// Simulate file watcher updating auth from disk via WithSkipPersist (e.g. user edited JSON on disk)
+	// 模拟文件监听器通过 WithSkipPersist 从磁盘更新 auth（例如用户在磁盘上编辑了 JSON）
 	watcherAuth := gen1Auth.Clone()
 	delete(watcherAuth.Metadata, "stale_sentinel")
 	watcherAuth.ProxyURL = "http://user-disk-edit.proxy"
@@ -1162,12 +1162,12 @@ func TestManager_Persist_SkipPersistAdvancesWatermarkAndBlocksOlderGeneration(t 
 		t.Fatalf("watcher update failed: %v", errUpdate)
 	}
 
-	// Now simulate the older generation 1 snapshot trying to persist afterwards
+	// 现在模拟较旧的第 1 代快照随后尝试持久化
 	if errPersist := manager.persist(ctx, gen1Auth); errPersist != nil {
 		t.Fatalf("persist error: %v", errPersist)
 	}
 
-	// Immediately verify store was NOT overwritten with gen1's stale sentinel
+	// 立即验证存储没有被第 1 代的过期哨兵覆盖
 	mockStore.mu.Lock()
 	savedImmediately := mockStore.auths[auth.ID]
 	mockStore.mu.Unlock()
@@ -1177,7 +1177,7 @@ func TestManager_Persist_SkipPersistAdvancesWatermarkAndBlocksOlderGeneration(t 
 	if savedImmediately.Metadata["stale_sentinel"] != nil {
 		t.Fatalf("stale generation-1 snapshot was persisted to store! sentinel = %v", savedImmediately.Metadata["stale_sentinel"])
 	}
-	// Let's verify by updating a generation 3 that DOES persist:
+	// 我们用一个确实会持久化的第 3 代更新来验证：
 	gen3Auth := watcherAuth.Clone()
 	gen3Auth.Metadata["access_token"] = "gen3-token"
 	if _, errUpdate := manager.Update(ctx, gen3Auth); errUpdate != nil {
@@ -1208,7 +1208,7 @@ func (e *proxyMutatingExecutor) Refresh(ctx context.Context, auth *Auth) (*Auth,
 	auth.Metadata["proxy_url"] = "http://executor-returned.proxy:8080"
 	auth.Metadata["access_token"] = "refreshed-token"
 	auth.Metadata["expired"] = time.Now().Add(time.Hour).Format(time.RFC3339)
-	auth.Status = "" // Executor returns unset status
+	auth.Status = "" // 执行器返回未设置的状态
 	return auth, nil
 }
 
@@ -1226,7 +1226,7 @@ func TestManager_RefreshAuth_BothModifyProxy_UserTakesPrecedenceAndConsistent(t 
 	auth := &Auth{
 		ID:       "conflict-proxy-auth",
 		Provider: "antigravity",
-		Status:   StatusError, // Starts in error
+		Status:   StatusError, // 初始处于错误状态
 		ProxyURL: "http://base.proxy:8080",
 		Metadata: map[string]any{
 			"type":         "antigravity",
@@ -1247,7 +1247,7 @@ func TestManager_RefreshAuth_BothModifyProxy_UserTakesPrecedenceAndConsistent(t 
 
 	<-executor.started
 
-	// Concurrently, user changes proxy to http://user-preferred.proxy:9090
+	// 并发地，用户把代理改为 http://user-preferred.proxy:9090
 	current, ok := manager.GetByID(auth.ID)
 	if !ok {
 		t.Fatalf("auth not found: %s", auth.ID)
@@ -1266,18 +1266,18 @@ func TestManager_RefreshAuth_BothModifyProxy_UserTakesPrecedenceAndConsistent(t 
 		t.Fatalf("expected auth %q after refresh", auth.ID)
 	}
 
-	// User's proxy change MUST win over executor's proxy change
+	// 用户对代理的修改必须胜过执行器对代理的修改
 	if finalAuth.ProxyURL != "http://user-preferred.proxy:9090" {
 		t.Fatalf("ProxyURL = %q, want user value http://user-preferred.proxy:9090", finalAuth.ProxyURL)
 	}
 	if gotProxy, _ := finalAuth.Metadata["proxy_url"].(string); gotProxy != "http://user-preferred.proxy:9090" {
 		t.Fatalf("Metadata[proxy_url] = %q, want user value http://user-preferred.proxy:9090", gotProxy)
 	}
-	// Token must still be updated
+	// 令牌仍必须被更新
 	if gotToken, _ := finalAuth.Metadata["access_token"].(string); gotToken != "refreshed-token" {
 		t.Fatalf("access_token = %q, want refreshed-token", gotToken)
 	}
-	// Status should be restored to Active even if executor returned empty Status
+	// 即使执行器返回空 Status，状态也应被恢复为 Active
 	if finalAuth.Status != StatusActive {
 		t.Fatalf("Status = %v, want StatusActive", finalAuth.Status)
 	}
@@ -1315,7 +1315,7 @@ func TestManager_RefreshAuth_PreservesConcurrentModelCooldown(t *testing.T) {
 
 	<-executor.started
 
-	// While refresh is running, model "gpt-pro" gets put in 429 quota cooldown
+	// 在刷新运行期间，模型 "gpt-pro" 被置入 429 额度冷却
 	current, ok := manager.GetByID(auth.ID)
 	if !ok {
 		t.Fatalf("auth not found: %s", auth.ID)
@@ -1341,7 +1341,7 @@ func TestManager_RefreshAuth_PreservesConcurrentModelCooldown(t *testing.T) {
 	if !ok {
 		t.Fatalf("auth not found: %s", auth.ID)
 	}
-	// The model cooldown on "gpt-pro" MUST be preserved
+	// "gpt-pro" 上的模型冷却必须被保留
 	ms := finalAuth.ModelStates["gpt-pro"]
 	if ms == nil {
 		t.Fatal("ModelStates[gpt-pro] is nil, want preserved cooldown")

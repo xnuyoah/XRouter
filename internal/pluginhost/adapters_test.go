@@ -2404,7 +2404,7 @@ func TestUsageAdapterNormalizesOmittedGenerateToTrue(t *testing.T) {
 		pluginID: "usage-generate",
 	}
 
-	// Legacy callers construct usage.Record without Generate; adapter must publish true.
+	// 旧版调用方构造 usage.Record 时不带 Generate；适配器必须发布 true。
 	adapter.HandleUsage(context.Background(), coreusage.Record{Provider: "provider", Model: "gpt-5.4"})
 	if !gotGenerate {
 		t.Fatalf("plugin Generate = %v, want true for omitted field", gotGenerate)
@@ -2477,7 +2477,7 @@ func TestUsageAdapterPropagatesResponseModelServiceTierAndStream(t *testing.T) {
 		t.Fatalf("plugin Stream = %v, want true", gotRecord.Stream)
 	}
 
-	// Verify empty fields and Stream=false propagate cleanly without corruption.
+	// 验证空字段与 Stream=false 能干净地传播而不被破坏。
 	adapter.HandleUsage(context.Background(), coreusage.Record{
 		Provider: "provider",
 		Model:    "gpt-5.4",
@@ -3892,11 +3892,11 @@ func (failingReadCloser) Close() error {
 }
 
 func TestInterceptRequest_ReadOnlyInterceptorDoesNotReplaceBody_Issue6101(t *testing.T) {
-	// A read-only interceptor (like cpa-account-config-manager) returns an unmodified body (empty/nil Body).
-	// Per RequestInterceptResponse documentation, "Body replaces the current request body only when non-empty."
-	// When an interceptor does not mutate the body, host.InterceptRequestBeforeAuth and InterceptRequestAfterAuth
-	// must return an empty/nil Body so downstream callers know the request body was not replaced,
-	// rather than returning a cloned copy of the input body.
+	// 只读拦截器（如 cpa-account-config-manager）返回未修改的 body（空/nil Body）。
+	// 根据 RequestInterceptResponse 文档，"Body 仅在非空时替换当前请求体。"
+	// 当拦截器不修改 body 时，host.InterceptRequestBeforeAuth 与 InterceptRequestAfterAuth
+	// 必须返回空/nil Body，以便下游调用方知道请求体未被替换，
+	// 而不是返回输入 body 的克隆副本。
 	host := newHostWithRecords(capabilityRecord{
 		id: "read-only-observer",
 		plugin: pluginapi.Plugin{Capabilities: pluginapi.Capabilities{
@@ -3928,8 +3928,8 @@ func TestInterceptRequest_ReadOnlyInterceptorDoesNotReplaceBody_Issue6101(t *tes
 }
 
 func TestInterceptRequest_FirstPluginInPlaceMutationDiscardedIfEmptyOrFailed(t *testing.T) {
-	// If plugin 1 mutates req.Body in-place but returns an empty body (or fails),
-	// plugin 2 must still receive the uncorrupted original body from currentBase.
+	// 若插件 1 就地修改 req.Body 但返回空 body（或失败），
+	// 插件 2 仍必须从 currentBase 收到未被破坏的原始 body。
 	var plugin2ReceivedBody []byte
 	host := newHostWithRecords(
 		capabilityRecord{
@@ -3937,9 +3937,9 @@ func TestInterceptRequest_FirstPluginInPlaceMutationDiscardedIfEmptyOrFailed(t *
 			priority: 20,
 			plugin: pluginapi.Plugin{Capabilities: pluginapi.Capabilities{
 				RequestInterceptor: requestInterceptorFunc(func(ctx context.Context, req pluginapi.RequestInterceptRequest) (pluginapi.RequestInterceptResponse, error) {
-					// In-place mutation on nextReq.Body
+					// 就地修改 nextReq.Body
 					req.Body[0] = 'X'
-					// Returns empty body (mutation is not returned as a replacement)
+					// 返回空 body（修改未作为替换内容返回）
 					return pluginapi.RequestInterceptResponse{
 						Headers: http.Header{"X-Plugin-1": []string{"ran"}},
 					}, nil
@@ -3975,8 +3975,8 @@ func TestInterceptRequest_FirstPluginInPlaceMutationDiscardedIfEmptyOrFailed(t *
 }
 
 func TestInterceptRequest_FirstPluginInPlaceMutationDiscardedOnError(t *testing.T) {
-	// If plugin 1 mutates req.Body in-place but returns an error,
-	// plugin 2 must still receive the uncorrupted original body from currentBase.
+	// 若插件 1 就地修改 req.Body 但返回错误，
+	// 插件 2 仍必须从 currentBase 收到未被破坏的原始 body。
 	var plugin2ReceivedBody []byte
 	host := newHostWithRecords(
 		capabilityRecord{
@@ -4066,7 +4066,7 @@ func BenchmarkHostRequestInterceptors_ReadOnly(b *testing.B) {
 		{name: "1MiB", bytes: 1 << 20},
 		{name: "8MiB", bytes: 8 << 20},
 	}
-	// 1 read-only plugin (matching cpa-account-config-manager)
+	// 1 个只读插件（匹配 cpa-account-config-manager）
 	hostSingle := newHostWithRecords(capabilityRecord{
 		id: "read-only-observer",
 		plugin: pluginapi.Plugin{Capabilities: pluginapi.Capabilities{
@@ -4075,7 +4075,7 @@ func BenchmarkHostRequestInterceptors_ReadOnly(b *testing.B) {
 			}),
 		}},
 	})
-	// 2 read-only plugins
+	// 2 个只读插件
 	hostMulti := newHostWithRecords(
 		capabilityRecord{
 			id: "observer-1", priority: 20,

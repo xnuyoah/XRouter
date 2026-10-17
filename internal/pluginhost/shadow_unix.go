@@ -20,8 +20,8 @@ func removeShadowPluginDir(dir string) {
 }
 
 func shadowPluginProcessAlive(pid int) bool {
-	// Only ESRCH proves the process is gone; any other outcome keeps the
-	// directory so a live process never loses its resident plugin images.
+	// 只有 ESRCH 才能证明进程已不存在；任何其他结果都会保留
+	// 该目录，从而让存活进程不会丢失其常驻的插件镜像。
 	errSignal := syscall.Kill(pid, 0)
 	return !errors.Is(errSignal, syscall.ESRCH)
 }

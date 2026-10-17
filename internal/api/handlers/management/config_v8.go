@@ -14,16 +14,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ConfigV8ContextKey marks operations registered by the v8 API that save configuration.
+// ConfigV8ContextKey 标记由 v8 API 注册的、会保存配置的操作。
 const ConfigV8ContextKey = "management.config-v8"
 
-// ConfigV8 serves the persisted configuration using v8 names. GET is a view;
-// only a successful configuration mutation migrates the stored document.
+// ConfigV8 使用 v8 名称提供持久化的配置。GET 是只读视图；
+// 只有成功的配置变更才会迁移已存储的文档。
 //
-// Reads return an ETag holding the SHA-256 of the on-disk config bytes.
-// Writes honour an optional If-Match against that token, so a client can
-// detect that another writer saved after its read (412) instead of silently
-// overwriting the change. Without If-Match, writes stay unconditional.
+// 读取会返回一个持有磁盘上配置字节 SHA-256 的 ETag。
+// 写入会遵循针对该令牌的可选 If-Match，因此客户端可以
+// 检测到在它读取之后有其他写入者保存了内容（412），而不是静默
+// 覆盖该变更。没有 If-Match 时，写入保持无条件执行。
 func (h *Handler) ConfigV8(c *gin.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -116,7 +116,7 @@ func (h *Handler) ConfigV8(c *gin.Context) {
 				return
 			}
 		}
-		// Paths identify YAML keys, never array indexes. Lists are replaced whole.
+		// 路径标识 YAML key，绝不标识数组下标。列表是整体替换的。
 		dst := root
 		for _, part := range parts {
 			if part == "" || dst.Kind != yaml.MappingNode {
@@ -145,7 +145,7 @@ func (h *Handler) ConfigV8(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_config", "message": err.Error()})
 		return
 	}
-	// Revisions are owned by Home and must not become ordinary editable settings.
+	// Revisions 归 Home 所有，不得变成普通的可编辑设置。
 	for _, field := range []string{"credentials/concurrency/lifecycle-config-revision", "credentials/concurrency/observation-barrier-revision", "plugins/auth-revision"} {
 		old := configV8Node(before, strings.Split(field, "/"))
 		next := configV8Node(root, strings.Split(field, "/"))
@@ -182,19 +182,19 @@ func (h *Handler) ConfigV8(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_config", "message": err.Error()})
 		return
 	}
-	// Save the validated canonical tree directly: projecting runtime defaults
-	// back onto it loses explicit nulls, empty maps, and opaque plugin settings.
-	// WriteConfig retains the inode of a mounted configuration file.
+	// 直接保存已校验的规范树：将运行时默认值投影
+	// 回去会丢失显式的 null、空 map 以及不透明的插件设置。
+	// WriteConfig 会保留已挂载配置文件的 inode。
 	if err = WriteConfig(h.configFilePath, data); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "write_failed", "message": err.Error()})
 		return
 	}
-	// Runtime-only ownership state is never sourced from an uploaded YAML document.
+	// 仅运行时的归属状态绝不会从上传的 YAML 文档中获取。
 	next.Home = h.cfg.Home
-	// WriteConfig may normalize the bytes, so report the version actually on
-	// disk. If it cannot be read back, omit the ETag instead of guessing one.
-	// Like Home, SourceHash keeps its runtime owner and is published by the
-	// reload, so it is not overwritten on next here.
+	// WriteConfig 可能会规范化字节，因此报告磁盘上实际的
+	// 版本。如果无法读回，则省略 ETag，而不是猜测一个。
+	// 与 Home 一样，SourceHash 保留其运行时归属者，并由重载
+	// 发布，因此这里不会在下一次时被覆盖。
 	if saved, errSaved := os.ReadFile(h.configFilePath); errSaved == nil {
 		c.Header("ETag", configV8ETag(config.ComputeSourceHash(saved)))
 	}
@@ -204,16 +204,16 @@ func (h *Handler) ConfigV8(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok", "config-version": 8})
 }
 
-// configV8ETag renders a config source hash as a strong ETag.
+// configV8ETag 将配置源哈希渲染为强 ETag。
 func configV8ETag(hash string) string {
 	return `"` + hash + `"`
 }
 
-// ifMatchSatisfied reports whether the optional If-Match header lines pass
-// the RFC 9110 strong comparison against currentHash. Repeated lines form
-// one list. An absent header always passes; a present but blank header
-// carries no tag and fails; the whole field "*" matches any current
-// version; weak and malformed entity tags never match.
+// ifMatchSatisfied 报告可选的 If-Match 头各行是否通过
+// 针对 currentHash 的 RFC 9110 强比较。重复的行构成
+// 一个列表。缺失该头总是通过；存在但为空的行
+// 不携带任何 tag，判定为失败；整个字段为 "*" 时匹配任何当前
+// 版本；弱实体标签和格式错误的实体标签永不匹配。
 func ifMatchSatisfied(values []string, currentHash string) bool {
 	if len(values) == 0 {
 		return true
@@ -231,8 +231,8 @@ func ifMatchSatisfied(values []string, currentHash string) bool {
 	return false
 }
 
-// splitEntityTagList splits an If-Match field value on list commas. A comma
-// inside a quoted entity tag is tag content, not a separator.
+// splitEntityTagList 按列表逗号切分 If-Match 字段值。带引号的
+// 实体标签内部的逗号是标签内容，而非分隔符。
 func splitEntityTagList(field string) []string {
 	parts := []string{}
 	start := 0
@@ -268,8 +268,8 @@ func configV8Node(root *yaml.Node, parts []string) *yaml.Node {
 	return root
 }
 
-// deleteConfigV8Path prunes only empty ancestors of the removed field. Other
-// explicit empty maps can carry inheritance or plugin semantics and stay intact.
+// deleteConfigV8Path 只修剪被移除字段的空祖先。其他
+// 显式的空 map 可能承载继承或插件语义，保持不动。
 func deleteConfigV8Path(root *yaml.Node, parts []string) bool {
 	if root == nil || root.Kind != yaml.MappingNode || len(parts) == 0 {
 		return false
@@ -302,8 +302,8 @@ func cloneConfigV8Node(node *yaml.Node) *yaml.Node {
 	return &copy
 }
 
-// Unlike JSON merge-patch, null is retained: optional key overrides use it to
-// inherit the group value. DELETE is the explicit field-removal operation.
+// 与 JSON merge-patch 不同，null 会被保留：可选的 key 覆盖用它来
+// 继承组的值。DELETE 是显式的字段移除操作。
 func mergeConfigV8Patch(dst, src *yaml.Node) {
 	if dst.Kind != yaml.MappingNode || src.Kind != yaml.MappingNode {
 		if dst.Kind == yaml.ScalarNode && src.Kind == yaml.ScalarNode {

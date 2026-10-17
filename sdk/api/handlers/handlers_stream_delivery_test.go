@@ -36,7 +36,7 @@ func TestIssue6332LifecycleDeliveryReadyBoundary(t *testing.T) {
 				cancel()
 				chunks := make(chan coreexecutor.StreamChunk)
 				close(chunks)
-				// Both EOF and cancellation are ready before the shared select.
+				// 在共享 select 之前，EOF 与取消都已就绪。
 				_, _, canceled := nextStreamChunk(ctx, nil, nil, chunks)
 				outcome, status, err := pluginapi.RequestCompletionSucceeded, http.StatusOK, error(nil)
 				if canceled {
@@ -138,7 +138,7 @@ func TestIssue6332LifecycleValidationFailureSurvivesDeliveryCancellation(t *test
 	h.SetPluginHost(&handlerInterceptorTestHost{
 		interceptStreamChunk: func(_ context.Context, req pluginapi.StreamChunkInterceptRequest) pluginapi.StreamChunkInterceptResponse {
 			if len(req.Body) > 0 {
-				// Make cancellation and the buffered error send ready together.
+				// 让取消与带缓冲的错误发送同时就绪。
 				finish(nil)
 				cancel()
 			}

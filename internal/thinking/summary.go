@@ -8,7 +8,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
-// SummaryMode represents whether the client explicitly requested reasoning summaries.
+// SummaryMode 表示客户端是否显式请求了推理摘要。
 type SummaryMode int
 
 const (
@@ -17,23 +17,23 @@ const (
 	SummaryEnabled
 )
 
-// SummaryConfig is the provider-neutral reasoning-summary visibility intent.
-// Detail preserves protocols that distinguish auto, concise, and detailed summaries.
+// SummaryConfig 是与供应商无关的推理摘要可见性意图。
+// Detail 用于保留区分 auto、concise 和 detailed 摘要的协议。
 type SummaryConfig struct {
 	Mode   SummaryMode
 	Detail string
 }
 
-// ExtractSummaryConfig reads protocol-specific summary visibility intent.
+// ExtractSummaryConfig 读取特定协议的摘要可见性意图。
 //
-// OpenAI Chat is the one protocol where effort implies summaries: chat
-// completions has no summary field of its own, and clients that send
-// reasoning_effort have always received reasoning summaries here, so treating a
-// non-none effort as an explicit request preserves that contract. Every other
-// protocol carries a dedicated summary field, so effort alone means nothing.
+// OpenAI Chat 是唯一一个 effort 暗示摘要的协议：chat
+// completions 本身没有摘要字段，而发送
+// reasoning_effort 的客户端在此处一直会收到推理摘要，因此把
+// 非 none 的 effort 视为显式请求可以保持该约定。其他每个
+// 协议都带有专门的摘要字段，因此仅凭 effort 说明不了什么。
 func ExtractSummaryConfig(body []byte, format string) SummaryConfig {
 	normalized := strings.ToLower(strings.TrimSpace(format))
-	// Check the format first so unsupported targets skip whole-body validation.
+	// 先检查格式，使不支持的目标跳过整个请求体校验。
 	if !summaryFormatSupported(normalized) || len(body) == 0 || !gjson.ValidBytes(body) {
 		return SummaryConfig{}
 	}
@@ -61,7 +61,7 @@ func ExtractSummaryConfig(body []byte, format string) SummaryConfig {
 			return config
 		}
 	case "claude":
-		// Anthropic only accepts display alongside active adaptive/manual thinking.
+		// Anthropic 仅在接受处于活动状态的自适应/手动思考时接受 display。
 		if !claudeThinkingAcceptsDisplay(body) {
 			return SummaryConfig{}
 		}
@@ -73,10 +73,10 @@ func ExtractSummaryConfig(body []byte, format string) SummaryConfig {
 	return SummaryConfig{}
 }
 
-// ExtractExplicitSummaryConfig reads only explicit visibility controls from a
-// provider payload. Unlike ExtractSummaryConfig, OpenAI Chat reasoning_effort
-// is not treated as a summary proxy. This lets executor post-processing tell
-// whether a request normalizer retained or removed the translated target field.
+// ExtractExplicitSummaryConfig 仅从供应商载荷中读取显式的可见性控制。
+// 与 ExtractSummaryConfig 不同，OpenAI Chat 的 reasoning_effort
+// 不会被当作摘要的代理。这使执行器的后处理能够判断
+// 请求归一化器是否保留或移除了翻译后的目标字段。
 func ExtractExplicitSummaryConfig(body []byte, format string) SummaryConfig {
 	normalized := strings.ToLower(strings.TrimSpace(format))
 	if normalized != "openai" {
@@ -89,9 +89,9 @@ func ExtractExplicitSummaryConfig(body []byte, format string) SummaryConfig {
 	return config
 }
 
-// ExtractTranslatedSummaryConfig reads source visibility intent using the
-// source/target protocol pair. OpenAI Chat reasoning_effort controls depth,
-// not Claude display visibility, so it is ignored only for Chat-to-Claude.
+// ExtractTranslatedSummaryConfig 使用源/目标协议对读取源端的可见性意图。
+// OpenAI Chat 的 reasoning_effort 控制的是深度，
+// 而非 Claude 的 display 可见性，因此仅在 Chat 转 Claude 时忽略它。
 func ExtractTranslatedSummaryConfig(body []byte, sourceFormat, targetFormat string) SummaryConfig {
 	source := strings.ToLower(strings.TrimSpace(sourceFormat))
 	target := strings.ToLower(strings.TrimSpace(targetFormat))
@@ -101,9 +101,9 @@ func ExtractTranslatedSummaryConfig(body []byte, sourceFormat, targetFormat stri
 	return ExtractSummaryConfig(body, source)
 }
 
-// ApplyTranslatedSummaryToClaude copies an explicit source visibility choice
-// onto a Claude body. Chat reasoning_effort is not a visibility field, so it
-// stays unspecified and the Claude cloak can apply its default display.
+// ApplyTranslatedSummaryToClaude 将源端显式的可见性选择复制
+// 到 Claude 请求体上。Chat 的 reasoning_effort 不是可见性字段，因此
+// 保持未指定，Claude cloak 可以应用其默认 display。
 func ApplyTranslatedSummaryToClaude(out, source []byte, sourceFormat, model string) []byte {
 	config := ExtractTranslatedSummaryConfig(source, sourceFormat, "claude")
 	if config.Mode == SummaryUnspecified {
@@ -112,26 +112,26 @@ func ApplyTranslatedSummaryToClaude(out, source []byte, sourceFormat, model stri
 	return ApplySummaryConfigForModel(out, "claude", model, config)
 }
 
-// ApplySummaryConfig writes canonical summary intent in the target protocol.
+// ApplySummaryConfig 以目标协议写入规范化的摘要意图。
 func ApplySummaryConfig(body []byte, format string, config SummaryConfig) []byte {
 	return ApplySummaryConfigForModel(body, format, "", config)
 }
 
-// ApplySummaryConfigForModel writes canonical summary intent in the target
-// protocol and uses target model capabilities when a valid target request must
-// activate thinking before it can request summaries.
+// ApplySummaryConfigForModel 以目标协议写入规范化的摘要意图，
+// 并在合法的目标请求必须先激活思考才能请求摘要时，
+// 使用目标模型的能力信息。
 func ApplySummaryConfigForModel(body []byte, format, model string, config SummaryConfig) []byte {
 	return applySummaryConfigForModel(body, format, model, nil, config)
 }
 
-// applySummaryConfigForModel uses the resolved model definition when execution
-// selected a configured API-key model whose capability is not globally visible.
+// applySummaryConfigForModel 在执行选择了一个其能力不全局可见的
+// 已配置 API-key 模型时，使用解析后的模型定义。
 func applySummaryConfigForModel(body []byte, format, model string, modelInfo *registry.ModelInfo, config SummaryConfig) []byte {
 	return applySummaryConfigForProvider(body, format, model, "", modelInfo, config)
 }
 
-// applySummaryConfigForProvider uses the execution provider identity for Chat
-// dialects whose visibility controls are not part of the OpenAI wire format.
+// applySummaryConfigForProvider 对可见性控制不属于 OpenAI 传输格式的
+// Chat 方言使用执行时的供应商身份。
 func applySummaryConfigForProvider(body []byte, format, model, provider string, modelInfo *registry.ModelInfo, config SummaryConfig) []byte {
 	normalized := strings.ToLower(strings.TrimSpace(format))
 	if config.Mode == SummaryUnspecified || !summaryFormatSupported(normalized) || len(body) == 0 || !gjson.ValidBytes(body) {
@@ -143,18 +143,18 @@ func applySummaryConfigForProvider(body []byte, format, model, provider string, 
 	case "openai":
 		body = applyOpenAIChatSummaryConfig(body, provider, enabled)
 	case "claude":
-		// Anthropic documents display as invalid with thinking.type=disabled and
-		// requires it alongside adaptive or enabled thinking. Model defaults differ:
-		// Opus 5 and Sonnet 5 default to adaptive thinking; Fable/Mythos 5 are always
-		// on. Opus 4.8/4.7/4.6, Sonnet 4.6, and the 4.5 models default to thinking
-		// off. The newest models also default display to omitted. Keeping a missing
-		// thinking block absent therefore preserves both kinds of model default;
-		// absence does not mean every Claude model runs without thinking. Only an
-		// enabled summary may activate a valid target thinking mode so that summarized
-		// text can be returned. A disabled summary only adds omitted to an
-		// already-active target mode.
+		// Anthropic 文档说明 display 在 thinking.type=disabled 时无效，
+		// 并要求它与 adaptive 或 enabled 的思考同时出现。各模型默认值不同：
+		// Opus 5 和 Sonnet 5 默认使用 adaptive 思考；Fable/Mythos 5 始终
+		// 开启。Opus 4.8/4.7/4.6、Sonnet 4.6 和 4.5 系列模型默认关闭
+		// 思考。最新模型还会默认将 display 设为 omitted。因此让缺失的
+		// thinking 块保持缺失，可以同时保留两类模型默认值；
+		// 缺失并不意味着所有 Claude 模型都在不思考的情况下运行。只有
+		// 启用的摘要才可以激活合法的目标思考模式，以便返回
+		// 摘要文本。禁用的摘要只会向已处于活动状态的目标模式
+		// 添加 omitted。
 		//
-		// Anthropic docs:
+		// Anthropic 文档：
 		// https://platform.claude.com/docs/en/build-with-claude/thinking
 		// https://platform.claude.com/docs/en/build-with-claude/thinking-troubleshooting#supported-models
 		if enabled && !gjson.GetBytes(body, "thinking.type").Exists() {
@@ -174,8 +174,8 @@ func applySummaryConfigForProvider(body []byte, format, model, provider string, 
 			body, _ = sjson.DeleteBytes(body, "reasoning.generate_summary")
 			break
 		}
-		// Omitting the field is the documented way to disable summaries; an
-		// explicit null is not accepted by every Responses-compatible backend.
+		// 省略该字段是禁用摘要的文档化方式；
+		// 并非所有兼容 Responses 的后端都接受显式的 null。
 		body, _ = sjson.DeleteBytes(body, "reasoning.summary")
 		body, _ = sjson.DeleteBytes(body, "reasoning.generate_summary")
 		if reasoning := gjson.GetBytes(body, "reasoning"); reasoning.IsObject() && len(reasoning.Map()) == 0 {
@@ -185,8 +185,8 @@ func applySummaryConfigForProvider(body []byte, format, model, provider string, 
 	return body
 }
 
-// summaryFormatSupported reports whether a protocol carries summary visibility
-// intent that this package can read or write.
+// summaryFormatSupported 报告某协议是否携带本包可以
+// 读写的摘要可见性意图。
 func summaryFormatSupported(format string) bool {
 	switch format {
 	case "openai", "openai-response", "codex", "claude":
@@ -196,16 +196,16 @@ func summaryFormatSupported(format string) bool {
 	}
 }
 
-// claudeThinkingAcceptsDisplay reports whether the body carries an active
-// thinking block that can hold a display field.
+// claudeThinkingAcceptsDisplay 报告请求体是否携带可以容纳
+// display 字段的活动 thinking 块。
 func claudeThinkingAcceptsDisplay(body []byte) bool {
 	switch strings.ToLower(strings.TrimSpace(gjson.GetBytes(body, "thinking.type").String())) {
 	case "adaptive":
 		return true
 	case "enabled":
-		// This runs before ApplyThinking normalizes the request, so a missing
-		// budget_tokens is an unfinished body rather than inactive thinking. CPA
-		// also accepts -1 as its compatibility representation for auto thinking.
+		// 此处在 ApplyThinking 归一化请求之前运行，因此缺失的
+		// budget_tokens 表示未完成的请求体，而不是未激活的思考。CPA
+		// 也接受 -1 作为自动思考的兼容表示。
 		budget := gjson.GetBytes(body, "thinking.budget_tokens")
 		if budget.Type != gjson.Number {
 			return true
@@ -217,18 +217,18 @@ func claudeThinkingAcceptsDisplay(body []byte) bool {
 	}
 }
 
-// applyOpenAIChatSummaryConfig writes only documented Chat visibility controls.
+// applyOpenAIChatSummaryConfig 仅写入有文档记载的 Chat 可见性控制。
 //
-// OpenAI Chat Completions exposes reasoning_effort but no reasoning summary or
-// visibility parameter. DeepSeek Chat returns reasoning_content while
-// thinking is active, but likewise documents no independent hide/show switch.
-// Summary intent must therefore never invent or overwrite thinking effort for
-// those dialects. OpenRouter is the exception: reasoning.exclude is its
-// documented "reason but hide" control, and include_reasoning is its deprecated
-// inverse alias. Unknown OpenAI-compatible providers are handled conservatively
-// by updating those fields only when the payload already carries them.
+// OpenAI Chat Completions 暴露 reasoning_effort，但没有推理摘要或
+// 可见性参数。DeepSeek Chat 在思考激活时返回 reasoning_content，
+// 但同样没有记录任何独立的隐藏/显示开关。
+// 因此摘要意图绝不能为这些方言凭空生成或覆盖 thinking effort。
+// OpenRouter 是例外：reasoning.exclude 是其文档化的
+// “推理但隐藏”控制，include_reasoning 是其已废弃的
+// 反向别名。未知的 OpenAI 兼容供应商会被保守处理，
+// 仅当载荷已携带这些字段时才更新它们。
 //
-// Docs:
+// 文档：
 // https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create
 // https://openrouter.ai/docs/guides/best-practices/reasoning-tokens
 // https://api-docs.deepseek.com/guides/thinking_mode
@@ -258,8 +258,8 @@ func isOpenRouterProvider(provider string) bool {
 }
 
 func extractOpenAIExplicitSummaryConfig(body []byte) (SummaryConfig, bool) {
-	// Explicit visibility aliases take precedence over Chat's reasoning_effort
-	// fallback.
+	// 显式的可见性别名优先于 Chat 的 reasoning_effort
+	// 回退逻辑。
 	for _, path := range []string{
 		"thinking.includeThoughts",
 		"thinking.include_thoughts",
@@ -280,10 +280,10 @@ func extractOpenAIExplicitSummaryConfig(body []byte) (SummaryConfig, bool) {
 		}
 	}
 
-	// reasoning.exclude is OpenRouter's documented "reason but hide" bit, not an
-	// OpenAI wire field; include_reasoning is its documented legacy alias
-	// (include_reasoning: false is equivalent to reasoning: {exclude: true}).
-	// Only accept actual JSON booleans.
+	// reasoning.exclude 是 OpenRouter 文档化的“推理但隐藏”位，而非
+	// OpenAI 传输字段；include_reasoning 是其文档化的旧版别名
+	// （include_reasoning: false 等价于 reasoning: {exclude: true}）。
+	// 只接受真正的 JSON 布尔值。
 	if exclude := gjson.GetBytes(body, "reasoning.exclude"); exclude.IsBool() {
 		if exclude.Bool() {
 			return SummaryConfig{Mode: SummaryDisabled}, true
@@ -296,8 +296,8 @@ func extractOpenAIExplicitSummaryConfig(body []byte) (SummaryConfig, bool) {
 		}
 		return SummaryConfig{Mode: SummaryDisabled}, true
 	}
-	// OpenRouter's reasoning.enabled turns reasoning on "with no exclusions", so
-	// it also decides visibility when no dedicated bit was sent.
+	// OpenRouter 的 reasoning.enabled 会“无排除地”开启推理，因此
+	// 在未发送专门位时它也决定可见性。
 	if enabled := gjson.GetBytes(body, "reasoning.enabled"); enabled.IsBool() {
 		if enabled.Bool() {
 			return SummaryConfig{Mode: SummaryEnabled, Detail: "auto"}, true
@@ -335,8 +335,8 @@ func responsesSummaryConfig(body []byte, path string) (SummaryConfig, bool) {
 	case "auto", "concise", "detailed":
 		return SummaryConfig{Mode: SummaryEnabled, Detail: raw}, true
 	case "none":
-		// Compatibility with clients that expose a none enum; the OpenAI wire
-		// representation disables summaries by omitting the field.
+		// 兼容暴露 none 枚举的客户端；OpenAI 的传输
+		// 表示通过省略该字段来禁用摘要。
 		return SummaryConfig{Mode: SummaryDisabled}, true
 	default:
 		return SummaryConfig{}, false

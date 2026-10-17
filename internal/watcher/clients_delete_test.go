@@ -44,7 +44,7 @@ func TestAuthDeleteFileRemovalClassification(t *testing.T) {
 		t.Fatal("expected multi-auth synthesis to mark plugin virtual auths")
 	}
 	initialRevision := w.pendingUpdates["a"].Revision()
-	// Removing one ID from an existing file is not a whole-file removal.
+	// 从现有文件中移除一个 ID 并不等同于整文件移除。
 	write(`{"type":"plugin","ids":["b","c"]}`)
 	assertDelete("a", false)
 	if w.pendingUpdates["a"].Revision() <= initialRevision {
@@ -62,8 +62,8 @@ func TestAuthDeleteFileRemovalClassification(t *testing.T) {
 	assertDelete("c", true)
 	removalRevision := w.pendingUpdates["b"].Revision()
 
-	// Re-create only B without a create event. Both snapshot APIs must read the
-	// source file rather than the cleared watcher state or queued tombstones.
+	// 在没有 create 事件的情况下仅重新创建 B。两个快照 API 都必须读取
+	// 源文件，而非已清空的监听器状态或排队的墓碑记录。
 	if errWriteFile := os.WriteFile(path, []byte(`{"type":"plugin","ids":["b"]}`), 0o600); errWriteFile != nil {
 		t.Fatal(errWriteFile)
 	}
@@ -76,8 +76,8 @@ func TestAuthDeleteFileRemovalClassification(t *testing.T) {
 		t.Fatalf("expected only B in the single-file snapshot, got %+v, err=%v", fileSnapshot, errSnapshotAuthFile)
 	}
 
-	// Pending updates are keyed by ID: a newer add replaces the marked delete,
-	// and a later content delete must not inherit its file-removal mark.
+	// 待处理更新以 ID 为键：较新的 add 会替换被标记的 delete，
+	// 而后续的内容删除不得继承其文件移除标记。
 	write(`{"type":"plugin","ids":["a","b"]}`)
 	addition := w.pendingUpdates["b"]
 	if addition.Action != AuthUpdateActionAdd || addition.IsFileRemoval() || addition.Revision() <= removalRevision {

@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// IsAuthTokenPayloadKey returns true if key is a credential or token lifecycle field
-// that should not overwrite newly acquired OAuth credentials during metadata merge.
+// IsAuthTokenPayloadKey 在 key 属于凭据或令牌生命周期字段时返回 true，
+// 此类字段在元数据合并期间不应覆盖新获取的 OAuth 凭据。
 func IsAuthTokenPayloadKey(key string) bool {
 	switch strings.ToLower(strings.TrimSpace(key)) {
 	case "access_token", "refresh_token", "id_token", "session_id",
@@ -19,8 +19,8 @@ func IsAuthTokenPayloadKey(key string) bool {
 	}
 }
 
-// MergeExistingAuthMetadata merges user-configured metadata fields from existingMap
-// into target.Metadata and target.Storage if target does not already define them.
+// MergeExistingAuthMetadata 将 existingMap 中用户配置的元数据字段合并到
+// target.Metadata 和 target.Storage，前提是 target 尚未定义它们。
 func MergeExistingAuthMetadata(target *Auth, existingMap map[string]any) {
 	if target == nil || len(existingMap) == 0 {
 		return
@@ -52,15 +52,15 @@ func MergeExistingAuthMetadata(target *Auth, existingMap map[string]any) {
 	}
 }
 
-// MergePreparedAuth merges prepared request auth updates into current without modifying
-// refresh lifecycle fields (such as LastRefreshedAt, LastError, or cooldown status).
+// MergePreparedAuth 将准备好的请求 auth 更新合并到 current，且不修改
+// 刷新生命周期字段（如 LastRefreshedAt、LastError 或冷却状态）。
 func MergePreparedAuth(base, current, updated *Auth) *Auth {
 	return mergeAuthContent(base, current, updated)
 }
 
-// MergeRefreshedAuth merges the refresh results from updated (derived from base)
-// into the latest runtime auth current, preserving concurrent user modifications
-// and active cooldowns.
+// MergeRefreshedAuth 将 updated（派生自 base）的刷新结果合并到
+// 最新的运行时 auth current 中，同时保留并发的用户修改
+// 和活跃的冷却。
 func MergeRefreshedAuth(base, current, updated *Auth) *Auth {
 	merged := mergeAuthContent(base, current, updated)
 	if merged == nil || current == nil || updated == nil {
@@ -70,7 +70,7 @@ func MergeRefreshedAuth(base, current, updated *Auth) *Auth {
 		return merged
 	}
 
-	// 1. Refresh Lifecycle Timestamps
+	// 1. 刷新生命周期时间戳
 	merged.RejectedAccessToken = updated.RejectedAccessToken
 	if !updated.LastRefreshedAt.IsZero() {
 		merged.LastRefreshedAt = updated.LastRefreshedAt
@@ -79,7 +79,7 @@ func MergeRefreshedAuth(base, current, updated *Auth) *Auth {
 		merged.NextRefreshAfter = updated.NextRefreshAfter
 	}
 
-	// 2. Error and Status recovery
+	// 2. 错误与状态恢复
 	baseErrMsg := ""
 	if base != nil && base.LastError != nil {
 		baseErrMsg = base.LastError.Message
@@ -90,7 +90,7 @@ func MergeRefreshedAuth(base, current, updated *Auth) *Auth {
 	}
 	hasNewConcurrentError := currentErrMsg != "" && currentErrMsg != baseErrMsg
 
-	// 2. Disabled status three-way merge
+	// 2. 禁用状态三方合并
 	baseDisabled := base != nil && (base.Disabled || base.Status == StatusDisabled)
 	currentDisabled := current.Disabled || current.Status == StatusDisabled
 	updatedDisabled := updated.Disabled || updated.Status == StatusDisabled
@@ -115,23 +115,23 @@ func MergeRefreshedAuth(base, current, updated *Auth) *Auth {
 		merged.Metadata["disabled"] = false
 
 		if hasNewConcurrentError {
-			// A new error occurred concurrently (e.g. 503, 429, timeout). Preserve it.
+			// 并发发生了新错误（例如 503、429、超时）。保留它。
 			merged.LastError = current.LastError
 			merged.Status = current.Status
 			merged.Unavailable = current.Unavailable
 			merged.StatusMessage = current.StatusMessage
 		} else if current.Quota.Exceeded && current.Quota.Reason == "credential_quota" && current.Quota.NextRecoverAt.After(time.Now()) {
-			// Preserve active credential quota
+			// 保留活跃的凭据额度
 			merged.Unavailable = current.Unavailable
 			merged.Status = current.Status
 			merged.StatusMessage = current.StatusMessage
 		} else if current.Unavailable && current.NextRetryAfter.After(time.Now()) {
-			// Preserve active cooldown
+			// 保留活跃的冷却
 			merged.Unavailable = current.Unavailable
 			merged.Status = current.Status
 			merged.StatusMessage = current.StatusMessage
 		} else if updated.Status == StatusActive || updated.Status == "" {
-			// Successful refresh clears previous auth error and restores active
+			// 刷新成功会清除先前的 auth 错误并恢复活跃
 			merged.Status = StatusActive
 			merged.Unavailable = false
 			merged.StatusMessage = ""
@@ -139,7 +139,7 @@ func MergeRefreshedAuth(base, current, updated *Auth) *Auth {
 		}
 	}
 
-	// 3. ModelStates: three-way merge to preserve concurrent cooldown/quota
+	// 3. ModelStates：三方合并以保留并发的冷却/额度
 	var baseModels map[string]*ModelState
 	if base != nil {
 		baseModels = base.ModelStates
@@ -189,7 +189,7 @@ func mergeAuthContent(base, current, updated *Auth) *Auth {
 		return current.Clone()
 	}
 	if base != nil && current.RegistrationEpoch != base.RegistrationEpoch {
-		// Stale update from a previous registration cycle; keep current state.
+		// 来自先前注册周期的过期更新；保持当前状态。
 		return current.Clone()
 	}
 
@@ -203,7 +203,7 @@ func mergeAuthContent(base, current, updated *Auth) *Auth {
 		baseMeta = base.Metadata
 	}
 
-	// 1. Three-way merge for Metadata (excluding proxy_url which has dedicated canonical merge)
+	// 1. Metadata 的三方合并（不含 proxy_url，它有专门的规范化合并）
 	if updated.Metadata != nil {
 		for k, v := range updated.Metadata {
 			if strings.EqualFold(strings.TrimSpace(k), "proxy_url") {
@@ -241,13 +241,13 @@ func mergeAuthContent(base, current, updated *Auth) *Auth {
 			changedByUser := hadInBase != hadInCurrent || (hadInBase && !reflect.DeepEqual(baseVal, currentVal))
 
 			if changedByExecutor {
-				// Apply executor change if user didn't modify it, or if it is a token payload field
+				// 如果用户未修改该字段，或它是令牌载荷字段，则应用执行器变更
 				if !changedByUser || IsAuthTokenPayloadKey(k) {
 					merged.Metadata[k] = v
 				}
 			}
 		}
-		// Deletions by executor: only delete if user didn't modify the field concurrently
+		// 执行器删除：仅当用户未并发修改该字段时才删除
 		if baseMeta != nil {
 			for k, baseVal := range baseMeta {
 				trimmedKey := strings.ToLower(strings.TrimSpace(k))
@@ -265,7 +265,7 @@ func mergeAuthContent(base, current, updated *Auth) *Auth {
 		}
 	}
 
-	// 2. Storage and Runtime
+	// 2. 存储与运行时
 	if updated.Storage != nil {
 		merged.Storage = updated.Storage
 	}
@@ -273,7 +273,7 @@ func mergeAuthContent(base, current, updated *Auth) *Auth {
 		merged.Runtime = updated.Runtime
 	}
 
-	// 3. ProxyURL three-way merge (supporting both struct field and metadata modifications)
+	// 3. ProxyURL 三方合并（同时支持结构体字段和元数据两种修改方式）
 	baseStruct := ""
 	if base != nil {
 		baseStruct = strings.TrimSpace(base.ProxyURL)
@@ -311,7 +311,7 @@ func mergeAuthContent(base, current, updated *Auth) *Auth {
 	}
 
 	if userChangedStruct || userChangedMeta {
-		// User modified proxy concurrently; user takes precedence over executor.
+		// 用户并发修改了 proxy；用户优先于执行器。
 		if userChangedStruct && !userChangedMeta {
 			finalProxy = currentStruct
 		} else if userChangedMeta && !userChangedStruct {
@@ -322,7 +322,7 @@ func mergeAuthContent(base, current, updated *Auth) *Auth {
 			finalProxy = currentMetaProxy
 		}
 	} else if execChangedStruct || execChangedMeta {
-		// Executor modified proxy and user did not touch it.
+		// 执行器修改了 proxy，而用户未触及它。
 		if execChangedStruct && !execChangedMeta {
 			finalProxy = updatedStruct
 		} else if execChangedMeta && !execChangedStruct {
@@ -342,7 +342,7 @@ func mergeAuthContent(base, current, updated *Auth) *Auth {
 		delete(merged.Metadata, "proxy_url")
 	}
 
-	// 4. Prefix (three-way merge, user modification takes precedence)
+	// 4. Prefix（三方合并，用户修改优先）
 	basePrefix := ""
 	if base != nil {
 		basePrefix = strings.TrimSpace(base.Prefix)
@@ -356,7 +356,7 @@ func mergeAuthContent(base, current, updated *Auth) *Auth {
 		merged.Prefix = currentPrefix
 	}
 
-	// 5. Attributes (three-way merge)
+	// 5. Attributes（三方合并）
 	if updated.Attributes != nil {
 		if merged.Attributes == nil {
 			merged.Attributes = make(map[string]string)

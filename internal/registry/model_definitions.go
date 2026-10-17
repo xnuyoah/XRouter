@@ -1,18 +1,18 @@
-// Package registry provides model definitions and lookup helpers for AI providers.
-// Provider model defaults are declared per executor/config family; the embedded
-// catalog ships no static provider sections.
+// Package registry 为 AI 供应商提供模型定义和查找辅助函数。
+// 供应商模型默认值按执行器/配置族声明；内嵌的
+// 目录不包含任何静态的供应商区块。
 package registry
 
 import (
 	"strings"
 )
 
-// staticModelsJSON mirrors the top-level structure of models.json.
-// The bundled catalog carries no provider sections.
+// staticModelsJSON 镜像 models.json 的顶层结构。
+// 随附的目录不包含任何供应商区块。
 type staticModelsJSON struct{}
 
-// upsertModelInfos replaces matching model IDs in models with extras and
-// appends the remaining extras.
+// upsertModelInfos 用 extras 替换 models 中匹配的模型 ID，并
+// 追加剩余的 extras。
 func upsertModelInfos(models []*ModelInfo, extras ...*ModelInfo) []*ModelInfo {
 	if len(extras) == 0 {
 		return models
@@ -59,7 +59,7 @@ func upsertModelInfos(models []*ModelInfo, extras ...*ModelInfo) []*ModelInfo {
 	return filtered
 }
 
-// cloneModelInfos returns a shallow copy of the slice with each element deep-cloned.
+// cloneModelInfos 返回该切片的浅拷贝，其中每个元素都被深拷贝。
 func cloneModelInfos(models []*ModelInfo) []*ModelInfo {
 	if len(models) == 0 {
 		return nil

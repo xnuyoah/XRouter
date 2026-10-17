@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// Compare full requests and SSE transcripts with the baseline (self-terminating SSE frames, issue #6161).
+// 将完整请求与 SSE 记录同基线比较（自终止的 SSE 帧，issue #6161）。
 func TestResponsesCompatibilityDigest(t *testing.T) {
 	requests := [][]byte{
 		responsesPerfRequest(0), responsesPerfRequest(10), responsesPerfRequest(100),

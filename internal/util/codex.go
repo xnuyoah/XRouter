@@ -7,7 +7,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// IsCodexResponsesLiteRequest recognizes the native header and its websocket metadata mirror.
+// IsCodexResponsesLiteRequest 识别原生头及其 websocket 元数据镜像。
 func IsCodexResponsesLiteRequest(body []byte, headers http.Header) bool {
 	if strings.EqualFold(strings.TrimSpace(headers.Get("X-OpenAI-Internal-Codex-Responses-Lite")), "true") {
 		return true

@@ -472,7 +472,7 @@ func TestConfigV8EmptyExcludedModelsSurvivesSave(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			// Later manual legacy edits must remain shadowed by the explicit v8 empty map.
+			// 之后手动进行的旧式编辑必须仍被显式的 v8 空映射遮蔽。
 			saved = append(saved, []byte("\noauth-excluded-models: {codex: [legacy-blocked-model]}\n")...)
 			if err = os.WriteFile(path, saved, 0600); err != nil {
 				t.Fatal(err)
@@ -558,7 +558,7 @@ plugins:
 			t.Fatal(errLoad)
 		}
 		loaded.Home = cfg.Home
-		// SourceHash is runtime-only metadata of a file load, not persisted config.
+		// SourceHash 是文件加载的仅运行时元数据，不是持久化配置。
 		loaded.SourceHash = ""
 		select {
 		case snapshot := <-reloads:
@@ -572,8 +572,8 @@ plugins:
 	_, original := read()
 	request(http.MethodDelete, "routing/retry/request-retry", http.StatusOK, "")
 	checkReload()
-	// Simulate a new sibling written on the server after the first deletion.
-	// The next request must use the latest file, not a stale runtime projection.
+	// 模拟第一次删除之后服务端又写入了新的同族文件。
+	// 下一个请求必须使用最新文件，而不是过期的运行时投影。
 	data, _ := read()
 	data = []byte(strings.Replace(string(data), "max-retry-interval: 30", "max-retry-interval: 30\n        max-retry-credentials: 7 # Keep new sibling", 1))
 	if err = os.WriteFile(file, data, 0600); err != nil {
@@ -589,8 +589,8 @@ plugins:
 		request(http.MethodGet, path, http.StatusNotFound, "")
 	}
 	request(http.MethodGet, "routing/retry/max-retry-credentials", http.StatusOK, "7")
-	// Apart from the requested removals and the server-side sibling, the whole
-	// document must retain the same presence and values (including null/maps).
+	// 除了请求的移除项和服务端新增的同族文件之外，整个
+	// 文档必须保持相同的字段存在性与取值（包括 null/映射）。
 	expected := cloneConfigV8Node(original)
 	deleteConfigV8Path(expected, []string{"routing", "retry", "request-retry"})
 	retry := configV8Node(expected, []string{"routing", "retry"})
@@ -665,7 +665,7 @@ api-keys:
 	router.PUT("/v8/management/config/*path", h.ConfigV8)
 	router.PATCH("/v8/management/config", h.ConfigV8)
 
-	// Send JSON update simulating v8 management panel saving complex items
+	// 发送 JSON 更新，模拟 v8 管理面板保存复杂条目
 	jsonUpdate := `[{"name":"compat-provider","base-url":"https://api.example.com","headers":{"User-Agent":"$User-Agent"},"models":[{"alias":"coding","name":"gpt-4o"}],"keys":[{"api-key":"sk-compat-1"}]}]`
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPut, "/v8/management/config/api-keys/openai-compatibility", strings.NewReader(jsonUpdate))
@@ -681,7 +681,7 @@ api-keys:
 	}
 	savedStr := string(saved)
 
-	// Ensure the saved config does NOT contain inline JSON / flow style for complex collections
+	// 确保保存的配置对复杂集合不包含内联 JSON / flow 风格
 	if strings.Contains(savedStr, "[{") || strings.Contains(savedStr, `headers: {`) || strings.Contains(savedStr, `models: [{`) {
 		t.Fatalf("config contains flow style / inline JSON collections:\n%s", savedStr)
 	}
@@ -692,7 +692,7 @@ api-keys:
 		t.Fatalf("expected keys to be unquoted in block YAML, got:\n%s", savedStr)
 	}
 
-	// Also test PATCH at root /v8/management/config with JSON
+	// 同时测试以 JSON 对根路径 /v8/management/config 的 PATCH
 	patchJSON := `{"api-keys":{"openai-compatibility":[{"name":"compat-provider-2","base-url":"https://api.example2.com","headers":{"User-Agent":"$User-Agent-2"},"models":[{"alias":"coding-2","name":"gpt-4o-mini"}],"keys":[{"api-key":"sk-compat-2"}]}]}}`
 	w = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPatch, "/v8/management/config", strings.NewReader(patchJSON))
@@ -713,7 +713,7 @@ api-keys:
 		t.Fatalf("expected block style sequence after PATCH for openai-compatibility, got:\n%s", savedStr)
 	}
 
-	// Verify that empty sequence retains flow style []
+	// 验证空序列保留 flow 风格 []
 	emptyJSON := `{"server":{"trusted-proxies":[]}}`
 	w = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPatch, "/v8/management/config", strings.NewReader(emptyJSON))
@@ -731,7 +731,7 @@ api-keys:
 		t.Fatalf("expected empty sequence to retain flow style [], got:\n%s", savedStr)
 	}
 
-	// Also test root PUT with entire JSON document
+	// 同时测试以完整 JSON 文档对根路径的 PUT
 	rootPutJSON := `{"config-version":8,"server":{"port":11016},"api-keys":{"openai-compatibility":[{"name":"compat-provider-root","base-url":"https://api.example3.com","headers":{"User-Agent":"$User-Agent-3"},"models":[{"alias":"coding-3","name":"gpt-4o"}],"keys":[{"api-key":"sk-compat-3"}]}]}}`
 	w = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPut, "/v8/management/config", strings.NewReader(rootPutJSON))
@@ -755,7 +755,7 @@ api-keys:
 		t.Fatalf("expected compat-provider-root in saved config, got:\n%s", savedStr)
 	}
 
-	// Verify the final saved file loads correctly into Config
+	// 验证最终保存的文件能被正确加载进 Config
 	loaded, errLoaded := config.LoadConfig(file)
 	if errLoaded != nil {
 		t.Fatalf("LoadConfig failed on normalized saved YAML: %v", errLoaded)

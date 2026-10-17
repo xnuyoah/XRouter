@@ -16,8 +16,8 @@ const (
 	claudeToolResultImagePlaceholder = "[Tool returned image content; the images follow in the next user message.]"
 )
 
-// ShouldNormalizeOpenAIToolResultsForModel reports whether the selected model
-// explicitly excludes image input through its input-modalities configuration.
+// ShouldNormalizeOpenAIToolResultsForModel 报告所选模型
+// 是否通过其 input-modalities 配置显式排除图像输入。
 func ShouldNormalizeOpenAIToolResultsForModel(compat *config.OpenAICompatibility, upstreamModel, requestedModel string) bool {
 	if compat == nil {
 		return false
@@ -30,9 +30,9 @@ func ShouldNormalizeOpenAIToolResultsForModel(compat *config.OpenAICompatibility
 	return normalize
 }
 
-// NormalizeOpenAIToolResultsTextOnly converts tool message content to strings
-// and strips relayed tool result images for text-only compatibility models.
-// Text parts are preserved and image parts are replaced with a short marker.
+// NormalizeOpenAIToolResultsTextOnly 将工具消息内容转换为字符串，
+// 并为纯文本兼容模型剥离转发的工具结果图像。
+// 文本部分被保留，图像部分被替换为简短标记。
 func NormalizeOpenAIToolResultsTextOnly(payload []byte) []byte {
 	messages := gjson.GetBytes(payload, "messages")
 	if !messages.Exists() || !messages.IsArray() {
@@ -112,7 +112,7 @@ func NormalizeOpenAIToolResultsTextOnly(payload []byte) []byte {
 					replacedPlaceholderInCurrentTurn = false
 
 					if len(remainingParts) == 0 {
-						// Synthetic relay message contained only relayed images; omit entirely.
+						// 合成的转发消息仅包含被转发的图像；整体省略。
 						continue
 					}
 

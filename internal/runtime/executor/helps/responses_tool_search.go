@@ -13,8 +13,8 @@ const (
 	responsesToolSearchOutputType = "tool_search_output"
 )
 
-// ResponsesHasToolSearch reports whether a Responses payload carries a client
-// tool_search declaration or tool_search history items.
+// ResponsesHasToolSearch 报告 Responses 载荷是否携带客户端
+// tool_search 声明或 tool_search 历史项。
 func ResponsesHasToolSearch(payload []byte) bool {
 	if hasClientToolSearchDeclaration(gjson.GetBytes(payload, "tools")) {
 		return true
@@ -32,11 +32,11 @@ func ResponsesHasToolSearch(payload []byte) bool {
 	return found
 }
 
-// StripResponsesToolSearch removes client tool_search declarations and every
-// tool_search_call/tool_search_output input item, so the Claude translator
-// produces the same output it did before tool_search support. Hosted
-// declarations are left for the translator. An unchanged payload is returned
-// as is.
+// StripResponsesToolSearch 移除客户端 tool_search 声明以及每一个
+// tool_search_call/tool_search_output 输入项，使 Claude 转换器
+// 产生与支持 tool_search 之前相同的输出。托管的
+// 声明会留给转换器处理。未发生改变的载荷会
+// 原样返回。
 func StripResponsesToolSearch(payload []byte) []byte {
 	out := payload
 	if tools := gjson.GetBytes(out, "tools"); tools.IsArray() {
@@ -89,8 +89,8 @@ func hasClientToolSearchDeclaration(tools gjson.Result) bool {
 	return found
 }
 
-// withoutClientToolSearch rebuilds a tools array without client tool_search
-// declarations and reports whether anything was removed.
+// withoutClientToolSearch 重建一个不含客户端 tool_search 声明的
+// tools 数组，并报告是否有任何内容被移除。
 func withoutClientToolSearch(tools gjson.Result) ([]byte, bool) {
 	if !tools.IsArray() {
 		return nil, false

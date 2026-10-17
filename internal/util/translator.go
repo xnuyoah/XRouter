@@ -1,6 +1,6 @@
-// Package util provides utility functions for the XRouter server.
-// It includes helper functions for JSON manipulation, proxy configuration,
-// and other common operations used across the application.
+// Package util 为 XRouter 服务器提供工具函数。
+// 它包含用于 JSON 操作、代理配置的辅助函数，
+// 以及应用中使用的其他常见操作。
 package util
 
 import (
@@ -16,24 +16,24 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-// Walk recursively traverses a JSON structure to find all occurrences of a specific field.
-// It builds paths to each occurrence and adds them to the provided paths slice.
+// Walk 递归遍历 JSON 结构以查找某个字段的所有出现位置。
+// 它为每个出现位置构建路径并追加到传入的 paths 切片中。
 //
-// Parameters:
-//   - value: The gjson.Result object to traverse
-//   - path: The current path in the JSON structure (empty string for root)
-//   - field: The field name to search for
-//   - paths: Pointer to a slice where found paths will be stored
+// 参数：
+//   - value: 要遍历的 gjson.Result 对象
+//   - path: JSON 结构中的当前路径（根节点为空字符串）
+//   - field: 要搜索的字段名
+//   - paths: 指向切片（用于存储找到的路径）的指针
 //
-// The function works recursively, building dot-notation paths to each occurrence
-// of the specified field throughout the JSON structure.
+// 该函数递归工作，为 JSON 结构中指定字段的每个出现位置
+// 构建点号表示法的路径。
 func Walk(value gjson.Result, path, field string, paths *[]string) {
 	switch value.Type {
 	case gjson.JSON:
-		// For JSON objects and arrays, iterate through each child
+		// 对于 JSON 对象和数组，遍历每个子节点
 		value.ForEach(func(key, val gjson.Result) bool {
 			var childPath string
-			// Escape special characters for gjson/sjson path syntax
+			// 对 gjson/sjson 路径语法中的特殊字符进行转义
 			// . -> \.
 			// * -> \*
 			// ? -> \?
@@ -52,25 +52,25 @@ func Walk(value gjson.Result, path, field string, paths *[]string) {
 			return true
 		})
 	case gjson.String, gjson.Number, gjson.True, gjson.False, gjson.Null:
-		// Terminal types - no further traversal needed
+		// 终止类型 - 无需继续遍历
 	}
 }
 
-// RenameKey renames a key in a JSON string by moving its value to a new key path
-// and then deleting the old key path.
+// RenameKey 通过将值移动到新的键路径并删除旧键路径
+// 来重命名 JSON 字符串中的键。
 //
-// Parameters:
-//   - jsonStr: The JSON string to modify
-//   - oldKeyPath: The dot-notation path to the key that should be renamed
-//   - newKeyPath: The dot-notation path where the value should be moved to
+// 参数：
+//   - jsonStr: 要修改的 JSON 字符串
+//   - oldKeyPath: 要重命名的键的点号表示法路径
+//   - newKeyPath: 值要移动到的点号表示法路径
 //
-// Returns:
-//   - string: The modified JSON string with the key renamed
-//   - error: An error if the operation fails
+// 返回：
+//   - string: 键已重命名后的修改后 JSON 字符串
+//   - error: 操作失败时的错误
 //
-// The function performs the rename in two steps:
-// 1. Sets the value at the new key path
-// 2. Deletes the old key path
+// 该函数分两步执行重命名：
+// 1. 在新键路径上设置值
+// 2. 删除旧键路径
 func RenameKey(jsonStr, oldKeyPath, newKeyPath string) (string, error) {
 	value := gjson.Get(jsonStr, oldKeyPath)
 
@@ -91,33 +91,33 @@ func RenameKey(jsonStr, oldKeyPath, newKeyPath string) (string, error) {
 	return string(finalJSON), nil
 }
 
-// FixJSON converts non-standard JSON that uses single quotes for strings into
-// RFC 8259-compliant JSON by converting those single-quoted strings to
-// double-quoted strings with proper escaping.
+// FixJSON 将使用单引号表示字符串的非标准 JSON 转换为
+// 符合 RFC 8259 的 JSON：把这些单引号字符串转换为
+// 带正确转义的双引号字符串。
 //
-// Examples:
+// 示例：
 //
 //	{'a': 1, 'b': '2'}      => {"a": 1, "b": "2"}
 //	{"t": 'He said "hi"'} => {"t": "He said \"hi\""}
 //
-// Rules:
-//   - Existing double-quoted JSON strings are preserved as-is.
-//   - Single-quoted strings are converted to double-quoted strings.
-//   - Inside converted strings, any double quote is escaped (\").
-//   - Common backslash escapes (\n, \r, \t, \b, \f, \\) are preserved.
-//   - \' inside single-quoted strings becomes a literal ' in the output (no
-//     escaping needed inside double quotes).
-//   - Unicode escapes (\uXXXX) inside single-quoted strings are forwarded.
-//   - The function does not attempt to fix other non-JSON features beyond quotes.
+// 规则：
+//   - 已有的双引号 JSON 字符串原样保留。
+//   - 单引号字符串转换为双引号字符串。
+//   - 转换后的字符串内部，任何双引号都会被转义（\"）。
+//   - 常见的反斜杠转义（\n、\r、\t、\b、\f、\\）会被保留。
+//   - 单引号字符串内的 \' 在输出中变为字面量 '（双引号内
+//     无需转义）。
+//   - 单引号字符串内的 Unicode 转义（\uXXXX）会被原样传递。
+//   - 该函数不会尝试修复除引号之外的其他非 JSON 特性。
 func FixJSON(input string) string {
 	var out bytes.Buffer
 
 	inDouble := false
 	inSingle := false
-	escaped := false // applies within the current string state
+	escaped := false // 在当前字符串状态下生效
 
-	// Helper to write a rune, escaping double quotes when inside a converted
-	// single-quoted string (which becomes a double-quoted string in output).
+	// 写入一个 rune 的辅助函数：当处于被转换的单引号字符串内时，
+	// 对双引号进行转义（该字符串在输出中会变为双引号字符串）。
 	writeConverted := func(r rune) {
 		if r == '"' {
 			out.WriteByte('\\')
@@ -134,7 +134,7 @@ func FixJSON(input string) string {
 		if inDouble {
 			out.WriteRune(r)
 			if escaped {
-				// end of escape sequence in a standard JSON string
+				// 标准 JSON 字符串中转义序列结束
 				escaped = false
 				continue
 			}
@@ -150,29 +150,29 @@ func FixJSON(input string) string {
 
 		if inSingle {
 			if escaped {
-				// Handle common escape sequences after a backslash within a
-				// single-quoted string
+				// 处理单引号字符串内反斜杠之后的
+				// 常见转义序列
 				escaped = false
 				switch r {
 				case 'n', 'r', 't', 'b', 'f', '/', '"':
-					// Keep the backslash and the character (except for '"' which
-					// rarely appears, but if it does, keep as \" to remain valid)
+					// 保留反斜杠和该字符（'"' 很少出现，但一旦出现
+					// 就保留为 \" 以保持合法）
 					out.WriteByte('\\')
 					out.WriteRune(r)
 				case '\\':
 					out.WriteByte('\\')
 					out.WriteByte('\\')
 				case '\'':
-					// \' inside single-quoted becomes a literal '
+					// 单引号内的 \' 变为字面量 '
 					out.WriteRune('\'')
 				case 'u':
-					// Forward \uXXXX if possible
+					// 尽可能原样传递 \uXXXX
 					out.WriteByte('\\')
 					out.WriteByte('u')
-					// Copy up to next 4 hex digits if present
+					// 如果存在，则复制最多后 4 位十六进制数字
 					for k := 0; k < 4 && i+1 < len(runes); k++ {
 						peek := runes[i+1]
-						// simple hex check
+						// 简单的十六进制检查
 						if (peek >= '0' && peek <= '9') || (peek >= 'a' && peek <= 'f') || (peek >= 'A' && peek <= 'F') {
 							out.WriteRune(peek)
 							i++
@@ -181,34 +181,34 @@ func FixJSON(input string) string {
 						}
 					}
 				default:
-					// Unknown escape: preserve the backslash and the char
+					// 未知转义：保留反斜杠和该字符
 					out.WriteByte('\\')
 					out.WriteRune(r)
 				}
 				continue
 			}
 
-			if r == '\\' { // start escape sequence
+			if r == '\\' { // 转义序列开始
 				escaped = true
 				continue
 			}
-			if r == '\'' { // end of single-quoted string
+			if r == '\'' { // 单引号字符串结束
 				out.WriteByte('"')
 				inSingle = false
 				continue
 			}
-			// regular char inside converted string; escape double quotes
+			// 转换字符串内的普通字符；对双引号进行转义
 			writeConverted(r)
 			continue
 		}
 
-		// Outside any string
+		// 不在任何字符串内
 		if r == '"' {
 			inDouble = true
 			out.WriteRune(r)
 			continue
 		}
-		if r == '\'' { // start of non-standard single-quoted string
+		if r == '\'' { // 非标准单引号字符串开始
 			inSingle = true
 			out.WriteByte('"')
 			continue
@@ -216,8 +216,8 @@ func FixJSON(input string) string {
 		out.WriteRune(r)
 	}
 
-	// If input ended while still inside a single-quoted string, close it to
-	// produce the best-effort valid JSON.
+	// 如果在仍处于单引号字符串内时输入结束，则将其闭合，
+	// 以尽力生成合法的 JSON。
 	if inSingle {
 		out.WriteByte('"')
 	}
@@ -231,8 +231,8 @@ func CanonicalToolName(name string) string {
 	return strings.ToLower(canonical)
 }
 
-// ToolNameMapFromClaudeRequest returns a canonical-name -> original-name map extracted from a Claude request.
-// It is used to restore exact tool name casing for clients that require strict tool name matching (e.g. Claude Code).
+// ToolNameMapFromClaudeRequest 返回从 Claude 请求中提取的规范名 -> 原始名映射。
+// 它用于为要求严格工具名匹配的客户端（如 Claude Code）恢复工具名的精确大小写。
 func ToolNameMapFromClaudeRequest(rawJSON []byte) map[string]string {
 	if len(rawJSON) == 0 || !gjson.ValidBytes(rawJSON) {
 		return nil
@@ -279,9 +279,9 @@ func MapToolName(toolNameMap map[string]string, name string) string {
 	return name
 }
 
-// SanitizedFunctionNameMap builds an original-name → sanitized-name map from request tools.
-// Exact duplicate names share a mapping. Distinct names that sanitize to the same value receive
-// deterministic hash suffixes so every declaration remains addressable within the 64-byte limit.
+// SanitizedFunctionNameMap 根据请求中的工具构建原始名 → 清洗后名称的映射。
+// 完全重复的名称共享同一映射。清洗后得到相同值的不同名称会获得
+// 确定性的哈希后缀，使每个声明在 64 字节限制内仍可寻址。
 func SanitizedFunctionNameMap(rawJSON []byte) map[string]string {
 	names := functionNamesFromRequest(rawJSON)
 	if len(names) == 0 {
@@ -325,7 +325,7 @@ func SanitizedFunctionNameMap(rawJSON []byte) map[string]string {
 	return out
 }
 
-// MapSanitizedFunctionName returns the request-specific sanitized name when available.
+// MapSanitizedFunctionName 在可用时返回请求特定的清洗后名称。
 func MapSanitizedFunctionName(nameMap map[string]string, name string) string {
 	if mapped := nameMap[name]; mapped != "" {
 		return mapped
@@ -333,8 +333,8 @@ func MapSanitizedFunctionName(nameMap map[string]string, name string) string {
 	return SanitizeFunctionName(name)
 }
 
-// DisambiguatedToolNameMap builds a sanitized-name → original-name map using the
-// same collision-aware mapping as SanitizedFunctionNameMap.
+// DisambiguatedToolNameMap 使用与 SanitizedFunctionNameMap 相同的冲突感知映射
+// 构建清洗后名称 → 原始名的映射。
 func DisambiguatedToolNameMap(rawJSON []byte) map[string]string {
 	forward := SanitizedFunctionNameMap(rawJSON)
 	if len(forward) == 0 {
@@ -353,9 +353,9 @@ func DisambiguatedToolNameMap(rawJSON []byte) map[string]string {
 	return out
 }
 
-// SanitizedToolNameMap builds the legacy sanitized-name → original-name map from
-// top-level Claude-style tools. Collision-aware translators should use
-// DisambiguatedToolNameMap instead.
+// SanitizedToolNameMap 从顶层 Claude 风格工具构建旧版清洗后名称 → 原始名的映射。
+// 具备冲突感知能力的转换器应改用
+// DisambiguatedToolNameMap。
 func SanitizedToolNameMap(rawJSON []byte) map[string]string {
 	if len(rawJSON) == 0 || !gjson.ValidBytes(rawJSON) {
 		return nil
@@ -460,7 +460,7 @@ func disambiguateSanitizedFunctionName(base, original string, used map[string]st
 	}
 }
 
-// DeduplicateFunctionDeclarations removes duplicate named declarations while preserving order.
+// DeduplicateFunctionDeclarations 删除重复的具名声明，同时保持顺序。
 func DeduplicateFunctionDeclarations(raw []byte) []byte {
 	result := gjson.ParseBytes(raw)
 	if !result.IsArray() {
@@ -482,9 +482,9 @@ func DeduplicateFunctionDeclarations(raw []byte) []byte {
 	return []byte("[" + strings.Join(parts, ",") + "]")
 }
 
-// RestoreSanitizedToolName looks up a sanitized function name in the provided map
-// and returns the original client-facing name. If no mapping exists, it returns
-// the sanitized name unchanged.
+// RestoreSanitizedToolName 在提供的映射中查找清洗后的函数名
+// 并返回原始的面向客户端的名称。如果不存在映射，则原样返回
+// 清洗后的名称。
 func RestoreSanitizedToolName(toolNameMap map[string]string, sanitizedName string) string {
 	if sanitizedName == "" || toolNameMap == nil {
 		return sanitizedName

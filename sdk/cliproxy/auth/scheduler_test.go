@@ -545,8 +545,8 @@ func TestSchedulerPickMixed_RetryTriedFilterPreservesSmoothWeightedDistribution(
 	scheduler := newSchedulerForTest(&WeightedRoundRobinSelector{}, auths...)
 	providers := []string{"provider-a", "provider-b", "provider-c", "provider-d"}
 
-	// Simulate retries where auth-a failed and is in the tried filter:
-	// Verify that retry picks rotate smoothly across auth-b, auth-c, auth-d without alphabetical bias towards auth-b.
+	// 模拟 auth-a 已失败并处于已尝试过滤器中的重试场景：
+	// 校验重试选择在 auth-b、auth-c、auth-d 之间平滑轮转，而不偏向字母序靠前的 auth-b。
 	retryCounts := make(map[string]int)
 	tried := map[string]struct{}{"auth-a": {}}
 	for index := 0; index < 30; index++ {
@@ -595,7 +595,7 @@ func TestReadyViewRoundRobinPreservesSuccessorAcrossRebuild(t *testing.T) {
 		original := readyView{
 			flat: []*scheduledAuth{entry("A"), entry("B"), entry("C")},
 		}
-		// Pick A, then B
+		// 先选 A，再选 B
 		if got := original.pickRoundRobin(nil); got == nil || got.auth.ID != "A" {
 			t.Fatalf("first pick = %v, want A", got)
 		}
@@ -619,7 +619,7 @@ func TestReadyViewRoundRobinPreservesSuccessorAcrossRebuild(t *testing.T) {
 		original := readyView{
 			flat: []*scheduledAuth{entry("A"), entry("B"), entry("C")},
 		}
-		// Pick A, B, C
+		// 先选 A、B、C
 		for _, want := range []string{"A", "B", "C"} {
 			if got := original.pickRoundRobin(nil); got == nil || got.auth.ID != want {
 				t.Fatalf("pick = %v, want %s", got, want)
@@ -647,7 +647,7 @@ func TestReadyViewRoundRobinPreservesSuccessorAcrossRebuild(t *testing.T) {
 		}
 
 		state := snapshotReadyViewCursors(original)
-		// A recovered and is prepended back
+		// A 已恢复并被前置回队列
 		rebuilt := readyView{
 			flat: []*scheduledAuth{entry("A"), entry("B"), entry("C")},
 		}
@@ -1037,7 +1037,7 @@ func TestManagerPluginSchedulerDefaultHighestPriorityOnly(t *testing.T) {
 	}
 
 	scheduler := &fakePluginScheduler{
-		acrossPriorities: false, // default opt-in false
+		acrossPriorities: false, // 默认选择启用为 false
 		resp:             pluginapi.SchedulerPickResponse{Handled: true, AuthID: "auth-high"},
 		handled:          true,
 	}
@@ -1086,7 +1086,7 @@ func TestManagerPluginSchedulerAcrossPrioritiesUnhandledFallsBackToHighestPriori
 	if len(scheduler.requests[0].Candidates) != 2 {
 		t.Fatalf("Candidates count = %d, want 2", len(scheduler.requests[0].Candidates))
 	}
-	// Fallback should pick auth-high because it has the highest priority tier
+	// 回退应选择 auth-high，因为它具有最高的优先级层级
 	if got == nil || got.ID != "auth-high" {
 		t.Fatalf("picked auth = %v, want auth-high", got)
 	}
@@ -2185,7 +2185,7 @@ func TestManager_SchedulerSharesThinkingSuffixCooldownAndRegistryState(t *testin
 	if len(auth.ModelStates) != 1 || auth.ModelStates[baseModel] == nil {
 		t.Fatalf("ModelStates = %+v, want only canonical key %q", auth.ModelStates, baseModel)
 	}
-	// Only thinking-auth-a is cooling down; thinking-auth-b remains available.
+	// 只有 thinking-auth-a 处于冷却中；thinking-auth-b 仍可用。
 	if count := reg.GetModelCount(baseModel); count != 1 {
 		t.Fatalf("registry model count during cooldown = %d, want 1", count)
 	}
@@ -2413,7 +2413,7 @@ func TestManagerPluginSchedulerUnhandledWithRejectFlagFallsBack(t *testing.T) {
 		t.Fatalf("Register(auth-a) error = %v", errRegister)
 	}
 
-	// When Handled is false, even if Reject is set, it must remain unhandled and fall back to built-in selection.
+	// 当 Handled 为 false 时，即使设置了 Reject，它也必须保持未处理并回退到内置选择。
 	scheduler := &fakePluginScheduler{
 		resp:    pluginapi.SchedulerPickResponse{Handled: false, Reject: true},
 		handled: false,

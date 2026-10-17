@@ -7,10 +7,10 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// AlignOpenAIToolCallMessages reorders tool result messages to immediately follow
-// the assistant message that issued their matching tool_calls by tool_call_id.
-// It preserves original message order, content parts, reasoning fields, and numeric
-// precision, while leaving ambiguous, orphan, and incomplete histories untouched.
+// AlignOpenAIToolCallMessages 重排工具结果消息，使其按 tool_call_id
+// 紧跟在发出匹配 tool_calls 的 assistant 消息之后。
+// 它保留原始消息顺序、内容部分、推理字段以及数值
+// 精度，同时不动有歧义、孤儿和不完整的历史记录。
 func AlignOpenAIToolCallMessages(messages [][]byte, extraAmbiguousIDs ...string) [][]byte {
 	if len(messages) <= 1 {
 		return messages
@@ -46,7 +46,7 @@ func AlignOpenAIToolCallMessages(messages [][]byte, extraAmbiguousIDs ...string)
 					for _, tc := range rawCalls {
 						callID := tc.Get("id").String()
 						if callID == "" {
-							// Empty tool_call_id cannot be safely matched.
+							// 空的 tool_call_id 无法安全匹配。
 							ambiguousCallIDs[""] = true
 							hasEmptyCallID = true
 							continue
@@ -96,7 +96,7 @@ func AlignOpenAIToolCallMessages(messages [][]byte, extraAmbiguousIDs ...string)
 		if ast.hasInvalidOrEmptyID {
 			continue
 		}
-		// Verify completeness and ambiguity for this assistant.
+		// 校验该 assistant 的完整性与歧义性。
 		isEligible := true
 		matchedToolIndices := make([]int, 0, len(ast.callIDs))
 
@@ -107,13 +107,13 @@ func AlignOpenAIToolCallMessages(messages [][]byte, extraAmbiguousIDs ...string)
 			}
 			indices := toolMsgIndicesByCallID[callID]
 			if len(indices) != 1 {
-				// Incomplete or orphan: exactly one tool message must match.
+				// 不完整或孤儿：必须恰好有一个工具消息匹配。
 				isEligible = false
 				break
 			}
 			toolIdx := indices[0]
 			if toolIdx <= ast.msgIndex {
-				// Causal order violation: tool result before assistant.
+				// 因果顺序违规：工具结果出现在 assistant 之前。
 				isEligible = false
 				break
 			}
@@ -124,10 +124,10 @@ func AlignOpenAIToolCallMessages(messages [][]byte, extraAmbiguousIDs ...string)
 			continue
 		}
 
-		// Sort tool message indices to preserve their relative order.
+		// 对工具消息下标排序，以保留它们的相对顺序。
 		sort.Ints(matchedToolIndices)
 
-		// Check if tool messages already immediately follow this assistant.
+		// 检查工具消息是否已经紧跟在 assistant 之后。
 		alreadyAdjacent := true
 		for offset, toolIdx := range matchedToolIndices {
 			if toolIdx != ast.msgIndex+offset+1 {

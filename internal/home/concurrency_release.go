@@ -9,7 +9,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executionregistry"
 )
 
-// ConcurrencyReleaseFrame is the cumulative release accepted by Home for one credential and model.
+// ConcurrencyReleaseFrame 是 Home 为一个凭据和模型接受的累计释放量。
 type ConcurrencyReleaseFrame struct {
 	CredentialID string `json:"credential_id"`
 	Model        string `json:"model"`
@@ -44,7 +44,7 @@ func newReleaseFlusher(flushInterval, maxBackoff time.Duration, send func(contex
 	}
 }
 
-// NewReleaseFlusher creates a flusher that reads timing updates from the current limiter configuration.
+// NewReleaseFlusher 创建一个刷新器，它从当前限流器配置读取时序更新。
 func NewReleaseFlusher(configProvider func() internalconfig.CredentialConcurrencyConfig, send func(context.Context, ConcurrencyReleaseFrame) error) *releaseFlusher {
 	flusher := newReleaseFlusher(0, 0, send)
 	flusher.SetConfigProvider(configProvider)
@@ -61,7 +61,7 @@ func (f *releaseFlusher) SetConfigProvider(provider func() internalconfig.Creden
 	f.signal()
 }
 
-// SetSender replaces the Home lifetime used for subsequent release attempts.
+// SetSender 替换后续释放尝试所用的 Home 生命周期。
 func (f *releaseFlusher) SetSender(send func(context.Context, ConcurrencyReleaseFrame) error) {
 	if f == nil {
 		return
@@ -72,8 +72,8 @@ func (f *releaseFlusher) SetSender(send func(context.Context, ConcurrencyRelease
 	f.signal()
 }
 
-// MarkDirty records the latest cumulative sequence for one release group and
-// returns a ticket completed when Home acknowledges that sequence.
+// MarkDirty 记录某个释放组的最新累计序号，并返回一个
+// 在 Home 确认该序号后完成的票据。
 func (f *releaseFlusher) MarkDirty(group executionregistry.ReleaseGroup, sequence int64) *executionregistry.ReleaseTicket {
 	if f == nil || sequence <= 0 || group.CredentialID == "" || group.Model == "" {
 		return nil
@@ -99,7 +99,7 @@ func (f *releaseFlusher) MarkDirty(group executionregistry.ReleaseGroup, sequenc
 	return executionregistry.NewReleaseTicket(group, sequence, done)
 }
 
-// Run sends dirty groups until its lifetime is cancelled.
+// Run 发送脏的组，直到其生命周期被取消。
 func (f *releaseFlusher) Run(ctx context.Context) {
 	if f == nil {
 		return
@@ -232,7 +232,7 @@ func (f *releaseFlusher) flush(ctx context.Context) bool {
 	return failed
 }
 
-// Flush waits for all currently dirty groups to be acknowledged within ctx.
+// Flush 等待所有当前为脏的组在 ctx 内被确认。
 func (f *releaseFlusher) Flush(ctx context.Context) error {
 	if f == nil {
 		return nil

@@ -1,7 +1,7 @@
-// Package thinking provides unified thinking configuration processing.
+// Package thinking 提供统一的 thinking 配置处理。
 //
-// This file implements suffix parsing functionality for extracting
-// thinking configuration from model names in the format model(value).
+// 本文件实现后缀解析功能，用于从形如 model(value) 的模型名中
+// 提取 thinking 配置。
 package thinking
 
 import (
@@ -9,30 +9,30 @@ import (
 	"strings"
 )
 
-// ParseSuffix extracts thinking suffix from a model name.
+// ParseSuffix 从模型名中提取 thinking 后缀。
 //
-// The suffix format is: model-name(value)
-// Examples:
+// 后缀格式为：model-name(value)
+// 示例：
 //   - "claude-sonnet-4-5(16384)" -> ModelName="claude-sonnet-4-5", RawSuffix="16384"
 //   - "gpt-5.2(high)" -> ModelName="gpt-5.2", RawSuffix="high"
 //   - "claude-opus-5" -> ModelName="claude-opus-5", HasSuffix=false
 //
-// This function only extracts the suffix; it does not validate or interpret
-// the suffix content. Use ParseNumericSuffix, ParseLevelSuffix, etc. for
-// content interpretation.
+// 本函数只提取后缀，不校验也不解释后缀内容。内容解释请使用
+// ParseNumericSuffix、ParseLevelSuffix 等
+// 函数。
 func ParseSuffix(model string) SuffixResult {
-	// Find the last opening parenthesis
+	// 查找最后一个左括号
 	lastOpen := strings.LastIndex(model, "(")
 	if lastOpen == -1 {
 		return SuffixResult{ModelName: model, HasSuffix: false}
 	}
 
-	// Check if the string ends with a closing parenthesis
+	// 检查字符串是否以右括号结尾
 	if !strings.HasSuffix(model, ")") {
 		return SuffixResult{ModelName: model, HasSuffix: false}
 	}
 
-	// Extract components
+	// 提取各组成部分
 	modelName := model[:lastOpen]
 	rawSuffix := model[lastOpen+1 : len(model)-1]
 
@@ -43,32 +43,32 @@ func ParseSuffix(model string) SuffixResult {
 	}
 }
 
-// HasThinkingSuffix reports whether the model suffix defines a thinking configuration.
+// HasThinkingSuffix 报告模型后缀是否定义了 thinking 配置。
 func HasThinkingSuffix(model string) bool {
 	result := ParseSuffix(model)
 	return result.HasSuffix && hasThinkingConfig(parseSuffixToConfig(result.RawSuffix, "", result.ModelName))
 }
 
-// ParseNumericSuffix attempts to parse a raw suffix as a numeric budget value.
+// ParseNumericSuffix 尝试把原始后缀解析为数值型预算值。
 //
-// This function parses the raw suffix content (from ParseSuffix.RawSuffix) as an integer.
-// Only non-negative integers are considered valid numeric suffixes.
+// 本函数把原始后缀内容（来自 ParseSuffix.RawSuffix）解析为整数。
+// 只有非负整数才被视为合法的数值后缀。
 //
-// Platform note: The budget value uses Go's int type, which is 32-bit on 32-bit
-// systems and 64-bit on 64-bit systems. Values exceeding the platform's int range
-// will return ok=false.
+// 平台说明：预算值使用 Go 的 int 类型，在 32 位系统上为 32 位，
+// 在 64 位系统上为 64 位。超出该平台 int 范围的值
+// 会返回 ok=false。
 //
-// Leading zeros are accepted: "08192" parses as 8192.
+// 允许前导零："08192" 解析为 8192。
 //
-// Examples:
+// 示例：
 //   - "8192" -> budget=8192, ok=true
-//   - "0" -> budget=0, ok=true (represents ModeNone)
-//   - "08192" -> budget=8192, ok=true (leading zeros accepted)
-//   - "-1" -> budget=0, ok=false (negative numbers are not valid numeric suffixes)
-//   - "high" -> budget=0, ok=false (not a number)
-//   - "9223372036854775808" -> budget=0, ok=false (overflow on 64-bit systems)
+//   - "0" -> budget=0, ok=true (表示 ModeNone)
+//   - "08192" -> budget=8192, ok=true (允许前导零)
+//   - "-1" -> budget=0, ok=false (负数不是合法的数值后缀)
+//   - "high" -> budget=0, ok=false (不是数字)
+//   - "9223372036854775808" -> budget=0, ok=false (在 64 位系统上溢出)
 //
-// For special handling of -1 as auto mode, use ParseSpecialSuffix instead.
+// 若需把 -1 特殊处理为 auto 模式，请改用 ParseSpecialSuffix。
 func ParseNumericSuffix(rawSuffix string) (budget int, ok bool) {
 	if rawSuffix == "" {
 		return 0, false
@@ -79,8 +79,8 @@ func ParseNumericSuffix(rawSuffix string) (budget int, ok bool) {
 		return 0, false
 	}
 
-	// Negative numbers are not valid numeric suffixes
-	// -1 should be handled by special value parsing as "auto"
+	// 负数不是合法的数值后缀
+	// -1 应作为 "auto" 交由特殊值解析处理
 	if value < 0 {
 		return 0, false
 	}
@@ -88,20 +88,20 @@ func ParseNumericSuffix(rawSuffix string) (budget int, ok bool) {
 	return value, true
 }
 
-// ParseSpecialSuffix attempts to parse a raw suffix as a special thinking mode value.
+// ParseSpecialSuffix 尝试把原始后缀解析为特殊的 thinking 模式值。
 //
-// This function handles special strings that represent a change in thinking mode:
-//   - "none" -> ModeNone (disables thinking)
-//   - "auto" -> ModeAuto (automatic/dynamic thinking)
-//   - "-1"   -> ModeAuto (numeric representation of auto mode)
+// 本函数处理表示 thinking 模式变化的特殊字符串：
+//   - "none" -> ModeNone (关闭 thinking)
+//   - "auto" -> ModeAuto (自动/动态 thinking)
+//   - "-1"   -> ModeAuto (auto 模式的数值表示)
 //
-// String values are case-insensitive.
+// 字符串值不区分大小写。
 func ParseSpecialSuffix(rawSuffix string) (mode ThinkingMode, ok bool) {
 	if rawSuffix == "" {
 		return ModeBudget, false
 	}
 
-	// Case-insensitive matching
+	// 不区分大小写匹配
 	switch strings.ToLower(rawSuffix) {
 	case "none":
 		return ModeNone, true
@@ -112,29 +112,29 @@ func ParseSpecialSuffix(rawSuffix string) (mode ThinkingMode, ok bool) {
 	}
 }
 
-// ParseLevelSuffix attempts to parse a raw suffix as a discrete thinking level.
+// ParseLevelSuffix 尝试把原始后缀解析为离散的 thinking 等级。
 //
-// This function parses the raw suffix content (from ParseSuffix.RawSuffix) as a level.
-// Only discrete effort levels are valid: minimal, low, medium, high, xhigh, max.
-// Level matching is case-insensitive.
+// 本函数把原始后缀内容（来自 ParseSuffix.RawSuffix）解析为等级。
+// 只有离散的力度等级合法：minimal、low、medium、high、xhigh、max。
+// 等级匹配不区分大小写。
 //
-// Special values (none, auto) are NOT handled by this function; use ParseSpecialSuffix
-// instead. This separation allows callers to prioritize special value handling.
+// 特殊值（none、auto）不由本函数处理；请改用 ParseSpecialSuffix。
+// 这种拆分让调用方可以优先处理特殊值。
 //
-// Examples:
+// 示例：
 //   - "high" -> level=LevelHigh, ok=true
-//   - "HIGH" -> level=LevelHigh, ok=true (case insensitive)
+//   - "HIGH" -> level=LevelHigh, ok=true (不区分大小写)
 //   - "medium" -> level=LevelMedium, ok=true
-//   - "none" -> level="", ok=false (special value, use ParseSpecialSuffix)
-//   - "auto" -> level="", ok=false (special value, use ParseSpecialSuffix)
-//   - "8192" -> level="", ok=false (numeric, use ParseNumericSuffix)
-//   - "ultra" -> level="", ok=false (unknown level)
+//   - "none" -> level="", ok=false (特殊值，请用 ParseSpecialSuffix)
+//   - "auto" -> level="", ok=false (特殊值，请用 ParseSpecialSuffix)
+//   - "8192" -> level="", ok=false (数值，请用 ParseNumericSuffix)
+//   - "ultra" -> level="", ok=false (未知等级)
 func ParseLevelSuffix(rawSuffix string) (level ThinkingLevel, ok bool) {
 	if rawSuffix == "" {
 		return "", false
 	}
 
-	// Case-insensitive matching
+	// 不区分大小写匹配
 	switch strings.ToLower(rawSuffix) {
 	case "minimal":
 		return LevelMinimal, true

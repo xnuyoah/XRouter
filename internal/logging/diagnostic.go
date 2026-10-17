@@ -24,9 +24,9 @@ var (
 	diagnosticStatusPattern       = regexp.MustCompile(`(?i)\bstatus(?:\s+code)?\s*[:=]?\s*([1-5][0-9]{2})\b`)
 )
 
-// SafeDiagnosticForLog returns a bounded, single-line diagnostic suitable for
-// ordinary application logs. It preserves the access-token-expired signal while
-// redacting credential values and URL userinfo.
+// SafeDiagnosticForLog 返回有界、单行的诊断信息，适用于
+// 普通应用日志。它保留 access-token-expired 信号，同时
+// 对凭据值和 URL 中的用户信息做脱敏。
 func SafeDiagnosticForLog(message string) string {
 	excerpt, sourceTruncated := diagnosticRunePrefix(message, diagnosticLogScanRuneLimit)
 	if sourceTruncated && !accessTokenExpiredLogPattern.MatchString(excerpt) {
@@ -46,8 +46,8 @@ func SafeDiagnosticForLog(message string) string {
 	return truncateDiagnosticLogExcerpt(excerpt, sourceTruncated)
 }
 
-// SafeErrorDiagnostic extracts only allowlisted failure signals from an
-// arbitrary error. It never carries the original free-form error text.
+// SafeErrorDiagnostic 仅从任意错误中提取
+// 允许列表内的失败信号。它绝不携带原始的自由文本错误信息。
 func SafeErrorDiagnostic(err error) string {
 	if err == nil {
 		return ""

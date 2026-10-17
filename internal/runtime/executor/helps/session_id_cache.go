@@ -65,7 +65,7 @@ func sessionIDCacheKey(apiKey string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// CachedSessionID returns a stable session UUID per apiKey, refreshing the TTL on each access.
+// CachedSessionID 为每个 apiKey 返回稳定的会话 UUID，并在每次访问时刷新 TTL。
 func CachedSessionID(apiKey string) string {
 	value, errValue := CachedSessionIDRequired(context.Background(), apiKey)
 	if errValue == nil && value != "" {
@@ -74,7 +74,7 @@ func CachedSessionID(apiKey string) string {
 	return uuid.New().String()
 }
 
-// CachedSessionIDRequired returns a stable session UUID per apiKey for request-time paths.
+// CachedSessionIDRequired 为请求时路径按 apiKey 返回稳定的会话 UUID。
 func CachedSessionIDRequired(ctx context.Context, apiKey string) (string, error) {
 	if apiKey == "" {
 		return uuid.New().String(), nil

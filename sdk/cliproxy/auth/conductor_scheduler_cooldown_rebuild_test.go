@@ -14,9 +14,9 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// TestScheduler_ModelCooldown_DoesNotTriggerRebuild verifies that when credentials
-// for a model enter cooldown, pick failures do NOT trigger full scheduler rebuilds.
-// Rebuilding on cooldown pick failure causes catastrophic lock contention (issue #5988).
+// TestScheduler_ModelCooldown_DoesNotTriggerRebuild 验证当某个模型的
+// 凭据进入冷却时，挑选失败不会触发完整的调度器重建。
+// 在冷却导致挑选失败时重建会造成灾难性的锁竞争（issue #5988）。
 func TestScheduler_ModelCooldown_DoesNotTriggerRebuild(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
@@ -33,13 +33,13 @@ func TestScheduler_ModelCooldown_DoesNotTriggerRebuild(t *testing.T) {
 	registerSchedulerModels(t, "openai", model, auth.ID)
 	manager.RefreshSchedulerEntry(auth.ID)
 
-	// Verify initial pick succeeds.
+	// 验证初始挑选成功。
 	picked, errPick := manager.scheduler.pickSingle(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPick != nil || picked == nil || picked.ID != auth.ID {
 		t.Fatalf("initial pickSingle failed: picked=%v, err=%v", picked, errPick)
 	}
 
-	// Put credential into cooldown.
+	// 让凭据进入冷却。
 	manager.MarkResult(ctx, Result{
 		AuthID:   auth.ID,
 		Provider: "openai",
@@ -48,7 +48,7 @@ func TestScheduler_ModelCooldown_DoesNotTriggerRebuild(t *testing.T) {
 		Error:    &Error{HTTPStatus: http.StatusTooManyRequests, Message: "quota exceeded"},
 	})
 
-	// Directly verify shouldRetrySchedulerPick does NOT treat modelCooldownError as retryable.
+	// 直接验证 shouldRetrySchedulerPick 不会把 modelCooldownError 视为可重试。
 	_, errCooldown := manager.scheduler.pickSingle(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	var targetCooldownErr *modelCooldownError
 	if !errors.As(errCooldown, &targetCooldownErr) {
@@ -58,12 +58,12 @@ func TestScheduler_ModelCooldown_DoesNotTriggerRebuild(t *testing.T) {
 		t.Fatalf("shouldRetrySchedulerPick returned true for modelCooldownError; cooldown must not trigger scheduler rebuild")
 	}
 
-	// Capture scheduler provider pointer before pickNext.
+	// 在 pickNext 之前捕获调度器 provider 指针。
 	manager.scheduler.mu.Lock()
 	providerSchedulerBefore := manager.scheduler.providers["openai"]
 	manager.scheduler.mu.Unlock()
 
-	// Calling pickNext on a cooled down model should return modelCooldownError without rebuilding.
+	// 对已冷却的模型调用 pickNext 应返回 modelCooldownError，且不触发重建。
 	_, _, errPickNext := manager.pickNext(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPickNext == nil {
 		t.Fatal("expected pickNext to fail with cooldown error, got nil")
@@ -76,25 +76,25 @@ func TestScheduler_ModelCooldown_DoesNotTriggerRebuild(t *testing.T) {
 	providerSchedulerAfter := manager.scheduler.providers["openai"]
 	manager.scheduler.mu.Unlock()
 
-	// In the buggy implementation, syncScheduler re-allocates providers map and providerScheduler during rebuild.
+	// 在有缺陷的实现中，syncScheduler 会在重建期间重新分配 providers map 和 providerScheduler。
 	if providerSchedulerBefore != providerSchedulerAfter {
 		t.Fatalf("pickNext unexpectedly triggered a full scheduler rebuild on cooldown error")
 	}
 
-	// Verify that syncedVersion has caught up to currentVersion so subsequent picks take the fast-path.
+	// 验证 syncedVersion 已追上 currentVersion，以便后续挑选走快速路径。
 	if manager.currentVersion() != manager.syncedVersion.Load() {
 		t.Fatalf("syncedVersion (%d) did not advance to currentVersion (%d)", manager.syncedVersion.Load(), manager.currentVersion())
 	}
 
-	// Subsequent pickNext call must take the fast path without scanning.
+	// 随后的 pickNext 调用必须走快速路径而不做扫描。
 	_, _, errSubsequent := manager.pickNext(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if !errors.As(errSubsequent, &targetCooldownErr) {
 		t.Fatalf("expected subsequent pickNext error to be *modelCooldownError, got: %v", errSubsequent)
 	}
 }
 
-// TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel verifies that concurrent
-// requests for a cooling-down model do not trigger rebuilds or starve picks on healthy models.
+// TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel 验证对正在冷却的
+// 模型的并发请求不会触发重建，也不会让健康模型的挑选饥饿。
 func TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
@@ -118,7 +118,7 @@ func TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel(t *testing.T) 
 	manager.RefreshSchedulerEntry(authCool.ID)
 	manager.RefreshSchedulerEntry(authHealthy.ID)
 
-	// Put authCool into cooldown.
+	// 让 authCool 进入冷却。
 	manager.MarkResult(ctx, Result{
 		AuthID:   authCool.ID,
 		Provider: "openai",
@@ -131,7 +131,7 @@ func TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel(t *testing.T) 
 	providerBefore := manager.scheduler.providers["openai"]
 	manager.scheduler.mu.Unlock()
 
-	// Launch concurrent picks for cooledModel.
+	// 为 cooledModel 发起并发挑选。
 	var wg sync.WaitGroup
 	const concurrency = 30
 	startGate := make(chan struct{})
@@ -145,7 +145,7 @@ func TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel(t *testing.T) 
 		}()
 	}
 
-	// Healthy model pick must complete quickly without being blocked behind rebuild storms.
+	// 健康模型的挑选必须快速完成，不被重建风暴阻塞在后。
 	healthyDone := make(chan struct{})
 	go func() {
 		<-startGate
@@ -162,17 +162,17 @@ func TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel(t *testing.T) 
 		close(workersDone)
 	}()
 
-	// Start all concurrent goroutines simultaneously.
+	// 同时启动所有并发 goroutine。
 	close(startGate)
 
-	// Verify healthy model completes while cooldown picks are underway.
+	// 验证冷却挑选进行期间健康模型能完成。
 	select {
 	case <-healthyDone:
 	case <-time.After(5 * time.Second):
 		t.Fatal("healthy model pick was blocked/starved by concurrent cooldown picks")
 	}
 
-	// Verify all cooldown workers finish within timeout.
+	// 验证所有冷却工作协程在超时前结束。
 	select {
 	case <-workersDone:
 	case <-time.After(5 * time.Second):
@@ -188,9 +188,9 @@ func TestScheduler_ConcurrentCooldownPicks_DoNotBlockHealthyModel(t *testing.T) 
 	}
 }
 
-// TestScheduler_InterleavedMarkResult_DoesNotTriggerRebuild verifies that ongoing,
-// concurrent MarkResult operations (which bump Generation and update model states)
-// do NOT trigger full scheduler rebuilds when pick operations fail for cooled models.
+// TestScheduler_InterleavedMarkResult_DoesNotTriggerRebuild 验证持续进行的、
+// 并发的 MarkResult 操作（会提升 Generation 并更新模型状态）
+// 在冷却模型挑选失败时不会触发完整的调度器重建。
 func TestScheduler_InterleavedMarkResult_DoesNotTriggerRebuild(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
@@ -214,7 +214,7 @@ func TestScheduler_InterleavedMarkResult_DoesNotTriggerRebuild(t *testing.T) {
 	manager.RefreshSchedulerEntry(authActive.ID)
 	manager.RefreshSchedulerEntry(authCooled.ID)
 
-	// Put authCooled into cooldown.
+	// 让 authCooled 进入冷却。
 	manager.MarkResult(ctx, Result{
 		AuthID:   authCooled.ID,
 		Provider: "openai",
@@ -230,7 +230,7 @@ func TestScheduler_InterleavedMarkResult_DoesNotTriggerRebuild(t *testing.T) {
 	var stopFlag atomic.Bool
 	var wg sync.WaitGroup
 
-	// Background worker continuously calling MarkResult on authActive to increment Generation.
+	// 后台工作协程持续对 authActive 调用 MarkResult 以提升 Generation。
 	const resultWorkers = 5
 	for i := 0; i < resultWorkers; i++ {
 		wg.Add(1)
@@ -247,7 +247,7 @@ func TestScheduler_InterleavedMarkResult_DoesNotTriggerRebuild(t *testing.T) {
 		}()
 	}
 
-	// Concurrent workers attempting pickNext on modelCooldown while MarkResult is actively mutating generations.
+	// 并发工作协程在 MarkResult 正在改变 generation 时尝试对 modelCooldown 调用 pickNext。
 	const pickWorkers = 20
 	pickDone := make(chan struct{})
 	go func() {
@@ -287,9 +287,9 @@ func TestScheduler_InterleavedMarkResult_DoesNotTriggerRebuild(t *testing.T) {
 	}
 }
 
-// TestScheduler_LargeCredentialSet_CooldownDoesNotLockStarve verifies that with a large
-// number of credentials (as in production Antigravity deployments with issue #5988),
-// concurrent cooldown pick failures do not cause lock starvation or rebuilds.
+// TestScheduler_LargeCredentialSet_CooldownDoesNotLockStarve 验证在存在大量
+// 凭据时（如同带有 issue #5988 的生产 Antigravity 部署），
+// 并发的冷却挑选失败不会造成锁饥饿或重建。
 func TestScheduler_LargeCredentialSet_CooldownDoesNotLockStarve(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
@@ -309,7 +309,7 @@ func TestScheduler_LargeCredentialSet_CooldownDoesNotLockStarve(t *testing.T) {
 		if _, errRegister := manager.Register(ctx, auth); errRegister != nil {
 			t.Fatalf("register auth %d: %v", i, errRegister)
 		}
-		// Register BOTH models in a single call to preserve targetModel.
+		// 在单次调用中同时注册两个模型，以保留 targetModel。
 		reg.RegisterClient(authID, "antigravity", []*registry.ModelInfo{
 			{ID: targetModel},
 			{ID: siblingModel},
@@ -320,13 +320,13 @@ func TestScheduler_LargeCredentialSet_CooldownDoesNotLockStarve(t *testing.T) {
 		manager.RefreshSchedulerEntry(authID)
 	}
 
-	// Verify targetModel can be picked initially.
+	// 验证 targetModel 初始时可被挑选。
 	initialPicked, errInitial := manager.scheduler.pickSingle(ctx, "antigravity", targetModel, cliproxyexecutor.Options{}, nil)
 	if errInitial != nil || initialPicked == nil {
 		t.Fatalf("initial targetModel pick failed: %v", errInitial)
 	}
 
-	// Put all credentials into cooldown for targetModel only.
+	// 仅让所有凭据针对 targetModel 进入冷却。
 	for i := 0; i < credentialCount; i++ {
 		authID := fmt.Sprintf("ag-auth-%d", i)
 		manager.MarkResult(ctx, Result{
@@ -338,7 +338,7 @@ func TestScheduler_LargeCredentialSet_CooldownDoesNotLockStarve(t *testing.T) {
 		})
 	}
 
-	// Verify targetModel is in modelCooldownError.
+	// 验证 targetModel 处于 modelCooldownError。
 	_, errTargetCooldown := manager.scheduler.pickSingle(ctx, "antigravity", targetModel, cliproxyexecutor.Options{}, nil)
 	var cooldownErr *modelCooldownError
 	if !errors.As(errTargetCooldown, &cooldownErr) {
@@ -349,7 +349,7 @@ func TestScheduler_LargeCredentialSet_CooldownDoesNotLockStarve(t *testing.T) {
 	providerBefore := manager.scheduler.providers["antigravity"]
 	manager.scheduler.mu.Unlock()
 
-	// Launch concurrent picks on targetModel (all cooling) and siblingModel (healthy).
+	// 对 targetModel（全部冷却中）和 siblingModel（健康）发起并发挑选。
 	var wg sync.WaitGroup
 	const concurrentPicks = 30
 	startGate := make(chan struct{})
@@ -409,9 +409,9 @@ func TestScheduler_LargeCredentialSet_CooldownDoesNotLockStarve(t *testing.T) {
 	}
 }
 
-// TestScheduler_RebuildDuringConcurrentMarkResult_PreservesLatestState verifies
-// that when rebuild runs with an earlier snapshot, in-flight MarkResult state mutations
-// (e.g. cooldown or recovery) are preserved and never reverted (Reviewer Finding P1).
+// TestScheduler_RebuildDuringConcurrentMarkResult_PreservesLatestState 验证
+// 当重建使用更早的快照运行时，进行中的 MarkResult 状态变更
+// （例如冷却或恢复）会被保留且绝不会被回退（Reviewer Finding P1）。
 func TestScheduler_RebuildDuringConcurrentMarkResult_PreservesLatestState(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
@@ -428,7 +428,7 @@ func TestScheduler_RebuildDuringConcurrentMarkResult_PreservesLatestState(t *tes
 	registerSchedulerModels(t, "openai", model, auth.ID)
 	manager.RefreshSchedulerEntry(auth.ID)
 
-	// Case A: Snapshot G is healthy, concurrent MarkResult puts auth into cooldown (G+1).
+	// 情形 A：快照 G 健康，并发 MarkResult 使 auth 进入冷却（G+1）。
 	manager.mu.RLock()
 	healthySnapshot := manager.auths[auth.ID].Clone()
 	manager.mu.RUnlock()
@@ -441,39 +441,39 @@ func TestScheduler_RebuildDuringConcurrentMarkResult_PreservesLatestState(t *tes
 		Error:    &Error{HTTPStatus: http.StatusTooManyRequests, Message: "quota exceeded"},
 	})
 
-	// Rebuild with the older healthy snapshot G.
+	// 使用更早的健康快照 G 重建。
 	manager.scheduler.rebuild([]*Auth{healthySnapshot})
 
-	// Cooldown state must be preserved (must NOT revert to healthy).
+	// 冷却状态必须被保留（绝不能回退为健康）。
 	_, errPickCooldown := manager.scheduler.pickSingle(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	var targetCooldownErr *modelCooldownError
 	if !errors.As(errPickCooldown, &targetCooldownErr) {
 		t.Fatalf("rebuild with stale snapshot reverted cooldown state; expected *modelCooldownError, got: %v", errPickCooldown)
 	}
 
-	// Case B: Snapshot G is in cooldown, concurrent MarkResult restores/recovers auth (G+2).
+	// 情形 B：快照 G 处于冷却，并发 MarkResult 恢复/修复了 auth（G+2）。
 	manager.mu.RLock()
 	cooledSnapshot := manager.auths[auth.ID].Clone()
 	manager.mu.RUnlock()
 
-	// Clear cooldown via ResetQuota.
+	// 通过 ResetQuota 清除冷却。
 	if _, _, errReset := manager.ResetQuota(ctx, auth.ID); errReset != nil {
 		t.Fatalf("reset quota: %v", errReset)
 	}
 
-	// Rebuild with older cooled snapshot.
+	// 使用更早的冷却快照重建。
 	manager.scheduler.rebuild([]*Auth{cooledSnapshot})
 
-	// Recovered state must be preserved (must NOT revert to cooldown).
+	// 已恢复的状态必须被保留（绝不能回退为冷却）。
 	pickedRecovered, errPickRecovered := manager.scheduler.pickSingle(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPickRecovered != nil || pickedRecovered == nil || pickedRecovered.ID != auth.ID {
 		t.Fatalf("rebuild with stale snapshot reverted recovered state: picked=%v, err=%v", pickedRecovered, errPickRecovered)
 	}
 }
 
-// TestScheduler_ModelProjectionCooldown_DoesNotInvalidateFastPath verifies that
-// ApplyClientModelProjections (cooldowns / quota events) does not increment RegistrationEpoch,
-// ensuring the fast path remains 100% active during cooldowns (Reviewer Finding P2).
+// TestScheduler_ModelProjectionCooldown_DoesNotInvalidateFastPath 验证
+// ApplyClientModelProjections（冷却/额度事件）不会递增 RegistrationEpoch，
+// 从而确保快速路径在冷却期间保持 100% 生效（Reviewer Finding P2）。
 func TestScheduler_ModelProjectionCooldown_DoesNotInvalidateFastPath(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
@@ -496,7 +496,7 @@ func TestScheduler_ModelProjectionCooldown_DoesNotInvalidateFastPath(t *testing.
 		t.Fatalf("expected syncedVersion (%d) to equal currentVersion (%d)", manager.syncedVersion.Load(), initialVersion)
 	}
 
-	// Apply cooldown via MarkResult (invokes ApplyClientModelProjections).
+	// 通过 MarkResult 应用冷却（会调用 ApplyClientModelProjections）。
 	manager.MarkResult(ctx, Result{
 		AuthID:   auth.ID,
 		Provider: "openai",
@@ -505,21 +505,21 @@ func TestScheduler_ModelProjectionCooldown_DoesNotInvalidateFastPath(t *testing.
 		Error:    &Error{HTTPStatus: http.StatusTooManyRequests, Message: "quota exceeded"},
 	})
 
-	// RegistrationEpoch and currentVersion must NOT have changed.
+	// RegistrationEpoch 和 currentVersion 不得发生变化。
 	if manager.currentVersion() != initialVersion {
 		t.Fatalf("currentVersion changed from %d to %d on quota cooldown; cooldown must not invalidate structural registration epoch", initialVersion, manager.currentVersion())
 	}
 
-	// Fast path is confirmed intact.
+	// 确认快速路径完好。
 	_, errPick := manager.scheduler.pickSingle(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if manager.shouldRetrySchedulerPick(errPick, initialVersion) {
 		t.Fatal("shouldRetrySchedulerPick unexpectedly returned true on cooldown error")
 	}
 }
 
-// TestScheduler_RebuildDuringConcurrentUpdate_DoesNotResurrectDisabledCredential verifies
-// that an active snapshot taken at Generation G cannot resurrect a credential that was
-// disabled at Generation G+1 when rebuild executes (Reviewer Finding P1).
+// TestScheduler_RebuildDuringConcurrentUpdate_DoesNotResurrectDisabledCredential 验证
+// 在 Generation G 取得的活跃快照无法在重建执行时复活一个
+// 在 Generation G+1 被禁用的凭据（Reviewer Finding P1）。
 func TestScheduler_RebuildDuringConcurrentUpdate_DoesNotResurrectDisabledCredential(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
@@ -537,12 +537,12 @@ func TestScheduler_RebuildDuringConcurrentUpdate_DoesNotResurrectDisabledCredent
 	registerSchedulerModels(t, "openai", model, auth.ID)
 	manager.RefreshSchedulerEntry(auth.ID)
 
-	// Capture active snapshot at Generation 1.
+	// 在 Generation 1 捕获活跃快照。
 	manager.mu.RLock()
 	activeSnapshotG1 := manager.auths[auth.ID].Clone()
 	manager.mu.RUnlock()
 
-	// Update auth to disabled at Generation 2.
+	// 在 Generation 2 把 auth 更新为已禁用。
 	disabledAuth := activeSnapshotG1.Clone()
 	disabledAuth.Disabled = true
 	disabledAuth.Status = StatusDisabled
@@ -550,20 +550,20 @@ func TestScheduler_RebuildDuringConcurrentUpdate_DoesNotResurrectDisabledCredent
 		t.Fatalf("update auth to disabled: %v", errUpdate)
 	}
 
-	// Rebuild scheduler using the older active snapshot G1.
+	// 使用更早的活跃快照 G1 重建调度器。
 	manager.scheduler.rebuild([]*Auth{activeSnapshotG1})
 
-	// Verify the disabled credential is NOT resurrected in scheduler and cannot be picked.
+	// 验证被禁用的凭据在调度器中未被复活且无法被挑选。
 	picked, errPick := manager.scheduler.pickSingle(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPick == nil || picked != nil {
 		t.Fatalf("rebuild with stale active snapshot resurrected disabled credential: %v", picked)
 	}
 }
 
-// TestScheduler_IncrementalRefresh_AllowsFailedPickToRetryAndSucceed verifies that
-// when an initial pick attempt fails before an incremental RefreshSchedulerEntry occurs,
-// the subsequent shouldRetrySchedulerPick check recognizes that an incremental update completed,
-// advances syncedVersion, and allows the request to retry and succeed without full rebuild (Reviewer P2).
+// TestScheduler_IncrementalRefresh_AllowsFailedPickToRetryAndSucceed 验证
+// 当初始挑选尝试在增量 RefreshSchedulerEntry 发生之前失败时，
+// 随后的 shouldRetrySchedulerPick 检查会识别出增量更新已完成、
+// 推进 syncedVersion，并允许请求重试并成功，而无需完整重建（Reviewer P2）。
 func TestScheduler_IncrementalRefresh_AllowsFailedPickToRetryAndSucceed(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
@@ -583,14 +583,14 @@ func TestScheduler_IncrementalRefresh_AllowsFailedPickToRetryAndSucceed(t *testi
 	manager.RefreshSchedulerEntry(auth.ID)
 	manager.syncScheduler()
 
-	// Initial pick on newModel fails because it is not registered yet.
+	// 对 newModel 的初始挑选失败，因为它尚未注册。
 	beforeVer := manager.syncedVersion.Load()
 	_, errInitialPick := manager.scheduler.pickSingle(ctx, "openai", newModel, cliproxyexecutor.Options{}, nil)
 	if errInitialPick == nil {
 		t.Fatal("expected pickSingle on newModel to fail initially")
 	}
 
-	// Register newModel in registry and execute incremental RefreshSchedulerEntry (no full rebuild).
+	// 在注册表中注册 newModel 并执行增量 RefreshSchedulerEntry（不做完整重建）。
 	reg := registry.GetGlobalRegistry()
 	reg.RegisterClient(auth.ID, "openai", []*registry.ModelInfo{
 		{ID: initialModel},
@@ -601,21 +601,21 @@ func TestScheduler_IncrementalRefresh_AllowsFailedPickToRetryAndSucceed(t *testi
 	})
 	manager.RefreshSchedulerEntry(auth.ID)
 
-	// shouldRetrySchedulerPick must recognize that incremental update occurred and return true to allow retry.
+	// shouldRetrySchedulerPick 必须识别出发生了增量更新并返回 true 以允许重试。
 	if !manager.shouldRetrySchedulerPick(errInitialPick, beforeVer) {
 		t.Fatal("shouldRetrySchedulerPick returned false after incremental RefreshSchedulerEntry; expected true to allow retry")
 	}
 
-	// Retrying pickSingle must now succeed.
+	// 重试 pickSingle 现在必须成功。
 	picked, errRetry := manager.scheduler.pickSingle(ctx, "openai", newModel, cliproxyexecutor.Options{}, nil)
 	if errRetry != nil || picked == nil || picked.ID != auth.ID {
 		t.Fatalf("retry pickSingle failed: picked=%v, err=%v", picked, errRetry)
 	}
 }
 
-// TestScheduler_ConcurrentPicks_OneSyncAllowsOthersToRetry verifies that when multiple
-// concurrent requests fail on an un-synced model, one request performing the sync allows
-// all other waiting/concurrent requests to retry and succeed without failing (Reviewer Finding P2).
+// TestScheduler_ConcurrentPicks_OneSyncAllowsOthersToRetry 验证当多个
+// 并发请求在未同步的模型上失败时，其中一个请求执行同步后，
+// 其他所有等待中/并发的请求都能重试并成功而不再失败（Reviewer Finding P2）。
 func TestScheduler_ConcurrentPicks_OneSyncAllowsOthersToRetry(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
@@ -635,7 +635,7 @@ func TestScheduler_ConcurrentPicks_OneSyncAllowsOthersToRetry(t *testing.T) {
 	manager.RefreshSchedulerEntry(auth.ID)
 	manager.syncScheduler()
 
-	// Register modelNew directly into registry.
+	// 直接把 modelNew 注册到注册表中。
 	reg := registry.GetGlobalRegistry()
 	reg.RegisterClient(auth.ID, "openai", []*registry.ModelInfo{
 		{ID: modelInitial},
@@ -657,7 +657,7 @@ func TestScheduler_ConcurrentPicks_OneSyncAllowsOthersToRetry(t *testing.T) {
 		idx := i
 		go func() {
 			defer wg.Done()
-			// Phase 1: All requests attempt initial pick before sync and observe the failure.
+			// 阶段 1：所有请求在同步前尝试初始挑选并观察到失败。
 			beforeVer := manager.syncedVersion.Load()
 			selected, errPick := manager.scheduler.pickSingle(ctx, "openai", modelNew, cliproxyexecutor.Options{}, nil)
 			if errPick != nil && modelNew != "" {
@@ -677,13 +677,13 @@ func TestScheduler_ConcurrentPicks_OneSyncAllowsOthersToRetry(t *testing.T) {
 		}()
 	}
 
-	// Wait until all requests have failed phase 1 initial pick.
+	// 等待所有请求的初始挑选都失败。
 	select {
 	case <-phase1Done:
 	case <-time.After(2 * time.Second):
 		t.Fatal("phase 1 timed out waiting for all initial pick attempts to fail")
 	}
-	// Release all requests into phase 2 to concurrently evaluate retry.
+	// 释放所有请求进入阶段 2，以并发评估重试。
 	close(phase2Start)
 	wg.Wait()
 
@@ -694,9 +694,9 @@ func TestScheduler_ConcurrentPicks_OneSyncAllowsOthersToRetry(t *testing.T) {
 	}
 }
 
-// TestScheduler_RegisterClient_InvalidatesFastPath verifies that external model registry
-// changes (RegisterClient) reliably invalidate the fast-path even if a previous sync already occurred
-// (Reviewer Finding P2).
+// TestScheduler_RegisterClient_InvalidatesFastPath 验证外部模型注册表
+// 变更（RegisterClient）即使在此前已发生过同步的情况下也能可靠地使快速路径失效
+// （Reviewer Finding P2）。
 func TestScheduler_RegisterClient_InvalidatesFastPath(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
@@ -715,13 +715,13 @@ func TestScheduler_RegisterClient_InvalidatesFastPath(t *testing.T) {
 	registerSchedulerModels(t, "openai", initialModel, auth.ID)
 	manager.RefreshSchedulerEntry(auth.ID)
 
-	// Ensure manager and scheduler are completely synced (syncedVersion == currentVersion).
+	// 确保管理器与调度器完全同步（syncedVersion == currentVersion）。
 	manager.syncScheduler()
 	if manager.currentVersion() != manager.syncedVersion.Load() {
 		t.Fatalf("expected syncedVersion (%d) to equal currentVersion (%d)", manager.syncedVersion.Load(), manager.currentVersion())
 	}
 
-	// Register dynamicModel directly into global registry without calling RefreshSchedulerEntry.
+	// 直接把 dynamicModel 注册到全局注册表，而不调用 RefreshSchedulerEntry。
 	reg := registry.GetGlobalRegistry()
 	reg.RegisterClient(auth.ID, "openai", []*registry.ModelInfo{
 		{ID: initialModel},
@@ -731,12 +731,12 @@ func TestScheduler_RegisterClient_InvalidatesFastPath(t *testing.T) {
 		reg.UnregisterClient(auth.ID)
 	})
 
-	// currentVersion must have increased because registry generation changed.
+	// currentVersion 必须已增加，因为注册表 generation 发生了变化。
 	if manager.currentVersion() <= manager.syncedVersion.Load() {
 		t.Fatalf("currentVersion (%d) did not increase after RegisterClient (syncedVersion=%d)", manager.currentVersion(), manager.syncedVersion.Load())
 	}
 
-	// pickNext on dynamicModel must succeed by discovering the new model.
+	// 对 dynamicModel 调用 pickNext 必须通过发现新模型而成功。
 	picked, exec, errPick := manager.pickNext(ctx, "openai", dynamicModel, cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNext failed to discover dynamically registered model: %v", errPick)
@@ -746,9 +746,9 @@ func TestScheduler_RegisterClient_InvalidatesFastPath(t *testing.T) {
 	}
 }
 
-// TestScheduler_UnschedulableAuth_DoesNotTriggerRebuildLoop verifies that unschedulable auths
-// (e.g. auths with empty provider or empty ID) are not counted as schedulable auths, preventing
-// an infinite rebuild loop where activeCount never matches s.authProviders (Reviewer Finding P2).
+// TestScheduler_UnschedulableAuth_DoesNotTriggerRebuildLoop 验证不可调度的 auth
+// （例如 provider 为空或 ID 为空的 auth）不会被计为可调度 auth，从而避免
+// activeCount 永远无法匹配 s.authProviders 的无限重建循环（Reviewer Finding P2）。
 func TestScheduler_UnschedulableAuth_DoesNotTriggerRebuildLoop(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
@@ -756,7 +756,7 @@ func TestScheduler_UnschedulableAuth_DoesNotTriggerRebuildLoop(t *testing.T) {
 
 	model := "model-unschedulable-test"
 
-	// Register a valid auth that will cool down.
+	// 注册一个之后会进入冷却的有效 auth。
 	validAuth := &Auth{
 		ID:       "auth-valid-cooling",
 		Provider: "openai",
@@ -767,16 +767,16 @@ func TestScheduler_UnschedulableAuth_DoesNotTriggerRebuildLoop(t *testing.T) {
 	registerSchedulerModels(t, "openai", model, validAuth.ID)
 	manager.RefreshSchedulerEntry(validAuth.ID)
 
-	// Register an unschedulable auth directly in manager (e.g. Empty provider).
+	// 直接在管理器中注册一个不可调度的 auth（例如 provider 为空）。
 	unschedulableAuth := &Auth{
 		ID:       "auth-empty-provider",
-		Provider: "", // Unschedulable!
+		Provider: "", // 不可调度！
 	}
 	if _, errRegister := manager.Register(ctx, unschedulableAuth); errRegister != nil {
 		t.Fatalf("register unschedulable auth: %v", errRegister)
 	}
 
-	// Put validAuth into cooldown.
+	// 让 validAuth 进入冷却。
 	manager.MarkResult(ctx, Result{
 		AuthID:   validAuth.ID,
 		Provider: "openai",
@@ -785,13 +785,13 @@ func TestScheduler_UnschedulableAuth_DoesNotTriggerRebuildLoop(t *testing.T) {
 		Error:    &Error{HTTPStatus: http.StatusTooManyRequests, Message: "quota exceeded"},
 	})
 
-	// Initial pick on model should sync once and converge.
+	// 对 model 的初始挑选应同步一次并收敛。
 	_, _, errPickInitial := manager.pickNext(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	if errPickInitial == nil {
 		t.Fatal("expected pickNext to fail with cooldown error")
 	}
 
-	// Synced version must have converged to currentVersion despite the unschedulable auth.
+	// 尽管存在不可调度的 auth，syncedVersion 也必须已收敛到 currentVersion。
 	if manager.currentVersion() != manager.syncedVersion.Load() {
 		t.Fatalf("syncedVersion (%d) did not converge to currentVersion (%d) in presence of unschedulable auth",
 			manager.syncedVersion.Load(), manager.currentVersion())
@@ -801,7 +801,7 @@ func TestScheduler_UnschedulableAuth_DoesNotTriggerRebuildLoop(t *testing.T) {
 	providersBefore := manager.scheduler.providers["openai"]
 	manager.scheduler.mu.Unlock()
 
-	// Subsequent pick attempts on the cooling model MUST NOT trigger rebuilds.
+	// 对冷却模型的后续挑选尝试绝不能触发重建。
 	for i := 0; i < 5; i++ {
 		_, _, _ = manager.pickNext(ctx, "openai", model, cliproxyexecutor.Options{}, nil)
 	}

@@ -129,7 +129,7 @@ func TestSetStringWithoutHTMLEscape(t *testing.T) {
 				t.Fatalf("SetStringWithoutHTMLEscape() = %s, want %s", string(got), tc.want)
 			}
 
-			// Verify that the JSON parses back and decodes to the exact same value (round-trip)
+			// 验证 JSON 能被重新解析并解码出完全相同的值（往返）
 			res := gjson.GetBytes(got, tc.path)
 			if !res.Exists() {
 				t.Fatalf("path %q does not exist in result: %s", tc.path, string(got))

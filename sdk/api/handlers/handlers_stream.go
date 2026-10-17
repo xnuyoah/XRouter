@@ -16,14 +16,14 @@ import (
 	"golang.org/x/net/context"
 )
 
-// ExecuteStreamWithAuthManager executes a streaming request via the core auth manager.
-// This path is the only supported execution route.
-// The returned http.Header carries upstream response headers captured before streaming begins.
+// ExecuteStreamWithAuthManager 通过 core auth 管理器执行流式请求。
+// 该路径是唯一受支持的执行路由。
+// 返回的 http.Header 携带在流式传输开始之前捕获的上游响应头。
 func (h *BaseAPIHandler) ExecuteStreamWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) (<-chan []byte, http.Header, <-chan *interfaces.ErrorMessage) {
 	return h.executeStreamWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, false)
 }
 
-// ExecuteImageStreamWithAuthManager executes a streaming OpenAI-compatible image endpoint request.
+// ExecuteImageStreamWithAuthManager 执行一次流式的 OpenAI 兼容图像端点请求。
 func (h *BaseAPIHandler) ExecuteImageStreamWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) (<-chan []byte, http.Header, <-chan *interfaces.ErrorMessage) {
 	return h.executeStreamWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, true)
 }
@@ -97,9 +97,9 @@ func (h *BaseAPIHandler) streamWithPluginExecutor(ctx context.Context, entryProt
 	streamInterceptorsActive := streamInterceptorsEnabled(interceptorHost)
 	rawStreamHeaders := cloneHeader(streamResult.Headers)
 	baseStreamHeaders := cloneHeader(streamResult.Headers)
-	// Request headers and request bodies are stream-invariant. Keep a private snapshot
-	// and clone into each interceptor call so plugins cannot mutate shared storage.
-	// Schema v3+ payload chunks omit these bodies (host also strips per plugin).
+	// 请求头与请求体在整个流中保持不变。保留一份私有快照，
+	// 并在每次拦截器调用时克隆，使插件无法修改共享存储。
+	// Schema v3+ 的载荷分块省略这些 body（宿主也会针对每个插件剥离）。
 	var streamRequestHeaders http.Header
 	var streamOriginalRequest []byte
 	var streamRequestBody []byte
@@ -220,12 +220,12 @@ func (h *BaseAPIHandler) streamWithPluginExecutor(ctx context.Context, entryProt
 					ChunkIndex:      chunkIndex,
 					Metadata:        opts.Metadata,
 				}
-				// Re-evaluate each chunk so mid-stream plugin reloads stay correct.
-				// Schema v5+ omits history here.
+				// 对每个分块重新评估，以确保流中途的插件重载仍然正确。
+				// Schema v5+ 在此省略 history。
 				if streamChunkPayloadIncludesHistory(interceptorHost) {
 					chunkReq.HistoryChunks = cloneByteSlices(historyChunks)
 				}
-				// Schema v3+ omits bodies here (one header-init clone only).
+				// Schema v3+ 在此省略 body（仅在 header-init 时克隆一次）。
 				if streamChunkPayloadIncludesRequestBody(interceptorHost) {
 					chunkReq.OriginalRequest = cloneBytes(streamOriginalRequest)
 					chunkReq.RequestBody = cloneBytes(streamRequestBody)
@@ -283,7 +283,7 @@ func (h *BaseAPIHandler) executeStreamWithAuthManager(ctx context.Context, handl
 
 func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context, entryProtocol, exitProtocol, modelName string, rawJSON []byte, alt string, allowImageModel bool, execOptions modelExecutionOptions) (<-chan []byte, http.Header, <-chan *interfaces.ErrorMessage) {
 	originalRequestedModel := modelName
-	// Speech-only models are reachable solely through the speech entry protocol.
+	// 仅语音模型只能通过 speech 入口协议访问。
 	execOptions.AllowSpeechModel = isModelExecutionSpeechProtocol(entryProtocol)
 	routeDecision, preparedRoute := preparedModelRouteFromContext(ctx, execOptions.SkipRouterPluginID)
 	if !preparedRoute {
@@ -371,8 +371,8 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 	passthroughHeadersEnabled := executionPassthroughHeaders(h.CurrentConfig(), execOptions.InternalSource)
 	interceptorHost := h.interceptorHost()
 	streamInterceptorsActive := streamInterceptorsEnabled(interceptorHost)
-	// Resolve bootstrap retries and header initialization before returning so the
-	// returned header snapshot is never modified by the stream goroutine.
+	// 在返回之前解析引导重试与报头初始化，以确保
+	// 返回的报头快照不会被流式 goroutine 修改。
 	rawStreamHeaders := cloneHeader(streamResult.Headers)
 	baseStreamHeaders := cloneHeader(streamResult.Headers)
 	chunks := streamResult.Chunks
@@ -384,9 +384,9 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 	streamClosedBeforeRead := false
 	streamCanceledBeforeRead := false
 	streamHeaderInitialized := false
-	// Request headers/bodies are stream-invariant after after-auth capture. Keep a private
-	// snapshot and clone into each interceptor call so plugins cannot mutate shared storage.
-	// Schema v3+ payload chunks omit these bodies (host also strips per plugin).
+	// 在 after-auth 捕获之后，请求头/请求体在整个流中保持不变。保留一份私有
+	// 快照，并在每次拦截器调用时克隆，使插件无法修改共享存储。
+	// Schema v3+ 的载荷分块省略这些 body（宿主也会针对每个插件剥离）。
 	var streamRequestHeaders http.Header
 	var streamOriginalRequest []byte
 	var streamRequestBody []byte
@@ -439,12 +439,12 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 				ChunkIndex:      *chunkIndex,
 				Metadata:        opts.Metadata,
 			}
-			// Re-evaluate each chunk so mid-stream plugin reloads stay correct.
-			// Schema v5+ omits history here.
+			// 对每个分块重新评估，以确保流中途的插件重载仍然正确。
+			// Schema v5+ 在此省略 history。
 			if streamChunkPayloadIncludesHistory(interceptorHost) {
 				chunkReq.HistoryChunks = cloneByteSlices(historyChunks)
 			}
-			// Schema v3+ omits bodies here (one header-init clone only).
+			// Schema v3+ 在此省略 body（仅在 header-init 时克隆一次）。
 			if streamChunkPayloadIncludesRequestBody(interceptorHost) {
 				chunkReq.OriginalRequest = cloneBytes(streamOriginalRequest)
 				chunkReq.RequestBody = cloneBytes(streamRequestBody)
@@ -843,8 +843,8 @@ func validateSSEDataJSON(chunk []byte) error {
 	return state.Finish()
 }
 
-// streamDeliveryCompletion reconciles execution cleanup with the HTTP outcome.
-// Call only after closing output channels: the consumer may need EOF to finish.
+// streamDeliveryCompletion 将执行清理与 HTTP 结果进行对账。
+// 仅在关闭输出通道之后调用：消费方可能需要在收到 EOF 后才能完成。
 func streamDeliveryCompletion(ctx context.Context, outcome pluginapi.RequestCompletionOutcome, status int, err error) (pluginapi.RequestCompletionOutcome, int, error) {
 	if ctx == nil {
 		return outcome, status, err

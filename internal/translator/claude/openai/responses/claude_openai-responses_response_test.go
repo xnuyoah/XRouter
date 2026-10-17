@@ -1342,7 +1342,7 @@ func TestConvertClaudeResponseToOpenAIResponses_MaxTokensWithWebSearchEmitsIncom
 		t.Fatalf("response.output.0.status = %q, want incomplete", got)
 	}
 
-	// Non-stream
+	// 非流式
 	raw := []byte(strings.Join([]string{
 		`data: {"type":"message_start","message":{"id":"msg_ws_incomplete","usage":{"input_tokens":10,"output_tokens":0}}}`,
 		`data: {"type":"content_block_start","index":0,"content_block":{"type":"server_tool_use","id":"srv_1","name":"web_search"}}`,
@@ -2264,7 +2264,7 @@ func TestApplyPatchClaudeSnapshotAfterItemCompletion(t *testing.T) {
 		{"equivalent reencoded snapshot", ` { "input" : "\u0078" } `, false},
 		{"placeholder after item completion", `{}`, false},
 	} {
-		// Reproduce the six-step sequence with a second, still-open patch call.
+		// 用第二个仍未关闭的 patch 调用复现这六步序列。
 		chunks := [][]byte{
 			applyPatchClaudeStart(0, "c1", "apply_patch"),
 			applyPatchClaudeFragment(0, `{"input":"x"}`),
@@ -2426,10 +2426,10 @@ func TestApplyPatchClaudeSuccessfulTerminalSealsState(t *testing.T) {
 	}
 }
 
-// The request body is picked and validated once when the per-stream state is
-// created; later chunks reuse that pinned copy for tool metadata and the
-// completed event instead of re-picking (and re-validating) the full body on
-// every chunk. Regression test for issue #6665.
+// 请求体在每个流状态创建时被挑选并校验一次；
+// 后续分块复用该固定副本用于工具元数据和
+// completed 事件，而不是在每个分块上重新挑选（并重新校验）
+// 整个请求体。这是 issue #6665 的回归测试。
 func TestConvertClaudeResponseToOpenAIResponses_PinsRequestPerStream(t *testing.T) {
 	originalRequest := []byte(`{
 		"model":"gpt-test",
@@ -2449,9 +2449,9 @@ func TestConvertClaudeResponseToOpenAIResponses_PinsRequestPerStream(t *testing.
 	var param any
 	var added, completed gjson.Result
 	for i, chunk := range chunks {
-		// Only the first chunk carries the request copy; the pinned state
-		// must keep tool metadata and completed-event fields working even
-		// when later chunks do not carry the request again.
+		// 只有第一个分块携带请求副本；被固定的状态
+		// 必须在后续分块不再携带请求时，
+		// 仍保持工具元数据与 completed 事件字段正常工作。
 		var requestForChunk []byte
 		if i == 0 {
 			requestForChunk = originalRequest
@@ -2484,7 +2484,7 @@ func TestConvertClaudeResponseToOpenAIResponses_PinsRequestPerStream(t *testing.
 }
 
 func BenchmarkConvertClaudeResponseToOpenAIResponses_TextDelta(b *testing.B) {
-	// A 64 KiB request body, as a Codex session with a long history sends.
+	// 一个 64 KiB 的请求体，如同历史很长的 Codex 会话所发送的。
 	request := []byte(`{"model":"claude-test","instructions":"` + strings.Repeat("x", 64*1024) + `","tools":[{"name":"shell","description":"run","input_schema":{"type":"object"}}]}`)
 	start := []byte(`data: {"type":"message_start","message":{"id":"msg_1"}}`)
 	blockStart := []byte(`data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}`)

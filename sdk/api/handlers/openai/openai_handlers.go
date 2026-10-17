@@ -1,9 +1,9 @@
-// Package openai provides HTTP handlers for OpenAI API endpoints.
-// This package implements the OpenAI-compatible API interface, including model listing
-// and chat completion functionality. It supports both streaming and non-streaming responses,
-// and manages a pool of clients to interact with backend services.
-// The handlers translate OpenAI API requests to the appropriate backend format and
-// convert responses back to OpenAI-compatible format.
+// Package openai 为 OpenAI API 端点提供 HTTP 处理器。
+// 本包实现 OpenAI 兼容的 API 接口，包括模型列表
+// 与聊天补全功能。它同时支持流式与非流式响应，
+// 并管理一个客户端池以与后端服务交互。
+// 这些处理器将 OpenAI API 请求转换为合适的后端格式，
+// 并把响应转换回 OpenAI 兼容格式。
 package openai
 
 import (
@@ -25,46 +25,46 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
 )
 
-// OpenAIAPIHandler contains the handlers for OpenAI API endpoints.
-// It holds a pool of clients to interact with the backend service.
+// OpenAIAPIHandler 包含 OpenAI API 端点的处理器。
+// 它持有一个客户端池以与后端服务交互。
 type OpenAIAPIHandler struct {
 	*handlers.BaseAPIHandler
 }
 
-// NewOpenAIAPIHandler creates a new OpenAI API handlers instance.
-// It takes an BaseAPIHandler instance as input and returns an OpenAIAPIHandler.
+// NewOpenAIAPIHandler 创建一个新的 OpenAI API 处理器实例。
+// 它接收一个 BaseAPIHandler 实例作为输入，并返回一个 OpenAIAPIHandler。
 //
-// Parameters:
-//   - apiHandlers: The base API handlers instance
+// 参数：
+//   - apiHandlers：基础 API 处理器实例
 //
-// Returns:
-//   - *OpenAIAPIHandler: A new OpenAI API handlers instance
+// 返回：
+//   - *OpenAIAPIHandler：一个新的 OpenAI API 处理器实例
 func NewOpenAIAPIHandler(apiHandlers *handlers.BaseAPIHandler) *OpenAIAPIHandler {
 	return &OpenAIAPIHandler{
 		BaseAPIHandler: apiHandlers,
 	}
 }
 
-// HandlerType returns the identifier for this handler implementation.
+// HandlerType 返回此处理器实现的标识符。
 func (h *OpenAIAPIHandler) HandlerType() string {
 	return OpenAI
 }
 
-// Models returns the OpenAI-compatible model metadata supported by this handler.
+// Models 返回此处理器支持的 OpenAI 兼容模型元数据。
 func (h *OpenAIAPIHandler) Models() []map[string]any {
-	// Get dynamic models from the global registry
+	// 从全局注册表获取动态模型
 	modelRegistry := registry.GetGlobalRegistry()
 	return modelRegistry.GetAvailableModels("openai")
 }
 
-// OpenAIModels handles the /v1/models endpoint.
-// It returns a list of available AI models with their capabilities
-// and specifications in OpenAI-compatible format.
+// OpenAIModels 处理 /v1/models 端点。
+// 它以 OpenAI 兼容格式返回可用 AI 模型列表
+// 及其能力和规格。
 func (h *OpenAIAPIHandler) OpenAIModels(c *gin.Context) {
-	// Get all available models
+	// 获取所有可用模型
 	allModels := h.Models()
 
-	// Filter to only include the 4 required fields: id, object, created, owned_by
+	// 过滤为仅包含 4 个必需字段：id、object、created、owned_by
 	filteredModels := make([]map[string]any, len(allModels))
 	for i, model := range allModels {
 		filteredModel := map[string]any{
@@ -72,12 +72,12 @@ func (h *OpenAIAPIHandler) OpenAIModels(c *gin.Context) {
 			"object": model["object"],
 		}
 
-		// Add created field if it exists
+		// 若存在则添加 created 字段
 		if created, exists := model["created"]; exists {
 			filteredModel["created"] = created
 		}
 
-		// Add owned_by field if it exists
+		// 若存在则添加 owned_by 字段
 		if ownedBy, exists := model["owned_by"]; exists {
 			filteredModel["owned_by"] = ownedBy
 		}
@@ -91,15 +91,15 @@ func (h *OpenAIAPIHandler) OpenAIModels(c *gin.Context) {
 	})
 }
 
-// ChatCompletions handles the /v1/chat/completions endpoint.
-// It determines whether the request is for a streaming or non-streaming response
-// and calls the appropriate handler based on the model provider.
+// ChatCompletions 处理 /v1/chat/completions 端点。
+// 它判断请求是流式还是非流式响应，
+// 并根据模型供应商调用相应的处理器。
 //
-// Parameters:
-//   - c: The Gin context containing the HTTP request and response
+// 参数：
+//   - c：包含 HTTP 请求与响应的 Gin context
 func (h *OpenAIAPIHandler) ChatCompletions(c *gin.Context) {
 	rawJSON, err := handlers.ReadRequestBody(c)
-	// If data retrieval fails, return a 400 Bad Request error.
+	// 若数据获取失败，返回 400 Bad Request 错误。
 	if err != nil {
 		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadRequest), handlers.ErrorResponse{
 			Error: handlers.ErrorDetail{
@@ -110,12 +110,12 @@ func (h *OpenAIAPIHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
-	// Check if the client requested a streaming response.
+	// 检查客户端是否请求了流式响应。
 	streamResult := gjson.GetBytes(rawJSON, "stream")
 	stream := streamResult.Type == gjson.True
 
-	// Some clients send OpenAI Responses-format payloads to /v1/chat/completions.
-	// Convert them to Chat Completions so downstream translators preserve tool metadata.
+	// 一些客户端会向 /v1/chat/completions 发送 OpenAI Responses 格式的载荷。
+	// 将其转换为 Chat Completions，以便下游转换器保留工具元数据。
 	if shouldTreatAsResponsesFormat(rawJSON) {
 		modelName := gjson.GetBytes(rawJSON, "model").String()
 		rawJSON, _ = responsesconverter.ConvertOpenAIResponsesRequestToOpenAIChatCompletions(modelName, rawJSON, stream)
@@ -130,8 +130,8 @@ func (h *OpenAIAPIHandler) ChatCompletions(c *gin.Context) {
 
 }
 
-// shouldTreatAsResponsesFormat detects OpenAI Responses-style payloads that are
-// accidentally sent to the Chat Completions endpoint.
+// shouldTreatAsResponsesFormat 检测被误发到 Chat Completions
+// 端点的 OpenAI Responses 风格载荷。
 func shouldTreatAsResponsesFormat(rawJSON []byte) bool {
 	if gjson.GetBytes(rawJSON, "messages").Exists() {
 		return false
@@ -145,16 +145,16 @@ func shouldTreatAsResponsesFormat(rawJSON []byte) bool {
 	return false
 }
 
-// Completions handles the /v1/completions endpoint.
-// It determines whether the request is for a streaming or non-streaming response
-// and calls the appropriate handler based on the model provider.
-// This endpoint follows the OpenAI completions API specification.
+// Completions 处理 /v1/completions 端点。
+// 它判断请求是流式还是非流式响应，
+// 并根据模型供应商调用相应的处理器。
+// 该端点遵循 OpenAI completions API 规范。
 //
-// Parameters:
-//   - c: The Gin context containing the HTTP request and response
+// 参数：
+//   - c：包含 HTTP 请求与响应的 Gin context
 func (h *OpenAIAPIHandler) Completions(c *gin.Context) {
 	rawJSON, err := handlers.ReadRequestBody(c)
-	// If data retrieval fails, return a 400 Bad Request error.
+	// 若数据获取失败，返回 400 Bad Request 错误。
 	if err != nil {
 		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadRequest), handlers.ErrorResponse{
 			Error: handlers.ErrorDetail{
@@ -165,7 +165,7 @@ func (h *OpenAIAPIHandler) Completions(c *gin.Context) {
 		return
 	}
 
-	// Check if the client requested a streaming response.
+	// 检查客户端是否请求了流式响应。
 	streamResult := gjson.GetBytes(rawJSON, "stream")
 	if streamResult.Type == gjson.True {
 		h.handleCompletionsStreamingResponse(c, rawJSON)
@@ -175,35 +175,35 @@ func (h *OpenAIAPIHandler) Completions(c *gin.Context) {
 
 }
 
-// convertCompletionsRequestToChatCompletions converts OpenAI completions API request to chat completions format.
-// This allows the completions endpoint to use the existing chat completions infrastructure.
+// convertCompletionsRequestToChatCompletions 将 OpenAI completions API 请求转换为 chat completions 格式。
+// 这使 completions 端点能够复用现有的 chat completions 基础设施。
 //
-// Parameters:
-//   - rawJSON: The raw JSON bytes of the completions request
+// 参数：
+//   - rawJSON：completions 请求的原始 JSON 字节
 //
-// Returns:
-//   - []byte: The converted chat completions request
+// 返回：
+//   - []byte：转换后的 chat completions 请求
 func convertCompletionsRequestToChatCompletions(rawJSON []byte) []byte {
 	root := gjson.ParseBytes(rawJSON)
 
-	// Extract prompt from completions request
+	// 从 completions 请求中提取 prompt
 	prompt := root.Get("prompt").String()
 	if prompt == "" {
 		prompt = "Complete this:"
 	}
 
-	// Create chat completions structure
+	// 创建 chat completions 结构
 	out := []byte(`{"model":"","messages":[{"role":"user","content":""}]}`)
 
-	// Set model
+	// 设置 model
 	if model := root.Get("model"); model.Exists() {
 		out, _ = sjson.SetBytes(out, "model", model.String())
 	}
 
-	// Set the prompt as user message content
+	// 将 prompt 设置为用户消息内容
 	out, _ = sjson.SetBytes(out, "messages.0.content", prompt)
 
-	// Copy other parameters from completions to chat completions
+	// 将其他参数从 completions 复制到 chat completions
 	if maxTokens := root.Get("max_tokens"); maxTokens.Exists() {
 		out, _ = sjson.SetBytes(out, "max_tokens", maxTokens.Int())
 	}
@@ -247,21 +247,21 @@ func convertCompletionsRequestToChatCompletions(rawJSON []byte) []byte {
 	return out
 }
 
-// convertChatCompletionsResponseToCompletions converts chat completions API response back to completions format.
-// This ensures the completions endpoint returns data in the expected format.
+// convertChatCompletionsResponseToCompletions 将 chat completions API 响应转换回 completions 格式。
+// 这确保 completions 端点以预期格式返回数据。
 //
-// Parameters:
-//   - rawJSON: The raw JSON bytes of the chat completions response
+// 参数：
+//   - rawJSON：chat completions 响应的原始 JSON 字节
 //
-// Returns:
-//   - []byte: The converted completions response
+// 返回：
+//   - []byte：转换后的 completions 响应
 func convertChatCompletionsResponseToCompletions(rawJSON []byte) []byte {
 	root := gjson.ParseBytes(rawJSON)
 
-	// Base completions response structure
+	// 基础 completions 响应结构
 	out := []byte(`{"id":"","object":"text_completion","created":0,"model":"","choices":[]}`)
 
-	// Copy basic fields
+	// 复制基础字段
 	if id := root.Get("id"); id.Exists() {
 		out, _ = sjson.SetBytes(out, "id", id.String())
 	}
@@ -278,7 +278,7 @@ func convertChatCompletionsResponseToCompletions(rawJSON []byte) []byte {
 		out, _ = sjson.SetRawBytes(out, "usage", []byte(usage.Raw))
 	}
 
-	// Convert choices from chat completions to completions format
+	// 将 choices 从 chat completions 转换为 completions 格式
 	var choices []interface{}
 	if chatChoices := root.Get("choices"); chatChoices.Exists() && chatChoices.IsArray() {
 		chatChoices.ForEach(func(_, choice gjson.Result) bool {
@@ -286,24 +286,24 @@ func convertChatCompletionsResponseToCompletions(rawJSON []byte) []byte {
 				"index": choice.Get("index").Int(),
 			}
 
-			// Extract text content from message.content
+			// 从 message.content 提取文本内容
 			if message := choice.Get("message"); message.Exists() {
 				if content := message.Get("content"); content.Exists() {
 					completionsChoice["text"] = content.String()
 				}
 			} else if delta := choice.Get("delta"); delta.Exists() {
-				// For streaming responses, use delta.content
+				// 对于流式响应，使用 delta.content
 				if content := delta.Get("content"); content.Exists() {
 					completionsChoice["text"] = content.String()
 				}
 			}
 
-			// Copy finish_reason
+			// 复制 finish_reason
 			if finishReason := choice.Get("finish_reason"); finishReason.Exists() {
 				completionsChoice["finish_reason"] = finishReason.String()
 			}
 
-			// Copy logprobs if present
+			// 若存在则复制 logprobs
 			if logprobs := choice.Get("logprobs"); logprobs.Exists() {
 				completionsChoice["logprobs"] = logprobs.Value()
 			}
@@ -321,47 +321,47 @@ func convertChatCompletionsResponseToCompletions(rawJSON []byte) []byte {
 	return out
 }
 
-// convertChatCompletionsStreamChunkToCompletions converts a streaming chat completions chunk to completions format.
-// This handles the real-time conversion of streaming response chunks and filters out empty text responses.
+// convertChatCompletionsStreamChunkToCompletions 将流式 chat completions 分块转换为 completions 格式。
+// 它处理流式响应分块的实时转换，并过滤掉空文本响应。
 //
-// Parameters:
-//   - chunkData: The raw JSON bytes of a single chat completions stream chunk
+// 参数：
+//   - chunkData：单个 chat completions 流分块的原始 JSON 字节
 //
-// Returns:
-//   - []byte: The converted completions stream chunk, or nil if should be filtered out
+// 返回：
+//   - []byte：转换后的 completions 流分块；若应被过滤掉则为 nil
 func convertChatCompletionsStreamChunkToCompletions(chunkData []byte) []byte {
 	root := gjson.ParseBytes(chunkData)
 
-	// Check if this chunk has any meaningful content
+	// 检查该分块是否有任何有意义的内容
 	hasContent := false
 	hasUsage := root.Get("usage").Exists()
 	if chatChoices := root.Get("choices"); chatChoices.Exists() && chatChoices.IsArray() {
 		chatChoices.ForEach(func(_, choice gjson.Result) bool {
-			// Check if delta has content or finish_reason
+			// 检查 delta 是否包含 content 或 finish_reason
 			if delta := choice.Get("delta"); delta.Exists() {
 				if content := delta.Get("content"); content.Exists() && content.String() != "" {
 					hasContent = true
-					return false // Break out of forEach
+					return false // 跳出 forEach
 				}
 			}
-			// Also check for finish_reason to ensure we don't skip final chunks
+			// 同时检查 finish_reason，确保不会跳过最终分块
 			if finishReason := choice.Get("finish_reason"); finishReason.Exists() && finishReason.String() != "" && finishReason.String() != "null" {
 				hasContent = true
-				return false // Break out of forEach
+				return false // 跳出 forEach
 			}
 			return true
 		})
 	}
 
-	// If no meaningful content and no usage, return nil to indicate this chunk should be skipped
+	// 若无有意义的内容且无 usage，返回 nil 表示该分块应被跳过
 	if !hasContent && !hasUsage {
 		return nil
 	}
 
-	// Base completions stream response structure
+	// 基础 completions 流式响应结构
 	out := []byte(`{"id":"","object":"text_completion","created":0,"model":"","choices":[]}`)
 
-	// Copy basic fields
+	// 复制基础字段
 	if id := root.Get("id"); id.Exists() {
 		out, _ = sjson.SetBytes(out, "id", id.String())
 	}
@@ -374,7 +374,7 @@ func convertChatCompletionsStreamChunkToCompletions(chunkData []byte) []byte {
 		out, _ = sjson.SetBytes(out, "model", model.String())
 	}
 
-	// Convert choices from chat completions delta to completions format
+	// 将 choices 从 chat completions delta 转换为 completions 格式
 	var choices []interface{}
 	if chatChoices := root.Get("choices"); chatChoices.Exists() && chatChoices.IsArray() {
 		chatChoices.ForEach(func(_, choice gjson.Result) bool {
@@ -382,7 +382,7 @@ func convertChatCompletionsStreamChunkToCompletions(chunkData []byte) []byte {
 				"index": choice.Get("index").Int(),
 			}
 
-			// Extract text content from delta.content
+			// 从 delta.content 提取文本内容
 			if delta := choice.Get("delta"); delta.Exists() {
 				if content := delta.Get("content"); content.Exists() && content.String() != "" {
 					completionsChoice["text"] = content.String()
@@ -393,12 +393,12 @@ func convertChatCompletionsStreamChunkToCompletions(chunkData []byte) []byte {
 				completionsChoice["text"] = ""
 			}
 
-			// Copy finish_reason
+			// 复制 finish_reason
 			if finishReason := choice.Get("finish_reason"); finishReason.Exists() && finishReason.String() != "null" {
 				completionsChoice["finish_reason"] = finishReason.String()
 			}
 
-			// Copy logprobs if present
+			// 若存在则复制 logprobs
 			if logprobs := choice.Get("logprobs"); logprobs.Exists() {
 				completionsChoice["logprobs"] = logprobs.Value()
 			}
@@ -413,7 +413,7 @@ func convertChatCompletionsStreamChunkToCompletions(chunkData []byte) []byte {
 		out, _ = sjson.SetRawBytes(out, "choices", choicesJSON)
 	}
 
-	// Copy usage if present
+	// 若存在则复制 usage
 	if usage := root.Get("usage"); usage.Exists() {
 		out, _ = sjson.SetRawBytes(out, "usage", []byte(usage.Raw))
 	}
@@ -421,13 +421,13 @@ func convertChatCompletionsStreamChunkToCompletions(chunkData []byte) []byte {
 	return out
 }
 
-// handleNonStreamingResponse handles non-streaming chat completion responses.
-// It selects a client from the pool, sends the request, and
-// aggregates the response before sending it back to the client in OpenAI format.
+// handleNonStreamingResponse 处理非流式聊天补全响应。
+// 它从池中选择一个客户端，发送请求，并在以 OpenAI 格式
+// 返回给客户端之前聚合响应。
 //
-// Parameters:
-//   - c: The Gin context containing the HTTP request and response
-//   - rawJSON: The raw JSON bytes of the OpenAI-compatible request
+// 参数：
+//   - c：包含 HTTP 请求与响应的 Gin context
+//   - rawJSON：OpenAI 兼容请求的原始 JSON 字节
 func (h *OpenAIAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSON []byte) {
 	c.Header("Content-Type", "application/json")
 
@@ -446,15 +446,15 @@ func (h *OpenAIAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSON []
 	cliCancel()
 }
 
-// handleStreamingResponse handles streaming chat completion responses.
-// It establishes a streaming connection with the backend service and forwards
-// the response chunks to the client in real-time using Server-Sent Events.
+// handleStreamingResponse 处理流式聊天补全响应。
+// 它与后端服务建立流式连接，并使用 Server-Sent Events
+// 实时将响应分块转发给客户端。
 //
-// Parameters:
-//   - c: The Gin context containing the HTTP request and response
-//   - rawJSON: The raw JSON bytes of the OpenAI-compatible request
+// 参数：
+//   - c：包含 HTTP 请求与响应的 Gin context
+//   - rawJSON：OpenAI 兼容请求的原始 JSON 字节
 func (h *OpenAIAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byte) {
-	// Get the http.Flusher interface to manually flush the response.
+	// 获取 http.Flusher 接口以手动刷新响应。
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, handlers.ErrorResponse{
@@ -501,7 +501,7 @@ func (h *OpenAIAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byt
 	}
 	upstreamHeaders = resolvedHeaders
 
-	// Peek at the first chunk to determine success or failure before setting headers
+	// 在设置 header 之前先窥视第一个分块，以判断成功还是失败
 	for {
 		select {
 		case <-c.Request.Context().Done():
@@ -509,7 +509,7 @@ func (h *OpenAIAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byt
 			return
 		case errMsg, ok := <-errChan:
 			if !ok {
-				// Err channel closed cleanly; wait for data channel.
+				// Err 通道正常关闭；等待 data 通道。
 				errChan = nil
 				continue
 			}
@@ -521,7 +521,7 @@ func (h *OpenAIAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byt
 				h.handleStreamResult(c, flusher, func(err error) { cliCancel(err) }, make(chan []byte), pendingErrors, false)
 				return
 			}
-			// Upstream failed immediately. Return proper error status and JSON.
+			// 上游立即失败。返回合适的错误状态与 JSON。
 			h.WriteErrorResponse(c, errMsg)
 			if errMsg != nil {
 				cliCancel(errMsg.Error)
@@ -548,7 +548,7 @@ func (h *OpenAIAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byt
 					}
 					return
 				}
-				// Stream closed without data? Send DONE or just headers.
+				// 流关闭且没有数据？发送 DONE 或仅发送 header。
 				commitSSE()
 				_, _ = fmt.Fprintf(c.Writer, "data: [DONE]\n\n")
 				flusher.Flush()
@@ -556,7 +556,7 @@ func (h *OpenAIAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byt
 				return
 			}
 
-			// Success! Commit to streaming headers.
+			// 成功！提交流式 header。
 			stopKeepAlive()
 			commitSSE()
 
@@ -564,7 +564,7 @@ func (h *OpenAIAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byt
 			_, _ = fmt.Fprintf(c.Writer, "data: %s\n\n", string(chunk))
 			flusher.Flush()
 
-			// Continue streaming the rest
+			// 继续流式传输其余内容
 			h.handleStreamResult(c, flusher, func(err error) { cliCancel(err) }, dataChan, errChan, initialHasFinishReason)
 			return
 		case <-keepAliveC:
@@ -573,17 +573,17 @@ func (h *OpenAIAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byt
 	}
 }
 
-// handleCompletionsNonStreamingResponse handles non-streaming completions responses.
-// It converts completions request to chat completions format, sends to backend,
-// then converts the response back to completions format before sending to client.
+// handleCompletionsNonStreamingResponse 处理非流式 completions 响应。
+// 它将 completions 请求转换为 chat completions 格式并发送到后端，
+// 然后将响应转换回 completions 格式再发送给客户端。
 //
-// Parameters:
-//   - c: The Gin context containing the HTTP request and response
-//   - rawJSON: The raw JSON bytes of the OpenAI-compatible completions request
+// 参数：
+//   - c：包含 HTTP 请求与响应的 Gin context
+//   - rawJSON：OpenAI 兼容 completions 请求的原始 JSON 字节
 func (h *OpenAIAPIHandler) handleCompletionsNonStreamingResponse(c *gin.Context, rawJSON []byte) {
 	c.Header("Content-Type", "application/json")
 
-	// Convert completions request to chat completions format
+	// 将 completions 请求转换为 chat completions 格式
 	chatCompletionsJSON := convertCompletionsRequestToChatCompletions(rawJSON)
 
 	modelName := gjson.GetBytes(chatCompletionsJSON, "model").String()
@@ -602,15 +602,15 @@ func (h *OpenAIAPIHandler) handleCompletionsNonStreamingResponse(c *gin.Context,
 	cliCancel()
 }
 
-// handleCompletionsStreamingResponse handles streaming completions responses.
-// It converts completions request to chat completions format, streams from backend,
-// then converts each response chunk back to completions format before sending to client.
+// handleCompletionsStreamingResponse 处理流式 completions 响应。
+// 它将 completions 请求转换为 chat completions 格式，从后端流式获取，
+// 然后将每个响应分块转换回 completions 格式再发送给客户端。
 //
-// Parameters:
-//   - c: The Gin context containing the HTTP request and response
-//   - rawJSON: The raw JSON bytes of the OpenAI-compatible completions request
+// 参数：
+//   - c：包含 HTTP 请求与响应的 Gin context
+//   - rawJSON：OpenAI 兼容 completions 请求的原始 JSON 字节
 func (h *OpenAIAPIHandler) handleCompletionsStreamingResponse(c *gin.Context, rawJSON []byte) {
-	// Get the http.Flusher interface to manually flush the response.
+	// 获取 http.Flusher 接口以手动刷新响应。
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, handlers.ErrorResponse{
@@ -622,7 +622,7 @@ func (h *OpenAIAPIHandler) handleCompletionsStreamingResponse(c *gin.Context, ra
 		return
 	}
 
-	// Convert completions request to chat completions format
+	// 将 completions 请求转换为 chat completions 格式
 	chatCompletionsJSON := convertCompletionsRequestToChatCompletions(rawJSON)
 
 	modelName := gjson.GetBytes(chatCompletionsJSON, "model").String()
@@ -660,7 +660,7 @@ func (h *OpenAIAPIHandler) handleCompletionsStreamingResponse(c *gin.Context, ra
 	}
 	upstreamHeaders = resolvedHeaders
 
-	// Peek at the first chunk
+	// 窥视第一个分块
 	for {
 		select {
 		case <-c.Request.Context().Done():
@@ -668,7 +668,7 @@ func (h *OpenAIAPIHandler) handleCompletionsStreamingResponse(c *gin.Context, ra
 			return
 		case errMsg, ok := <-errChan:
 			if !ok {
-				// Err channel closed cleanly; wait for data channel.
+				// Err 通道正常关闭；等待 data 通道。
 				errChan = nil
 				continue
 			}
@@ -713,11 +713,11 @@ func (h *OpenAIAPIHandler) handleCompletionsStreamingResponse(c *gin.Context, ra
 				return
 			}
 
-			// Success! Set headers.
+			// 成功！设置 header。
 			stopKeepAlive()
 			commitSSE()
 
-			// Write the first chunk
+			// 写入第一个分块
 			converted := convertChatCompletionsStreamChunkToCompletions(chunk)
 			var initialHasFinishReason bool
 			if converted != nil {

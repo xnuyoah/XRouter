@@ -11,15 +11,15 @@ import (
 	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
-// TestConvertClaudeRequestToOpenAI_ThinkingToReasoningContent tests the mapping
-// of Claude thinking content to OpenAI reasoning_content field.
+// TestConvertClaudeRequestToOpenAI_ThinkingToReasoningContent 测试将 Claude thinking 内容
+// 映射到 OpenAI reasoning_content 字段。
 func TestConvertClaudeRequestToOpenAI_ThinkingToReasoningContent(t *testing.T) {
 	tests := []struct {
 		name                    string
 		inputJSON               string
 		wantReasoningContent    string
 		wantHasReasoningContent bool
-		wantContentText         string // Expected visible content text (if any)
+		wantContentText         string // 期望的可见内容文本（如果有）
 		wantHasContent          bool
 	}{
 		{
@@ -102,7 +102,7 @@ func TestConvertClaudeRequestToOpenAI_ThinkingToReasoningContent(t *testing.T) {
 					"content": [{"type": "text", "text": "Hello"}]
 				}]
 			}`,
-			// System messages don't have reasoning_content mapping
+			// 系统消息没有 reasoning_content 映射
 			wantReasoningContent:    "",
 			wantHasReasoningContent: false,
 			wantContentText:         "Hello",
@@ -185,7 +185,7 @@ func TestConvertClaudeRequestToOpenAI_ThinkingToReasoningContent(t *testing.T) {
 			result, _ := ConvertClaudeRequestToOpenAI("test-model", []byte(tt.inputJSON), false)
 			resultJSON := gjson.ParseBytes(result)
 
-			// Find the relevant message
+			// 找到相关消息
 			messages := resultJSON.Get("messages").Array()
 			if len(messages) < 1 {
 				if tt.wantHasReasoningContent || tt.wantHasContent {
@@ -194,7 +194,7 @@ func TestConvertClaudeRequestToOpenAI_ThinkingToReasoningContent(t *testing.T) {
 				return
 			}
 
-			// Check the last non-system message
+			// 检查最后一条非系统消息
 			var targetMsg gjson.Result
 			for i := len(messages) - 1; i >= 0; i-- {
 				if messages[i].Get("role").String() != "system" {
@@ -203,7 +203,7 @@ func TestConvertClaudeRequestToOpenAI_ThinkingToReasoningContent(t *testing.T) {
 				}
 			}
 
-			// Check reasoning_content
+			// 检查 reasoning_content
 			gotReasoningContent := targetMsg.Get("reasoning_content").String()
 			gotHasReasoningContent := targetMsg.Get("reasoning_content").Exists()
 
@@ -215,9 +215,9 @@ func TestConvertClaudeRequestToOpenAI_ThinkingToReasoningContent(t *testing.T) {
 				t.Errorf("reasoning_content = %q, want %q", gotReasoningContent, tt.wantReasoningContent)
 			}
 
-			// Check content
+			// 检查 content
 			content := targetMsg.Get("content")
-			// content has meaningful content if it's a non-empty array, or a non-empty string
+			// 当 content 是非空数组或非空字符串时，它具有有意义的内容
 			var gotHasContent bool
 			switch {
 			case content.IsArray():
@@ -233,7 +233,7 @@ func TestConvertClaudeRequestToOpenAI_ThinkingToReasoningContent(t *testing.T) {
 			}
 
 			if tt.wantHasContent && tt.wantContentText != "" {
-				// Find text content
+				// 查找文本内容
 				var foundText string
 				content.ForEach(func(_, v gjson.Result) bool {
 					if v.Get("type").String() == "text" {
@@ -314,8 +314,8 @@ func TestConvertClaudeRequestToOpenAI_SignedThinkingCompatibility(t *testing.T) 
 	}
 }
 
-// TestConvertClaudeRequestToOpenAI_UnsignedThinkingOnlyMessageDropped verifies
-// that unsigned Claude thinking is not migrated into GPT reasoning state.
+// TestConvertClaudeRequestToOpenAI_UnsignedThinkingOnlyMessageDropped 验证
+// 未签名的 Claude thinking 不会被迁移到 GPT 推理状态。
 func TestConvertClaudeRequestToOpenAI_UnsignedThinkingOnlyMessageDropped(t *testing.T) {
 	inputJSON := `{
 		"model": "claude-3-opus",
@@ -431,7 +431,7 @@ func TestConvertClaudeRequestToOpenAI_PreservesToolAdjacencyWithInterveningSyste
 	result, _ := ConvertClaudeRequestToOpenAI("gpt-5", []byte(inputJSON), false)
 	messages := gjson.GetBytes(result, "messages").Array()
 
-	// Expected roles order:
+	// 期望的角色顺序：
 	// 0: user ("Execute tools")
 	// 1: assistant (tool_calls [call_1, call_2])
 	// 2: tool (tool_call_id: call_1)
@@ -447,7 +447,7 @@ func TestConvertClaudeRequestToOpenAI_PreservesToolAdjacencyWithInterveningSyste
 		t.Fatalf("unexpected roles: got %v, want %v", roles, wantRoles)
 	}
 
-	// Verify tool messages immediately follow assistant
+	// 验证 tool 消息紧跟在 assistant 之后
 	if messages[2].Get("tool_call_id").String() != "call_1" {
 		t.Fatalf("expected tool message 0 to respond to call_1, got %q", messages[2].Get("tool_call_id").String())
 	}
@@ -517,7 +517,7 @@ func TestConvertClaudeRequestToOpenAI_SystemMessageScenarios(t *testing.T) {
 				"messages": [{"role": "user", "content": "hello"}]
 			}`,
 			wantHasSys:  true,
-			wantSysText: "Block 2", // We will update the test logic to check all blocks or specifically the second one
+			wantSysText: "Block 2", // 我们将更新测试逻辑以检查所有块，或专门检查第二个块
 		},
 	}
 
@@ -539,13 +539,13 @@ func TestConvertClaudeRequestToOpenAI_SystemMessageScenarios(t *testing.T) {
 			}
 
 			if tt.wantHasSys {
-				// Check content - it could be string or array in OpenAI
+				// 检查 content —— 在 OpenAI 中它可能是字符串或数组
 				content := sysMsg.Get("content")
 				var gotText string
 				if content.IsArray() {
 					arr := content.Array()
 					if len(arr) > 0 {
-						// Get the last element's text for validation
+						// 获取最后一个元素的文本用于校验
 						gotText = arr[len(arr)-1].Get("text").String()
 					}
 				} else {
@@ -626,8 +626,8 @@ func TestConvertClaudeRequestToOpenAI_ToolResultOrderAndContent(t *testing.T) {
 	resultJSON := gjson.ParseBytes(result)
 	messages := resultJSON.Get("messages").Array()
 
-	// OpenAI requires: tool messages MUST immediately follow assistant(tool_calls).
-	// Correct order: assistant(tool_calls) + tool(result) + user(before+after)
+	// OpenAI 要求：tool 消息必须紧跟在 assistant(tool_calls) 之后。
+	// 正确顺序：assistant(tool_calls) + tool(result) + user(before+after)
 	if len(messages) != 3 {
 		t.Fatalf("Expected 3 messages, got %d. Messages: %s", len(messages), resultJSON.Get("messages").Raw)
 	}
@@ -636,7 +636,7 @@ func TestConvertClaudeRequestToOpenAI_ToolResultOrderAndContent(t *testing.T) {
 		t.Fatalf("Expected messages[0] to be assistant tool_calls, got %s: %s", messages[0].Get("role").String(), messages[0].Raw)
 	}
 
-	// tool message MUST immediately follow assistant(tool_calls) per OpenAI spec
+	// 根据 OpenAI 规范，tool 消息必须紧跟 assistant(tool_calls)
 	if messages[1].Get("role").String() != "tool" {
 		t.Fatalf("Expected messages[1] to be tool (must follow tool_calls), got %s", messages[1].Get("role").String())
 	}
@@ -647,11 +647,11 @@ func TestConvertClaudeRequestToOpenAI_ToolResultOrderAndContent(t *testing.T) {
 		t.Fatalf("Expected tool content %q, got %q", "tool ok", got)
 	}
 
-	// User message comes after tool message
+	// user 消息位于 tool 消息之后
 	if messages[2].Get("role").String() != "user" {
 		t.Fatalf("Expected messages[2] to be user, got %s", messages[2].Get("role").String())
 	}
-	// User message should contain both "before" and "after" text
+	// user 消息应同时包含 "before" 和 "after" 文本
 	if got := messages[2].Get("content.0.text").String(); got != "before" {
 		t.Fatalf("Expected user text[0] %q, got %q", "before", got)
 	}
@@ -740,7 +740,7 @@ func TestConvertClaudeRequestToOpenAI_ToolResultTextAndImageContent(t *testing.T
 		t.Fatalf("Expected 3 messages, got %d. Messages: %s", len(messages), resultJSON.Get("messages").Raw)
 	}
 
-	// The tool message keeps only the textual payload; OpenAI drops image parts there.
+	// tool 消息只保留文本载荷；OpenAI 会丢弃其中的图片部分。
 	if got := messages[1].Get("role").String(); got != "tool" {
 		t.Fatalf("Expected second message role %q, got %q", "tool", got)
 	}
@@ -751,7 +751,7 @@ func TestConvertClaudeRequestToOpenAI_ToolResultTextAndImageContent(t *testing.T
 		t.Fatalf("Expected tool content %q, got %q", "tool ok", got)
 	}
 
-	// The image is relayed as a user message directly after the tool result.
+	// 该图片作为 user 消息直接转发在 tool 结果之后。
 	relay := messages[2]
 	if got := relay.Get("role").String(); got != "user" {
 		t.Fatalf("Expected relay message role %q, got %q", "user", got)
@@ -808,7 +808,7 @@ func TestConvertClaudeRequestToOpenAI_ToolResultURLImageOnly(t *testing.T) {
 		t.Fatalf("Expected 3 messages, got %d. Messages: %s", len(messages), resultJSON.Get("messages").Raw)
 	}
 
-	// An image-only tool_result still needs a non-empty text payload on the tool message.
+	// 仅含图片的 tool_result 仍然需要在 tool 消息上放置非空文本载荷。
 	if got := messages[1].Get("content").String(); got != toolResultImagePlaceholder {
 		t.Fatalf("Expected tool content %q, got %q", toolResultImagePlaceholder, got)
 	}
@@ -862,7 +862,7 @@ func TestConvertClaudeRequestToOpenAI_ToolResultImageMergesIntoUserText(t *testi
 	resultJSON := gjson.ParseBytes(result)
 	messages := resultJSON.Get("messages").Array()
 
-	// The relayed image joins the user text instead of adding a second user turn.
+	// 被转发的图片并入 user 文本，而不是新增第二个 user 轮次。
 	if len(messages) != 3 {
 		t.Fatalf("Expected 3 messages, got %d. Messages: %s", len(messages), resultJSON.Get("messages").Raw)
 	}
@@ -934,7 +934,7 @@ func TestConvertClaudeRequestToOpenAI_MultipleToolResultsWithImages(t *testing.T
 	resultJSON := gjson.ParseBytes(result)
 	messages := resultJSON.Get("messages").Array()
 
-	// Expected: assistant(2 tool calls), tool(call_1), tool(call_2), user(relay 2 images)
+	// 期望：assistant(2 tool calls), tool(call_1), tool(call_2), user(转发 2 张图片)
 	if len(messages) != 4 {
 		t.Fatalf("Expected 4 messages, got %d. Messages: %s", len(messages), resultJSON.Get("messages").Raw)
 	}
@@ -987,8 +987,8 @@ func TestConvertClaudeRequestToOpenAI_AssistantTextToolUseTextOrder(t *testing.T
 	resultJSON := gjson.ParseBytes(result)
 	messages := resultJSON.Get("messages").Array()
 
-	// New behavior: content + tool_calls unified in single assistant message
-	// Expect: assistant(content[pre,post] + tool_calls)
+	// 新行为：content + tool_calls 统一在单条 assistant 消息中
+	// 期望：assistant(content[pre,post] + tool_calls)
 	if len(messages) != 1 {
 		t.Fatalf("Expected 1 message, got %d. Messages: %s", len(messages), resultJSON.Get("messages").Raw)
 	}
@@ -998,7 +998,7 @@ func TestConvertClaudeRequestToOpenAI_AssistantTextToolUseTextOrder(t *testing.T
 		t.Fatalf("Expected messages[0] to be assistant, got %s", assistantMsg.Get("role").String())
 	}
 
-	// Should have both content and tool_calls in same message
+	// 同一消息中应同时具有 content 和 tool_calls
 	if !assistantMsg.Get("tool_calls").Exists() {
 		t.Fatalf("Expected assistant message to have tool_calls")
 	}
@@ -1009,7 +1009,7 @@ func TestConvertClaudeRequestToOpenAI_AssistantTextToolUseTextOrder(t *testing.T
 		t.Fatalf("Expected tool_call name %q, got %q", "do_work", got)
 	}
 
-	// Content should have both pre and post text
+	// content 应同时包含 pre 和 post 文本
 	if got := assistantMsg.Get("content.0.text").String(); got != "pre" {
 		t.Fatalf("Expected content[0] text %q, got %q", "pre", got)
 	}
@@ -1039,7 +1039,7 @@ func TestConvertClaudeRequestToOpenAI_AssistantThinkingToolUseThinkingSplit(t *t
 	resultJSON := gjson.ParseBytes(result)
 	messages := resultJSON.Get("messages").Array()
 
-	// Unsigned thinking is dropped, while text and tool_calls remain unified.
+	// 未签名的 thinking 被丢弃，而 text 和 tool_calls 保持统一。
 	if len(messages) != 1 {
 		t.Fatalf("Expected 1 message, got %d. Messages: %s", len(messages), resultJSON.Get("messages").Raw)
 	}
@@ -1049,7 +1049,7 @@ func TestConvertClaudeRequestToOpenAI_AssistantThinkingToolUseThinkingSplit(t *t
 		t.Fatalf("Expected messages[0] to be assistant, got %s", assistantMsg.Get("role").String())
 	}
 
-	// Should have content with both pre and post
+	// 应具有同时包含 pre 和 post 的 content
 	if got := assistantMsg.Get("content.0.text").String(); got != "pre" {
 		t.Fatalf("Expected content[0] text %q, got %q", "pre", got)
 	}
@@ -1057,7 +1057,7 @@ func TestConvertClaudeRequestToOpenAI_AssistantThinkingToolUseThinkingSplit(t *t
 		t.Fatalf("Expected content[1] text %q, got %q", "post", got)
 	}
 
-	// Should have tool_calls
+	// 应具有 tool_calls
 	if !assistantMsg.Get("tool_calls").Exists() {
 		t.Fatalf("Expected assistant message to have tool_calls")
 	}
@@ -1218,7 +1218,7 @@ func TestConvertClaudeRequestToOpenAI_StripsUnsupportedUnicodePropertyEscapePatt
 		t.Fatalf("expected function.parameters in output: %s", output)
 	}
 
-	// Incompatible \p{...} pattern must be stripped
+	// 不兼容的 \p{...} 模式必须被移除
 	if params.Get("properties.field.pattern").Exists() {
 		t.Errorf("expected properties.field.pattern to be removed, got: %s", params.Get("properties.field.pattern").Raw)
 	}
@@ -1226,7 +1226,7 @@ func TestConvertClaudeRequestToOpenAI_StripsUnsupportedUnicodePropertyEscapePatt
 		t.Errorf("expected properties.field.type == 'string', got %q", got)
 	}
 
-	// Valid patterns must remain intact
+	// 有效模式必须保持原样
 	if got := params.Get("properties.asset_id.pattern").String(); got != "^[0-9a-f]{32}$" {
 		t.Errorf("expected properties.asset_id.pattern preserved, got %q", got)
 	}
@@ -1270,12 +1270,12 @@ func TestConvertClaudeRequestToOpenAI_PreservesNonSchemaPatternKeys(t *testing.T
 		t.Fatalf("expected function.parameters in output: %s", output)
 	}
 
-	// Real schema pattern must be removed
+	// 真实 schema 模式必须被移除
 	if params.Get("properties.real_schema.pattern").Exists() {
 		t.Errorf("expected real_schema.pattern to be removed, got: %s", params.Get("properties.real_schema").Raw)
 	}
 
-	// User data under default and enum must be PRESERVED
+	// default 和 enum 下的用户数据必须保留
 	if got := params.Get("properties.regex_config.default.pattern").String(); got != `\p{L}+` {
 		t.Errorf("expected default.pattern preserved, got %q", got)
 	}
@@ -1471,8 +1471,8 @@ func TestConvertClaudeRequestToOpenAI_ToolCallPairingByID(t *testing.T) {
 		roles = append(roles, m.Get("role").String())
 	}
 
-	// Tool results must be paired immediately following the assistant tool_calls message.
-	// Expected:
+	// 工具结果必须紧跟在 assistant tool_calls 消息之后成对出现。
+	// 期望：
 	// messages[0]: user ("Run analysis")
 	// messages[1]: assistant (tool_calls [call_1, call_2])
 	// messages[2]: tool (tool_call_id: call_2 or call_1)
@@ -1495,7 +1495,7 @@ func TestConvertClaudeRequestToOpenAI_ToolCallPairingByID(t *testing.T) {
 }
 
 func TestConvertClaudeRequestToOpenAI_ToolCallPairing_OrphanAndIncompletePreserved(t *testing.T) {
-	// Orphan tool results and incomplete histories must not be rearranged or guessed
+	// 孤立的工具结果和不完整的历史记录不得被重排或猜测
 	inputJSON := `{
 		"model": "deepseek-v4.1-flash",
 		"messages": [
@@ -1525,8 +1525,8 @@ func TestConvertClaudeRequestToOpenAI_ToolCallPairing_OrphanAndIncompletePreserv
 	result, _ := ConvertClaudeRequestToOpenAI("deepseek-v4.1-flash", []byte(inputJSON), false)
 	messages := gjson.GetBytes(result, "messages").Array()
 
-	// Incomplete history (call_alpha and call_beta are unanswered) and orphan result
-	// (call_unmatched has no matching assistant tool_calls) must remain untouched.
+	// 不完整的历史记录（call_alpha 和 call_beta 未得到应答）以及孤立结果
+	// （call_unmatched 没有匹配的 assistant tool_calls）必须保持原样。
 	roles := make([]string, 0, len(messages))
 	for _, m := range messages {
 		roles = append(roles, m.Get("role").String())
@@ -1744,22 +1744,22 @@ func TestConvertClaudeRequestToOpenAI_NormalizesBooleanSubschemas(t *testing.T) 
 		t.Fatalf("boolean $defs subschema not normalized to empty object {}: %s", wildcard.Raw)
 	}
 
-	// additionalProperties: false must remain boolean false
+	// additionalProperties: false 必须保持布尔值 false
 	if addProps := params.Get("additionalProperties"); !addProps.Exists() || addProps.Type != gjson.False {
 		t.Fatalf("additionalProperties: false must be preserved as boolean false, got: %s", addProps.Raw)
 	}
 
-	// nested_obj.additionalProperties: true must remain boolean true
+	// nested_obj.additionalProperties: true 必须保持布尔值 true
 	if nestedAddProps := params.Get("properties.nested_obj.additionalProperties"); !nestedAddProps.Exists() || nestedAddProps.Type != gjson.True {
 		t.Fatalf("nested additionalProperties: true must be preserved as boolean true, got: %s", nestedAddProps.Raw)
 	}
 
-	// disabled: false must remain boolean false
+	// disabled: false 必须保持布尔值 false
 	if disabled := params.Get("properties.disabled"); !disabled.Exists() || disabled.Type != gjson.False {
 		t.Fatalf("disabled: false must be preserved as boolean false, got: %s", disabled.Raw)
 	}
 
-	// enabled_flag data values default: true and enum: [true, false] must remain boolean data values
+	// enabled_flag 数据值 default: true 和 enum: [true, false] 必须保持布尔数据值
 	if defVal := params.Get("properties.enabled_flag.default"); !defVal.Exists() || defVal.Type != gjson.True {
 		t.Fatalf("enabled_flag.default should remain boolean true, got: %s", defVal.Raw)
 	}

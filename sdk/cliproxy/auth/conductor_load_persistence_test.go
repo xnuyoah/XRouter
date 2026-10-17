@@ -11,7 +11,7 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// reloadAuthStore snapshots records independently of blocked storage I/O.
+// reloadAuthStore 独立于被阻塞的存储 I/O 对记录做快照。
 type reloadAuthStore struct {
 	mu          sync.Mutex
 	records     map[string]*Auth

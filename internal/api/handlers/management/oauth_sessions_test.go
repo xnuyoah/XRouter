@@ -246,7 +246,7 @@ func TestGuardOAuthSessionPendingForSave(t *testing.T) {
 		}
 	}
 
-	// Completed and errored sessions must also refuse save.
+	// 已完成和出错的会话同样必须拒绝保存。
 	store.Register("completed-save", "codex")
 	store.Complete("completed-save")
 	if errGuard := guardOAuthSessionPendingForSave("completed-save", "codex"); !errors.Is(errGuard, errOAuthSessionNotPending) {
@@ -292,7 +292,7 @@ func TestCancelAuthSessionHandler(t *testing.T) {
 		t.Fatalf("repeat cancel response = %#v, want ok with cancelled=false", repeat)
 	}
 
-	// Status after cancel should not report success.
+	// 取消之后的状态不应报告为成功。
 	statusRouter := gin.New()
 	statusRouter.GET("/status", handler.GetAuthStatus)
 	unknown := performOAuthStatusRequest(t, statusRouter, "device-state")

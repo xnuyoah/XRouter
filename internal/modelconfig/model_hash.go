@@ -11,7 +11,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
-// ComputeOpenAICompatModelsHash returns a stable hash for OpenAI-compatible models.
+// ComputeOpenAICompatModelsHash 返回 OpenAI 兼容模型的稳定哈希。
 func ComputeOpenAICompatModelsHash(models []config.OpenAICompatibilityModel) string {
 	keys := modelRoutingKeys(func(out func(key string)) {
 		for _, model := range models {
@@ -26,7 +26,7 @@ func ComputeOpenAICompatModelsHash(models []config.OpenAICompatibilityModel) str
 	return hashJoined(keys)
 }
 
-// ComputeNativeAPIModelsHash returns a stable hash for native OpenAI-wire API-key models.
+// ComputeNativeAPIModelsHash 返回原生 OpenAI 线路 API-key 模型的稳定哈希。
 func ComputeNativeAPIModelsHash(models []config.NativeAPIModel) string {
 	keys := modelRoutingKeys(func(out func(key string)) {
 		for _, model := range models {

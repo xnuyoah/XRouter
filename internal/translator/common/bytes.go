@@ -17,7 +17,7 @@ func ClaudeInputTokensJSON(count int64) []byte {
 	return out
 }
 
-// NewRawArrayItems creates a raw item slice sized for the expected input.
+// NewRawArrayItems 创建一个按预期输入大小预分配的原始项切片。
 func NewRawArrayItems(capacity int64) [][]byte {
 	if capacity <= 0 {
 		return nil
@@ -44,8 +44,8 @@ func JoinRawArray(items [][]byte) []byte {
 	return append(out, ']')
 }
 
-// SetRawArrayItems replaces an empty JSON array at path with raw items.
-// The single-item path avoids allocating an intermediate joined array.
+// SetRawArrayItems 将 path 处的空 JSON 数组替换为原始项。
+// 单项路径避免了分配一个中间拼接数组。
 func SetRawArrayItems(data []byte, path string, items [][]byte) []byte {
 	if len(items) == 0 {
 		return data
@@ -65,8 +65,8 @@ func SetRawArrayItems(data []byte, path string, items [][]byte) []byte {
 	return data
 }
 
-// SSEEventData builds one complete SSE frame. Each frame carries its own
-// blank-line terminator so concatenated frames stay separable downstream.
+// SSEEventData 构建一个完整的 SSE 帧。每个帧都携带自己的
+// 空行终止符，因此拼接后的帧在下游仍可分离。
 func SSEEventData(event string, payload []byte) []byte {
 	out := make([]byte, 0, len(event)+len(payload)+16)
 	out = append(out, "event: "...)
@@ -101,10 +101,10 @@ func AppendSSEEventBytes(out []byte, event string, payload []byte, trailingNewli
 	return out
 }
 
-// SetStringWithoutHTMLEscape sets a string field in a JSON payload without escaping
-// HTML characters (<, >, &). Standard sjson.Set/SetBytes delegates string values
-// containing quotes or special characters to encoding/json.Marshal, which unconditionally
-// escapes <, >, & to \u003c, \u003e, \u0026.
+// SetStringWithoutHTMLEscape 在 JSON 载荷中设置字符串字段，且不转义
+// HTML 字符（<、>、&）。标准的 sjson.Set/SetBytes 会把
+// 含引号或特殊字符的字符串值交给 encoding/json.Marshal，后者会无条件
+// 将 <、>、& 转义为 \u003c、\u003e、\u0026。
 func SetStringWithoutHTMLEscape(data []byte, path, value string) ([]byte, error) {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)

@@ -129,14 +129,14 @@ func (m *Manager) executeHomeOnce(ctx context.Context, providers []string, req c
 			selection.End("attempt_bind_failed")
 			return cliproxyexecutor.Response{}, errBind
 		}
-		// Enrich before auth preparation so prepare-stage usage records observe the client request.
+		// 在 auth 准备之前进行补全，以便准备阶段的用量记录能观察到客户端请求。
 		execCtx = contextWithRequestedModelAlias(execCtx, opts, routeModel)
 		execCtx = newUpstreamAttemptContext(execCtx)
 		if rt := m.roundTripperFor(auth); rt != nil {
 			execCtx = context.WithValue(execCtx, roundTripperContextKey{}, rt)
 			execCtx = context.WithValue(execCtx, "cliproxy.roundtripper", rt)
 		}
-		// Home owns credential availability; execute its dispatch without local state filtering.
+		// Home 掌握凭据可用性；在不做本地状态过滤的情况下执行其分发。
 		models, pooled, aliasResult, routing := m.executionModelCandidatesWithAlias(auth, routeModel)
 		if aliasResult.ForceMapping && responseAlias != "" {
 			aliasResult.OriginalAlias = responseAlias

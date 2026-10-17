@@ -10,10 +10,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// maxRefreshTimerWait caps the sleep duration for the refresh timer.
-// On Linux systems, CLOCK_MONOTONIC stops ticking during suspend/sleep.
-// Capping the timer ensures that when the system resumes, the loop wakes
-// up promptly to detect and refresh any credentials that expired during sleep.
+// maxRefreshTimerWait 为刷新定时器设定休眠时长上限。
+// 在 Linux 系统上，CLOCK_MONOTONIC 在挂起/休眠期间会停止走动。
+// 为定时器设上限可确保系统恢复时，循环会及时
+// 唤醒，以检测并刷新休眠期间过期的任何凭据。
 const maxRefreshTimerWait = 30 * time.Second
 
 type authAutoRefreshLoop struct {
@@ -35,7 +35,7 @@ type authRefreshJob struct {
 	registrationEpoch uint64
 	pendingUntil      time.Time
 	loop              *authAutoRefreshLoop
-	running           bool // guarded by manager.mu
+	running           bool // 由 manager.mu 保护
 }
 
 func newAuthAutoRefreshLoop(manager *Manager, interval time.Duration, concurrency int) *authAutoRefreshLoop {
@@ -321,7 +321,7 @@ func (l *authAutoRefreshLoop) handleDueAuth(ctx context.Context, now time.Time, 
 		default:
 		}
 	}
-	// A full queue must not hold the dispatcher or leave a phantom pending job.
+	// 队列已满时不得占用分发器，也不得留下幽灵待处理任务。
 	retryAt := now.Add(l.interval)
 	manager.finishRefreshJob(job, retryAt, false)
 	l.upsert(authID, retryAt)

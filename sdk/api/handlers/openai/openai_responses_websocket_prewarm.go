@@ -58,9 +58,9 @@ func writeResponsesWebsocketSyntheticPrewarm(
 	return gjson.GetBytes(payloads[0], "response.id").String(), nil
 }
 
-// A synthetic warm-up acknowledges input that never reached the upstream.
-// Materialize that input before compacted-history detection can mistake the
-// client's remaining delta for a complete replacement transcript.
+// 合成预热会确认从未到达上游的输入。
+// 在压缩历史检测把客户端剩余增量误判为完整替换
+// 记录之前，将该输入实体化。
 func normalizeResponsesWebsocketPrewarmFollowup(rawJSON, warmupRequest []byte) ([]byte, []byte, *interfaces.ErrorMessage) {
 	requestType := strings.TrimSpace(gjson.GetBytes(rawJSON, "type").String())
 	if requestType != wsRequestTypeCreate && requestType != wsRequestTypeAppend {
@@ -125,14 +125,14 @@ func syntheticResponsesWebsocketPrewarmPayloads(requestJSON []byte) ([][]byte, e
 	return [][]byte{createdPayload, completedPayload}, nil
 }
 
-// inputContainsFullTranscript returns true when the input array carries compact
-// replay markers that indicate the client already sent the full conversation
-// transcript. Merging that input with stale lastRequest/lastResponseOutput
-// would duplicate or break function_call/function_call_output pairings, so the
-// caller should use the input as-is.
+// inputContainsFullTranscript 在 input 数组携带压缩
+// 重放标记（表示客户端已发送完整对话记录）时返回 true。
+// 将该输入与过期的 lastRequest/lastResponseOutput 合并
+// 会导致 function_call/function_call_output 配对重复或断裂，因此
+// 调用方应按原样使用该输入。
 //
-// Assistant messages alone are not enough to classify the payload as a replay:
-// incremental websocket requests may legitimately append assistant items.
+// 仅凭 assistant 消息不足以将载荷归类为重放：
+// 增量 websocket 请求可能合法地追加 assistant 条目。
 func inputContainsFullTranscript(input gjson.Result) bool {
 	if !input.IsArray() {
 		return false

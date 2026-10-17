@@ -25,7 +25,7 @@ type Snapshot struct {
 	quotaSupportedProviders   map[string][]string
 }
 
-// RegisteredPluginInfo describes a plugin that is active in the current runtime snapshot.
+// RegisteredPluginInfo 描述在当前运行时快照中处于活动状态的插件。
 type RegisteredPluginInfo struct {
 	ID            string
 	Priority      int
@@ -37,7 +37,7 @@ type RegisteredPluginInfo struct {
 	Menus         []RegisteredPluginMenu
 }
 
-// RegisteredPluginMenu describes a plugin-owned resource menu entry.
+// RegisteredPluginMenu 描述插件所有的资源菜单项。
 type RegisteredPluginMenu struct {
 	Path        string
 	Menu        string
@@ -67,7 +67,7 @@ func (h *Host) activeRecordsFromSnapshot(snap *Snapshot) []capabilityRecord {
 	return out
 }
 
-// RegisteredPlugins returns a stable copy of plugin metadata in the current runtime snapshot.
+// RegisteredPlugins 返回当前运行时快照中插件元数据的稳定副本。
 func (h *Host) RegisteredPlugins() []RegisteredPluginInfo {
 	records := h.activeRecords()
 	if len(records) == 0 {
@@ -104,7 +104,7 @@ func (h *Host) RegisteredPlugins() []RegisteredPluginInfo {
 	return out
 }
 
-// PluginRegistered reports whether a plugin is active in the current runtime snapshot.
+// PluginRegistered 报告某插件在当前运行时快照中是否处于活动状态。
 func (h *Host) PluginRegistered(id string) bool {
 	if h == nil {
 		return false

@@ -13,21 +13,21 @@ type CodexCache struct {
 	Expire time.Time
 }
 
-// codexCacheMap stores prompt cache IDs keyed by model+user_id.
-// Protected by codexCacheMu. Entries expire after 1 hour.
+// codexCacheMap 以 model+user_id 为键存储提示缓存的 ID。
+// 由 codexCacheMu 保护。条目在 1 小时后过期。
 var (
 	codexCacheMap = make(map[string]CodexCache)
 	codexCacheMu  sync.RWMutex
 )
 
-// codexCacheCleanupInterval controls how often expired entries are purged.
+// codexCacheCleanupInterval 控制清理过期条目的频率。
 const codexCacheCleanupInterval = 15 * time.Minute
 
-// codexCacheCleanupOnce ensures the background cleanup goroutine starts only once.
+// codexCacheCleanupOnce 确保后台清理 goroutine 只启动一次。
 var codexCacheCleanupOnce sync.Once
 
-// startCodexCacheCleanup launches a background goroutine that periodically
-// removes expired entries from codexCacheMap to prevent memory leaks.
+// startCodexCacheCleanup 启动一个后台 goroutine，定期
+// 从 codexCacheMap 中删除过期条目以防止内存泄漏。
 func startCodexCacheCleanup() {
 	go func() {
 		ticker := time.NewTicker(codexCacheCleanupInterval)
@@ -38,7 +38,7 @@ func startCodexCacheCleanup() {
 	}()
 }
 
-// purgeExpiredCodexCache removes entries that have expired.
+// purgeExpiredCodexCache 删除已过期的条目。
 func purgeExpiredCodexCache() {
 	now := time.Now()
 	codexCacheMu.Lock()
@@ -50,7 +50,7 @@ func purgeExpiredCodexCache() {
 	}
 }
 
-// GetCodexCache retrieves a cached entry, returning ok=false if not found or expired.
+// GetCodexCache 获取缓存条目，未找到或已过期时返回 ok=false。
 func GetCodexCache(key string) (CodexCache, bool) {
 	cache, ok, err := GetCodexCacheRequired(context.Background(), key)
 	if err == nil {
@@ -59,7 +59,7 @@ func GetCodexCache(key string) (CodexCache, bool) {
 	return CodexCache{}, false
 }
 
-// GetCodexCacheRequired retrieves a cached entry for request-time paths.
+// GetCodexCacheRequired 为请求时路径获取缓存条目。
 func GetCodexCacheRequired(ctx context.Context, key string) (CodexCache, bool, error) {
 	var homeCache CodexCache
 	homeMode, found, errGet := homekv.KVGetJSONRequired(ctx, key, &homeCache)
@@ -84,12 +84,12 @@ func GetCodexCacheRequired(ctx context.Context, key string) (CodexCache, bool, e
 	return cache, true, nil
 }
 
-// SetCodexCache stores a cache entry.
+// SetCodexCache 存储一个缓存条目。
 func SetCodexCache(key string, cache CodexCache) {
 	SetCodexCacheBestEffort(context.Background(), key, cache)
 }
 
-// SetCodexCacheRequired stores a cache entry for request-time paths.
+// SetCodexCacheRequired 为请求时路径存储缓存条目。
 func SetCodexCacheRequired(ctx context.Context, key string, cache CodexCache) error {
 	ttl := time.Until(cache.Expire)
 	if ttl <= 0 {
@@ -106,7 +106,7 @@ func SetCodexCacheRequired(ctx context.Context, key string, cache CodexCache) er
 	return nil
 }
 
-// SetCodexCacheBestEffort stores a cache entry without failing completed responses.
+// SetCodexCacheBestEffort 存储缓存条目，但不会让已完成的响应失败。
 func SetCodexCacheBestEffort(ctx context.Context, key string, cache CodexCache) bool {
 	ttl := time.Until(cache.Expire)
 	if ttl <= 0 {
@@ -122,7 +122,7 @@ func SetCodexCacheBestEffort(ctx context.Context, key string, cache CodexCache) 
 	return true
 }
 
-// CodexPromptCacheKey builds the Home KV key for a model/user prompt cache.
+// CodexPromptCacheKey 为 model/user 提示缓存构建 Home KV 键。
 func CodexPromptCacheKey(modelName string, userScope string) string {
 	return "cpa:codex:prompt-cache:" + homekv.HashKeyPart(modelName) + ":" + homekv.HashKeyPart(userScope)
 }

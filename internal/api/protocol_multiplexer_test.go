@@ -36,19 +36,19 @@ func TestAcceptMuxNotBlockedByIdleConnection(t *testing.T) {
 	srv.Listener = muxLn
 	srv.Start()
 
-	// Open an idle TCP connection that never sends any bytes.
+	// 打开一个从不发送任何字节的空闲 TCP 连接。
 	idleConn, err := net.DialTimeout("tcp", listener.Addr().String(), 2*time.Second)
 	if err != nil {
 		t.Fatalf("failed to dial idle connection: %v", err)
 	}
 	defer idleConn.Close()
 
-	// Give the accept loop time to pick up the idle connection.
+	// 给 accept 循环时间以接收该空闲连接。
 	time.Sleep(50 * time.Millisecond)
 
-	// Send a real HTTP request. Before the fix, the accept loop would be
-	// blocked on Peek(1) for the idle connection, causing this request to
-	// time out.
+	// 发送一个真实的 HTTP 请求。在修复之前，accept 循环会
+	// 因空闲连接阻塞在 Peek(1) 上，导致该请求
+	// 超时。
 	client := &http.Client{Timeout: 3 * time.Second}
 	resp, err := client.Get("http://" + listener.Addr().String() + "/")
 	if err != nil {

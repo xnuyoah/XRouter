@@ -282,10 +282,10 @@ func TestWeightedRoundRobinSelectorPick_SubsetFilteringDoesNotResetAccumulatorOr
 	authB := &Auth{ID: "auth-b"}
 	authC := &Auth{ID: "auth-c"}
 	authD := &Auth{ID: "auth-d"}
-	subsetPool := []*Auth{authB, authC, authD} // auth-a excluded (e.g. tried or cooling)
+	subsetPool := []*Auth{authB, authC, authD} // auth-a 被排除（例如已尝试或处于冷却）
 
-	// Simulate repeated failover calls where auth-a is excluded:
-	// Verify that auth-b, auth-c, auth-d are picked evenly (10 each) rather than auth-b taking 100% of picks.
+	// 模拟 auth-a 被排除时的重复故障转移调用：
+	// 验证 auth-b、auth-c、auth-d 被均匀选中（各 10 次），而不是 auth-b 独占 100% 的选择。
 	retryCounts := make(map[string]int)
 	for index := 0; index < 30; index++ {
 		got, errPick := selector.Pick(context.Background(), "provider", "model", cliproxyexecutor.Options{}, subsetPool)
@@ -310,19 +310,19 @@ func TestSmoothWeightedStatePrepare_KeepsCreditsForTransientSubsetsAndBoundsGrow
 	state.current["a"] = -2
 	state.current["b"] = 1
 
-	// A shrinking candidate set must not discard credits.
+	// 候选集缩小时不得丢弃信用值。
 	state.prepare(map[string]int64{"b": 1})
 	if state.current["a"] != -2 || state.current["b"] != 1 {
 		t.Fatalf("credits after subset prepare = %#v, want a:-2 b:1", state.current)
 	}
 
-	// A real weight change resets credits.
+	// 权重真正变化时会重置信用值。
 	state.prepare(map[string]int64{"b": 5})
 	if len(state.current) != 0 {
 		t.Fatalf("credits after weight change = %#v, want empty", state.current)
 	}
 
-	// Long-lived churn must stay bounded instead of leaking one entry per removed credential.
+	// 长期频繁变动必须有界，而不是每移除一个凭据就泄漏一个条目。
 	for index := 0; index < maxSmoothWeightedStateEntries*3; index++ {
 		state.prepare(map[string]int64{fmt.Sprintf("churn-%d", index): 5})
 	}
@@ -728,9 +728,9 @@ func TestRoundRobinSelectorPick_ResumesRotationAcrossRetryExclusions(t *testing.
 		auths = append(auths, &Auth{ID: id})
 	}
 
-	// Every request burns three attempts, so each attempt must consume the next slot of one
-	// shared rotation. Re-seating the rotation on the shrunken candidate slice would starve
-	// the head of the tier and hammer its tail.
+	// 每个请求消耗三次尝试，因此每次尝试都必须占用同一个共享
+	// 轮询中的下一个槽位。若在缩小后的候选切片上重新建立轮询，会让
+	// 该层的头部饥饿而尾部被反复击中。
 	selector := &RoundRobinSelector{}
 	const requests = 50
 	firstAttempt := make(map[string]int)
@@ -769,8 +769,8 @@ func TestRoundRobinSelectorPick_ResumesRotationAcrossRetryExclusions(t *testing.
 func TestWeightedRoundRobinSelectorPick_KeepsWeightRatiosWhenCandidatesAreExcluded(t *testing.T) {
 	t.Parallel()
 
-	// auth-a is excluded exactly as a retry or cooldown would exclude it. The survivors must
-	// keep their configured 3:1 ratio instead of collapsing onto the first candidate.
+	// auth-a 的排除方式与重试或冷却导致的排除完全一致。幸存者必须
+	// 保持其配置的 3:1 比例，而不是塌缩到首个候选上。
 	selector := &WeightedRoundRobinSelector{}
 	authA := &Auth{ID: "auth-a", Attributes: map[string]string{AttributeWeight: "5"}}
 	authB := &Auth{ID: "auth-b", Attributes: map[string]string{AttributeWeight: "3"}}
@@ -912,11 +912,11 @@ func TestSessionAffinitySelector_SameSessionSameAuth(t *testing.T) {
 		{ID: "auth-c"},
 	}
 
-	// Use valid UUID format for session ID
+	// 使用合法的 UUID 格式作为会话 ID
 	payload := []byte(`{"metadata":{"user_id":"user_xxx_account__session_ac980658-63bd-4fb3-97ba-8da64cb1e344"}}`)
 	opts := cliproxyexecutor.Options{OriginalRequest: payload}
 
-	// Same session should always pick the same auth
+	// 同一会话应始终选中同一个 auth
 	first, err := selector.Pick(context.Background(), "claude", "claude-3", opts, auths)
 	if err != nil {
 		t.Fatalf("Pick() error = %v", err)
@@ -925,7 +925,7 @@ func TestSessionAffinitySelector_SameSessionSameAuth(t *testing.T) {
 		t.Fatalf("Pick() returned nil")
 	}
 
-	// Verify consistency: same session, same auths -> same result
+	// 验证一致性：同一会话、同一批 auth -> 同一结果
 	for i := 0; i < 10; i++ {
 		got, err := selector.Pick(context.Background(), "claude", "claude-3", opts, auths)
 		if err != nil {
@@ -961,7 +961,7 @@ func TestSessionAffinitySelector_ThinkingSuffixVariantsPreserveBindingAndRelease
 		t.Fatalf("first Pick() returned nil")
 	}
 
-	// Suffix variant claude-sonnet-4-5(high) should reuse the exact same auth binding
+	// 后缀变体 claude-sonnet-4-5(high) 应复用完全相同的 auth 绑定
 	second, errSecond := selector.Pick(context.Background(), "anthropic", "claude-sonnet-4-5(high)", opts, auths)
 	if errSecond != nil {
 		t.Fatalf("second Pick() error = %v", errSecond)
@@ -970,7 +970,7 @@ func TestSessionAffinitySelector_ThinkingSuffixVariantsPreserveBindingAndRelease
 		t.Fatalf("second Pick() auth.ID = %q, want %q (thinking suffix variant should keep session stickiness)", second.ID, first.ID)
 	}
 
-	// Third request with claude-sonnet-4-5(medium) should also reuse the same auth
+	// 使用 claude-sonnet-4-5(medium) 的第三个请求也应复用同一个 auth
 	third, errThird := selector.Pick(context.Background(), "anthropic", "claude-sonnet-4-5(medium)", opts, auths)
 	if errThird != nil {
 		t.Fatalf("third Pick() error = %v", errThird)
@@ -979,7 +979,7 @@ func TestSessionAffinitySelector_ThinkingSuffixVariantsPreserveBindingAndRelease
 		t.Fatalf("third Pick() auth.ID = %q, want %q (thinking suffix variant should keep session stickiness)", third.ID, first.ID)
 	}
 
-	// Failure on a thinking-suffix variant (with explicit metadata) should properly release the session binding
+	// thinking 后缀变体（带显式元数据）失败时应正确释放会话绑定
 	optsWithMetadata := cliproxyexecutor.Options{
 		OriginalRequest: payload,
 		Metadata: map[string]any{
@@ -996,7 +996,7 @@ func TestSessionAffinitySelector_ThinkingSuffixVariantsPreserveBindingAndRelease
 		Options:  optsWithMetadata,
 	})
 
-	// After release, next pick should reselect using fallback selector
+	// 释放之后，下一次选择应使用回退选择器重新选择
 	next, errNext := selector.Pick(context.Background(), "anthropic", "claude-sonnet-4-5", opts, auths)
 	if errNext != nil {
 		t.Fatalf("next Pick() error = %v", errNext)
@@ -1087,7 +1087,7 @@ func TestSessionAffinitySelector_NoSessionFallback(t *testing.T) {
 		{ID: "auth-c"},
 	}
 
-	// No session in payload, should fallback to FillFirstSelector (picks "auth-a" after sorting)
+	// 载荷中没有会话，应回退到 FillFirstSelector（排序后选中 "auth-a"）
 	payload := []byte(`{"model":"claude-3"}`)
 	opts := cliproxyexecutor.Options{OriginalRequest: payload}
 
@@ -1112,7 +1112,7 @@ func TestSessionAffinitySelector_DifferentSessionsDifferentAuths(t *testing.T) {
 		{ID: "auth-c"},
 	}
 
-	// Use valid UUID format for session IDs
+	// 使用合法的 UUID 格式作为会话 ID
 	session1 := []byte(`{"metadata":{"user_id":"user_xxx_account__session_11111111-1111-1111-1111-111111111111"}}`)
 	session2 := []byte(`{"metadata":{"user_id":"user_xxx_account__session_22222222-2222-2222-2222-222222222222"}}`)
 
@@ -1122,8 +1122,8 @@ func TestSessionAffinitySelector_DifferentSessionsDifferentAuths(t *testing.T) {
 	auth1, _ := selector.Pick(context.Background(), "claude", "claude-3", opts1, auths)
 	auth2, _ := selector.Pick(context.Background(), "claude", "claude-3", opts2, auths)
 
-	// Different sessions may or may not pick different auths (depends on hash collision)
-	// But each session should be consistent
+	// 不同会话可能选中相同或不同的 auth（取决于哈希冲突）
+	// 但每个会话自身应保持一致
 	for i := 0; i < 5; i++ {
 		got1, _ := selector.Pick(context.Background(), "claude", "claude-3", opts1, auths)
 		got2, _ := selector.Pick(context.Background(), "claude", "claude-3", opts2, auths)
@@ -1155,13 +1155,13 @@ func TestSessionAffinitySelector_FailoverWhenAuthUnavailable(t *testing.T) {
 	payload := []byte(`{"metadata":{"user_id":"user_xxx_account__session_failover-test-uuid"}}`)
 	opts := cliproxyexecutor.Options{OriginalRequest: payload}
 
-	// First pick establishes binding
+	// 首次选择建立绑定
 	first, err := selector.Pick(context.Background(), "claude", "claude-3", opts, auths)
 	if err != nil {
 		t.Fatalf("Pick() error = %v", err)
 	}
 
-	// Remove the bound auth from available list (simulating rate limit)
+	// 从可用列表中移除已绑定的 auth（模拟限流）
 	availableWithoutFirst := make([]*Auth, 0, len(auths)-1)
 	for _, a := range auths {
 		if a.ID != first.ID {
@@ -1169,7 +1169,7 @@ func TestSessionAffinitySelector_FailoverWhenAuthUnavailable(t *testing.T) {
 		}
 	}
 
-	// With failover enabled, should pick a new auth
+	// 启用故障转移后，应选中新的 auth
 	second, err := selector.Pick(context.Background(), "claude", "claude-3", opts, availableWithoutFirst)
 	if err != nil {
 		t.Fatalf("Pick() after failover error = %v", err)
@@ -1178,7 +1178,7 @@ func TestSessionAffinitySelector_FailoverWhenAuthUnavailable(t *testing.T) {
 		t.Fatalf("Pick() after failover returned same auth %q, expected different", first.ID)
 	}
 
-	// Subsequent picks should consistently return the new binding
+	// 后续选择应始终返回新的绑定
 	for i := 0; i < 5; i++ {
 		got, _ := selector.Pick(context.Background(), "claude", "claude-3", opts, availableWithoutFirst)
 		if got.ID != second.ID {
@@ -1190,7 +1190,7 @@ func TestSessionAffinitySelector_FailoverWhenAuthUnavailable(t *testing.T) {
 func TestExtractSessionID_NestedRequestSubagent(t *testing.T) {
 	t.Parallel()
 
-	// 1. Nested request with sessionId and metadata.agent_id
+	// 1. 带 sessionId 和 metadata.agent_id 的嵌套请求
 	payloadAgent := []byte(`{
 		"request": {
 			"sessionId": "root",
@@ -1207,7 +1207,7 @@ func TestExtractSessionID_NestedRequestSubagent(t *testing.T) {
 		t.Fatalf("extractExplicitSessionIDs() = (%q, %q), want (session:root:agent:worker, session:root)", primary, fallback)
 	}
 
-	// 2. Nested request with sessionId and metadata.subagent_id
+	// 2. 带 sessionId 和 metadata.subagent_id 的嵌套请求
 	payloadSubagent := []byte(`{
 		"request": {
 			"sessionId": "root",
@@ -1224,7 +1224,7 @@ func TestExtractSessionID_NestedRequestSubagent(t *testing.T) {
 		t.Fatalf("extractExplicitSessionIDs() = (%q, %q), want (session:root:agent:worker, session:root)", primary, fallback)
 	}
 
-	// 3. Nested request with sessionId and parentSessionId
+	// 3. 带 sessionId 和 parentSessionId 的嵌套请求
 	payloadParent := []byte(`{
 		"request": {
 			"sessionId": "root",
@@ -1242,7 +1242,7 @@ func TestExtractSessionID_NestedRequestSubagent(t *testing.T) {
 		t.Fatalf("extractExplicitSessionIDs() = (%q, %q), want (session:root:agent:worker, session:parent-root)", primary, fallback)
 	}
 
-	// 4. Nested promptCacheKey when top-level prompt_cache_key is empty string
+	// 4. 顶层 prompt_cache_key 为空字符串时的嵌套 promptCacheKey
 	payloadPCKShadow := []byte(`{
 		"prompt_cache_key": "",
 		"request": {
@@ -1257,7 +1257,7 @@ func TestExtractSessionID_NestedRequestSubagent(t *testing.T) {
 func TestExtractSessionID_ClaudeCodePriorityOverHeader(t *testing.T) {
 	t.Parallel()
 
-	// Claude Code metadata.user_id remains higher priority than a generic X-Session-ID header.
+	// Claude Code 的 metadata.user_id 优先级仍高于通用的 X-Session-ID 头。
 	headers := make(http.Header)
 	headers.Set("X-Session-ID", "header-session-id")
 
@@ -1273,7 +1273,7 @@ func TestExtractSessionID_ClaudeCodePriorityOverHeader(t *testing.T) {
 func TestExtractSessionID_ClaudeCodePriorityOverIdempotencyKey(t *testing.T) {
 	t.Parallel()
 
-	// Claude Code metadata.user_id should have highest priority, even when idempotency_key is present
+	// 即使存在 idempotency_key，Claude Code 的 metadata.user_id 也应具有最高优先级
 	metadata := map[string]any{"idempotency_key": "idem-12345"}
 	payload := []byte(`{"metadata":{"user_id":"user_xxx_account__session_ac980658-63bd-4fb3-97ba-8da64cb1e344"}}`)
 
@@ -1337,15 +1337,15 @@ func TestExtractSessionID_CodexSessionIDPriorityOverClientRequestID(t *testing.T
 	}
 }
 
-// TestExtractSessionID_IdempotencyKey verifies that idempotency_key is intentionally
-// ignored for session affinity (it's auto-generated per-request, causing cache misses).
+// TestExtractSessionID_IdempotencyKey 验证 idempotency_key 被有意
+// 忽略于会话亲和性（它按请求自动生成，会导致缓存未命中）。
 func TestExtractSessionID_IdempotencyKey(t *testing.T) {
 	t.Parallel()
 
 	metadata := map[string]any{"idempotency_key": "idem-12345"}
 
 	got := ExtractSessionID(nil, nil, metadata)
-	// idempotency_key is disabled - should return empty (no payload to hash)
+	// idempotency_key 已禁用——应返回空（没有可哈希的载荷）
 	if got != "" {
 		t.Errorf("ExtractSessionID() with idempotency_key = %q, want empty (idempotency_key is disabled)", got)
 	}
@@ -1393,7 +1393,7 @@ func TestExtractSessionID_DerivedSessionAndExplicitPriority(t *testing.T) {
 func TestExtractSessionID_MessageHashFallback(t *testing.T) {
 	t.Parallel()
 
-	// First request (user only) generates short hash
+	// 首个请求（仅 user）生成短哈希
 	firstRequestPayload := []byte(`{"messages":[{"role":"user","content":"Hello world"}]}`)
 	shortHash := ExtractSessionID(nil, firstRequestPayload, nil)
 	if shortHash == "" {
@@ -1403,7 +1403,7 @@ func TestExtractSessionID_MessageHashFallback(t *testing.T) {
 		t.Errorf("ExtractSessionID() = %q, want prefix 'msg:'", shortHash)
 	}
 
-	// Multi-turn with assistant generates full hash (different from short hash)
+	// 含 assistant 的多轮对话生成完整哈希（与短哈希不同）
 	multiTurnPayload := []byte(`{"messages":[
 		{"role":"user","content":"Hello world"},
 		{"role":"assistant","content":"Hi! How can I help?"},
@@ -1417,7 +1417,7 @@ func TestExtractSessionID_MessageHashFallback(t *testing.T) {
 		t.Error("Full hash should differ from short hash (includes assistant)")
 	}
 
-	// Same multi-turn payload should produce same hash
+	// 相同的多轮载荷应产生相同的哈希
 	fullHash2 := ExtractSessionID(nil, multiTurnPayload, nil)
 	if fullHash != fullHash2 {
 		t.Errorf("ExtractSessionID() not stable: got %q then %q", fullHash, fullHash2)
@@ -1427,7 +1427,7 @@ func TestExtractSessionID_MessageHashFallback(t *testing.T) {
 func TestExtractSessionID_ClaudeAPITopLevelSystem(t *testing.T) {
 	t.Parallel()
 
-	// Claude API: system prompt in top-level "system" field (array format)
+	// Claude API：系统提示词位于顶层 "system" 字段（数组格式）
 	arraySystem := []byte(`{
 		"messages": [{"role": "user", "content": [{"type": "text", "text": "Hello"}]}],
 		"system": [{"type": "text", "text": "You are Claude Code"}]
@@ -1437,7 +1437,7 @@ func TestExtractSessionID_ClaudeAPITopLevelSystem(t *testing.T) {
 		t.Errorf("ExtractSessionID() with array system = %q, want msg:* prefix", got1)
 	}
 
-	// Claude API: system prompt in top-level "system" field (string format)
+	// Claude API：系统提示词位于顶层 "system" 字段（字符串格式）
 	stringSystem := []byte(`{
 		"messages": [{"role": "user", "content": "Hello"}],
 		"system": "You are Claude Code"
@@ -1447,7 +1447,7 @@ func TestExtractSessionID_ClaudeAPITopLevelSystem(t *testing.T) {
 		t.Errorf("ExtractSessionID() with string system = %q, want msg:* prefix", got2)
 	}
 
-	// Multi-turn with top-level system should produce stable hash
+	// 带顶层 system 的多轮对话应产生稳定的哈希
 	multiTurn := []byte(`{
 		"messages": [
 			{"role": "user", "content": "Hello"},
@@ -1468,7 +1468,7 @@ func TestExtractSessionID_ClaudeAPITopLevelSystem(t *testing.T) {
 func TestExtractSessionID_ContentsFormat(t *testing.T) {
 	t.Parallel()
 
-	// contents/parts format with systemInstruction
+	// 带 systemInstruction 的 contents/parts 格式
 	payload := []byte(`{
 		"systemInstruction": {"parts": [{"text": "You are a helpful assistant."}]},
 		"contents": [
@@ -1485,13 +1485,13 @@ func TestExtractSessionID_ContentsFormat(t *testing.T) {
 		t.Errorf("ExtractSessionID() = %q, want prefix 'msg:'", got)
 	}
 
-	// Same payload should produce same hash
+	// 相同载荷应产生相同哈希
 	got2 := ExtractSessionID(nil, payload, nil)
 	if got != got2 {
 		t.Errorf("ExtractSessionID() not stable: got %q then %q", got, got2)
 	}
 
-	// Different user message should produce different hash
+	// 不同的用户消息应产生不同的哈希
 	differentPayload := []byte(`{
 		"systemInstruction": {"parts": [{"text": "You are a helpful assistant."}]},
 		"contents": [
@@ -1904,15 +1904,15 @@ func TestSessionAffinitySelector_MultiModelSession(t *testing.T) {
 	})
 	defer selector.Stop()
 
-	// auth-a supports only model-a, auth-b supports only model-b
+	// auth-a 仅支持 model-a，auth-b 仅支持 model-b
 	authA := &Auth{ID: "auth-a"}
 	authB := &Auth{ID: "auth-b"}
 
-	// Same session ID for all requests
+	// 所有请求使用同一个会话 ID
 	payload := []byte(`{"metadata":{"user_id":"user_xxx_account__session_multi-model-test"}}`)
 	opts := cliproxyexecutor.Options{OriginalRequest: payload}
 
-	// Request model-a with only auth-a available for that model
+	// 请求 model-a，该模型只有 auth-a 可用
 	authsForModelA := []*Auth{authA}
 	pickedA, err := selector.Pick(context.Background(), "provider", "model-a", opts, authsForModelA)
 	if err != nil {
@@ -1922,7 +1922,7 @@ func TestSessionAffinitySelector_MultiModelSession(t *testing.T) {
 		t.Fatalf("Pick() for model-a = %q, want auth-a", pickedA.ID)
 	}
 
-	// Request model-b with only auth-b available for that model
+	// 请求 model-b，该模型只有 auth-b 可用
 	authsForModelB := []*Auth{authB}
 	pickedB, err := selector.Pick(context.Background(), "provider", "model-b", opts, authsForModelB)
 	if err != nil {
@@ -1932,7 +1932,7 @@ func TestSessionAffinitySelector_MultiModelSession(t *testing.T) {
 		t.Fatalf("Pick() for model-b = %q, want auth-b", pickedB.ID)
 	}
 
-	// Switch back to model-a - should still get auth-a (separate binding per model)
+	// 切回 model-a——仍应得到 auth-a（每个模型单独绑定）
 	pickedA2, err := selector.Pick(context.Background(), "provider", "model-a", opts, authsForModelA)
 	if err != nil {
 		t.Fatalf("Pick() for model-a (2nd) error = %v", err)
@@ -1941,7 +1941,7 @@ func TestSessionAffinitySelector_MultiModelSession(t *testing.T) {
 		t.Fatalf("Pick() for model-a (2nd) = %q, want auth-a", pickedA2.ID)
 	}
 
-	// Verify bindings are stable for multiple calls
+	// 验证多次调用下绑定保持稳定
 	for i := 0; i < 5; i++ {
 		gotA, _ := selector.Pick(context.Background(), "provider", "model-a", opts, authsForModelA)
 		gotB, _ := selector.Pick(context.Background(), "provider", "model-b", opts, authsForModelB)
@@ -1957,7 +1957,7 @@ func TestSessionAffinitySelector_MultiModelSession(t *testing.T) {
 func TestExtractSessionID_MultimodalContent(t *testing.T) {
 	t.Parallel()
 
-	// First request generates short hash
+	// 首个请求生成短哈希
 	firstRequestPayload := []byte(`{"messages":[{"role":"user","content":[{"type":"text","text":"Hello world"},{"type":"image","source":{"data":"..."}}]}]}`)
 	shortHash := ExtractSessionID(nil, firstRequestPayload, nil)
 	if shortHash == "" {
@@ -1967,7 +1967,7 @@ func TestExtractSessionID_MultimodalContent(t *testing.T) {
 		t.Errorf("ExtractSessionID() = %q, want prefix 'msg:'", shortHash)
 	}
 
-	// Multi-turn generates full hash
+	// 多轮对话生成完整哈希
 	multiTurnPayload := []byte(`{"messages":[
 		{"role":"user","content":[{"type":"text","text":"Hello world"},{"type":"image","source":{"data":"..."}}]},
 		{"role":"assistant","content":"I see an image!"},
@@ -1981,7 +1981,7 @@ func TestExtractSessionID_MultimodalContent(t *testing.T) {
 		t.Error("Full hash should differ from short hash")
 	}
 
-	// Different user content produces different hash
+	// 不同的用户内容产生不同的哈希
 	differentPayload := []byte(`{"messages":[
 		{"role":"user","content":[{"type":"text","text":"Different content"}]},
 		{"role":"assistant","content":"I see something different!"}
@@ -2005,11 +2005,11 @@ func TestSessionAffinitySelector_CrossProviderIsolation(t *testing.T) {
 	authClaude := &Auth{ID: "auth-claude"}
 	authOpenAI := &Auth{ID: "auth-openai"}
 
-	// Same session ID for both providers
+	// 两个供应商使用同一个会话 ID
 	payload := []byte(`{"metadata":{"user_id":"user_xxx_account__session_cross-provider-test"}}`)
 	opts := cliproxyexecutor.Options{OriginalRequest: payload}
 
-	// Request via claude provider
+	// 通过 claude 供应商请求
 	pickedClaude, err := selector.Pick(context.Background(), "claude", "claude-3", opts, []*Auth{authClaude})
 	if err != nil {
 		t.Fatalf("Pick() for claude error = %v", err)
@@ -2018,7 +2018,7 @@ func TestSessionAffinitySelector_CrossProviderIsolation(t *testing.T) {
 		t.Fatalf("Pick() for claude = %q, want auth-claude", pickedClaude.ID)
 	}
 
-	// Same session but via openai provider should get different auth
+	// 同一会话但通过 openai 供应商请求时应得到不同的 auth
 	pickedOpenAI, err := selector.Pick(context.Background(), "openai", "gpt-5.5", opts, []*Auth{authOpenAI})
 	if err != nil {
 		t.Fatalf("Pick() for openai error = %v", err)
@@ -2027,7 +2027,7 @@ func TestSessionAffinitySelector_CrossProviderIsolation(t *testing.T) {
 		t.Fatalf("Pick() for openai = %q, want auth-openai", pickedOpenAI.ID)
 	}
 
-	// Verify both bindings remain stable
+	// 验证两个绑定都保持稳定
 	for i := 0; i < 5; i++ {
 		gotC, _ := selector.Pick(context.Background(), "claude", "claude-3", opts, []*Auth{authClaude})
 		gotG, _ := selector.Pick(context.Background(), "openai", "gpt-5.5", opts, []*Auth{authOpenAI})
@@ -2048,28 +2048,28 @@ func TestSessionCache_GetAndRefresh(t *testing.T) {
 
 	cache.Set("session1", "auth1")
 
-	// Verify initial value
+	// 验证初始值
 	got, ok := cache.GetAndRefresh("session1")
 	if !ok || got != "auth1" {
 		t.Fatalf("GetAndRefresh() = %q, %v, want auth1, true", got, ok)
 	}
 
-	// Wait half TTL and access again (should refresh)
+	// 等待半个 TTL 后再次访问（应刷新）
 	time.Sleep(60 * time.Millisecond)
 	got, ok = cache.GetAndRefresh("session1")
 	if !ok || got != "auth1" {
 		t.Fatalf("GetAndRefresh() after 60ms = %q, %v, want auth1, true", got, ok)
 	}
 
-	// Wait another 60ms (total 120ms from original, but TTL refreshed at 60ms)
-	// Entry should still be valid because TTL was refreshed
+	// 再等待 60ms（距最初共 120ms，但 TTL 已在 60ms 时刷新）
+	// 由于 TTL 已刷新，条目应仍然有效
 	time.Sleep(60 * time.Millisecond)
 	got, ok = cache.GetAndRefresh("session1")
 	if !ok || got != "auth1" {
 		t.Fatalf("GetAndRefresh() after refresh = %q, %v, want auth1, true (TTL should have been refreshed)", got, ok)
 	}
 
-	// Now wait full TTL without access
+	// 现在在无访问的情况下等待完整 TTL
 	time.Sleep(110 * time.Millisecond)
 	got, ok = cache.GetAndRefresh("session1")
 	if ok {
@@ -2133,7 +2133,7 @@ func TestSessionAffinitySelector_Concurrent(t *testing.T) {
 	payload := []byte(`{"metadata":{"user_id":"user_xxx_account__session_concurrent-test"}}`)
 	opts := cliproxyexecutor.Options{OriginalRequest: payload}
 
-	// First pick to establish binding
+	// 首次选择以建立绑定
 	first, err := selector.Pick(context.Background(), "claude", "claude-3", opts, auths)
 	if err != nil {
 		t.Fatalf("Initial Pick() error = %v", err)
@@ -2518,7 +2518,7 @@ func TestManagerSetSelectorUncomparableTypes(t *testing.T) {
 	sel1 := uncomparableSelector{fn: func() {}}
 	sel2 := uncomparableSelector{fn: func() {}}
 
-	// Setting uncomparable types must not panic
+	// 设置不可比较的类型不得 panic
 	manager.SetSelector(sel1)
 	manager.SetSelector(sel2)
 	manager.SetSelector(nil)
@@ -2529,7 +2529,7 @@ func TestManagerSetSelectorSameInstanceDoesNotStop(t *testing.T) {
 	mockSelector := &mockStoppableSelector{}
 	manager := NewManager(nil, mockSelector, nil)
 
-	// Setting the same instance should be a no-op and not call Stop
+	// 设置同一个实例应为无操作，不得调用 Stop
 	manager.SetSelector(mockSelector)
 	if mockSelector.stopped {
 		t.Fatal("setting the same selector instance unexpectedly called Stop")
@@ -2587,7 +2587,7 @@ func TestSessionAffinitySelector_LongCompositeIDBoundConsistency(t *testing.T) {
 		t.Fatalf("canonical ID %q missing hash separator", canonicalID)
 	}
 
-	// Verify CanonicalSessionID helper returns the same bounded identity
+	// 验证 CanonicalSessionID 辅助函数返回相同的受限标识
 	resolvedID := CanonicalSessionID(opts.Headers, opts.OriginalRequest, opts.Metadata)
 	if resolvedID != canonicalID {
 		t.Fatalf("CanonicalSessionID %q != metadata canonical %q", resolvedID, canonicalID)
@@ -2609,13 +2609,13 @@ func TestSessionAffinitySelector_DerivedIDBoundConsistencyOnResult(t *testing.T)
 		},
 	}
 
-	// 1. Pick establishes initial binding
+	// 1. Pick 建立初始绑定
 	pickedAuth, err := selector.Pick(context.Background(), "openai", "gpt-5.4", opts, auths)
 	if err != nil || pickedAuth == nil {
 		t.Fatalf("Pick failed: %v", err)
 	}
 
-	// 2. OnResult records success under bounded derived key
+	// 2. OnResult 在受限的派生键下记录成功
 	res := Result{
 		AuthID:   pickedAuth.ID,
 		Provider: "openai",
@@ -2625,7 +2625,7 @@ func TestSessionAffinitySelector_DerivedIDBoundConsistencyOnResult(t *testing.T)
 	}
 	selector.OnResult(res)
 
-	// 3. Next Pick with reverse candidates must hit the same bound credential
+	// 3. 使用逆序候选的下一次 Pick 必须命中同一个已绑定凭据
 	reverseAuths := []*Auth{{ID: "auth-b"}, {ID: "auth-a"}}
 	secondPicked, err := selector.Pick(context.Background(), "openai", "gpt-5.4", opts, reverseAuths)
 	if err != nil || secondPicked == nil {
@@ -2639,7 +2639,7 @@ func TestSessionAffinitySelector_DerivedIDBoundConsistencyOnResult(t *testing.T)
 func TestExtractExplicitSessionIDs_EnhancedHarnesses(t *testing.T) {
 	t.Parallel()
 
-	// 1. Roo Code / Cline task headers
+	// 1. Roo Code / Cline 任务头
 	rooHeaders := http.Header{}
 	rooHeaders.Set("X-Task-ID", "task-abc-1")
 	rooHeaders.Set("X-Parent-Task-ID", "task-root-1")
@@ -2652,7 +2652,7 @@ func TestExtractExplicitSessionIDs_EnhancedHarnesses(t *testing.T) {
 		t.Fatalf("ParentSessionIDMetadataKey = %v, want task:task-root-1", meta[cliproxyexecutor.ParentSessionIDMetadataKey])
 	}
 
-	// 2. OpenClaw forkSource sets IsForkMetadataKey
+	// 2. OpenClaw 的 forkSource 会设置 IsForkMetadataKey
 	clawPayload := []byte(`{"sessionId":"claw-c-1","forkSource":{"sessionId":"claw-p-1"}}`)
 	metaClaw := map[string]any{}
 	primary, fallback = extractExplicitSessionIDs(nil, clawPayload, metaClaw)
@@ -2663,7 +2663,7 @@ func TestExtractExplicitSessionIDs_EnhancedHarnesses(t *testing.T) {
 		t.Fatalf("OpenClaw IsForkMetadataKey = %v, want true", metaClaw[cliproxyexecutor.IsForkMetadataKey])
 	}
 
-	// 3. Roo Code subagent task inherits parent credential via affinity selector
+	// 3. Roo Code 子代理任务通过亲和性选择器继承父凭据
 	selector := NewSessionAffinitySelector(&RoundRobinSelector{})
 	defer selector.Stop()
 	auths := []*Auth{{ID: "auth-1"}, {ID: "auth-2"}}
@@ -2683,14 +2683,14 @@ func TestExtractExplicitSessionIDs_EnhancedHarnesses(t *testing.T) {
 		Options:  parentOpts,
 	})
 
-	// Subagent task request specifying parent task
+	// 指定父任务的子代理任务请求
 	subagentOpts := cliproxyexecutor.Options{
 		Headers: http.Header{
 			"X-Task-ID":        []string{"task-child-101"},
 			"X-Parent-Task-ID": []string{"task-parent-100"},
 		},
 	}
-	// Reverse candidate order to prove affinity, not order
+	// 反转候选顺序，以证明是亲和性而非顺序在起作用
 	reverseAuths := []*Auth{{ID: "auth-2"}, {ID: "auth-1"}}
 	subagentAuth, err := selector.Pick(context.Background(), "openai", "gpt-5.4", subagentOpts, reverseAuths)
 	if err != nil || subagentAuth == nil {

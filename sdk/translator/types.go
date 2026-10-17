@@ -1,38 +1,38 @@
-// Package translator provides types and functions for converting chat requests and responses between different schemas.
+// Package translator 提供在不同 schema 之间转换聊天请求与响应的类型和函数。
 package translator
 
 import "context"
 
-// RequestTransform converts a request payload from a source schema to a target schema.
-// A non-nil error is a request-scoped refusal. Registry.Register stores it on
-// RequestEnvelope.Err so executors can reject the request before calling upstream.
-// TranslateRequest still returns only the body for legacy callers.
+// RequestTransform 将请求载荷从源 schema 转换为目标 schema。
+// 非 nil 的 error 是请求级拒绝。Registry.Register 会将其存入
+// RequestEnvelope.Err，使执行器能在调用上游之前拒绝该请求。
+// TranslateRequest 对旧版调用方仍只返回 body。
 type RequestTransform func(model string, rawJSON []byte, stream bool) ([]byte, error)
 
-// RequestEnvelopeTransform translates a request while preserving request-scoped metadata.
+// RequestEnvelopeTransform 在转换请求的同时保留请求级元数据。
 type RequestEnvelopeTransform func(ctx context.Context, req RequestEnvelope) RequestEnvelope
 
-// ResponseStreamTransform is a function type that converts a streaming response from a source schema to a target schema.
-// It takes a context, the model name, the raw JSON of the original and converted requests, the raw JSON of the current response chunk, and an optional parameter.
-// It returns a slice of byte chunks containing the converted streaming response.
+// ResponseStreamTransform 是函数类型，将流式响应从源 schema 转换为目标 schema。
+// 它接收 context、模型名称、原始请求和已转换请求的原始 JSON、当前响应分块的原始 JSON，以及一个可选参数。
+// 它返回包含已转换流式响应的字节分块切片。
 type ResponseStreamTransform func(ctx context.Context, model string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) [][]byte
 
-// ResponseNonStreamTransform is a function type that converts a non-streaming response from a source schema to a target schema.
-// It takes a context, the model name, the raw JSON of the original and converted requests, the raw JSON of the response, and an optional parameter.
-// It returns the converted response as a single byte slice.
+// ResponseNonStreamTransform 是函数类型，将非流式响应从源 schema 转换为目标 schema。
+// 它接收 context、模型名称、原始请求和已转换请求的原始 JSON、响应的原始 JSON，以及一个可选参数。
+// 它返回已转换的响应，作为单个字节切片。
 type ResponseNonStreamTransform func(ctx context.Context, model string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) []byte
 
-// ResponseTokenCountTransform is a function type that transforms a token count from a source format to a target format.
-// It takes a context and the token count as an int64, and returns the transformed token count as bytes.
+// ResponseTokenCountTransform 是函数类型，将 token 计数从源格式转换为目标格式。
+// 它接收 context 和作为 int64 的 token 计数，并返回已转换的 token 计数（字节形式）。
 type ResponseTokenCountTransform func(ctx context.Context, count int64) []byte
 
-// ResponseTransform is a struct that groups together the functions for transforming streaming and non-streaming responses,
-// as well as token counts.
+// ResponseTransform 是结构体，汇集了用于转换流式响应和非流式响应的函数，
+// 以及 token 计数。
 type ResponseTransform struct {
-	// Stream is the function for transforming streaming responses.
+	// Stream 是用于转换流式响应的函数。
 	Stream ResponseStreamTransform
-	// NonStream is the function for transforming non-streaming responses.
+	// NonStream 是用于转换非流式响应的函数。
 	NonStream ResponseNonStreamTransform
-	// TokenCount is the function for transforming token counts.
+	// TokenCount 是用于转换 token 计数的函数。
 	TokenCount ResponseTokenCountTransform
 }

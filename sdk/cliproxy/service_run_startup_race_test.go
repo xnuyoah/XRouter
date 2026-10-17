@@ -93,8 +93,8 @@ func TestRegisterModelsForAuthBatch_ConsistentConfigSnapshotAcrossConcurrentComm
 
 	service.registerModelsForAuthBatch(ctx, manager.List())
 
-	// Because commitConfigUpdate ran before registerModelsForAuthWithCache read the config,
-	// registration must not mix compatCache from initialCfg (alias-v1) with ForceModelPrefix from updatedCfg.
+	// 由于 commitConfigUpdate 在 registerModelsForAuthWithCache 读取配置之前运行，
+	// 注册不得把 initialCfg（alias-v1）的 compatCache 与 updatedCfg 的 ForceModelPrefix 混在一起。
 	if reg.ClientSupportsModel(authID, "pfx/alias-v1") && !reg.ClientSupportsModel(authID, "alias-v1") {
 		t.Fatalf("detected torn config snapshot: registered initialCfg model alias-v1 with updatedCfg ForceModelPrefix=true (only pfx/alias-v1 present)")
 	}

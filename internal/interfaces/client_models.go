@@ -1,121 +1,121 @@
-// Package interfaces defines the core interfaces and shared structures for the XRouter server.
-// These interfaces provide a common contract for different components of the application,
-// such as AI service clients, API handlers, and data models.
+// Package interfaces 定义 XRouter 服务器的核心接口与共享结构体。
+// 这些接口为应用的不同组件提供统一契约，
+// 例如 AI 服务客户端、API 处理器和数据模型。
 package interfaces
 
-// Content represents a single message in a conversation, with a role and parts.
-// This structure models a message exchange between a user and an AI model.
+// Content 表示对话中的单条消息，包含角色与组成部分。
+// 该结构体对用户与 AI 模型之间的一次消息交换建模。
 type Content struct {
-	// Role indicates who sent the message ("user", "model", or "tool").
+	// Role 表示消息的发送者（"user"、"model" 或 "tool"）。
 	Role string `json:"role"`
 
-	// Parts is a collection of content parts that make up the message.
+	// Parts 是构成该消息的内容部分组成。
 	Parts []Part `json:"parts"`
 }
 
-// Part represents a distinct piece of content within a message.
-// A part can be text, inline data (like an image), a function call, or a function response.
+// Part 表示消息中一段独立的内容。
+// 一个 part 可以是文本、内联数据（如图片）、函数调用或函数响应。
 type Part struct {
 	Thought bool `json:"thought,omitempty"`
 
-	// Text contains plain text content.
+	// Text 包含纯文本内容。
 	Text string `json:"text,omitempty"`
 
-	// InlineData contains base64-encoded data with its MIME type (e.g., images).
+	// InlineData 包含带 MIME 类型的 base64 编码数据（例如图片）。
 	InlineData *InlineData `json:"inlineData,omitempty"`
 
-	// ThoughtSignature is a provider-required signature that accompanies certain parts.
+	// ThoughtSignature 是供应商要求、伴随某些 part 的签名。
 	ThoughtSignature string `json:"thoughtSignature,omitempty"`
 
-	// FunctionCall represents a tool call requested by the model.
+	// FunctionCall 表示模型请求的工具调用。
 	FunctionCall *FunctionCall `json:"functionCall,omitempty"`
 
-	// FunctionResponse represents the result of a tool execution.
+	// FunctionResponse 表示一次工具执行的结果。
 	FunctionResponse *FunctionResponse `json:"functionResponse,omitempty"`
 }
 
-// InlineData represents base64-encoded data with its MIME type.
-// This is typically used for embedding images or other binary data in requests.
+// InlineData 表示带 MIME 类型的 base64 编码数据。
+// 通常用于在请求中嵌入图片或其他二进制数据。
 type InlineData struct {
-	// MimeType specifies the media type of the embedded data (e.g., "image/png").
+	// MimeType 指定嵌入数据的媒体类型（例如 "image/png"）。
 	MimeType string `json:"mime_type,omitempty"`
 
-	// Data contains the base64-encoded binary data.
+	// Data 包含 base64 编码的二进制数据。
 	Data string `json:"data,omitempty"`
 }
 
-// FunctionCall represents a tool call requested by the model.
-// It includes the function name and its arguments that the model wants to execute.
+// FunctionCall 表示模型请求的工具调用。
+// 它包含模型希望执行的函数名及其参数。
 type FunctionCall struct {
-	// ID is the identifier of the function to be called.
+	// ID 是待调用函数的标识符。
 	ID string `json:"id,omitempty"`
 
-	// Name is the identifier of the function to be called.
+	// Name 是待调用函数的标识符。
 	Name string `json:"name"`
 
-	// Args contains the arguments to pass to the function.
+	// Args 包含传递给函数的参数。
 	Args map[string]interface{} `json:"args"`
 }
 
-// FunctionResponse represents the result of a tool execution.
-// This is sent back to the model after a tool call has been processed.
+// FunctionResponse 表示一次工具执行的结果。
+// 在工具调用被处理完成后回传给模型。
 type FunctionResponse struct {
-	// ID is the identifier of the function to be called.
+	// ID 是被调用函数的标识符。
 	ID string `json:"id,omitempty"`
 
-	// Name is the identifier of the function that was called.
+	// Name 是被调用函数的标识符。
 	Name string `json:"name"`
 
-	// Response contains the result data from the function execution.
+	// Response 包含函数执行返回的结果数据。
 	Response map[string]interface{} `json:"response"`
 }
 
-// GenerateContentRequest is the top-level request structure for the streamGenerateContent endpoint.
-// This structure defines all the parameters needed for generating content from an AI model.
+// GenerateContentRequest 是 streamGenerateContent 端点的顶层请求结构体。
+// 该结构体定义了从 AI 模型生成内容所需的全部参数。
 type GenerateContentRequest struct {
-	// SystemInstruction provides system-level instructions that guide the model's behavior.
+	// SystemInstruction 提供指导模型行为的系统级指令。
 	SystemInstruction *Content `json:"systemInstruction,omitempty"`
 
-	// Contents is the conversation history between the user and the model.
+	// Contents 是用户与模型之间的对话历史。
 	Contents []Content `json:"contents"`
 
-	// Tools defines the available tools/functions that the model can call.
+	// Tools 定义模型可调用的可用工具/函数。
 	Tools []ToolDeclaration `json:"tools,omitempty"`
 
-	// GenerationConfig contains parameters that control the model's generation behavior.
+	// GenerationConfig 包含控制模型生成行为的参数。
 	GenerationConfig `json:"generationConfig"`
 }
 
-// GenerationConfig defines parameters that control the model's generation behavior.
-// These parameters affect the creativity, randomness, and reasoning of the model's responses.
+// GenerationConfig 定义控制模型生成行为的参数。
+// 这些参数会影响模型响应的创造性、随机性与推理。
 type GenerationConfig struct {
-	// ThinkingConfig specifies configuration for the model's "thinking" process.
+	// ThinkingConfig 指定模型“思考”过程的配置。
 	ThinkingConfig GenerationConfigThinkingConfig `json:"thinkingConfig,omitempty"`
 
-	// Temperature controls the randomness of the model's responses.
-	// Values closer to 0 make responses more deterministic, while values closer to 1 increase randomness.
+	// Temperature 控制模型响应的随机性。
+	// 取值越接近 0，响应越确定；越接近 1，随机性越强。
 	Temperature float64 `json:"temperature,omitempty"`
 
-	// TopP controls nucleus sampling, which affects the diversity of responses.
-	// It limits the model to consider only the top P% of probability mass.
+	// TopP 控制核采样，影响响应的多样性。
+	// 它限制模型只考虑概率质量最高的前 P%。
 	TopP float64 `json:"topP,omitempty"`
 
-	// TopK limits the model to consider only the top K most likely tokens.
-	// This can help control the quality and diversity of generated text.
+	// TopK 限制模型只考虑概率最高的前 K 个 token。
+	// 这有助于控制生成文本的质量与多样性。
 	TopK float64 `json:"topK,omitempty"`
 }
 
-// GenerationConfigThinkingConfig specifies configuration for the model's "thinking" process.
-// This controls whether the model should output its reasoning process along with the final answer.
+// GenerationConfigThinkingConfig 指定模型“思考”过程的配置。
+// 它控制模型是否在给出最终答案的同时输出推理过程。
 type GenerationConfigThinkingConfig struct {
-	// IncludeThoughts determines whether the model should output its reasoning process.
-	// When enabled, the model will include its step-by-step thinking in the response.
+	// IncludeThoughts 决定模型是否输出其推理过程。
+	// 启用后，模型会在响应中包含逐步思考内容。
 	IncludeThoughts bool `json:"include_thoughts,omitempty"`
 }
 
-// ToolDeclaration defines the structure for declaring tools (like functions)
-// that the model can call during content generation.
+// ToolDeclaration 定义声明工具（如函数）的结构，
+// 这些工具可供模型在内容生成期间调用。
 type ToolDeclaration struct {
-	// FunctionDeclarations is a list of available functions that the model can call.
+	// FunctionDeclarations 是模型可调用的可用函数列表。
 	FunctionDeclarations []interface{} `json:"functionDeclarations"`
 }

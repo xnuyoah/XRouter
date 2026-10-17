@@ -8,13 +8,13 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// DeriveClaudeUserID returns a stable value for the Claude request field
-// metadata.user_id. It preserves any caller-supplied metadata.user_id or
-// OpenAI Chat Completions user field, then derives a deterministic value from
-// stable client signals (prompt_cache_key, session_id, conversation_id, first user
-// message content, and model/system instructions). The same conversation therefore gets
-// the same user_id on every worker and every turn, while different
-// conversations get different values.
+// DeriveClaudeUserID 为 Claude 请求字段 metadata.user_id 返回稳定值。
+// 它会保留调用方提供的任何 metadata.user_id 或
+// OpenAI Chat Completions 的 user 字段，然后根据稳定的客户端信号
+// （prompt_cache_key、session_id、conversation_id、第一条用户
+// 消息内容以及 model/system 指令）派生出一个确定性的值。因此同一会话
+// 在每个工作进程和每个轮次上都会得到相同的 user_id，而不同的
+// 会话则得到不同的值。
 func DeriveClaudeUserID(rawJSON []byte) string {
 	root := gjson.ParseBytes(rawJSON)
 
@@ -182,7 +182,7 @@ func isResponsesUserItem(item gjson.Result) bool {
 	}
 	typ := strings.ToLower(strings.TrimSpace(item.Get("type").String()))
 	if typ == "message" {
-		// Non-assistant / non-system message defaults to user
+		// 非 assistant / 非 system 消息默认视为 user
 		return true
 	}
 	return false

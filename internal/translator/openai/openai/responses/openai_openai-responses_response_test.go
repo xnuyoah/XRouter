@@ -33,15 +33,15 @@ func TestConvertOpenAIChatCompletionsResponseToOpenAIResponses_ResponseCompleted
 	tests := []struct {
 		name           string
 		in             []string
-		doneInputIndex int // Index in tt.in where the terminal [DONE] chunk arrives and response.completed must be emitted.
+		doneInputIndex int // tt.in 中终止 [DONE] 分块到达、且必须发出 response.completed 的索引。
 		hasUsage       bool
 		inputTokens    int64
 		outputTokens   int64
 		totalTokens    int64
 	}{
 		{
-			// A provider may send finish_reason first and only attach usage in a later chunk (e.g. Vertex AI),
-			// so response.completed must wait for [DONE] to include that usage.
+			// 供应商可能先发送 finish_reason，而在稍后的分块中才附加 usage（例如 Vertex AI），
+			// 因此 response.completed 必须等待 [DONE] 才能包含该 usage。
 			name: "late usage after finish reason",
 			in: []string{
 				`data: {"id":"resp_late_usage","object":"chat.completion.chunk","created":1773896263,"model":"model","choices":[{"index":0,"delta":{"role":"assistant","content":null,"reasoning_content":null,"tool_calls":[{"index":0,"id":"call_late_usage","type":"function","function":{"name":"read","arguments":""}}]},"finish_reason":null}]}`,
@@ -56,8 +56,8 @@ func TestConvertOpenAIChatCompletionsResponseToOpenAIResponses_ResponseCompleted
 			totalTokens:    18,
 		},
 		{
-			// When usage arrives on the same chunk as finish_reason, we still expect a
-			// single response.completed event and it should remain deferred until [DONE].
+			// 当 usage 与 finish_reason 出现在同一分块时，我们仍期望
+			// 只有一个 response.completed 事件，且它应延迟到 [DONE]。
 			name: "usage on finish reason chunk",
 			in: []string{
 				`data: {"id":"resp_usage_same_chunk","object":"chat.completion.chunk","created":1773896263,"model":"model","choices":[{"index":0,"delta":{"role":"assistant","content":null,"reasoning_content":null,"tool_calls":[{"index":0,"id":"call_usage_same_chunk","type":"function","function":{"name":"read","arguments":""}}]},"finish_reason":null}]}`,
@@ -80,8 +80,8 @@ func TestConvertOpenAIChatCompletionsResponseToOpenAIResponses_ResponseCompleted
 			hasUsage:       false,
 		},
 		{
-			// An OpenAI-compatible streams from a buggy server might never send usage, so response.completed should
-			// still wait for [DONE] but omit the usage object entirely.
+			// 来自有缺陷服务器的 OpenAI 兼容流可能永远不发送 usage，因此 response.completed
+			// 仍应等待 [DONE]，但完全省略 usage 对象。
 			name: "no usage chunk",
 			in: []string{
 				`data: {"id":"resp_no_usage","object":"chat.completion.chunk","created":1773896263,"model":"model","choices":[{"index":0,"delta":{"role":"assistant","content":null,"reasoning_content":null,"tool_calls":[{"index":0,"id":"call_no_usage","type":"function","function":{"name":"read","arguments":""}}]},"finish_reason":null}]}`,
@@ -101,11 +101,11 @@ func TestConvertOpenAIChatCompletionsResponseToOpenAIResponses_ResponseCompleted
 			var inProgressData gjson.Result
 			var completedData gjson.Result
 
-			// Reuse converter state across input lines to simulate one streaming response.
+			// 跨输入行复用转换器状态以模拟一个流式响应。
 			var param any
 
 			for i, line := range tt.in {
-				// One upstream chunk can emit multiple downstream SSE events.
+				// 一个上游分块可以发出多个下游 SSE 事件。
 				for _, chunk := range ConvertOpenAIChatCompletionsResponseToOpenAIResponses(context.Background(), "model", request, request, []byte(line), &param) {
 					event, data := parseOpenAIResponsesSSEEvent(t, chunk)
 					if event == "response.created" {
@@ -142,7 +142,7 @@ func TestConvertOpenAIChatCompletionsResponseToOpenAIResponses_ResponseCompleted
 				t.Fatalf("response.in_progress models = %q, want gpt-5.4", got)
 			}
 
-			// Missing upstream usage should stay omitted in the final completed event.
+			// 缺失的上游 usage 应在最终的 completed 事件中保持省略。
 			if !tt.hasUsage {
 				if completedData.Get("response.usage").Exists() {
 					t.Fatalf("expected response.completed to omit usage when none was provided, got %s", completedData.Get("response.usage").Raw)
@@ -150,7 +150,7 @@ func TestConvertOpenAIChatCompletionsResponseToOpenAIResponses_ResponseCompleted
 				return
 			}
 
-			// When usage is present, the final response.completed event must preserve the usage values.
+			// 当 usage 存在时，最终的 response.completed 事件必须保留 usage 值。
 			if got := completedData.Get("response.usage.input_tokens").Int(); got != tt.inputTokens {
 				t.Fatalf("unexpected response.usage.input_tokens: got %d want %d", got, tt.inputTokens)
 			}
@@ -710,7 +710,7 @@ func TestConvertOpenAIChatCompletionsResponseToOpenAIResponses_RestoresCappedNam
 			}
 		]
 	}`)
-	// The 66-char flattened name is capped to 64 chars.
+	// 展平后 66 字符的名称被截断到 64 字符。
 	chatName := capResponsesChatToolName("mcp__codex_apps__codex_document_control___execute_document_command")
 	chunks := []string{
 		`data: {"id":"chatcmpl_capped_stream","object":"chat.completion.chunk","created":1773896263,"model":"model","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_capped","type":"function","function":{"name":"` + chatName + `","arguments":""}}]},"finish_reason":null}]}`,
@@ -1593,7 +1593,7 @@ func TestConvertOpenAIChatCompletionsResponseToOpenAIResponses_ChunkWithContentA
 		t.Fatalf("expected exactly 1 response.completed, got %d", completedCount)
 	}
 
-	// Verify strict event ordering: reasoning completes before message starts
+	// 验证严格的事件顺序：reasoning 在 message 开始之前完成
 	wantOrder := []string{
 		"added:reasoning:0",
 		"done:reasoning:0",
@@ -1609,12 +1609,12 @@ func TestConvertOpenAIChatCompletionsResponseToOpenAIResponses_ChunkWithContentA
 		}
 	}
 
-	// Verify item IDs are unique
+	// 验证条目 ID 唯一
 	if len(addedItemIDs) != 2 || addedItemIDs[0] == addedItemIDs[1] {
 		t.Fatalf("expected 2 distinct item IDs, got %v", addedItemIDs)
 	}
 
-	// Verify completed response contains both outputs in ascending order
+	// 验证 completed 响应按升序包含两个输出
 	if got := completedData.Get("response.output.0.summary.0.text").String(); got != "Thinking part 1, Just professional." {
 		t.Fatalf("unexpected completed reasoning: got %q", got)
 	}

@@ -54,7 +54,7 @@ func TestRegisterExecutorForAuth_PluginAuthProviderWrapsOpenAICompatRefresh(t *t
 		t.Fatalf("inner executor type = %T, want *executor.OpenAICompatExecutor", inner)
 	}
 
-	// Upgrading from bare OpenAICompat without forceReplace should still wrap.
+	// 从裸 OpenAICompat 升级且未设置 forceReplace 时仍应进行包装。
 	service.coreManager.RegisterExecutor(runtimeexecutor.NewOpenAICompatExecutor("plugin-provider", service.cfg))
 	service.registerExecutorForAuth(auth, false)
 	resolved, ok = service.coreManager.Executor("plugin-provider")

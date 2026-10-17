@@ -8,37 +8,37 @@ import (
 	translatorcommon "github.com/xnuyoah/XRouter/v8/internal/translator/common"
 )
 
-// ConvertOpenAIResponsesRequestToOpenAIChatCompletions converts OpenAI responses format to OpenAI chat completions format.
-// It transforms the OpenAI responses API format (with instructions and input array) into the standard
-// OpenAI chat completions format (with messages array and system content).
+// ConvertOpenAIResponsesRequestToOpenAIChatCompletions 将 OpenAI responses 格式转换为 OpenAI chat completions 格式。
+// 它把 OpenAI responses API 格式（含 instructions 与 input 数组）转换为标准的
+// OpenAI chat completions 格式（含 messages 数组与 system 内容）。
 //
-// The conversion handles:
-// 1. Model name and streaming configuration
-// 2. Instructions to system message conversion
-// 3. Input array to messages array transformation
-// 4. Tool definitions and tool choice conversion
-// 5. Function calls and function results handling
-// 6. Generation parameters mapping (max_tokens, reasoning, etc.)
+// 转换涵盖：
+// 1. 模型名与流式配置
+// 2. instructions 到 system message 的转换
+// 3. input 数组到 messages 数组的转换
+// 4. 工具定义与 tool choice 转换
+// 5. 函数调用与函数结果处理
+// 6. 生成参数映射（max_tokens、reasoning 等）
 //
-// Parameters:
-//   - modelName: The name of the model to use for the request
-//   - rawJSON: The raw JSON request data in OpenAI responses format
-//   - stream: A boolean indicating if the request is for a streaming response
+// 参数：
+//   - modelName：请求所使用的模型名
+//   - rawJSON：OpenAI responses 格式的原始 JSON 请求数据
+//   - stream：布尔值，指示该请求是否为流式响应
 //
-// Returns:
-//   - []byte: The transformed request data in OpenAI chat completions format
+// 返回：
+//   - []byte：转换后的 OpenAI chat completions 格式请求数据
 func ConvertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inputRawJSON []byte, stream bool) ([]byte, error) {
 	return convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName, inputRawJSON, stream)
 
 }
 
-// convertOpenAIResponsesRequestToOpenAIChatCompletions also reports a file or
-// audio part Chat Completions cannot receive when it leaves a user turn with
-// nothing to send.
+// convertOpenAIResponsesRequestToOpenAIChatCompletions 还会在某个文件或
+// 音频部分导致用户回合无可发送内容时，报告 Chat Completions
+// 无法接收该部分。
 func convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inputRawJSON []byte, stream bool) ([]byte, error) {
 	rawJSON := inputRawJSON
 	var drops translatorcommon.UserTurnDrops
-	// Base OpenAI chat completions template with default values
+	// 带默认值的 OpenAI chat completions 基础模板
 	out := []byte(`{"model":"","messages":[],"stream":false}`)
 
 	root := gjson.ParseBytes(rawJSON)
@@ -49,20 +49,20 @@ func convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inpu
 		messages = append(messages, message)
 	}
 
-	// Set model name
+	// 设置模型名
 	out, _ = sjson.SetBytes(out, "model", modelName)
 
-	// Set stream configuration
+	// 设置流式配置
 	out, _ = sjson.SetBytes(out, "stream", stream)
 
-	// Map Responses text format to Chat Completions response format.
+	// 将 Responses text format 映射为 Chat Completions response format。
 	if textFormat := root.Get("text.format"); textFormat.Exists() {
 		if responseFormat := convertResponsesTextFormatToChatResponseFormat(textFormat); len(responseFormat) > 0 {
 			out, _ = sjson.SetRawBytes(out, "response_format", responseFormat)
 		}
 	}
 
-	// Map generation parameters from responses format to chat completions format
+	// 将生成参数从 responses 格式映射到 chat completions 格式
 	if maxTokens := root.Get("max_output_tokens"); maxTokens.Exists() {
 		if maxTokens.Raw != "" {
 			out, _ = sjson.SetRawBytes(out, "max_tokens", []byte(maxTokens.Raw))
@@ -71,7 +71,7 @@ func convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inpu
 		}
 	}
 
-	// Convert instructions to system message
+	// 将 instructions 转换为 system message
 	if instructions := root.Get("instructions"); instructions.Exists() {
 		systemMessage := []byte(`{"role":"system","content":""}`)
 		systemMessage, _ = sjson.SetBytes(systemMessage, "content", instructions.String())
@@ -80,7 +80,7 @@ func convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inpu
 
 	duplicateOutputIDs := make(map[string]struct{})
 
-	// Convert input array to messages
+	// 将 input 数组转换为 messages
 	if input := root.Get("input"); input.Exists() && input.IsArray() {
 		rawInputArray := toolIndex.shellHistory(input.Array())
 		explicitOutputCounts := make(map[string]int)
@@ -250,10 +250,10 @@ func convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inpu
 
 			switch itemType {
 			case "message", "":
-				// Handle regular message conversion
+				// 处理普通消息转换
 				role := item.Get("role").String()
-				// Only a real user turn can be refused; developer text is sent as user text
-				// but never counts as the user's own turn.
+				// 只有真正的用户回合才会被拒绝；developer 文本会作为用户文本发送，
+				// 但绝不视为用户自己的回合。
 				isUserTurn := role == "user"
 				if role == "developer" {
 					role = "user"
@@ -268,7 +268,7 @@ func convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inpu
 
 				if content := item.Get("content"); content.Exists() && content.IsArray() {
 					var contentItems [][]byte
-					// Counts the parts this turn really sends; an empty text part does not.
+					// 统计本回合真正发送的部分；空文本部分不计入。
 					turnSendable := 0
 					content.ForEach(func(_, contentItem gjson.Result) bool {
 						contentType := contentItem.Get("type").String()
@@ -296,8 +296,8 @@ func convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inpu
 							if processing := contentItem.Get("processing"); processing.Exists() {
 								contentPart, _ = sjson.SetRawBytes(contentPart, "video_url.processing", []byte(processing.Raw))
 							}
-							// Preserve malformed video parts for upstream validation instead of
-							// silently turning a video request into a text-only request.
+							// 保留格式错误的视频部分交给上游校验，
+							// 而不是把视频请求静默变成纯文本请求。
 							contentItems = append(contentItems, contentPart)
 							turnSendable++
 						case "input_image":
@@ -314,7 +314,7 @@ func convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inpu
 								contentItems = append(contentItems, contentPart)
 								turnSendable++
 							} else if isUserTurn {
-								// Chat Completions takes a file id or inline bytes only.
+								// Chat Completions 只接受文件 id 或内联字节。
 								drops.Drop(contentType)
 							}
 						case "input_audio":
@@ -363,7 +363,7 @@ func convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inpu
 				if isUsableResponsesReasoning(rc) {
 					latestReasoningContent = rc
 				}
-				// Buffer consecutive function calls and emit them as one assistant message.
+				// 缓冲连续的函数调用，并将它们合并为一条 assistant 消息发出。
 				toolCall := []byte(`{"id":"","type":"function","function":{"name":"","arguments":""}}`)
 
 				if callId := translatorcommon.ExtractResponsesCallID(item); callId != "" {
@@ -398,9 +398,9 @@ func convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inpu
 					}
 				}
 				if _, awaiting := awaitingToolOutputs[callID]; !awaiting {
-					// Orphan outputs (empty call_id or no matching assistant
-					// tool_calls, e.g. Codex send_message_to_thread cards) must
-					// not become tool messages. Emit as user text instead.
+					// 孤立输出（空 call_id，或没有匹配的 assistant
+					// tool_calls，例如 Codex 的 send_message_to_thread 卡片）
+					// 不能变成 tool 消息，改为作为用户文本发出。
 					appendStandaloneResponsesToolOutputAsUser(item.Get("output"), setFunctionCallOutputContent, appendRegularMessage)
 				} else {
 					toolMessage := []byte(`{"role":"tool","tool_call_id":"","content":""}`)
@@ -418,9 +418,9 @@ func convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inpu
 				if isUsableResponsesReasoning(rc) {
 					latestReasoningContent = rc
 				}
-				// Codex freeform tool call replay: wrap the raw input so it
-				// matches the {"input": string} function shape used when
-				// converting custom tool definitions.
+				// Codex 自由格式工具调用重放：包装原始输入，使其
+				// 与转换自定义工具定义时使用的
+				// {"input": string} 函数形态一致。
 				toolCall := []byte(`{"id":"","type":"function","function":{"name":"","arguments":""}}`)
 				toolCall, _ = sjson.SetBytes(toolCall, "id", translatorcommon.ExtractResponsesCallID(item))
 				functionName := item.Get("name").String()
@@ -481,10 +481,10 @@ func convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inpu
 		out, _ = sjson.SetRawBytes(out, "messages", translatorcommon.JoinRawArray(messages))
 	}
 
-	// Convert tools from responses format to chat completions format.
-	// Codex Desktop (Responses Lite) delivers tool definitions through an
-	// "additional_tools" input item instead of the top-level "tools" field,
-	// so merge both sources.
+	// 将工具从 responses 格式转换为 chat completions 格式。
+	// Codex Desktop（Responses Lite）通过 "additional_tools" input item
+	// 而非顶层 "tools" 字段传递工具定义，
+	// 因此需要合并两个来源。
 	var chatCompletionsTools []interface{}
 	for _, chatTool := range toolIndex.chatTools() {
 		chatCompletionsTools = append(chatCompletionsTools, gjson.ParseBytes(chatTool).Value())
@@ -509,9 +509,9 @@ func convertOpenAIResponsesRequestToOpenAIChatCompletions(modelName string, inpu
 	return out, drops.Err()
 }
 
-// responsesInputFileToChatPart maps a Responses input_file part onto a Chat
-// Completions file part. It reports false when the part carries neither a file
-// id nor inline bytes, because Chat Completions has no field for a bare url.
+// responsesInputFileToChatPart 将 Responses 的 input_file 部分映射为 Chat
+// Completions 的 file 部分。当该部分既没有 file id 也没有内联字节时返回 false，
+// 因为 Chat Completions 没有用于裸 url 的字段。
 func responsesInputFileToChatPart(contentItem gjson.Result) ([]byte, bool) {
 	fileID := contentItem.Get("file_id").String()
 	fileData := contentItem.Get("file_data").String()
@@ -531,8 +531,8 @@ func responsesInputFileToChatPart(contentItem gjson.Result) ([]byte, bool) {
 	return part, true
 }
 
-// responsesInputAudioToChatPart maps a Responses input_audio part onto a Chat
-// Completions input_audio part. It reports false when the part has no bytes.
+// responsesInputAudioToChatPart 将 Responses 的 input_audio 部分映射为 Chat
+// Completions 的 input_audio 部分。当该部分没有字节时返回 false。
 func responsesInputAudioToChatPart(contentItem gjson.Result) ([]byte, bool) {
 	audio := contentItem.Get("input_audio")
 	data := audio.Get("data").String()
@@ -770,7 +770,7 @@ func normalizeChatImageDetail(detailValue gjson.Result) (string, bool) {
 	case "auto", "low", "high":
 		return normalizedDetail, true
 	case "original":
-		// Chat Completions does not support Codex's original detail value.
+		// Chat Completions 不支持 Codex 的 original detail 取值。
 		return "high", true
 	default:
 		return "", true

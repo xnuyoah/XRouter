@@ -26,11 +26,11 @@ func compareJSON(t *testing.T, expectedJSON, actualJSON string) {
 }
 
 // ============================================================================
-// Empty Schema Placeholder Tests
+// Empty Schema 占位符测试
 // ============================================================================
 
 // ============================================================================
-// Format field handling (ad-hoc patch removal)
+// 格式字段处理（临时补丁移除）
 // ============================================================================
 
 func TestRemoveExtensionFields(t *testing.T) {
@@ -159,10 +159,10 @@ func TestRemoveExtensionFields(t *testing.T) {
 	}
 }
 
-// TestIsPropertyDefinitionDistinguishesPropertyNamedProperties covers the classification that
-// decides whether a key spelled like a schema keyword is a keyword or an author-chosen name.
-// Matching a trailing ".properties" alone mistook the schema of a property named "properties" for
-// a property map, which disabled cleaning inside it.
+// TestIsPropertyDefinitionDistinguishesPropertyNamedProperties 覆盖了一项分类：
+// 它判定某个拼写与 schema 关键字相同的键是关键字还是作者自选的名称。
+// 仅匹配结尾的 ".properties" 会把名为 "properties" 的属性的 schema 误认为
+// 属性映射，从而禁用其内部的清理。
 func TestIsPropertyDefinitionDistinguishesPropertyNamedProperties(t *testing.T) {
 	for path, want := range map[string]bool{
 		"":                                    false,
@@ -171,12 +171,12 @@ func TestIsPropertyDefinitionDistinguishesPropertyNamedProperties(t *testing.T) 
 		"properties.properties.properties":    true,
 		"properties.records.items.properties": true,
 		"properties.records.items":            false,
-		// Any prefix the caller nests the schema under must not change the answer.
+		// 调用方把 schema 嵌套在任意前缀之下都不得改变答案。
 		"schema.properties": true,
 		"request.tools.0.functionDeclarations.0.parameters":                       false,
 		"request.tools.0.functionDeclarations.0.parameters.properties":            true,
 		"request.tools.0.functionDeclarations.0.parameters.properties.properties": false,
-		// $defs and patternProperties are name maps for the same reason as properties.
+		// $defs 和 patternProperties 与 properties 出于同样原因是名称映射。
 		"$defs":                          true,
 		"$defs.properties":               false,
 		"properties.$defs":               false,
@@ -281,7 +281,7 @@ func TestCleanJSONSchemaForGeminiJSONSchema_PreservesAdditionalPropertiesAndPatt
 	if got := parsed.Get("properties.items_list.items.description"); got.Exists() && strings.Contains(got.String(), "pattern:") {
 		t.Fatalf("array items pattern should not be converted to description hint. Cleaned: %s", cleaned)
 	}
-	// non_existent should be removed from required because it's not in properties
+	// non_existent 应从 required 中移除，因为它不在 properties 里
 	required := parsed.Get("required").Array()
 	if len(required) != 2 {
 		t.Fatalf("required length = %d, want 2. Cleaned: %s", len(required), cleaned)
@@ -319,13 +319,13 @@ func TestCleanJSONSchemaForGeminiJSONSchema_PreservesSchemaValuedAdditionalPrope
 	}
 }
 
-// TestCleanJSONSchema_ArrayItemsRequireArrayType_Issue6011 covers Issue #6011:
-// Gemini rejects tool schemas where a property declares "items" but its type is not "array"
-// (e.g. type is omitted or flattened to a non-array type), returning:
-// "field predicate failed: $type == Type.ARRAY".
+// TestCleanJSONSchema_ArrayItemsRequireArrayType_Issue6011 覆盖 Issue #6011：
+// Gemini 拒绝属性声明了 "items" 但其类型不是 "array" 的工具 schema
+// （例如 type 被省略或被压平成非数组类型），返回：
+// "field predicate failed: $type == Type.ARRAY"。
 func TestCleanJSONSchema_ArrayItemsRequireArrayType_Issue6011(t *testing.T) {
-	// Case 1: property declares "items" but omits "type": "array" (relying on JSON Schema inference)
-	// Reproduces the error path reported in Issue #6011: properties.revision_reasons.items.properties.evidence_reference
+	// 情形 1：属性声明了 "items" 但省略了 "type": "array"（依赖 JSON Schema 推断）
+	// 复现 Issue #6011 中报告的错误路径：properties.revision_reasons.items.properties.evidence_reference
 	inputMissingType := `{
 		"type": "object",
 		"properties": {
@@ -367,7 +367,7 @@ func TestCleanJSONSchema_ArrayItemsRequireArrayType_Issue6011(t *testing.T) {
 		})
 	}
 
-	// Case 2: property declares union type: ["string", "array"] with items
+	// 情形 2：属性声明了联合类型：["string", "array"] 并带有 items
 	inputUnionType := `{
 		"type": "object",
 		"properties": {
@@ -399,7 +399,7 @@ func TestCleanJSONSchema_ArrayItemsRequireArrayType_Issue6011(t *testing.T) {
 		})
 	}
 
-	// Case 3: property has explicit non-array type (e.g. "string") with extraneous items
+	// 情形 3：属性有显式的非数组类型（例如 "string"）却带有多余的 items
 	inputNonArrayWithItems := `{
 		"type": "object",
 		"properties": {
@@ -431,7 +431,7 @@ func TestCleanJSONSchema_ArrayItemsRequireArrayType_Issue6011(t *testing.T) {
 		})
 	}
 
-	// Case 4: property literally named "items" should be preserved and not treated as array items
+	// 情形 4：字面命名为 "items" 的属性应被保留，不应被当作数组 items
 	inputPropertyNamedItems := `{
 		"type": "object",
 		"properties": {
@@ -456,7 +456,7 @@ func TestCleanJSONSchema_ArrayItemsRequireArrayType_Issue6011(t *testing.T) {
 		})
 	}
 
-	// Case 5: Root array with items missing type
+	// 情形 5：根数组的 items 缺少 type
 	inputRootArrayMissingType := `{
 		"items": {
 			"type": "string"
@@ -476,7 +476,7 @@ func TestCleanJSONSchema_ArrayItemsRequireArrayType_Issue6011(t *testing.T) {
 		})
 	}
 
-	// Case 6: Cleaning is idempotent across all cleaners
+	// 情形 6：清理对所有清理器都是幂等的
 	for name, clean := range cleaners {
 		t.Run(name+"_idempotent", func(t *testing.T) {
 			cleaned1 := clean(inputMissingType)
@@ -488,10 +488,10 @@ func TestCleanJSONSchema_ArrayItemsRequireArrayType_Issue6011(t *testing.T) {
 	}
 }
 
-// TestCleanJSONSchema_EnforcesObjectTypeForProperties_Issue6394 tests issue 6394:
-// When a property defines nested properties/required (e.g. through a union type like ["string", "object"],
-// merged anyOf branches, or missing type), Gemini requires type to be OBJECT.
-// Properties or required must never be emitted on a non-OBJECT type node.
+// TestCleanJSONSchema_EnforcesObjectTypeForProperties_Issue6394 测试 issue 6394：
+// 当属性定义了嵌套的 properties/required 时（例如通过 ["string", "object"] 这样的联合类型、
+// 合并后的 anyOf 分支，或缺省 type），Gemini 要求 type 为 OBJECT。
+// 绝不能在非 OBJECT 类型的节点上输出 properties 或 required。
 func TestCleanJSONSchema_EnforcesObjectTypeForProperties_Issue6394(t *testing.T) {
 	cleaners := map[string]func(string) string{
 		"GeminiJSONSchema": CleanJSONSchemaForGeminiJSONSchema,
@@ -552,10 +552,10 @@ func TestCleanJSONSchema_EnforcesObjectTypeForProperties_Issue6394(t *testing.T)
 	})
 }
 
-// TestCleanJSONSchema_RemovesDependentKeywords_Issue6539 covers Issue #6539:
-// JSON Schema keywords dependentRequired, dependentSchemas, and dependencies are rejected by
-// the Gemini/Antigravity backend with 400 INVALID_ARGUMENT ("Unknown name \"dependentRequired\" ... Cannot find field")
-// and must be stripped while preserving legitimate tool properties with those names.
+// TestCleanJSONSchema_RemovesDependentKeywords_Issue6539 覆盖 Issue #6539：
+// JSON Schema 关键字 dependentRequired、dependentSchemas 和 dependencies 被
+// Gemini/Antigravity 后端以 400 INVALID_ARGUMENT（"Unknown name \"dependentRequired\" ... Cannot find field"）
+// 拒绝，必须将其剥离，同时保留同名的合法工具属性。
 func TestCleanJSONSchema_RemovesDependentKeywords_Issue6539(t *testing.T) {
 	input := `{
 		"type": "object",
@@ -644,10 +644,10 @@ func TestCleanJSONSchema_RemovesDependentKeywords_Issue6539(t *testing.T) {
 	}
 }
 
-// TestCleanJSONSchema_PreservesMultiBranchAnyOfOneOf_Issue3662 covers Issue #3662:
-// Multi-branch anyOf/oneOf unions (such as string | image object | audio object) must not be
-// flattened to a single selected branch, which previously caused non-first object branches (e.g. audio)
-// to disappear from the cleaned schema.
+// TestCleanJSONSchema_PreservesMultiBranchAnyOfOneOf_Issue3662 覆盖 Issue #3662：
+// 多分支的 anyOf/oneOf 联合（例如 string | image 对象 | audio 对象）不得被
+// 压平成单个选中的分支，此前这会导致非首个的对象分支（例如 audio）
+// 从清理后的 schema 中消失。
 func TestCleanJSONSchema_PreservesMultiBranchAnyOfOneOf_Issue3662(t *testing.T) {
 	input := `{
 		"type": "object",
@@ -684,7 +684,7 @@ func TestCleanJSONSchema_PreservesMultiBranchAnyOfOneOf_Issue3662(t *testing.T) 
 			got := clean(input)
 			compareJSON(t, input, got)
 
-			// Verify idempotency when cleaned a second time
+			// 验证第二次清理时的幂等性
 			gotSecond := clean(got)
 			compareJSON(t, got, gotSecond)
 		})
@@ -750,7 +750,7 @@ func TestCleanJSONSchema_PreservesMultiBranchAnyOfOneOf_Issue3662(t *testing.T) 
 			"required": ["item"]
 		}`
 
-		// parametersJsonSchema carrier preserves standard JSON Schema oneOf
+		// parametersJsonSchema 载体保留标准 JSON Schema 的 oneOf
 		jsonSchemaParsed := gjson.Parse(CleanJSONSchemaForGeminiJSONSchema(oneOfInput))
 		if got := len(jsonSchemaParsed.Get("properties.item.oneOf").Array()); got != 3 {
 			t.Fatalf("[GeminiJSONSchema] oneOf branch count = %d, want 3: %s", got, jsonSchemaParsed.Raw)
@@ -785,8 +785,8 @@ func TestCleanJSONSchema_PreservesMultiBranchAnyOfOneOf_Issue3662(t *testing.T) 
 	})
 
 	t.Run("BooleanUnionBranchesAndSiblingAnyOfOneOf", func(t *testing.T) {
-		// When a node declares both anyOf and oneOf, native Schema carriers keep anyOf without concatenating
-		// oneOf into it and record oneOf as a description hint, while GeminiJSONSchema preserves both.
+		// 当一个节点同时声明 anyOf 和 oneOf 时，原生 Schema 载体会保留 anyOf 而不把
+		// oneOf 拼接进去，并将 oneOf 记为 description 提示，而 GeminiJSONSchema 两者都保留。
 		siblingUnions := `{
 			"type": "object",
 			"properties": {
@@ -807,7 +807,7 @@ func TestCleanJSONSchema_PreservesMultiBranchAnyOfOneOf_Issue3662(t *testing.T) 
 			t.Fatalf("[GeminiJSONSchema] expected both anyOf and oneOf to be preserved: %s", jsonSchemaSibling.Raw)
 		}
 
-		// Null-only unions (anyOf:[null], oneOf:[null], anyOf:[false, null]) must not panic across any cleaner.
+		// 仅含 null 的联合（anyOf:[null]、oneOf:[null]、anyOf:[false, null]）在任何清理器中都不得 panic。
 		nullOnlyCleaners := map[string]func(string) string{
 			"GeminiJSONSchema": CleanJSONSchemaForGeminiJSONSchema,
 		}
@@ -829,12 +829,12 @@ func TestCleanJSONSchema_PreservesMultiBranchAnyOfOneOf_Issue3662(t *testing.T) 
 	})
 }
 
-// TestCleanJSONSchema_RemovesDiscriminatorKeyword_Issue6639 covers Issue #6639:
-// OpenAPI/JSON Schema keyword "discriminator" alongside preserved anyOf/oneOf unions
-// (both directly on a property schema and inside array items) or on object schemas
-// is rejected by the Gemini/Antigravity backend with 400 INVALID_ARGUMENT
-// ("Unknown name \"discriminator\" ... Cannot find field") and must be stripped while
-// preserving legitimate tool properties named "discriminator".
+// TestCleanJSONSchema_RemovesDiscriminatorKeyword_Issue6639 覆盖 Issue #6639：
+// OpenAPI/JSON Schema 关键字 "discriminator" 与保留下来的 anyOf/oneOf 联合
+// （无论是在属性的 schema 上还是数组 items 内部）或对象 schema 上
+// 一同被 Gemini/Antigravity 后端以 400 INVALID_ARGUMENT
+// （"Unknown name \"discriminator\" ... Cannot find field"）拒绝，必须将其剥离，
+// 同时保留名为 "discriminator" 的合法工具属性。
 func TestCleanJSONSchema_RemovesDiscriminatorKeyword_Issue6639(t *testing.T) {
 	input := `{
 		"type": "object",

@@ -52,7 +52,7 @@ func applyPatchTestPayloads(chunk []byte) [][]byte {
 	return payloads
 }
 
-// applyPatchTestFrames separates real parameter fragments from terminal snapshots.
+// applyPatchTestFrames 将真实的参数片段与终止性快照区分开。
 func applyPatchTestFrames(protocol, name string) (string, string) {
 	args := applyPatchTestPartial + applyPatchTestRemainder
 	switch protocol {
@@ -117,7 +117,7 @@ func applyPatchTestDeclaration(t *testing.T, protocol string, body []byte) {
 	if tool.Get(parameters+".properties.input.type").String() != "string" || tool.Get(parameters+".required.0").String() != "input" {
 		t.Fatalf("wrong standard input schema: %s", tool.Raw)
 	}
-	// Antigravity's existing schema sanitizer replaces additionalProperties with a description.
+	// Antigravity 现有的 schema 清洗器会用 description 替换 additionalProperties。
 	if protocol == "antigravity" {
 		if !strings.Contains(tool.Get(parameters+".description").String(), "No extra properties allowed") {
 			t.Fatalf("sanitized schema lost the strict contract: %s", tool.Raw)
@@ -154,7 +154,7 @@ func applyPatchTestWireField(data []byte, target protowire.Number) []byte {
 	return nil
 }
 
-// Use a real downstream socket, not ResponseRecorder, to prove flush reaches a client.
+// 使用真实的下游 socket 而非 ResponseRecorder，以证明 flush 能到达客户端。
 func newApplyPatchTestGateway(t *testing.T, exec cliproxyauth.ProviderExecutor, auth *cliproxyauth.Auth) *httptest.Server {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -175,8 +175,8 @@ func newApplyPatchTestGateway(t *testing.T, exec cliproxyauth.ProviderExecutor, 
 	return server
 }
 
-// The server cannot send the suffix or terminal frame until the client acknowledges
-// a complete decoded line. Snapshot paths instead acknowledge unrelated text.
+// 在客户端确认一条完整的已解码行之前，服务器无法发送后缀或终止帧。
+// 而快照路径确认的是不相关的文本。
 func TestApplyPatchBridgeLiveHTTPPreviewMatrix(t *testing.T) {
 	for _, tc := range []struct {
 		provider, protocol string
@@ -441,8 +441,8 @@ func TestApplyPatchBridgeOrdinaryFunctionControl(t *testing.T) {
 	}
 }
 
-// Kimi selects its reused Chat and Claude executors for these ordinary clients.
-// Custom Responses clients select Kimi's Responses branch, covered by the HTTP matrix.
+// Kimi 会为这些普通客户端选择其复用的 Chat 和 Claude 执行器。
+// 自定义 Responses 客户端会选择 Kimi 的 Responses 分支，该分支由 HTTP 矩阵覆盖。
 func applyPatchTestPreviewChunks(t *testing.T, chunks <-chan cliproxyexecutor.StreamChunk, unblock func()) []byte {
 	t.Helper()
 	var lifecycle applyPatchTestLifecycle
@@ -510,7 +510,7 @@ func TestApplyPatchBridgeOrdinaryFunctionStreamControl(t *testing.T) {
 }
 
 func TestApplyPatchBridgeInvalidStreamArguments(t *testing.T) {
-	// Valid decoded prefixes can precede EOF failure; raw envelope fields must not leak.
+	// 合法的已解码前缀可能出现在 EOF 失败之前；原始信封字段绝不能泄漏。
 	for _, args := range []string{`{"input":7}`, `{}`, `{"input":null}`, `{"input":"x","input":"y"}`, `{"input":"x","extra":"RAW_SECRET"}`, `{"input":"unfinished"`, `{"input":"x"} trailing`} {
 		t.Run(args, func(t *testing.T) {
 			reply := strings.ReplaceAll(task6ProviderFixture("custom-compat", "stream", "apply_patch"), fmt.Sprintf("%q", `{"input":7,"secret":"RAW_SECRET"}`), fmt.Sprintf("%q", args))

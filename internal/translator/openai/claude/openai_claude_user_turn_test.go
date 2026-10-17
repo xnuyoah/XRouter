@@ -87,8 +87,8 @@ func TestConvertClaudeRequestToOpenAI_ToolResultKeepsTurnBesideUnsendableFile(t 
 	}
 }
 
-// claudeImageTurnToOpenAI translates a conversation of two history turns followed by a final user
-// turn holding the given content parts.
+// claudeImageTurnToOpenAI 转换由两个历史轮次加上携带给定内容
+// parts 的最终用户轮次组成的对话。
 func claudeImageTurnToOpenAI(finalContent string) sdktranslator.RequestEnvelope {
 	input := `{"model":"m","messages":[{"role":"user","content":"a"},{"role":"assistant","content":"b"},{"role":"user","content":[` + finalContent + `]}]}`
 	return sdktranslator.TranslateRequestEnvelope(context.Background(), sdktranslator.FormatClaude, sdktranslator.FormatOpenAI, sdktranslator.RequestEnvelope{

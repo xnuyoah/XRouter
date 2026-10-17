@@ -14,13 +14,13 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executionregistry"
 )
 
-// HomeInFlightTransport publishes in-flight observation frames for one Home lifetime.
+// HomeInFlightTransport 为一个 Home 生命周期发布在途观测帧。
 type HomeInFlightTransport interface {
 	HeartbeatOK() bool
 	LPushInFlightSnapshot(context.Context, []byte) error
 }
 
-// HomeInFlightPublisherConfig bounds in-flight observation frames.
+// HomeInFlightPublisherConfig 限定在途观测帧的边界。
 type HomeInFlightPublisherConfig struct {
 	SnapshotInterval   time.Duration
 	MaxPartBytes       int
@@ -44,7 +44,7 @@ func homeInFlightStatus(accounted bool) home.InFlightAccountedStatus {
 	return home.InFlightUnaccounted
 }
 
-// HomeInFlightPublisherConfigFromConfig converts validated runtime config into publisher bounds.
+// HomeInFlightPublisherConfigFromConfig 将校验过的运行时配置转换为发布器边界。
 func HomeInFlightPublisherConfigFromConfig(cfg internalconfig.CredentialInFlightConfig) (HomeInFlightPublisherConfig, error) {
 	snapshotInterval, _, _, errDurations := cfg.Durations()
 	if errDurations != nil {
@@ -64,7 +64,7 @@ func HomeInFlightPublisherConfigFromConfig(cfg internalconfig.CredentialInFlight
 	}, nil
 }
 
-// ApplyHomeInFlightPublisherConfig stores an immutable validated publisher config snapshot.
+// ApplyHomeInFlightPublisherConfig 存储不可变的已校验发布器配置快照。
 func (m *Manager) ApplyHomeInFlightPublisherConfig(cfg HomeInFlightPublisherConfig) {
 	if m == nil || !validHomeInFlightPublisherConfig(cfg) {
 		return
@@ -73,7 +73,7 @@ func (m *Manager) ApplyHomeInFlightPublisherConfig(cfg HomeInFlightPublisherConf
 	m.homeInFlightPublisherConfig.Store(&snapshot)
 }
 
-// HomeInFlightPublisherConfig returns the current immutable publisher config snapshot.
+// HomeInFlightPublisherConfig 返回当前不可变的发布器配置快照。
 func (m *Manager) HomeInFlightPublisherConfig() HomeInFlightPublisherConfig {
 	if m == nil {
 		return HomeInFlightPublisherConfig{}
@@ -101,7 +101,7 @@ func validHomeInFlightPublisherBounds(cfg HomeInFlightPublisherConfig) bool {
 		cfg.MaxAggregateGroups > 0 && cfg.MaxDetails >= 0 && cfg.MaxStringBytes > 0
 }
 
-// StartHomeInFlightPublisher publishes periodic snapshots for the supplied lifetime registry.
+// StartHomeInFlightPublisher 为给定的生命周期注册表定期发布快照。
 func (m *Manager) StartHomeInFlightPublisher(ctx context.Context, transport HomeInFlightTransport, registry *executionregistry.Registry) {
 	if m == nil || transport == nil || registry == nil {
 		return

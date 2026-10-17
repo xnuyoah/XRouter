@@ -2,7 +2,7 @@ package translator
 
 import "context"
 
-// PluginHooks defines optional translator extension hooks provided by plugins.
+// PluginHooks 定义插件可选提供的转换器扩展钩子。
 type PluginHooks interface {
 	NormalizeRequest(ctx context.Context, from, to Format, model string, body []byte, stream bool) []byte
 	TranslateRequest(ctx context.Context, from, to Format, model string, body []byte, stream bool) ([]byte, bool)

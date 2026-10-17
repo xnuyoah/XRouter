@@ -7,9 +7,9 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-// EnsureResponsesUsageDetails ensures that Responses usage objects contain output_tokens_details
-// (defaulting reasoning_tokens to 0) and input_tokens_details (defaulting cached_tokens to 0).
-// It supports plain JSON payloads, single-line SSE data: lines, and multi-line SSE frames (e.g. event: ...\ndata: ...).
+// EnsureResponsesUsageDetails 确保 Responses 用量对象包含 output_tokens_details
+// （reasoning_tokens 默认为 0）和 input_tokens_details（cached_tokens 默认为 0）。
+// 它支持纯 JSON 载荷、单行 SSE data: 行以及多行 SSE 帧（例如 event: ...\ndata: ...）。
 func EnsureResponsesUsageDetails(payload []byte) []byte {
 	if len(payload) == 0 {
 		return payload
@@ -20,7 +20,7 @@ func EnsureResponsesUsageDetails(payload []byte) []byte {
 		return payload
 	}
 
-	// 1. JSON-first: If trimmed payload starts with '{', process as a plain JSON object.
+	// 1. JSON 优先：若去除首尾空白后的载荷以 '{' 开头，则作为纯 JSON 对象处理。
 	if trimmed[0] == '{' {
 		if gjson.GetBytes(trimmed, "object").String() == "response.compaction" {
 			return payload
@@ -34,7 +34,7 @@ func EnsureResponsesUsageDetails(payload []byte) []byte {
 		return updated
 	}
 
-	// 2. SSE frames: Scan lines for data: prefixed lines and patch their JSON payloads.
+	// 2. SSE 帧：逐行扫描带 data: 前缀的行，并修补其 JSON 载荷。
 	if bytes.Contains(payload, []byte("data:")) {
 		lines := bytes.Split(payload, []byte("\n"))
 		modified := false

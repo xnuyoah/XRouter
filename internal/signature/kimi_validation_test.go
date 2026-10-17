@@ -11,11 +11,11 @@ import (
 	"testing"
 )
 
-// kimiSignatureCorpusPath locates the harvested Kimi signature corpus. The
-// corpus lives with the collection skill that produced it and is not tracked in
-// this repository, matching how the Grok native corpus is handled:
-// tests that need real traffic skip when it is absent rather than committing
-// captured payloads.
+// kimiSignatureCorpusPath 定位采集到的 Kimi 签名语料。该
+// 语料存放在生成它的采集技能旁边，且未纳入
+// 本仓库跟踪，与 Grok 原生语料的处理方式一致：
+// 需要真实流量的测试在它缺失时跳过，而不是提交
+// 捕获到的载荷。
 func kimiSignatureCorpusPath() (string, bool) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
@@ -29,8 +29,8 @@ func kimiSignatureCorpusPath() (string, bool) {
 	return path, true
 }
 
-// masterSignatureCatalogPath locates the cross-provider signature catalog from
-// the same collection skill.
+// masterSignatureCatalogPath 定位来自同一采集技能的跨供应商
+// 签名目录。
 func masterSignatureCatalogPath() (string, bool) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
@@ -76,11 +76,11 @@ func loadKimiCorpus(t *testing.T) []string {
 	return out
 }
 
-// synthesizeKimiSignature builds a signature-shaped payload of the requested
-// decoded size from a seeded PRNG. Kimi identification rests entirely on raw
-// length plus the payload being high-entropy unpadded base64, and none of that
-// requires captured traffic, so the contract tests below run everywhere instead
-// of depending on a local corpus.
+// synthesizeKimiSignature 用带种子的 PRNG 构造一个所请求
+// 解码大小的签名形状载荷。Kimi 的识别完全依赖原始
+// 长度加上载荷是高熵的无填充 base64，而这些都
+// 不需要捕获的流量，因此下面的契约测试在任何地方都能运行，
+// 而不依赖本地语料。
 func synthesizeKimiSignature(t *testing.T, decodedLen int, seed int64) string {
 	t.Helper()
 	buf := make([]byte, decodedLen)
@@ -91,11 +91,11 @@ func synthesizeKimiSignature(t *testing.T, decodedLen int, seed int64) string {
 	return base64.RawStdEncoding.EncodeToString(buf)
 }
 
-// TestKimiThinkingSignatureLengths_MatchDecodedSizes pins the arithmetic that
-// makes the two constants reachable at all: unpadded base64 of 9709 and 3255
-// bytes is exactly 12946 and 4340 characters. A future edit that changes one
-// constant without the other would otherwise produce a length no real payload
-// can have.
+// TestKimiThinkingSignatureLengths_MatchDecodedSizes 固定住让这两个
+// 常量得以被触及的算术关系：9709 和 3255
+// 字节的无填充 base64 恰好是 12946 和 4340 个字符。否则日后若改了
+// 其中一个常量而不改另一个，就会产生真实载荷
+// 不可能具有的长度。
 func TestKimiThinkingSignatureLengths_MatchDecodedSizes(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -144,9 +144,9 @@ func TestInspectKimiThinkingSignature_ReportsMode(t *testing.T) {
 	}
 }
 
-// TestInspectKimiThinkingSignature_RejectsNeighbouringLengths is the core
-// negative test for a size-only probe: one character in either direction must
-// fall out of the family.
+// TestInspectKimiThinkingSignature_RejectsNeighbouringLengths 是针对
+// 纯大小探测的核心否定测试：任一方向偏移一个字符都必须
+// 落到该族类之外。
 func TestInspectKimiThinkingSignature_RejectsNeighbouringLengths(t *testing.T) {
 	for _, decodedLen := range []int{9709, 3255} {
 		native := synthesizeKimiSignature(t, decodedLen, 3)
@@ -189,9 +189,9 @@ func TestInspectKimiThinkingSignature_RejectsMalformedInput(t *testing.T) {
 	}
 }
 
-// TestInspectKimiThinkingSignature_RejectsLowEntropyFiller pins the one attack a
-// length check alone cannot survive: a caller that knows the constant and pads
-// to it with structured bytes.
+// TestInspectKimiThinkingSignature_RejectsLowEntropyFiller 固定住单靠
+// 长度检查无法抵御的一种攻击：调用方知道该常量并用
+// 结构化字节填充到该长度。
 func TestInspectKimiThinkingSignature_RejectsLowEntropyFiller(t *testing.T) {
 	for _, length := range []int{KimiThinkingSignatureStreamingLen, KimiThinkingSignatureNonStreamingLen} {
 		if IsValidKimiThinkingSignature(strings.Repeat("A", length)) {
@@ -200,21 +200,21 @@ func TestInspectKimiThinkingSignature_RejectsLowEntropyFiller(t *testing.T) {
 	}
 }
 
-// TestInspectKimiThinkingSignature_RejectsSelfDescribingEnvelope guards the
-// exported entry point. DetectSignatureProviderForBlock already runs the
-// envelope probes first, but callers can reach this validator directly, so a
-// foreign envelope must not be accepted here on length alone.
+// TestInspectKimiThinkingSignature_RejectsSelfDescribingEnvelope 守护
+// 导出的入口点。DetectSignatureProviderForBlock 已经先运行了
+// 信封探测，但调用方可以直接访问此校验器，因此
+// 外来信封不得仅凭长度在这里被接受。
 func TestInspectKimiThinkingSignature_RejectsSelfDescribingEnvelope(t *testing.T) {
 	if IsValidKimiThinkingSignature(observedFable5Sample) {
 		t.Errorf("Claude CAIS sample accepted as Kimi signature")
 	}
 }
 
-// TestDetectSignatureProvider_KimiRunsAfterEnvelopeProbes pins the ordering
-// invariant. Kimi's base64 is uniformly distributed, so roughly 6% of real
-// signatures start with one of the "CERg" envelope characters; those must still
-// resolve to Kimi after the envelope probes decline, and a real envelope must
-// never be captured by the size probe.
+// TestDetectSignatureProvider_KimiRunsAfterEnvelopeProbes 固定住顺序
+// 不变量。Kimi 的 base64 是均匀分布的，因此约 6% 的真实
+// 签名以 "CERg" 信封字符之一开头；这些在信封探测
+// 拒绝之后仍必须解析为 Kimi，而真正的信封绝
+// 不能被大小探测捕获。
 func TestDetectSignatureProvider_KimiRunsAfterEnvelopeProbes(t *testing.T) {
 	if got := DetectSignatureProvider(observedFable5Sample); got != SignatureProviderClaude {
 		t.Fatalf("DetectSignatureProvider = %q, want %q for a Claude CAIS sample", got, SignatureProviderClaude)
@@ -245,8 +245,8 @@ func TestInspectGrokEncryptedContent_RejectsKimiLengths(t *testing.T) {
 	}
 }
 
-// TestInspectKimiThinkingSignature_NativeCorpus validates the synthesized
-// contract above against real harvested traffic when the corpus is available.
+// TestInspectKimiThinkingSignature_NativeCorpus 在语料可用时，
+// 用真实采集的流量验证上面的合成契约。
 func TestInspectKimiThinkingSignature_NativeCorpus(t *testing.T) {
 	modes := map[KimiThinkingSignatureMode]int{}
 	for _, sig := range loadKimiCorpus(t) {
@@ -264,9 +264,9 @@ func TestInspectKimiThinkingSignature_NativeCorpus(t *testing.T) {
 	}
 }
 
-// TestDetectSignatureProvider_KimiProbeDoesNotDisturbCatalog replays the whole
-// cross-provider catalog to prove the size probe changed nothing for the
-// self-describing families and never claims a Grok payload.
+// TestDetectSignatureProvider_KimiProbeDoesNotDisturbCatalog 重放整个
+// 跨供应商目录，以证明大小探测对自描述族类没有
+// 任何改变，也从不声称某个载荷是 Grok。
 func TestDetectSignatureProvider_KimiProbeDoesNotDisturbCatalog(t *testing.T) {
 	path, ok := masterSignatureCatalogPath()
 	if !ok {
@@ -307,9 +307,9 @@ func TestDetectSignatureProvider_KimiProbeDoesNotDisturbCatalog(t *testing.T) {
 			t.Errorf("%d %s signatures captured by the Kimi size probe", captured, claimed)
 		}
 	}
-	// xAI stays in the residual class by contract: its ciphertext carries no
-	// envelope and no fixed length, so any positive claim would also capture
-	// unrelated opaque payloads.
+	// xAI 按约定保留在残余类别中：它的密文不携带
+	// 信封也没有固定长度，因此任何肯定性的声称都会把
+	// 无关的不透明载荷也一并捕获。
 	for detected, count := range matrix["grok"] {
 		if detected != SignatureProviderUnknown {
 			t.Errorf("%d grok signatures classified as %q, want %q", count, detected, SignatureProviderUnknown)

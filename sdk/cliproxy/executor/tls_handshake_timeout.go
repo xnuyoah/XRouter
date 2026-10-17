@@ -6,21 +6,21 @@ import (
 	"fmt"
 )
 
-// ConfiguredTLSHandshakeTimeoutError identifies a TLS handshake failure
-// caused by an internally configured establishment bound rather than by
-// the caller's request context. Transports construct it only after they
-// have established that the parent context was still live and their own
-// handshake child context expired.
+// ConfiguredTLSHandshakeTimeoutError 标识一次 TLS 握手失败，
+// 其原因是内部配置的建连时限，而非调用方的请求上下文。
+// 传输层只会在确认父上下文仍然存活、
+// 且自身的握手子上下文已过期之后，
+// 才构造它。
 //
-// The concrete type is deliberately shared through this neutral executor
-// package so both transport helpers and auth retry classification can
-// recognize it without importing each other or trusting error text.
+// 该具体类型特意通过这个中立的执行器包共享，
+// 以便传输辅助代码和认证重试分类都能识别它，
+// 而无需互相导入或依赖错误文本。
 type ConfiguredTLSHandshakeTimeoutError struct {
 	cause error
 }
 
-// NewConfiguredTLSHandshakeTimeoutError wraps the handshake failure that
-// resulted from an internally configured TLS handshake deadline.
+// NewConfiguredTLSHandshakeTimeoutError 包装由内部配置的
+// TLS 握手截止时间所导致的握手失败。
 func NewConfiguredTLSHandshakeTimeoutError(cause error) error {
 	if cause == nil {
 		return nil
@@ -35,8 +35,8 @@ func (e *ConfiguredTLSHandshakeTimeoutError) Error() string {
 	return fmt.Sprintf("tls handshake timeout: %v", e.cause)
 }
 
-// Unwrap preserves the original handshake error chain, including
-// context.DeadlineExceeded, for diagnostics and errors.Is checks.
+// Unwrap 保留原始的握手错误链（包括 context.DeadlineExceeded），
+// 以供诊断和 errors.Is 检查使用。
 func (e *ConfiguredTLSHandshakeTimeoutError) Unwrap() error {
 	if e == nil {
 		return nil
@@ -44,16 +44,16 @@ func (e *ConfiguredTLSHandshakeTimeoutError) Unwrap() error {
 	return e.cause
 }
 
-// IsConfiguredTLSHandshakeTimeoutError reports whether err is exclusively
-// explained by configured TLS handshake deadlines.
+// IsConfiguredTLSHandshakeTimeoutError 报告 err 是否完全
+// 由配置的 TLS 握手截止时间所导致。
 //
-// Every context.Canceled or context.DeadlineExceeded occurrence in the
-// error tree must be contained in a ConfiguredTLSHandshakeTimeoutError
-// subtree, and at least one configured timeout subtree must itself contain
-// a deadline. A caller-owned cancellation or deadline anywhere outside
-// such a subtree therefore wins, including when it is combined with a
-// configured timeout through errors.Join. Matching error text is never
-// sufficient on its own.
+// 错误树中每一处 context.Canceled 或 context.DeadlineExceeded
+// 都必须位于某个 ConfiguredTLSHandshakeTimeoutError 子树内，
+// 并且至少有一个配置超时子树自身包含截止时间。
+// 因此，任何位于此类子树之外、由调用方拥有的取消或截止时间
+// 都优先——包括通过 errors.Join 与配置超时组合在一起的情况。
+// 仅凭错误文本匹配
+// 永远不足够。
 func IsConfiguredTLSHandshakeTimeoutError(err error) bool {
 	if err == nil {
 		return false
@@ -67,14 +67,14 @@ func inspectConfiguredTLSHandshakeTimeout(err error) (foundConfiguredDeadline bo
 		return false, false
 	}
 	if configured, ok := err.(*ConfiguredTLSHandshakeTimeoutError); ok && configured != nil {
-		// The transport has already proven that this subtree's deadline is
-		// internally owned and that its parent context was still live.
+		// 传输层已经证明该子树的截止时间是
+		// 内部拥有的，且其父上下文仍然存活。
 		return errors.Is(configured.cause, context.DeadlineExceeded), false
 	}
-	// A node can assert caller-context identity through its own Is method
-	// while Unwrap exposes unrelated children. Inspect that own identity
-	// at every non-configured node, before descending, so such a caller
-	// error cannot hide behind a joined configured timeout.
+	// 某个节点可以通过自身的 Is 方法断言调用方上下文身份，
+	// 而 Unwrap 暴露的却是无关的子节点。在每个非配置节点上，
+	// 都要在向下遍历之前检查该自身身份，这样这类调用方
+	// 错误就无法隐藏在通过 Join 组合的配置超时之后。
 	hasUnownedContextError = hasOwnContextIdentity(err)
 	for _, child := range unwrapChildErrors(err) {
 		childFound, childUnowned := inspectConfiguredTLSHandshakeTimeout(child)

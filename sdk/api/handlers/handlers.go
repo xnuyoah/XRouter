@@ -1,6 +1,6 @@
-// Package handlers provides core API handler functionality for the XRouter server.
-// It includes common types, client management, load balancing, and error handling
-// shared across all API endpoint handlers (OpenAI, Claude).
+// Package handlers 为 XRouter 服务器提供核心 API 处理器功能。
+// 它包含通用类型、客户端管理、负载均衡以及错误处理，
+// 由所有 API 端点处理器（OpenAI、Claude）共享。
 package handlers
 
 import (
@@ -30,26 +30,26 @@ import (
 	"golang.org/x/net/context"
 )
 
-// ErrorResponse represents a standard error response format for the API.
-// It contains a single ErrorDetail field.
+// ErrorResponse 表示 API 的标准错误响应格式。
+// 它包含单个 ErrorDetail 字段。
 type ErrorResponse struct {
-	// Error contains detailed information about the error that occurred.
+	// Error 包含所发生错误的详细信息。
 	Error ErrorDetail `json:"error"`
 }
 
-// ErrorDetail provides specific information about an error that occurred.
-// It includes a human-readable message, an error type, and an optional error code.
+// ErrorDetail 提供所发生错误的具体信息。
+// 它包含人类可读的消息、错误类型以及可选的错误码。
 type ErrorDetail struct {
-	// Message is a human-readable message providing more details about the error.
+	// Message 是提供错误更多细节的人类可读消息。
 	Message string `json:"message"`
 
-	// Type is the category of error that occurred (e.g., "invalid_request_error").
+	// Type 是所发生错误的类别（例如 "invalid_request_error"）。
 	Type string `json:"type"`
 
-	// Code is a short code identifying the error, if applicable.
+	// Code 是标识该错误的简短代码（如适用）。
 	Code string `json:"code,omitempty"`
 
-	// Retryable optionally indicates whether a retry might fix the issue automatically.
+	// Retryable 可选地表示重试是否可能自动解决问题。
 	Retryable *bool `json:"retryable,omitempty"`
 }
 
@@ -58,21 +58,21 @@ const idempotencyKeyMetadataKey = "idempotency_key"
 const (
 	defaultStreamingKeepAliveSeconds = 0
 	defaultStreamingBootstrapRetries = 0
-	// Stream interceptor history is intentionally bounded and not configurable in the first SDK surface.
+	// 流拦截器历史被有意限制大小，且在首个 SDK 界面中不可配置。
 	maxStreamInterceptorHistoryChunks = 64
 	maxStreamInterceptorHistoryBytes  = 1 << 20
 )
 
-// BuildErrorResponseBody builds an OpenAI-compatible JSON error response body.
-// If errText is already valid JSON, it is compacted to ensure single-line SSE compatibility
-// while preserving upstream error payloads.
+// BuildErrorResponseBody 构建 OpenAI 兼容的 JSON 错误响应体。
+// 如果 errText 已是有效 JSON，则对其进行压缩以确保单行 SSE 兼容性，
+// 同时保留上游错误载荷。
 func BuildErrorResponseBody(status int, errText string) []byte {
 	return BuildErrorResponseBodyWithError(status, errText, nil)
 }
 
-// BuildErrorResponseBodyWithError builds an OpenAI-compatible JSON error response body,
-// preserving structured classifications (such as terminal upstream auth failures and retryable flags)
-// present in err.
+// BuildErrorResponseBodyWithError 构建 OpenAI 兼容的 JSON 错误响应体，
+// 并保留 err 中存在的结构化分类
+// （例如终止性的上游认证失败和可重试标记）。
 func BuildErrorResponseBodyWithError(status int, errText string, err error) []byte {
 	if status <= 0 {
 		status = http.StatusInternalServerError
@@ -163,8 +163,8 @@ var streamingKeepAliveTickerFactory = func(interval time.Duration) (<-chan time.
 	return ticker.C, ticker.Stop
 }
 
-// StreamingKeepAliveInterval returns the streaming keep-alive interval for this server (SSE heartbeats and WebSocket Ping frames).
-// Returning 0 disables keep-alives (default when unset).
+// StreamingKeepAliveInterval 返回该服务器的流式保活间隔（SSE 心跳和 WebSocket Ping 帧）。
+// 返回 0 会禁用保活（未设置时的默认值）。
 func StreamingKeepAliveInterval(cfg *config.SDKConfig) time.Duration {
 	seconds := defaultStreamingKeepAliveSeconds
 	if cfg != nil {
@@ -176,14 +176,14 @@ func StreamingKeepAliveInterval(cfg *config.SDKConfig) time.Duration {
 	return time.Duration(seconds) * time.Second
 }
 
-// StreamingSendKeepAliveBeforeFT returns whether SSE keep-alives should be sent before the first token arrives.
-// It is active only when streaming.send-keepalive-before-ft is true and streaming.keepalive-seconds > 0.
+// StreamingSendKeepAliveBeforeFT 返回是否应在第一个 token 到达之前发送 SSE 保活。
+// 仅当 streaming.send-keepalive-before-ft 为 true 且 streaming.keepalive-seconds > 0 时生效。
 func StreamingSendKeepAliveBeforeFT(cfg *config.SDKConfig) bool {
 	return cfg != nil && cfg.Streaming.SendKeepAliveBeforeFT && StreamingKeepAliveInterval(cfg) > 0
 }
 
-// NewStreamingKeepAliveTicker returns a ticker channel and a stop function for streaming keep-alives.
-// When interval <= 0, it returns a nil channel and a no-op stop function.
+// NewStreamingKeepAliveTicker 返回用于流式保活的分时器通道和停止函数。
+// 当 interval <= 0 时，返回 nil 通道和无操作的停止函数。
 func NewStreamingKeepAliveTicker(interval time.Duration) (<-chan time.Time, func()) {
 	if interval <= 0 {
 		return nil, func() {}
@@ -191,8 +191,8 @@ func NewStreamingKeepAliveTicker(interval time.Duration) (<-chan time.Time, func
 	return streamingKeepAliveTickerFactory(interval)
 }
 
-// NewPreFirstTokenKeepAliveTicker returns a ticker channel and a stop function for pre-first-token SSE keep-alives.
-// It is active only when streaming.send-keepalive-before-ft is true and streaming.keepalive-seconds > 0.
+// NewPreFirstTokenKeepAliveTicker 返回用于首 token 之前 SSE 保活的分时器通道和停止函数。
+// 仅当 streaming.send-keepalive-before-ft 为 true 且 streaming.keepalive-seconds > 0 时生效。
 func NewPreFirstTokenKeepAliveTicker(cfg *config.SDKConfig) (<-chan time.Time, func()) {
 	if !StreamingSendKeepAliveBeforeFT(cfg) {
 		return nil, func() {}
@@ -200,8 +200,8 @@ func NewPreFirstTokenKeepAliveTicker(cfg *config.SDKConfig) (<-chan time.Time, f
 	return NewStreamingKeepAliveTicker(StreamingKeepAliveInterval(cfg))
 }
 
-// SetStreamingKeepAliveTickerFactoryForTest overrides the keep-alive ticker factory for deterministic tests
-// and returns a restore function.
+// SetStreamingKeepAliveTickerFactoryForTest 为确定性测试覆盖保活分时器工厂，
+// 并返回一个恢复函数。
 func SetStreamingKeepAliveTickerFactoryForTest(factory func(interval time.Duration) (<-chan time.Time, func())) func() {
 	prev := streamingKeepAliveTickerFactory
 	if factory != nil {
@@ -212,8 +212,8 @@ func SetStreamingKeepAliveTickerFactoryForTest(factory func(interval time.Durati
 	}
 }
 
-// NonStreamingKeepAliveInterval returns the keep-alive interval for non-streaming responses.
-// Returning 0 disables keep-alives (default when unset).
+// NonStreamingKeepAliveInterval 返回非流式响应的保活间隔。
+// 返回 0 会禁用保活（未设置时的默认值）。
 func NonStreamingKeepAliveInterval(cfg *config.SDKConfig) time.Duration {
 	seconds := 0
 	if cfg != nil {
@@ -225,7 +225,7 @@ func NonStreamingKeepAliveInterval(cfg *config.SDKConfig) time.Duration {
 	return time.Duration(seconds) * time.Second
 }
 
-// StreamingBootstrapRetries returns how many times a streaming request may be retried before any bytes are sent.
+// StreamingBootstrapRetries 返回在发送任何字节之前流式请求可重试的次数。
 func StreamingBootstrapRetries(cfg *config.SDKConfig) int {
 	retries := defaultStreamingBootstrapRetries
 	if cfg != nil {
@@ -237,21 +237,21 @@ func StreamingBootstrapRetries(cfg *config.SDKConfig) int {
 	return retries
 }
 
-// PassthroughHeadersEnabled returns whether upstream response headers should be forwarded to clients.
-// Default is false.
+// PassthroughHeadersEnabled 返回是否应将上游响应头转发给客户端。
+// 默认为 false。
 func PassthroughHeadersEnabled(cfg *config.SDKConfig) bool {
 	return cfg != nil && cfg.PassthroughHeaders
 }
 
-// executionPassthroughHeaders keeps client responses behind passthrough-headers while
-// plugin-host internal executions always receive filtered upstream headers.
+// executionPassthroughHeaders 使客户端响应受 passthrough-headers 控制，
+// 而插件宿主内部执行始终接收经过过滤的上游响应头。
 func executionPassthroughHeaders(cfg *config.SDKConfig, internal bool) bool {
 	return internal || PassthroughHeadersEnabled(cfg)
 }
 
 func requestExecutionMetadata(ctx context.Context) map[string]any {
-	// Idempotency-Key is an optional client-supplied header used to correlate retries.
-	// Only include it if the client explicitly provides it.
+	// Idempotency-Key 是客户端提供的可选请求头，用于关联重试。
+	// 仅在客户端显式提供时才包含它。
 	key := ""
 	requestPath := ""
 	var ginCtx *gin.Context
@@ -317,8 +317,8 @@ func extractSessionIDsFromRequest(request *http.Request) (string, string) {
 	return "", ""
 }
 
-// EnrichContextWithSessionHierarchy extracts canonical session and parent session identities
-// from headers, payload, and metadata and records them in ClientRequestMetadata.
+// EnrichContextWithSessionHierarchy 从请求头、载荷和元数据中提取
+// 规范会话和父会话标识，并记录到 ClientRequestMetadata 中。
 func EnrichContextWithSessionHierarchy(ctx context.Context, headers http.Header, payload []byte, metadata map[string]any) context.Context {
 	meta := logging.GetClientRequestMetadata(ctx)
 	if info, ok := coresession.ExtractSessionInfo(headers, payload, metadata); ok {
@@ -395,7 +395,7 @@ func setGenerateMetadata(meta map[string]any, rawJSON []byte) {
 	if meta == nil {
 		return
 	}
-	// Missing or true means generation is enabled; only an explicit false disables generation.
+	// 缺失或为 true 表示生成已启用；只有显式的 false 才会禁用生成。
 	generate := true
 	node := gjson.GetBytes(rawJSON, "generate")
 	if node.Exists() && node.IsBool() && !node.Bool() {
@@ -404,35 +404,35 @@ func setGenerateMetadata(meta map[string]any, rawJSON []byte) {
 	meta[coreexecutor.GenerateMetadataKey] = generate
 }
 
-// BaseAPIHandler contains the handlers for API endpoints.
-// It holds a pool of clients to interact with the backend service and manages
-// load balancing, client selection, and configuration.
+// BaseAPIHandler 包含 API 端点的处理器。
+// 它持有一个用于与后端服务交互的客户端池，并管理
+// 负载均衡、客户端选择和配置。
 type BaseAPIHandler struct {
 	runtimeMu sync.RWMutex
 
-	// AuthManager manages auth lifecycle and execution in the new architecture.
+	// AuthManager 在新架构中管理 auth 生命周期和执行。
 	AuthManager *coreauth.Manager
 
-	// Cfg holds the current application configuration.
+	// Cfg 保存当前应用配置。
 	Cfg *config.SDKConfig
 
-	// PluginHost optionally applies plugin interceptors around upstream execution.
+	// PluginHost 可选地在上游执行前后应用插件拦截器。
 	PluginHost PluginInterceptorHost
 
-	// ModelRouterHost optionally routes matching requests to a plugin executor, the router's own
-	// executor, or a built-in provider before model-to-provider resolution and auth selection.
+	// ModelRouterHost 可选地将匹配的请求路由到插件执行器、路由器自身的
+	// 执行器或内置供应商，且发生在模型到供应商解析和 auth 选择之前。
 	ModelRouterHost PluginModelRouterHost
 }
 
-// NewBaseAPIHandlers creates a new API handlers instance.
-// It takes a slice of clients and configuration as input.
+// NewBaseAPIHandlers 创建一个新的 API 处理器实例。
+// 它以客户端切片和配置作为输入。
 //
-// Parameters:
-//   - cliClients: A slice of AI service clients
-//   - cfg: The application configuration
+// 参数：
+//   - cliClients: AI 服务客户端切片
+//   - cfg: 应用配置
 //
-// Returns:
-//   - *BaseAPIHandler: A new API handlers instance
+// 返回：
+//   - *BaseAPIHandler: 新的 API 处理器实例
 func NewBaseAPIHandlers(cfg *config.SDKConfig, authManager *coreauth.Manager) *BaseAPIHandler {
 	return &BaseAPIHandler{
 		Cfg:         cfg,
@@ -440,12 +440,12 @@ func NewBaseAPIHandlers(cfg *config.SDKConfig, authManager *coreauth.Manager) *B
 	}
 }
 
-// UpdateClients updates the handlers' client list and configuration.
-// This method is called when the configuration or authentication tokens change.
+// UpdateClients 更新处理器的客户端列表和配置。
+// 当配置或认证令牌发生变化时会调用此方法。
 //
-// Parameters:
-//   - clients: The new slice of AI service clients
-//   - cfg: The new application configuration
+// 参数：
+//   - clients: 新的 AI 服务客户端切片
+//   - cfg: 新的应用配置
 func (h *BaseAPIHandler) UpdateClients(cfg *config.SDKConfig) {
 	if h == nil {
 		return
@@ -455,7 +455,7 @@ func (h *BaseAPIHandler) UpdateClients(cfg *config.SDKConfig) {
 	h.runtimeMu.Unlock()
 }
 
-// CurrentConfig returns the current application configuration snapshot.
+// CurrentConfig 返回当前应用配置快照。
 func (h *BaseAPIHandler) CurrentConfig() *config.SDKConfig {
 	if h == nil {
 		return nil
@@ -466,7 +466,7 @@ func (h *BaseAPIHandler) CurrentConfig() *config.SDKConfig {
 	return cfg
 }
 
-// SetPluginHost configures the optional plugin interceptor host.
+// SetPluginHost 配置可选的插件拦截器宿主。
 func (h *BaseAPIHandler) SetPluginHost(host PluginInterceptorHost) {
 	if h == nil {
 		return
@@ -479,7 +479,7 @@ func (h *BaseAPIHandler) SetPluginHost(host PluginInterceptorHost) {
 	h.runtimeMu.Unlock()
 }
 
-// SetModelRouterHost configures the optional plugin model router host.
+// SetModelRouterHost 配置可选的插件模型路由器宿主。
 func (h *BaseAPIHandler) SetModelRouterHost(host PluginModelRouterHost) {
 	if h == nil {
 		return
@@ -492,7 +492,7 @@ func (h *BaseAPIHandler) SetModelRouterHost(host PluginModelRouterHost) {
 	h.runtimeMu.Unlock()
 }
 
-// ModelRouterHostSnapshot returns the configured plugin model router host snapshot.
+// ModelRouterHostSnapshot 返回已配置的插件模型路由器宿主快照。
 func (h *BaseAPIHandler) ModelRouterHostSnapshot() PluginModelRouterHost {
 	if h == nil {
 		return nil
@@ -518,7 +518,7 @@ func isNilInterface(value any) bool {
 	if value == nil {
 		return true
 	}
-	// A typed nil pointer stored in an interface is not equal to nil.
+	// 存储在接口中的带类型 nil 指针不等于 nil。
 	reflected := reflect.ValueOf(value)
 	switch reflected.Kind() {
 	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
@@ -528,14 +528,14 @@ func isNilInterface(value any) bool {
 	}
 }
 
-// GetAlt extracts the 'alt' parameter from the request query string.
-// It checks both 'alt' and '$alt' parameters and returns the appropriate value.
+// GetAlt 从请求查询字符串中提取 'alt' 参数。
+// 它同时检查 'alt' 和 '$alt' 参数并返回相应的值。
 //
-// Parameters:
-//   - c: The Gin context containing the HTTP request
+// 参数：
+//   - c: 包含 HTTP 请求的 Gin 上下文
 //
-// Returns:
-//   - string: The alt parameter value, or empty string if it's "sse"
+// 返回：
+//   - string: alt 参数值；若为 "sse" 则返回空字符串
 func (h *BaseAPIHandler) GetAlt(c *gin.Context) string {
 	var alt string
 	var hasAlt bool
@@ -549,18 +549,18 @@ func (h *BaseAPIHandler) GetAlt(c *gin.Context) string {
 	return alt
 }
 
-// GetContextWithCancel creates a new context with cancellation capabilities.
-// It embeds the Gin context and the API handler into the new context for later use.
-// The returned cancel function also handles logging the API response if request logging is enabled.
+// GetContextWithCancel 创建一个带取消能力的新上下文。
+// 它将 Gin 上下文和 API 处理器嵌入新上下文以供后续使用。
+// 如果启用了请求日志，返回的取消函数还会负责记录 API 响应。
 //
-// Parameters:
-//   - handler: The API handler associated with the request.
-//   - c: The Gin context of the current request.
-//   - ctx: The parent context (caller values/deadlines are preserved; request context adds cancellation and request ID).
+// 参数：
+//   - handler: 与该请求关联的 API 处理器。
+//   - c: 当前请求的 Gin 上下文。
+//   - ctx: 父上下文（保留调用方的值/截止时间；请求上下文会添加取消和请求 ID）。
 //
-// Returns:
-//   - context.Context: The new context with cancellation and embedded values.
-//   - APIHandlerCancelFunc: A function to cancel the context and log the response.
+// 返回：
+//   - context.Context: 带取消和嵌入值的新上下文。
+//   - APIHandlerCancelFunc: 用于取消上下文并记录响应的函数。
 func (h *BaseAPIHandler) GetContextWithCancel(handler interfaces.APIHandler, c *gin.Context, ctx context.Context) (context.Context, APIHandlerCancelFunc) {
 	parentCtx := ctx
 	if parentCtx == nil {
@@ -678,8 +678,8 @@ func (h *BaseAPIHandler) GetContextWithCancel(handler interfaces.APIHandler, c *
 	}
 }
 
-// StartNonStreamingKeepAlive emits blank lines every 5 seconds while waiting for a non-streaming response.
-// It returns a stop function that must be called before writing the final response.
+// StartNonStreamingKeepAlive 在等待非流式响应期间每 5 秒发送空行。
+// 它返回一个停止函数，必须在写入最终响应之前调用。
 func (h *BaseAPIHandler) StartNonStreamingKeepAlive(c *gin.Context, ctx context.Context) func() {
 	if h == nil || c == nil {
 		return func() {}
@@ -725,13 +725,13 @@ func (h *BaseAPIHandler) StartNonStreamingKeepAlive(c *gin.Context, ctx context.
 	}
 }
 
-// appendAPIResponse preserves any previously captured API response and appends new data.
+// appendAPIResponse 保留先前已捕获的 API 响应并追加新数据。
 func appendAPIResponse(c *gin.Context, data []byte) {
 	if c == nil || len(data) == 0 {
 		return
 	}
 
-	// Capture timestamp on first API response
+	// 在首次 API 响应时捕获时间戳
 	if _, exists := c.Get("API_RESPONSE_TIMESTAMP"); !exists {
 		c.Set("API_RESPONSE_TIMESTAMP", time.Now())
 	}
@@ -752,6 +752,6 @@ func appendAPIResponse(c *gin.Context, data []byte) {
 	c.Set("API_RESPONSE", bytes.Clone(data))
 }
 
-// APIHandlerCancelFunc is a function type for canceling an API handler's context.
-// It can optionally accept parameters, which are used for logging the response.
+// APIHandlerCancelFunc 是用于取消 API 处理器上下文的函数类型。
+// 它可选地接受参数，这些参数用于记录响应。
 type APIHandlerCancelFunc func(params ...interface{})

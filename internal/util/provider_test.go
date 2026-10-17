@@ -7,9 +7,9 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
-// TestMaskSensitiveQueryMasksValue covers the related half of issue #6666:
-// deleting a client API key by value passes the secret as ?value=, so the
-// request logger must mask it like other secret-bearing parameters.
+// TestMaskSensitiveQueryMasksValue 覆盖 issue #6666 的另一半场景：
+// 按值删除客户端 API key 时会以 ?value= 传递密钥，因此
+// 请求日志记录器必须像其他携带密钥的参数一样对其打码。
 func TestMaskSensitiveQueryMasksValue(t *testing.T) {
 	secretKey := "sk-secret-client-key"
 

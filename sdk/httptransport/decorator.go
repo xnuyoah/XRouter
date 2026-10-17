@@ -1,6 +1,6 @@
-// Package httptransport exposes an additive, request-scoped observation seam.
-// A decorator wraps the transport already selected by the executor: it must not
-// replace provider fingerprints, proxy routing, pools, or HTTP protocol policy.
+// Package httptransport 提供一个附加的、请求作用域的观测切入点。
+// 装饰器包裹执行器已选定的 transport：它不得
+// 替换供应商指纹、代理路由、连接池或 HTTP 协议策略。
 package httptransport
 
 import (
@@ -10,14 +10,14 @@ import (
 
 type decoratorKey struct{}
 
-// Decorator may wrap next to observe final HTTP requests and response bodies.
-// It is called during client construction; implementations must be concurrency
-// safe, must delegate to next, and must not retain secrets or consume bodies.
-// A decorator does not observe WebSocket messages after an upgrade.
+// Decorator 可以包裹 next 以观测最终 HTTP 请求与响应体。
+// 它在客户端构造期间被调用；实现必须保证并发
+// 安全、必须委托给 next，且不得保留密钥或消费响应体。
+// 升级之后的 WebSocket 消息不会被装饰器观测到。
 type Decorator func(next http.RoundTripper) http.RoundTripper
 
-// WithDecorator attaches a decorator to one execution context. It does not
-// enable request logging or modify executor credential/selection policy.
+// WithDecorator 将装饰器附加到一个执行上下文。它不会
+// 启用请求日志，也不会修改执行器的凭据/选择策略。
 func WithDecorator(ctx context.Context, decorator Decorator) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -25,15 +25,15 @@ func WithDecorator(ctx context.Context, decorator Decorator) context.Context {
 	return context.WithValue(ctx, decoratorKey{}, decorator)
 }
 
-// WithoutDecorator suppresses intermediate helper decoration. A specialized
-// executor that further configures its helper's transport must apply Decorate
-// once, after its own protocol/pool policy is complete.
+// WithoutDecorator 抑制中间 helper 装饰。专用
+// 执行器若要进一步配置其 helper 的 transport，必须在自身
+// 协议/连接池策略完成后只应用一次 Decorate。
 func WithoutDecorator(ctx context.Context) context.Context {
 	return WithDecorator(ctx, nil)
 }
 
-// InheritDecorator copies a decorator from fallback into ctx when ctx does not
-// already specify a decorator or explicit suppression via WithoutDecorator.
+// InheritDecorator 在 ctx 未指定装饰器、也未通过 WithoutDecorator
+// 显式抑制时，将 fallback 中的装饰器复制到 ctx 中。
 func InheritDecorator(ctx, fallback context.Context) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -50,9 +50,9 @@ func InheritDecorator(ctx, fallback context.Context) context.Context {
 	return ctx
 }
 
-// Decorate applies a context decorator AFTER transport selection. With no
-// decorator, the exact original client is returned. Only the client value is
-// copied; the original selected transport/pool and all client policy survive.
+// Decorate 在 transport 选择之后应用上下文装饰器。若没有
+// 装饰器，则返回原始的 client。仅复制 client 值；
+// 原先选定的 transport/连接池以及 client 的全部策略保持不变。
 func Decorate(ctx context.Context, client *http.Client) *http.Client {
 	if ctx == nil || client == nil {
 		return client

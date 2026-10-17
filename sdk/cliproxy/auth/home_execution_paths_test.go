@@ -1264,7 +1264,7 @@ func TestHomeStreamWithoutSourceEndsSelection(t *testing.T) {
 	}
 }
 
-// homeRequestMetadataSnapshot captures the client request metadata a context carries.
+// homeRequestMetadataSnapshot 捕获上下文携带的客户端请求元数据。
 type homeRequestMetadataSnapshot struct {
 	requestedModel  string
 	reasoningEffort string
@@ -1281,12 +1281,12 @@ func homeRequestMetadataFromContext(ctx context.Context) homeRequestMetadataSnap
 	}
 }
 
-// homeRequestMetadataExecutor records the metadata visible at auth preparation and execution.
+// homeRequestMetadataExecutor 记录在 auth 准备与执行阶段可见的元数据。
 type homeRequestMetadataExecutor struct {
 	mu              sync.Mutex
 	prepareMetadata homeRequestMetadataSnapshot
 	executeMetadata homeRequestMetadataSnapshot
-	// prepareErrOnce fails only the first preparation so Home redispatch still terminates.
+	// prepareErrOnce 只让首次准备失败，因此 Home 重新派发仍会终止。
 	prepareErrOnce error
 	executeErr     error
 }
@@ -1352,7 +1352,7 @@ func (*homeRequestMetadataExecutor) HttpRequest(context.Context, *Auth, *http.Re
 	return nil, nil
 }
 
-// homeRequestMetadataHook buffers every Home result so a synchronous OnResult never blocks execution.
+// homeRequestMetadataHook 缓冲每个 Home 结果，使同步的 OnResult 永不阻塞执行。
 type homeRequestMetadataHook struct {
 	results chan homeRequestMetadataSnapshot
 }
@@ -1403,9 +1403,9 @@ func newHomeRequestMetadataManager(t *testing.T, executor *homeRequestMetadataEx
 	return manager
 }
 
-// homeRequestMetadataOptions mirrors handler-populated metadata. Handlers already derive the
-// OpenAI "auto" default for an omitted tier (see sdk/api/handlers metadata tests); this layer
-// only has to carry whatever the handler resolved.
+// homeRequestMetadataOptions 镜像处理器填充的元数据。处理器已经为
+// 省略的 tier 推导出 OpenAI "auto" 默认值（见 sdk/api/handlers 元数据测试）；此层
+// 只需携带处理器解析出的结果。
 func homeRequestMetadataOptions(serviceTier string) cliproxyexecutor.Options {
 	return cliproxyexecutor.Options{Metadata: map[string]any{
 		cliproxyexecutor.RequestedModelMetadataKey:  "client-model",
@@ -1456,9 +1456,9 @@ func homeStreamMetadataPath() homeRequestMetadataPath {
 	}
 }
 
-// TestHomeExecutionPropagatesRequestMetadata covers the Home regression from issue #4791: the
-// executor context must carry the client request metadata at auth preparation, at execution, and
-// in the Home result usage record.
+// TestHomeExecutionPropagatesRequestMetadata 覆盖 issue #4791 的 Home 回归：
+// 执行器上下文必须在 auth 准备、执行以及 Home 结果用量记录中
+// 携带客户端请求元数据。
 func TestHomeExecutionPropagatesRequestMetadata(t *testing.T) {
 	paths := []homeRequestMetadataPath{homeExecuteMetadataPath(), homeCountMetadataPath(), homeStreamMetadataPath()}
 
@@ -1481,8 +1481,8 @@ func TestHomeExecutionPropagatesRequestMetadata(t *testing.T) {
 	}
 }
 
-// TestHomeExecutionFailureResultPreservesRequestMetadata keeps the requested tier authoritative in
-// the failure usage record instead of falling back to the upstream or default tier.
+// TestHomeExecutionFailureResultPreservesRequestMetadata 在失败用量记录中
+// 保持所请求 tier 为准，而不是回退到上游或默认 tier。
 func TestHomeExecutionFailureResultPreservesRequestMetadata(t *testing.T) {
 	paths := []homeRequestMetadataPath{homeExecuteMetadataPath(), homeCountMetadataPath()}
 
@@ -1502,8 +1502,8 @@ func TestHomeExecutionFailureResultPreservesRequestMetadata(t *testing.T) {
 	}
 }
 
-// TestHomePrepareFailureResultPreservesRequestMetadata covers the prepare_failed Home result paths,
-// which report usage before any executor call happens.
+// TestHomePrepareFailureResultPreservesRequestMetadata 覆盖 prepare_failed 的 Home 结果路径，
+// 这些路径在任何执行器调用发生之前就上报用量。
 func TestHomePrepareFailureResultPreservesRequestMetadata(t *testing.T) {
 	paths := []homeRequestMetadataPath{homeExecuteMetadataPath(), homeCountMetadataPath(), homeStreamMetadataPath()}
 

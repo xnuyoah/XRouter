@@ -25,9 +25,9 @@ import (
 
 const seedTestPlaintextSecret = "seed-plaintext-secret"
 
-// seedTestConfigsKeepingPlaintext hold a plaintext secret that cannot be removed before
-// seeding: the file cannot be parsed, or a YAML anchor keeps the plaintext after the
-// referencing key is hashed or dropped as a conflicting legacy field.
+// seedTestConfigsKeepingPlaintext 持有的明文密钥无法在播种前移除：
+// 该文件无法被解析，或者某个 YAML 锚点在引用键被哈希
+// 或作为冲突的遗留字段被丢弃后仍保留明文。
 var seedTestConfigsKeepingPlaintext = map[string]string{
 	"unparsable":      "remote-management:\n  secret-key: " + seedTestPlaintextSecret + "\nport: [11016\n",
 	"anchored secret": "defaults: &management\n  secret-key: " + seedTestPlaintextSecret + "\nmanagement: *management\n",
@@ -40,7 +40,7 @@ func seedTestPlaintextConfig(section string) string {
 	return "# operator note\nport: 11016\n" + section + ":\n  secret-key: " + seedTestPlaintextSecret + "\n"
 }
 
-// seedTestSettledConfigs hold no plaintext secret, so seeding must upload them unchanged.
+// seedTestSettledConfigs 不含明文密钥，因此播种必须原样上传它们。
 func seedTestSettledConfigs(t *testing.T) map[string]string {
 	t.Helper()
 	hashed, errHash := bcrypt.GenerateFromPassword([]byte(seedTestPlaintextSecret), bcrypt.MinCost)
@@ -72,9 +72,9 @@ func readSeedTestFile(t *testing.T, path string) []byte {
 	return data
 }
 
-// assertSeededWithHashedSecret checks that a seeded config carries the bcrypt hash of
-// the plaintext secret under section and matches the local file, because later starts
-// overwrite the local file with the remote copy.
+// assertSeededWithHashedSecret 检查已播种的配置在 section 下携带明文的
+// bcrypt 哈希且与本地文件匹配，因为后续启动会用远程副本
+// 覆盖本地文件。
 func assertSeededWithHashedSecret(t *testing.T, seeded []byte, configPath, section string) {
 	t.Helper()
 	if bytes.Contains(seeded, []byte(seedTestPlaintextSecret)) {
@@ -94,11 +94,11 @@ func assertSeededWithHashedSecret(t *testing.T, seeded []byte, configPath, secti
 	}
 }
 
-// newSeedTestObjectStore returns an object store whose bucket has no config object and
-// records every config upload.
+// newSeedTestObjectStore 返回一个对象存储，其 bucket 没有 config 对象，
+// 并记录每次 config 上传。
 func newSeedTestObjectStore(t *testing.T, configPath string) (*ObjectTokenStore, *[][]byte) {
 	t.Helper()
-	// Every request answers 404, so the bucket holds no config.
+	// 每个请求都返回 404，因此该 bucket 不含 config。
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
@@ -162,8 +162,8 @@ func TestObjectTokenStoreSeedUploadsSettledConfigUnchanged(t *testing.T) {
 	}
 }
 
-// Bootstrap must fail rather than seed, and keep the local file as it was: a later
-// start finds the same file and has to refuse it again.
+// Bootstrap 必须失败而不是播种，并保持本地文件原样：后续
+// 启动会发现同一文件并不得不再次拒绝它。
 func TestObjectTokenStoreSeedRefusesConfigThatKeepsPlaintextSecret(t *testing.T) {
 	for name, content := range seedTestConfigsKeepingPlaintext {
 		t.Run(name, func(t *testing.T) {
@@ -186,8 +186,8 @@ func TestObjectTokenStoreSeedRefusesConfigThatKeepsPlaintextSecret(t *testing.T)
 	}
 }
 
-// seedTestDatabase is a database/sql driver whose config table is empty; it records
-// every config upsert.
+// seedTestDatabase 是一个 database/sql 驱动，其 config 表为空；它记录
+// 每次 config upsert。
 type seedTestDatabase struct {
 	mu      sync.Mutex
 	upserts []string
@@ -235,7 +235,7 @@ func (c *seedTestConn) ExecContext(_ context.Context, query string, args []drive
 	return driver.RowsAffected(1), nil
 }
 
-// QueryContext serves an empty config table.
+// QueryContext 提供一个空的 config 表。
 func (*seedTestConn) QueryContext(context.Context, string, []driver.NamedValue) (driver.Rows, error) {
 	return seedTestRows{}, nil
 }
@@ -309,8 +309,8 @@ func TestPostgresStoreSeedUploadsSettledConfigUnchanged(t *testing.T) {
 	}
 }
 
-// Bootstrap must fail rather than seed, and keep the local file as it was: a later
-// start finds the same file and has to refuse it again.
+// Bootstrap 必须失败而不是播种，并保持本地文件原样：后续
+// 启动会发现同一文件并不得不再次拒绝它。
 func TestPostgresStoreSeedRefusesConfigThatKeepsPlaintextSecret(t *testing.T) {
 	for name, content := range seedTestConfigsKeepingPlaintext {
 		t.Run(name, func(t *testing.T) {

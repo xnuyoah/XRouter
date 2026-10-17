@@ -16,7 +16,7 @@ type modelAliasEntry interface {
 	GetForceMapping() bool
 }
 
-// oauthModelAliasEntry stores the upstream model name and mapping flags for an alias.
+// oauthModelAliasEntry 存储别名的上游模型名和映射标志。
 type oauthModelAliasEntry struct {
 	upstreamModel string
 	configAlias   string
@@ -24,15 +24,15 @@ type oauthModelAliasEntry struct {
 }
 
 type oauthModelAliasTable struct {
-	// reverse maps channel -> alias (lower) -> entry with upstream model and flags.
+	// reverse 映射 channel -> alias（小写）-> 带上游模型和标志的条目。
 	reverse map[string]map[string]oauthModelAliasEntry
 }
 
-// OAuthModelAliasResult contains the resolved upstream model and mapping metadata.
+// OAuthModelAliasResult 包含解析出的上游模型和映射元数据。
 type OAuthModelAliasResult struct {
-	UpstreamModel string // resolved upstream model name (empty if no mapping found)
-	ForceMapping  bool   // whether to rewrite model name in responses
-	OriginalAlias string // client-visible model for response rewrite; only applied when ForceMapping is true (see rewriteForceMappedResponse / wrapStreamResult)
+	UpstreamModel string // 解析出的上游模型名（未找到映射时为空）
+	ForceMapping  bool   // 是否在响应中重写模型名
+	OriginalAlias string // 用于响应重写的客户端可见模型；仅在 ForceMapping 为 true 时应用（见 rewriteForceMappedResponse / wrapStreamResult）
 }
 
 func compileOAuthModelAliasTable(aliases map[string][]internalconfig.OAuthModelAlias) *oauthModelAliasTable {
@@ -77,23 +77,23 @@ func compileOAuthModelAliasTable(aliases map[string][]internalconfig.OAuthModelA
 	return out
 }
 
-// SetOAuthModelAlias updates the OAuth model name alias table used during execution.
-// The alias is applied per-auth channel to resolve the upstream model name while keeping the
-// client-visible model name unchanged for translation/response formatting.
+// SetOAuthModelAlias 更新执行期间使用的 OAuth 模型名别名表。
+// 别名按 auth 通道应用，以解析上游模型名，同时保持
+// 客户端可见模型名不变，用于转换/响应格式化。
 func (m *Manager) SetOAuthModelAlias(aliases map[string][]internalconfig.OAuthModelAlias) {
 	if m == nil {
 		return
 	}
 	table := compileOAuthModelAliasTable(aliases)
-	// atomic.Value requires non-nil store values.
+	// atomic.Value 要求存储的值非 nil。
 	if table == nil {
 		table = &oauthModelAliasTable{}
 	}
 	m.oauthModelAlias.Store(table)
 }
 
-// applyOAuthModelAlias resolves the upstream model from OAuth model alias.
-// If an alias exists, the returned model is the upstream model.
+// applyOAuthModelAlias 根据 OAuth 模型别名解析上游模型。
+// 若别名存在，返回的模型即为上游模型。
 func (m *Manager) applyOAuthModelAlias(auth *Auth, requestedModel string) string {
 	upstreamModel := m.resolveOAuthUpstreamModel(auth, requestedModel)
 	if upstreamModel == "" {
@@ -248,13 +248,13 @@ func resolveModelAliasResultFromConfigModels(requestedModel string, models []mod
 	return OAuthModelAliasResult{}
 }
 
-// resolveOAuthUpstreamModel resolves the upstream model name from OAuth model alias.
-// If an alias exists, returns the original (upstream) model name that corresponds
-// to the requested alias.
+// resolveOAuthUpstreamModel 根据 OAuth 模型别名解析上游模型名。
+// 若别名存在，则返回与所请求别名相对应的
+// 原始（上游）模型名。
 //
-// If the requested model contains a thinking suffix (e.g., "gpt-5(8192)"),
-// the suffix is preserved in the returned model name. However, if the alias's
-// original name already contains a suffix, the config suffix takes priority.
+// 如果所请求的模型包含 thinking 后缀（例如 "gpt-5(8192)"），
+// 该后缀会保留在返回的模型名中。但如果别名
+// 的原始名称已包含后缀，则配置后缀优先。
 func (m *Manager) resolveOAuthUpstreamModel(auth *Auth, requestedModel string) string {
 	result := m.resolveOAuthModelAliasWithResult(auth, requestedModel)
 	return result.UpstreamModel
@@ -278,7 +278,7 @@ func authAttributes(auth *Auth) map[string]string {
 	return auth.Attributes
 }
 
-// SetOAuthModelAliasesAttribute stores sanitized per-auth OAuth model aliases on an auth entry.
+// SetOAuthModelAliasesAttribute 将清理后的按 auth 划分的 OAuth 模型别名存储到 auth 条目上。
 func SetOAuthModelAliasesAttribute(auth *Auth, aliases []internalconfig.OAuthModelAlias) {
 	if auth == nil {
 		return
@@ -297,7 +297,7 @@ func SetOAuthModelAliasesAttribute(auth *Auth, aliases []internalconfig.OAuthMod
 	auth.Attributes[oauthModelAliasesAttributeKey] = string(data)
 }
 
-// OAuthModelAliasesFromAttributes returns sanitized per-auth OAuth model aliases from auth attributes.
+// OAuthModelAliasesFromAttributes 从 auth 属性中返回清理后的按 auth 划分的 OAuth 模型别名。
 func OAuthModelAliasesFromAttributes(attributes map[string]string) []internalconfig.OAuthModelAlias {
 	if len(attributes) == 0 {
 		return nil
@@ -455,9 +455,9 @@ func resolveUpstreamModelFromAliasTable(m *Manager, auth *Auth, requestedModel, 
 	return OAuthModelAliasResult{}
 }
 
-// modelAliasChannel extracts the OAuth model alias channel from an Auth object.
-// It determines the provider and auth kind from the Auth's attributes and delegates
-// to OAuthModelAliasChannel for the actual channel resolution.
+// modelAliasChannel 从 Auth 对象中提取 OAuth 模型别名通道。
+// 它根据 Auth 的属性确定供应商和 auth 类型，并将实际的
+// 通道解析委托给 OAuthModelAliasChannel。
 func modelAliasChannel(auth *Auth) string {
 	if auth == nil {
 		return ""
@@ -467,12 +467,12 @@ func modelAliasChannel(auth *Auth) string {
 	return OAuthModelAliasChannel(provider, authKind)
 }
 
-// OAuthModelAliasChannel returns the OAuth model alias channel name for a given provider
-// and auth kind. Returns empty string if the provider/authKind combination doesn't support
-// OAuth model alias (e.g., API key authentication).
+// OAuthModelAliasChannel 返回给定供应商和 auth 类型的 OAuth 模型别名通道名。
+// 如果供应商/authKind 组合不支持 OAuth 模型别名（例如 API key 认证），
+// 则返回空字符串。
 //
-// The channel is the normalized provider key, for plugin OAuth providers and built-in
-// protocol providers alike.
+// 该通道是规范化后的供应商键，对插件 OAuth 供应商和内置
+// 协议供应商同样适用。
 func OAuthModelAliasChannel(provider, authKind string) string {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	authKind = normalizeOAuthModelAliasAuthKind(authKind)

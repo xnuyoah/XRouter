@@ -107,8 +107,8 @@ func TestConfigSynthesizer_NativeAPIKeyDefaultsPerFamily(t *testing.T) {
 			t.Errorf("%s default models = %d, want %d", provider, got, want)
 		}
 	}
-	// A credential without declared models must not synthesize a models_hash, so the
-	// registry fallback keeps serving the family defaults.
+	// 未声明模型的凭据不得合成 models_hash，因此
+	// 注册表回退会继续提供家族默认值。
 	seen := map[string]bool{}
 	for _, auth := range auths {
 		if _, ok := wantDefaultModels[auth.Provider]; !ok {

@@ -15,16 +15,16 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
-// FileSynthesizer generates Auth entries from OAuth JSON files.
-// It handles file-based authentication.
+// FileSynthesizer 从 OAuth JSON 文件生成 Auth 条目。
+// 它处理基于文件的认证。
 type FileSynthesizer struct{}
 
-// NewFileSynthesizer creates a new FileSynthesizer instance.
+// NewFileSynthesizer 创建一个新的 FileSynthesizer 实例。
 func NewFileSynthesizer() *FileSynthesizer {
 	return &FileSynthesizer{}
 }
 
-// Synthesize generates Auth entries from auth files in the auth directory.
+// Synthesize 从 auth 目录中的 auth 文件生成 Auth 条目。
 func (s *FileSynthesizer) Synthesize(ctx *SynthesisContext) ([]*coreauth.Auth, error) {
 	out := make([]*coreauth.Auth, 0, 16)
 	if ctx == nil || ctx.AuthDir == "" {
@@ -33,7 +33,7 @@ func (s *FileSynthesizer) Synthesize(ctx *SynthesisContext) ([]*coreauth.Auth, e
 
 	entries, err := os.ReadDir(ctx.AuthDir)
 	if err != nil {
-		// Not an error if directory doesn't exist
+		// 目录不存在不算错误
 		return out, nil
 	}
 
@@ -63,8 +63,8 @@ func (s *FileSynthesizer) Synthesize(ctx *SynthesisContext) ([]*coreauth.Auth, e
 	return out, nil
 }
 
-// SynthesizeAuthFile generates Auth entries for one auth JSON file payload.
-// It shares exactly the same mapping behavior as FileSynthesizer.Synthesize.
+// SynthesizeAuthFile 为单个 auth JSON 文件载荷生成 Auth 条目。
+// 它与 FileSynthesizer.Synthesize 的映射行为完全一致。
 func SynthesizeAuthFile(ctx *SynthesisContext, fullPath string, data []byte) ([]*coreauth.Auth, error) {
 	return synthesizeFileAuths(ctx, fullPath, data)
 }
@@ -160,7 +160,7 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) ([
 	if email, _ := metadata["email"].(string); email != "" {
 		label = email
 	}
-	// Use relative path under authDir as ID to stay consistent with the file-based token store.
+	// 使用 authDir 下的相对路径作为 ID，以与基于文件的令牌存储保持一致。
 	id := fullPath
 	if strings.TrimSpace(ctx.AuthDir) != "" {
 		if rel, errRel := filepath.Rel(ctx.AuthDir, fullPath); errRel == nil && rel != "" {
@@ -191,7 +191,7 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) ([
 		status = coreauth.StatusDisabled
 	}
 
-	// Read per-account excluded models from the OAuth JSON file.
+	// 从 OAuth JSON 文件中读取按账号的排除模型。
 	perAccountExcluded := extractExcludedModelsFromMetadata(metadata)
 	perAccountModelAliases := extractOAuthModelAliasesFromMetadata(metadata)
 
@@ -213,12 +213,12 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) ([
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	// Read priority from auth file.
+	// 从 auth 文件读取优先级。
 	coreauth.ApplyAuthPriorityMetadata(a, metadata)
 	if errWeight := coreauth.ApplyAuthWeightMetadata(a, metadata); errWeight != nil {
 		return nil, fmt.Errorf("invalid auth weight in %s: %w", filepath.Base(fullPath), errWeight)
 	}
-	// Read note from auth file.
+	// 从 auth 文件读取备注。
 	if rawNote, ok := metadata["note"]; ok {
 		if note, isStr := rawNote.(string); isStr {
 			if trimmed := strings.TrimSpace(note); trimmed != "" {
@@ -264,8 +264,8 @@ func compactPluginAuths(auths []*coreauth.Auth) []*coreauth.Auth {
 	return out
 }
 
-// extractOAuthModelAliasesFromMetadata reads per-account model aliases from OAuth JSON metadata.
-// "model_aliases" is canonical; "model-aliases" remains a legacy alias.
+// extractOAuthModelAliasesFromMetadata 从 OAuth JSON 元数据中读取按账号的模型别名。
+// "model_aliases" 是规范形式；"model-aliases" 仍作为旧版别名保留。
 func extractOAuthModelAliasesFromMetadata(metadata map[string]any) []config.OAuthModelAlias {
 	if metadata == nil {
 		return nil
@@ -294,8 +294,8 @@ func extractOAuthModelAliasesFromMetadata(metadata map[string]any) []config.OAut
 	return cfg.OAuthModelAlias["auth"]
 }
 
-// extractExcludedModelsFromMetadata reads per-account excluded models from the OAuth JSON metadata.
-// "excluded_models" is canonical; "excluded-models" remains a legacy alias.
+// extractExcludedModelsFromMetadata 从 OAuth JSON 元数据中读取按账号的排除模型。
+// "excluded_models" 是规范形式；"excluded-models" 仍作为旧版别名保留。
 func extractExcludedModelsFromMetadata(metadata map[string]any) []string {
 	if metadata == nil {
 		return nil

@@ -1471,7 +1471,7 @@ func TestDecodeHostHTTPRequestWithWireProfile(t *testing.T) {
 		HeaderProfile:          []string{"host", "user-agent"},
 	}
 
-	// Flat rpcHostHTTPRequest
+	// 扁平 rpcHostHTTPRequest
 	flatReq := rpcHostHTTPRequest{
 		HostCallbackID: "cb-1",
 		Method:         http.MethodPost,
@@ -1496,7 +1496,7 @@ func TestDecodeHostHTTPRequestWithWireProfile(t *testing.T) {
 		t.Fatalf("decoded header profile mismatch: %#v", decoded.WireProfile.HeaderProfile)
 	}
 
-	// Nested httpRequest
+	// 嵌套 httpRequest
 	nestedReq := rpcHostHTTPRequest{
 		HostCallbackID: "cb-2",
 		Request: &httpRequest{
@@ -1520,7 +1520,7 @@ func TestDecodeHostHTTPRequestWithWireProfile(t *testing.T) {
 		t.Fatalf("decoded nested wire profile mismatch: %#v", decodedNested.WireProfile)
 	}
 
-	// Direct pluginapi.HTTPRequest JSON serialization (SDK contract)
+	// 直接使用 pluginapi.HTTPRequest 的 JSON 序列化（SDK 契约）
 	sdkReq := pluginapi.HTTPRequest{
 		Method:      http.MethodPost,
 		URL:         "https://example.com/sdk",
@@ -1643,20 +1643,20 @@ func TestModelExecutionErrorPreservesHTTPStatus(t *testing.T) {
 		t.Fatal("expected errors.Is(err, baseErr) to be true")
 	}
 
-	// Verify status preservation when underlying error is nil
+	// 验证底层错误为 nil 时状态得以保留
 	errNilBase := modelExecutionError(&interfaces.ErrorMessage{StatusCode: http.StatusServiceUnavailable})
 	if got := clienterror.HTTPStatusFromError(errNilBase); got != http.StatusServiceUnavailable {
 		t.Fatalf("clienterror.HTTPStatusFromError(nilBase) = %d, want %d", got, http.StatusServiceUnavailable)
 	}
 
-	// Verify status preservation when underlying error already matches status
+	// 验证底层错误已与状态一致时状态得以保留
 	matchingErr := testHostStatusError{error: errors.New("synthetic"), status: http.StatusTooManyRequests}
 	errMatching := modelExecutionError(&interfaces.ErrorMessage{StatusCode: http.StatusTooManyRequests, Error: matchingErr})
 	if errMatching != matchingErr {
 		t.Fatalf("expected errMatching to return original matchingErr, got %#v", errMatching)
 	}
 
-	// Verify explicit status overrides mismatched underlying status while preserving unwrap
+	// 验证显式状态覆盖不匹配的底层状态，同时保留 unwrap
 	errConflict := modelExecutionError(&interfaces.ErrorMessage{StatusCode: http.StatusServiceUnavailable, Error: matchingErr})
 	if got := clienterror.HTTPStatusFromError(errConflict); got != http.StatusServiceUnavailable {
 		t.Fatalf("clienterror.HTTPStatusFromError(errConflict) = %d, want %d", got, http.StatusServiceUnavailable)

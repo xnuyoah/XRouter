@@ -13,7 +13,7 @@ import (
 var benchmarkConvertSystemRoleOutput []byte
 var benchmarkConvertNormalizedOutput []byte
 
-// TestConvertSystemRoleToDeveloper_BasicConversion tests the basic system -> developer role conversion
+// TestConvertSystemRoleToDeveloper_BasicConversion 测试基本的 system -> developer 角色转换
 func TestConvertSystemRoleToDeveloper_BasicConversion(t *testing.T) {
 	inputJSON := []byte(`{
 		"model": "gpt-5.2",
@@ -34,26 +34,26 @@ func TestConvertSystemRoleToDeveloper_BasicConversion(t *testing.T) {
 	output, _ := ConvertOpenAIResponsesRequestToCodex("gpt-5.2", inputJSON, false)
 	outputStr := string(output)
 
-	// Check that system role was converted to developer
+	// 检查 system 角色已被转换为 developer
 	firstItemRole := gjson.Get(outputStr, "input.0.role")
 	if firstItemRole.String() != "developer" {
 		t.Errorf("Expected role 'developer', got '%s'", firstItemRole.String())
 	}
 
-	// Check that user role remains unchanged
+	// 检查 user 角色保持不变
 	secondItemRole := gjson.Get(outputStr, "input.1.role")
 	if secondItemRole.String() != "user" {
 		t.Errorf("Expected role 'user', got '%s'", secondItemRole.String())
 	}
 
-	// Check content is preserved
+	// 检查 content 被保留
 	firstItemContent := gjson.Get(outputStr, "input.0.content.0.text")
 	if firstItemContent.String() != "You are a pirate." {
 		t.Errorf("Expected content 'You are a pirate.', got '%s'", firstItemContent.String())
 	}
 }
 
-// TestConvertSystemRoleToDeveloper_MultipleSystemMessages tests conversion with multiple system messages
+// TestConvertSystemRoleToDeveloper_MultipleSystemMessages 测试包含多条 system 消息时的转换
 func TestConvertSystemRoleToDeveloper_MultipleSystemMessages(t *testing.T) {
 	inputJSON := []byte(`{
 		"model": "gpt-5.2",
@@ -79,7 +79,7 @@ func TestConvertSystemRoleToDeveloper_MultipleSystemMessages(t *testing.T) {
 	output, _ := ConvertOpenAIResponsesRequestToCodex("gpt-5.2", inputJSON, false)
 	outputStr := string(output)
 
-	// Check that both system roles were converted
+	// 检查两个 system 角色都已被转换
 	firstRole := gjson.Get(outputStr, "input.0.role")
 	if firstRole.String() != "developer" {
 		t.Errorf("Expected first role 'developer', got '%s'", firstRole.String())
@@ -90,14 +90,14 @@ func TestConvertSystemRoleToDeveloper_MultipleSystemMessages(t *testing.T) {
 		t.Errorf("Expected second role 'developer', got '%s'", secondRole.String())
 	}
 
-	// Check that user role is unchanged
+	// 检查 user 角色未改变
 	thirdRole := gjson.Get(outputStr, "input.2.role")
 	if thirdRole.String() != "user" {
 		t.Errorf("Expected third role 'user', got '%s'", thirdRole.String())
 	}
 }
 
-// TestConvertSystemRoleToDeveloper_NoSystemMessages tests that requests without system messages are unchanged
+// TestConvertSystemRoleToDeveloper_NoSystemMessages 测试不含 system 消息的请求保持不变
 func TestConvertSystemRoleToDeveloper_NoSystemMessages(t *testing.T) {
 	inputJSON := []byte(`{
 		"model": "gpt-5.2",
@@ -118,7 +118,7 @@ func TestConvertSystemRoleToDeveloper_NoSystemMessages(t *testing.T) {
 	output, _ := ConvertOpenAIResponsesRequestToCodex("gpt-5.2", inputJSON, false)
 	outputStr := string(output)
 
-	// Check that user and assistant roles are unchanged
+	// 检查 user 和 assistant 角色未改变
 	firstRole := gjson.Get(outputStr, "input.0.role")
 	if firstRole.String() != "user" {
 		t.Errorf("Expected role 'user', got '%s'", firstRole.String())
@@ -130,7 +130,7 @@ func TestConvertSystemRoleToDeveloper_NoSystemMessages(t *testing.T) {
 	}
 }
 
-// TestConvertSystemRoleToDeveloper_EmptyInput tests that empty input arrays are handled correctly
+// TestConvertSystemRoleToDeveloper_EmptyInput 测试空 input 数组能被正确处理
 func TestConvertSystemRoleToDeveloper_EmptyInput(t *testing.T) {
 	inputJSON := []byte(`{
 		"model": "gpt-5.2",
@@ -140,7 +140,7 @@ func TestConvertSystemRoleToDeveloper_EmptyInput(t *testing.T) {
 	output, _ := ConvertOpenAIResponsesRequestToCodex("gpt-5.2", inputJSON, false)
 	outputStr := string(output)
 
-	// Check that input is still an empty array
+	// 检查 input 仍然是空数组
 	inputArray := gjson.Get(outputStr, "input")
 	if !inputArray.IsArray() {
 		t.Error("Input should still be an array")
@@ -150,7 +150,7 @@ func TestConvertSystemRoleToDeveloper_EmptyInput(t *testing.T) {
 	}
 }
 
-// TestConvertSystemRoleToDeveloper_NoInputField tests that requests without input field are unchanged
+// TestConvertSystemRoleToDeveloper_NoInputField 测试不含 input 字段的请求保持不变
 func TestConvertSystemRoleToDeveloper_NoInputField(t *testing.T) {
 	inputJSON := []byte(`{
 		"model": "gpt-5.2",
@@ -160,7 +160,7 @@ func TestConvertSystemRoleToDeveloper_NoInputField(t *testing.T) {
 	output, _ := ConvertOpenAIResponsesRequestToCodex("gpt-5.2", inputJSON, false)
 	outputStr := string(output)
 
-	// Check that other fields are still set correctly
+	// 检查其他字段仍被正确设置
 	stream := gjson.Get(outputStr, "stream")
 	if !stream.Bool() {
 		t.Error("Stream should be set to true by conversion")
@@ -172,9 +172,9 @@ func TestConvertSystemRoleToDeveloper_NoInputField(t *testing.T) {
 	}
 }
 
-// TestConvertOpenAIResponsesRequestToCodex_OriginalIssue tests the exact issue reported by the user
+// TestConvertOpenAIResponsesRequestToCodex_OriginalIssue 测试用户报告的原始问题
 func TestConvertOpenAIResponsesRequestToCodex_OriginalIssue(t *testing.T) {
-	// This is the exact input that was failing with "System messages are not allowed"
+	// 这是当时以 "System messages are not allowed" 失败的原始输入
 	inputJSON := []byte(`{
 		"model": "gpt-5.2",
 		"input": [
@@ -195,19 +195,19 @@ func TestConvertOpenAIResponsesRequestToCodex_OriginalIssue(t *testing.T) {
 	output, _ := ConvertOpenAIResponsesRequestToCodex("gpt-5.2", inputJSON, false)
 	outputStr := string(output)
 
-	// Verify system role was converted to developer
+	// 验证 system 角色已被转换为 developer
 	firstRole := gjson.Get(outputStr, "input.0.role")
 	if firstRole.String() != "developer" {
 		t.Errorf("Expected role 'developer', got '%s'", firstRole.String())
 	}
 
-	// Verify stream was set to true (as required by Codex)
+	// 验证 stream 已被设置为 true（Codex 的要求）
 	stream := gjson.Get(outputStr, "stream")
 	if !stream.Bool() {
 		t.Error("Stream should be set to true")
 	}
 
-	// Verify other required fields for Codex
+	// 验证 Codex 的其他必需字段
 	store := gjson.Get(outputStr, "store")
 	if store.Bool() {
 		t.Error("Store should be false")
@@ -400,7 +400,7 @@ func TestConvertOpenAIResponsesRequestToCodex_FiltersPromptCacheRetention(t *tes
 	}
 }
 
-// TestConvertSystemRoleToDeveloper_AssistantRole tests that assistant role is preserved
+// TestConvertSystemRoleToDeveloper_AssistantRole 测试 assistant 角色被保留
 func TestConvertSystemRoleToDeveloper_AssistantRole(t *testing.T) {
 	inputJSON := []byte(`{
 		"model": "gpt-5.2",
@@ -426,19 +426,19 @@ func TestConvertSystemRoleToDeveloper_AssistantRole(t *testing.T) {
 	output, _ := ConvertOpenAIResponsesRequestToCodex("gpt-5.2", inputJSON, false)
 	outputStr := string(output)
 
-	// Check system -> developer
+	// 检查 system -> developer
 	firstRole := gjson.Get(outputStr, "input.0.role")
 	if firstRole.String() != "developer" {
 		t.Errorf("Expected first role 'developer', got '%s'", firstRole.String())
 	}
 
-	// Check user unchanged
+	// 检查 user 未改变
 	secondRole := gjson.Get(outputStr, "input.1.role")
 	if secondRole.String() != "user" {
 		t.Errorf("Expected second role 'user', got '%s'", secondRole.String())
 	}
 
-	// Check assistant unchanged
+	// 检查 assistant 未改变
 	thirdRole := gjson.Get(outputStr, "input.2.role")
 	if thirdRole.String() != "assistant" {
 		t.Errorf("Expected third role 'assistant', got '%s'", thirdRole.String())
@@ -501,7 +501,7 @@ func TestUserFieldDeletion(t *testing.T) {
 	output, _ := ConvertOpenAIResponsesRequestToCodex("gpt-5.2", inputJSON, false)
 	outputStr := string(output)
 
-	// Verify user field is deleted
+	// 验证 user 字段已被删除
 	userField := gjson.Get(outputStr, "user")
 	if userField.Exists() {
 		t.Errorf("user field should be deleted, but it was found with value: %s", userField.Raw)
@@ -725,11 +725,11 @@ func TestStripCodexResponsesCacheBreakpoints_WithSystemRole(t *testing.T) {
 	output, _ := ConvertOpenAIResponsesRequestToCodex("gpt-5.2", inputJSON, false)
 	outputStr := string(output)
 
-	// Check system role is converted to developer
+	// 检查 system 角色被转换为 developer
 	if gjson.Get(outputStr, "input.0.role").String() != "developer" {
 		t.Fatalf("expected role 'developer', got %q", gjson.Get(outputStr, "input.0.role").String())
 	}
-	// Check prompt_cache_breakpoint is completely removed from payload
+	// 检查 prompt_cache_breakpoint 已从载荷中完全移除
 	if strings.Contains(outputStr, "prompt_cache_breakpoint") {
 		t.Fatalf("prompt_cache_breakpoint should not exist in the output JSON")
 	}
@@ -968,10 +968,10 @@ func TestConvertOpenAIResponsesRequestToCodex_ServiceTier(t *testing.T) {
 }
 
 // TestConvertOpenAIResponsesRequestToCodex_NormalizesEmptyFunctionCallArguments
-// covers the parameter-less tool call shape that strict Codex Responses
-// upstreams reject with "`arguments` must be valid JSON": only blank string
-// arguments on function_call history items become "{}", everything else is
-// preserved byte-for-byte in intent.
+// 覆盖严格的 Codex Responses 上游会以 "`arguments` must be valid JSON"
+// 拒绝的无参数工具调用形态：只有 function_call 历史条目上的空白字符串
+// arguments 会变为 "{}"，其余内容在意图上
+// 逐字节保持不变。
 func TestConvertOpenAIResponsesRequestToCodex_NormalizesEmptyFunctionCallArguments(t *testing.T) {
 	inputJSON := []byte(`{"model":"gpt-5.6","input":[
 		{"type":"function_call","id":"fc_empty","call_id":"call_empty","name":"create_worktree","arguments":""},

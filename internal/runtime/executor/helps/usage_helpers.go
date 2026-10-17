@@ -58,15 +58,15 @@ type UsageReporter struct {
 	once                sync.Once
 
 	responseModelMu sync.RWMutex
-	// responseModel holds the latest model name reported by the upstream response.
+	// responseModel 保存上游响应报告的最新模型名。
 	responseModel string
-	// responseModelFinal marks that a terminal event already reported the served
-	// model, so later frames skip parsing entirely.
+	// responseModelFinal 标记终态事件已报告了实际服务的
+	// 模型，因此后续帧会完全跳过解析。
 	responseModelFinal atomic.Bool
 
 	upstreamModelMu sync.RWMutex
-	// upstreamModel holds the canonical upstream model expected to be served when
-	// it differs from the requested model (e.g. local model mappings).
+	// upstreamModel 保存预期实际服务的规范上游模型，用于
+	// 其与请求模型不同的情况（例如本地模型映射）。
 	upstreamModel string
 }
 
@@ -150,7 +150,7 @@ func NewUsageReporter(ctx context.Context, provider, model string, auth *cliprox
 	return reporter
 }
 
-// SetStream records whether the request was executed in streaming mode.
+// SetStream 记录请求是否以流式模式执行。
 func (r *UsageReporter) SetStream(stream bool) {
 	if r == nil {
 		return
@@ -158,8 +158,8 @@ func (r *UsageReporter) SetStream(stream bool) {
 	r.stream = stream
 }
 
-// SetSessionHierarchy sets the explicit session and parent session identifiers.
-// Callers should invoke this method before Publish or EnsurePublished on the request thread.
+// SetSessionHierarchy 设置显式的会话和父会话标识符。
+// 调用方应在请求线程上调用 Publish 或 EnsurePublished 之前调用此方法。
 func (r *UsageReporter) SetSessionHierarchy(sessionID, parentSessionID string) {
 	if r == nil {
 		return
@@ -189,7 +189,7 @@ func isHierarchyParent(primary, parent string) bool {
 	return false
 }
 
-// UpdateAccessTokenFingerprint records the token version actually used upstream.
+// UpdateAccessTokenFingerprint 记录上游实际使用的令牌版本。
 func (r *UsageReporter) UpdateAccessTokenFingerprint(auth *cliproxyauth.Auth) {
 	if r == nil {
 		return
@@ -208,8 +208,8 @@ func (r *UsageReporter) accessTokenFingerprint() string {
 	return r.accessTokenHash
 }
 
-// ObserveResponseModel stores the model reported by an upstream response or event and
-// ignores payloads without one; the substitution warning is emitted at publish time.
+// ObserveResponseModel 存储上游响应或事件报告的模型，
+// 并忽略没有该信息的载荷；替换警告在发布时发出。
 func (r *UsageReporter) ObserveResponseModel(payload []byte) {
 	if r == nil || r.responseModelFinal.Load() {
 		return
@@ -233,7 +233,7 @@ func (r *UsageReporter) ObserveResponseModel(payload []byte) {
 	}
 }
 
-// SetResponseModel sets the reported model directly if valid and not already marked final.
+// SetResponseModel 在有效且尚未标记为终态时直接设置报告的模型。
 func (r *UsageReporter) SetResponseModel(model string) {
 	if r == nil || r.responseModelFinal.Load() {
 		return
@@ -247,10 +247,10 @@ func (r *UsageReporter) SetResponseModel(model string) {
 	r.responseModelMu.Unlock()
 }
 
-// SetUpstreamModel records the upstream model expected to be served when it differs
-// from the requested model (e.g. due to provider-specific mapping or canonicalization).
-// Model substitution detection compares the response against this upstream model,
-// while usage accounting preserves the client's requested model.
+// SetUpstreamModel 记录预期实际服务的上游模型，用于其不同于
+// 请求模型的情况（例如由于供应商特定的映射或规范化）。
+// 模型替换检测会将响应与该上游模型比较，
+// 而用量统计则保留客户端请求的模型。
 func (r *UsageReporter) SetUpstreamModel(model string) {
 	if r == nil {
 		return
@@ -260,7 +260,7 @@ func (r *UsageReporter) SetUpstreamModel(model string) {
 	r.upstreamModelMu.Unlock()
 }
 
-// UpstreamModel returns the expected upstream model, or an empty string if not explicitly set.
+// UpstreamModel 返回预期的上游模型；未显式设置时返回空字符串。
 func (r *UsageReporter) UpstreamModel() string {
 	if r == nil {
 		return ""
@@ -270,13 +270,13 @@ func (r *UsageReporter) UpstreamModel() string {
 	return r.upstreamModel
 }
 
-// IsResponseModelFinal reports whether the response model was already finalized by a terminal event.
+// IsResponseModelFinal 报告响应模型是否已由终态事件确定。
 func (r *UsageReporter) IsResponseModelFinal() bool {
 	return r != nil && r.responseModelFinal.Load()
 }
 
-// warnModelSubstitution warns about a silent upstream model swap, and labels the
-// credential by index only, never by account.
+// warnModelSubstitution 对上游静默替换模型发出警告，并仅
+// 按索引标注凭据，绝不按账号标注。
 func (r *UsageReporter) warnModelSubstitution(ctx context.Context) {
 	if r == nil {
 		return
@@ -299,7 +299,7 @@ func (r *UsageReporter) warnModelSubstitution(ctx context.Context) {
 	LogWithRequestID(ctx).Warnf("%s executor: upstream served model %q for requested model %q (auth_index=%s)", providerName, served, r.model, r.authIndexForLog())
 }
 
-// authIndexForLog labels the credential without exposing its file name or account.
+// authIndexForLog 标注凭据，但不暴露其文件名或账号。
 func (r *UsageReporter) authIndexForLog() string {
 	if r == nil {
 		return "nil"
@@ -310,7 +310,7 @@ func (r *UsageReporter) authIndexForLog() string {
 	return "nil"
 }
 
-// ResponseModel returns the latest model reported by the upstream response.
+// ResponseModel 返回上游响应报告的最新模型。
 func (r *UsageReporter) ResponseModel() string {
 	if r == nil {
 		return ""
@@ -354,11 +354,11 @@ func (r *UsageReporter) TrackHTTPClient(client *http.Client) *http.Client {
 	return r.trackHTTPClient(client, false)
 }
 
-// TrackHTTPClientRoundTripOnly records the TTFT start time upon sending the request
-// and captures first-packet arrival fallback on initial body reads, while keeping
-// effective TTFT unset. This allows protocol-aware streaming executors (like Codex SSE)
-// to mark effective TTFT explicitly upon receiving substantive token events, while
-// preserving first-packet fallback metrics for non-2xx error bodies or keepalive streams.
+// TrackHTTPClientRoundTripOnly 在发送请求时记录 TTFT 起始时间，
+// 并在首次读取请求体时捕获首包到达的兜底值，同时
+// 保持有效 TTFT 未设置。这允许协议感知的流式执行器（如 Codex SSE）
+// 在收到实质性令牌事件时显式标记有效 TTFT，同时
+// 为非 2xx 错误响应体或保活流保留首包兜底指标。
 func (r *UsageReporter) TrackHTTPClientRoundTripOnly(client *http.Client) *http.Client {
 	return r.trackHTTPClient(client, true)
 }
@@ -435,15 +435,15 @@ func (r *UsageReporter) IsFirstPacketSet() bool {
 	return r.firstPacketSet
 }
 
-// RecordFirstPacket records the arrival time of the first packet/chunk from upstream as a fallback.
+// RecordFirstPacket 作为兜底记录上游首个数据包/分块的到达时间。
 func (r *UsageReporter) RecordFirstPacket() {
 	r.ObserveTokenEvent(false)
 }
 
-// ObserveTokenEvent records the first packet fallback time on the first frame,
-// and if isToken is true, records the effective TTFT. It uses a fast-path
-// read check to return immediately with zero write lock contention once TTFT is set
-// or when subsequent non-token metadata frames arrive after the first packet.
+// ObserveTokenEvent 在第一帧记录首包兜底时间，
+// 如果 isToken 为 true，则记录有效 TTFT。它使用快速路径
+// 读取检查，在 TTFT 已设置或首个数据包之后到达
+// 非令牌元数据帧时，以零写锁竞争立即返回。
 func (r *UsageReporter) ObserveTokenEvent(isToken bool) {
 	if r == nil {
 		return
@@ -558,10 +558,10 @@ func hasNonZeroTokenUsage(detail usage.Detail) bool {
 		detail.TokenBreakdown.TotalTokens != 0
 }
 
-// ensurePublished guarantees that a usage record is emitted exactly once.
-// It is safe to call multiple times; only the first call wins due to once.Do.
-// This is used to ensure request counting even when upstream responses do not
-// include any usage fields (tokens), especially for streaming paths.
+// ensurePublished 保证用量记录恰好发出一次。
+// 可以安全地多次调用；由于 once.Do，只有第一次调用生效。
+// 它用于确保即使上游响应不包含任何用量字段
+// （tokens），也能进行请求计数，尤其是流式路径。
 func (r *UsageReporter) EnsurePublished(ctx context.Context) {
 	if r == nil {
 		return
@@ -571,8 +571,8 @@ func (r *UsageReporter) EnsurePublished(ctx context.Context) {
 	})
 }
 
-// publishAttemptRecord emits the record for one upstream attempt and the
-// observability warnings that belong to the attempt rather than to a single event.
+// publishAttemptRecord 发出一次上游尝试的记录，
+// 以及属于该尝试而非单个事件的可观测性警告。
 func (r *UsageReporter) publishAttemptRecord(ctx context.Context, record usage.Record) {
 	r.publishRecord(ctx, record)
 	r.warnModelSubstitution(ctx)
@@ -583,7 +583,7 @@ func (r *UsageReporter) publishRecord(ctx context.Context, record usage.Record) 
 	usage.PublishRecord(ctx, record)
 }
 
-// RequestID returns the execution instance request ID for this reporter.
+// RequestID 返回该上报器的执行实例请求 ID。
 func (r *UsageReporter) RequestID() string {
 	if r == nil {
 		return ""
@@ -591,7 +591,7 @@ func (r *UsageReporter) RequestID() string {
 	return r.requestID
 }
 
-// TraceID returns the parent inbound request ID for this reporter.
+// TraceID 返回该上报器的父级入站请求 ID。
 func (r *UsageReporter) TraceID() string {
 	if r == nil {
 		return ""
@@ -599,7 +599,7 @@ func (r *UsageReporter) TraceID() string {
 	return r.traceID
 }
 
-// IsNativeKey reports whether the client API key was authenticated by CPA's native config provider.
+// IsNativeKey 报告客户端 API key 是否由 CPA 的原生配置供应商认证。
 func (r *UsageReporter) IsNativeKey() bool {
 	if r == nil {
 		return false
@@ -607,7 +607,7 @@ func (r *UsageReporter) IsNativeKey() bool {
 	return r.isNativeKey
 }
 
-// AccessProvider identifies the client request authentication provider.
+// AccessProvider 标识客户端请求的认证供应商。
 func (r *UsageReporter) AccessProvider() string {
 	if r == nil {
 		return ""
@@ -630,8 +630,8 @@ func (r *UsageReporter) buildRecordForModel(model string, detail usage.Detail, f
 	if r == nil {
 		return usage.Record{Model: model, Detail: detail, Failed: failed, Fail: fail, Generate: usage.GenerateFlag(true)}
 	}
-	// Additional-model records describe a side model (image generation tool usage) that
-	// the upstream response model never refers to, so they must stay empty.
+	// 附加模型记录描述的是一种上游响应模型从不引用的
+	// 附属模型（图像生成工具用量），因此必须保持为空。
 	responseModel := ""
 	if model == r.model {
 		responseModel = r.ResponseModel()
@@ -795,7 +795,7 @@ func APIKeyFromContext(ctx context.Context) string {
 	return ""
 }
 
-// AccessProviderFromContext extracts the client authentication provider identifier from the context.
+// AccessProviderFromContext 从上下文中提取客户端认证供应商标识符。
 func AccessProviderFromContext(ctx context.Context) string {
 	if provider := usage.AccessProviderFromContext(ctx); provider != "" {
 		return provider
@@ -851,7 +851,7 @@ func resolveUsageAuthType(auth *cliproxyauth.Auth) string {
 	return auth.AuthKind()
 }
 
-// StreamUsageBuffer keeps the latest usage detail observed in a stream.
+// StreamUsageBuffer 保存在流中观测到的最新用量详情。
 type StreamUsageBuffer struct {
 	detail        usage.Detail
 	ok            bool
@@ -863,7 +863,7 @@ var (
 	openAIStreamServiceTierMarker = []byte(`"service_tier"`)
 )
 
-// Observe records detail when ok is true, allowing the final stream usage to win.
+// Observe 在 ok 为 true 时记录 detail，让最终的流式用量生效。
 func (b *StreamUsageBuffer) Observe(detail usage.Detail, ok bool) {
 	if b == nil || !ok {
 		return
@@ -881,8 +881,8 @@ func (b *StreamUsageBuffer) Observe(detail usage.Detail, ok bool) {
 	b.ok = true
 }
 
-// ObserveOpenAIStream records response-tier state and the latest usage from an
-// OpenAI-style stream while avoiding JSON parsing for irrelevant chunks.
+// ObserveOpenAIStream 记录 OpenAI 风格流中的响应层级状态和
+// 最新用量，同时避免对无关分块进行 JSON 解析。
 func (b *StreamUsageBuffer) ObserveOpenAIStream(line []byte) {
 	if b == nil {
 		return
@@ -922,7 +922,7 @@ func (b *StreamUsageBuffer) ObserveOpenAIStream(line []byte) {
 	b.Observe(detail, usageOK || detail.ResponseServiceTier != "")
 }
 
-// ObserveClaudeStream records and merges usage from a Claude SSE line.
+// ObserveClaudeStream 记录并合并来自 Claude SSE 行的用量。
 func (b *StreamUsageBuffer) ObserveClaudeStream(line []byte) {
 	if b == nil {
 		return
@@ -939,7 +939,7 @@ func (b *StreamUsageBuffer) ObserveClaudeStream(line []byte) {
 	}
 }
 
-// Publish emits the latest observed usage detail, if any.
+// Publish 发出最新观测到的用量详情（如果有）。
 func (b *StreamUsageBuffer) Publish(ctx context.Context, reporter *UsageReporter) bool {
 	if b == nil || !b.ok || reporter == nil {
 		return false
@@ -951,7 +951,7 @@ func (b *StreamUsageBuffer) Publish(ctx context.Context, reporter *UsageReporter
 	return true
 }
 
-// PublishFailure emits the latest observed usage detail together with failure details.
+// PublishFailure 发出最新观测到的用量详情以及失败详情。
 func (b *StreamUsageBuffer) PublishFailure(ctx context.Context, reporter *UsageReporter, errs ...error) bool {
 	if b == nil || reporter == nil {
 		return false
@@ -963,7 +963,7 @@ func (b *StreamUsageBuffer) PublishFailure(ctx context.Context, reporter *UsageR
 	return true
 }
 
-// Detail returns the latest observed usage detail.
+// Detail 返回最新观测到的用量详情。
 func (b *StreamUsageBuffer) Detail() (usage.Detail, bool) {
 	if b == nil || !b.ok {
 		return usage.Detail{}, false
@@ -971,7 +971,7 @@ func (b *StreamUsageBuffer) Detail() (usage.Detail, bool) {
 	return b.detail, true
 }
 
-// ResponseModel returns the latest model observed in the stream buffer.
+// ResponseModel 返回流缓冲区中观测到的最新模型。
 func (b *StreamUsageBuffer) ResponseModel() string {
 	if b == nil {
 		return ""
@@ -1157,8 +1157,8 @@ func parseClaudeUsageNode(usageNode gjson.Result) usage.Detail {
 	cacheReadTokens := usageNode.Get("cache_read_input_tokens").Int()
 	cacheCreationTokens := usageNode.Get("cache_creation_input_tokens").Int()
 	rawOutputTokens := usageNode.Get("output_tokens").Int()
-	// Anthropic reports thinking as a subset of output_tokens. Prefer the official
-	// nested field, then fall back to legacy aliases used by some gateways.
+	// Anthropic 将思考报告为 output_tokens 的子集。优先使用官方的
+	// 嵌套字段，然后回退到某些网关使用的旧版别名。
 	reasoningNode := firstExistingUsageNode(
 		usageNode,
 		"output_tokens_details.thinking_tokens",
@@ -1173,9 +1173,9 @@ func parseClaudeUsageNode(usageNode gjson.Result) usage.Detail {
 	if reasoningTokens > 0 && reasoningTokens <= rawOutputTokens {
 		nonReasoningOutput = rawOutputTokens - reasoningTokens
 	} else if reasoningTokens > rawOutputTokens {
-		// Keep Detail.OutputTokens authoritative for keeper subset checks and
-		// avoid inventing extra non-reasoning output when the upstream payload
-		// is inconsistent.
+		// 保持 Detail.OutputTokens 对 keeper 子集检查的权威性，
+		// 并在上游载荷不一致时避免凭空
+		// 生成额外的非推理输出。
 		nonReasoningOutput = 0
 	}
 	detail := usage.Detail{
@@ -1189,8 +1189,8 @@ func parseClaudeUsageNode(usageNode gjson.Result) usage.Detail {
 	if detail.CachedTokens == 0 {
 		detail.CachedTokens = detail.CacheCreationTokens
 	}
-	// raw output_tokens already includes thinking; cache fields are independent
-	// from input_tokens in the Messages API.
+	// 原始 output_tokens 已包含思考；在 Messages API 中缓存字段
+	// 独立于 input_tokens。
 	detail.TotalTokens = detail.InputTokens + rawOutputTokens + detail.CacheReadTokens + detail.CacheCreationTokens
 	detail.TokenBreakdown = usage.NewIndependentTokenBreakdown(
 		detail.InputTokens,
@@ -1406,9 +1406,9 @@ func rememberStopWithoutUsage(traceID string) {
 	time.AfterFunc(10*time.Minute, func() { stopChunkWithoutUsage.Delete(traceID) })
 }
 
-// FilterSSEUsageMetadata removes usageMetadata from SSE events that are not
-// terminal (finishReason != "stop"). Stop chunks are left untouched. This
-// function is used for wrapped Google-style response envelopes.
+// FilterSSEUsageMetadata 从非终态（finishReason != "stop"）的 SSE 事件中
+// 移除 usageMetadata。Stop 分块保持不变。该
+// 函数用于包装后的 Google 风格响应信封。
 func FilterSSEUsageMetadata(payload []byte) []byte {
 	if len(payload) == 0 {
 		return payload
@@ -1456,7 +1456,7 @@ func FilterSSEUsageMetadata(payload []byte) []byte {
 	}
 	if !modified {
 		if !foundData {
-			// Handle payloads that are raw JSON without SSE data: prefix.
+			// 处理不带 SSE data: 前缀的原始 JSON 载荷。
 			trimmed := bytes.TrimSpace(payload)
 			cleaned, changed := StripUsageMetadataFromJSON(trimmed)
 			if !changed {
@@ -1469,16 +1469,16 @@ func FilterSSEUsageMetadata(payload []byte) []byte {
 	return bytes.Join(lines, []byte("\n"))
 }
 
-// StripUsageMetadataFromJSON drops usageMetadata unless finishReason is present (terminal).
-// It handles both the unwrapped (candidates.0.finishReason) and the wrapped
-// (response.candidates.0.finishReason) envelope shapes.
+// StripUsageMetadataFromJSON 丢弃 usageMetadata，除非存在 finishReason（终态）。
+// 它同时处理未包装（candidates.0.finishReason）和已包装
+// （response.candidates.0.finishReason）两种信封形态。
 func StripUsageMetadataFromJSON(rawJSON []byte) ([]byte, bool) {
 	jsonBytes := bytes.TrimSpace(rawJSON)
 	if len(jsonBytes) == 0 || !gjson.ValidBytes(jsonBytes) {
 		return rawJSON, false
 	}
 
-	// Check for finishReason in both the unwrapped and the wrapped envelope shapes
+	// 在未包装和已包装两种信封形态中检查 finishReason
 	finishReason := gjson.GetBytes(jsonBytes, "candidates.0.finishReason")
 	if !finishReason.Exists() {
 		finishReason = gjson.GetBytes(jsonBytes, "response.candidates.0.finishReason")
@@ -1490,29 +1490,29 @@ func StripUsageMetadataFromJSON(rawJSON []byte) ([]byte, bool) {
 		usageMetadata = gjson.GetBytes(jsonBytes, "response.usageMetadata")
 	}
 
-	// Terminal chunk: keep as-is.
+	// 终态分块：保持原样。
 	if terminalReason {
 		return rawJSON, false
 	}
 
-	// Nothing to strip
+	// 无需剥离任何内容
 	if !usageMetadata.Exists() {
 		return rawJSON, false
 	}
 
-	// Remove usageMetadata from both possible locations
+	// 从两个可能的位置移除 usageMetadata
 	cleaned := jsonBytes
 	var changed bool
 
 	if usageMetadata = gjson.GetBytes(cleaned, "usageMetadata"); usageMetadata.Exists() {
-		// Rename usageMetadata to cpaUsageMetadata
+		// 将 usageMetadata 重命名为 cpaUsageMetadata
 		cleaned, _ = sjson.SetRawBytes(cleaned, "cpaUsageMetadata", []byte(usageMetadata.Raw))
 		cleaned, _ = sjson.DeleteBytes(cleaned, "usageMetadata")
 		changed = true
 	}
 
 	if usageMetadata = gjson.GetBytes(cleaned, "response.usageMetadata"); usageMetadata.Exists() {
-		// Rename usageMetadata to cpaUsageMetadata
+		// 将 usageMetadata 重命名为 cpaUsageMetadata
 		cleaned, _ = sjson.SetRawBytes(cleaned, "response.cpaUsageMetadata", []byte(usageMetadata.Raw))
 		cleaned, _ = sjson.DeleteBytes(cleaned, "response.usageMetadata")
 		changed = true

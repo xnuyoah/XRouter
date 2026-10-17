@@ -1,5 +1,5 @@
-// Package discovery provides local network mDNS / DNS-SD service advertising
-// and discovery capabilities for XRouter (CPA).
+// Package discovery 为 XRouter (CPA) 提供局域网 mDNS / DNS-SD
+// 服务广播与发现能力。
 package discovery
 
 import (
@@ -8,21 +8,21 @@ import (
 )
 
 const (
-	// DefaultServiceType is the proposed common service type for AI Gateways.
+	// DefaultServiceType 是为 AI 网关提议的通用服务类型。
 	DefaultServiceType = "_ai-gateway._tcp"
-	// DefaultDomain is the link-local domain used by mDNS.
+	// DefaultDomain 是 mDNS 使用的链路本地域名。
 	DefaultDomain = "local."
-	// SubtypeChatCompletions identifies the Chat Completions API protocol.
+	// SubtypeChatCompletions 标识 Chat Completions API 协议。
 	SubtypeChatCompletions = "_chat-completions"
-	// SubtypeResponses identifies the Responses API protocol.
+	// SubtypeResponses 标识 Responses API 协议。
 	SubtypeResponses = "_responses"
-	// SubtypeMessages identifies the Anthropic Messages API protocol.
+	// SubtypeMessages 标识 Anthropic Messages API 协议。
 	SubtypeMessages = "_messages"
-	// ProductCPA is the product identifier for XRouter.
+	// ProductCPA 是 XRouter 的产品标识。
 	ProductCPA = "xrouter"
 )
 
-// ServiceSpec describes a service to be advertised on the local network.
+// ServiceSpec 描述要在局域网上广播的服务。
 type ServiceSpec struct {
 	InstanceName  string
 	ServiceType   string
@@ -34,7 +34,7 @@ type ServiceSpec struct {
 	AdvertisedIPs []string
 }
 
-// DiscoveredService describes a discovered AI gateway service on the LAN.
+// DiscoveredService 描述在局域网上发现的 AI 网关服务。
 type DiscoveredService struct {
 	InstanceName string            `json:"instance_name"`
 	ServiceType  string            `json:"service_type"`
@@ -54,13 +54,13 @@ type DiscoveredService struct {
 	RawTXT       map[string]string `json:"raw_txt,omitempty"`
 }
 
-// Advertiser defines the server-side mDNS advertisement lifecycle.
+// Advertiser 定义服务端 mDNS 广播的生命周期。
 type Advertiser interface {
 	Start(ctx context.Context, spec ServiceSpec) error
 	Stop() error
 }
 
-// Browser defines the client-side mDNS browsing interface.
+// Browser 定义客户端 mDNS 浏览接口。
 type Browser interface {
 	Browse(ctx context.Context, serviceType, domain string) ([]DiscoveredService, error)
 	BrowseWithFallback(ctx context.Context) ([]DiscoveredService, error)

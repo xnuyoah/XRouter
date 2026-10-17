@@ -13,8 +13,8 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
-// ResolveDiscoveryStateDir returns an absolute state directory for discovery metadata,
-// avoiding writing relative paths into the current working directory.
+// ResolveDiscoveryStateDir 返回用于发现元数据的绝对状态目录，
+// 避免将相对路径写入当前工作目录。
 func ResolveDiscoveryStateDir() string {
 	if writable := util.WritablePath(); writable != "" {
 		return filepath.Join(writable, "discovery")
@@ -28,8 +28,8 @@ func ResolveDiscoveryStateDir() string {
 	return ""
 }
 
-// validateServiceType checks whether st conforms to RFC 6763 / RFC 6335 service type format.
-// CPA only exposes a TCP listener, so advertised types must end with ._tcp.
+// validateServiceType 检查 st 是否符合 RFC 6763 / RFC 6335 的服务类型格式。
+// CPA 只暴露 TCP 监听器，因此广播的类型必须以 ._tcp 结尾。
 func validateServiceType(st string) error {
 	st = strings.TrimSpace(st)
 	if st == "" {
@@ -60,14 +60,14 @@ func validateServiceType(st string) error {
 	return nil
 }
 
-// sanitizeSubtype validates and normalizes a subtype label according to RFC 6763 §7.1.
-// Returns a valid label prefixed with '_' (e.g. "_responses") or empty string if invalid.
+// sanitizeSubtype 依据 RFC 6763 §7.1 校验并规范化子类型标签。
+// 返回以 '_' 为前缀的合法标签（例如 "_responses"），若不合法则返回空字符串。
 func sanitizeSubtype(sub string) string {
 	sub = strings.TrimSpace(sub)
 	if sub == "" {
 		return ""
 	}
-	// Reject malformed attempts to pass full domain structures
+	// 拒绝传入完整域名结构的畸形尝试
 	if strings.Contains(sub, "._sub") || strings.Contains(sub, ".") {
 		return ""
 	}
@@ -78,7 +78,7 @@ func sanitizeSubtype(sub string) string {
 	if len(label) == 0 || len(label) > 62 {
 		return ""
 	}
-	// RFC 6335 / RFC 6763: alphanumeric and hyphen, cannot start or end with hyphen, no internal underscores
+	// RFC 6335 / RFC 6763：仅字母数字和连字符，不能以连字符开头或结尾，不允许内部下划线
 	if label[0] == '-' || label[len(label)-1] == '-' {
 		return ""
 	}
@@ -104,8 +104,8 @@ func truncateRunesTo(s string, maxBytes int) string {
 	return s
 }
 
-// sanitizeInstanceName limits name to 63 bytes without breaking UTF-8 rune boundaries
-// and removes ASCII control characters.
+// sanitizeInstanceName 将名称限制在 63 字节以内且不破坏 UTF-8 rune 边界，
+// 并移除 ASCII 控制字符。
 func sanitizeInstanceName(name string) string {
 	var b strings.Builder
 	for _, r := range name {
@@ -144,7 +144,7 @@ func interfaceHasIP(iface net.Interface, target net.IP) bool {
 	return false
 }
 
-// BuildServiceSpec creates a ServiceSpec from configuration, port, and TLS setting.
+// BuildServiceSpec 根据配置、端口和 TLS 设置创建 ServiceSpec。
 func BuildServiceSpec(cfg *config.Config, port int, tlsEnabled bool) (ServiceSpec, error) {
 	if cfg == nil {
 		return ServiceSpec{}, fmt.Errorf("discovery: config is nil")
@@ -154,17 +154,17 @@ func BuildServiceSpec(cfg *config.Config, port int, tlsEnabled bool) (ServiceSpe
 	}
 	discCfg := cfg.Discovery
 
-	// 1. Resolve State Dir for persistent instance ID
+	// 1. 解析状态目录以获得持久化实例 ID
 	stateDir := ResolveDiscoveryStateDir()
 	instanceID := GetOrGenerateInstanceID(stateDir)
 
-	// 2. Format instance name (CPA-<ShortID> or <custom>-<ShortID>) within DNS label limits
+	// 2. 在 DNS 标签限制内格式化实例名称（CPA-<ShortID> 或 <custom>-<ShortID>）
 	instanceName := FormatInstanceName(discCfg.ServiceName, instanceID)
 	if instanceName == "" {
 		instanceName = DefaultInstancePrefix + instanceID
 	}
 
-	// 3. Service type validation (RFC 6763 / RFC 6335)
+	// 3. 服务类型校验（RFC 6763 / RFC 6335）
 	serviceType := strings.TrimSpace(discCfg.ServiceType)
 	if serviceType == "" {
 		serviceType = DefaultServiceType
@@ -172,7 +172,7 @@ func BuildServiceSpec(cfg *config.Config, port int, tlsEnabled bool) (ServiceSpe
 		return ServiceSpec{}, fmt.Errorf("discovery: invalid service-type: %w", errST)
 	}
 
-	// 4. Subtypes sanitization
+	// 4. 子类型净化
 	var subtypes []string
 	rawSubtypes := discCfg.Subtypes
 	if len(rawSubtypes) == 0 {
@@ -191,7 +191,7 @@ func BuildServiceSpec(cfg *config.Config, port int, tlsEnabled bool) (ServiceSpe
 		subtypes = []string{SubtypeChatCompletions}
 	}
 
-	// 5. Interface filtering (Scheme C)
+	// 5. 网卡过滤（方案 C）
 	ifaces, err := FilterInterfaces(discCfg.Interfaces.Include, discCfg.Interfaces.Exclude)
 	if err != nil {
 		log.Warnf("discovery: failed to filter interfaces: %v", err)
@@ -236,7 +236,7 @@ func BuildServiceSpec(cfg *config.Config, port int, tlsEnabled bool) (ServiceSpe
 		return ServiceSpec{}, fmt.Errorf("discovery: no advertised address matches bind host %q", bindHost)
 	}
 
-	// 6. Build TXT records
+	// 6. 构建 TXT 记录
 	txtOpts := DefaultTXTOptions()
 	txtOpts.InstanceID = instanceID
 	txtOpts.TLS = tlsEnabled

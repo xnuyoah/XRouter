@@ -15,7 +15,7 @@ import (
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
-// pauseAuthSnapshot suspends a real scan after reading files, before publishing them.
+// pauseAuthSnapshot 在读取文件之后、发布它们之前暂停一次真实扫描。
 func pauseAuthSnapshot(t *testing.T, w *Watcher, force bool) func() {
 	t.Helper()
 	originalSnapshot := snapshotCoreAuthsFunc
@@ -63,7 +63,7 @@ func TestRefreshAuthStatePreservesConcurrentFileLifecycle(t *testing.T) {
 			}
 			w.addOrUpdateClient(otherPath)
 			w.authQueue = make(chan AuthUpdate, 10)
-			// The full scan must still publish changes to unrelated files.
+			// 全量扫描仍必须发布对无关文件的变更。
 			if errWrite := os.WriteFile(otherPath, []byte(`{"type":"codex","note":"scanned"}`), 0o600); errWrite != nil {
 				t.Fatal(errWrite)
 			}
@@ -130,7 +130,7 @@ func TestRefreshAuthStatePreservesConcurrentRoundTrip(t *testing.T) {
 			originalSnapshot := snapshotCoreAuthsFunc
 			t.Cleanup(func() { snapshotCoreAuthsFunc = originalSnapshot })
 			snapshotCoreAuthsFunc = func(cfg *config.Config, authDir string, parser synthesizer.PluginAuthParser) []*coreauth.Auth {
-				// Deliver two events during the scan, ending at the starting content.
+				// 在扫描期间投递两个事件，最终回到起始内容。
 				if errWrite := os.WriteFile(path, []byte(`{"type":"codex","proxy_url":"http://intermediate.proxy:8080"}`), 0o600); errWrite != nil {
 					t.Fatal(errWrite)
 				}
@@ -183,7 +183,7 @@ func TestRefreshAuthStatePreservesUnchangedFileObservation(t *testing.T) {
 			}
 			w := &Watcher{authDir: dir, config: &config.Config{AuthDir: dir}, authQueue: make(chan AuthUpdate, 10)}
 			w.addOrUpdateClient(path)
-			// The intermediate content is seen only by the full scan, never by an event.
+			// 中间内容只会被全量扫描看到，绝不会被事件看到。
 			if errWrite := os.WriteFile(path, []byte(`{"type":"codex"}`), 0o600); errWrite != nil {
 				t.Fatal(errWrite)
 			}
@@ -235,9 +235,9 @@ func TestRefreshAuthStateAppliesHashCachedFileObservation(t *testing.T) {
 			t.Cleanup(func() { snapshotCoreAuthsFunc = originalSnapshot })
 			snapshotCoreAuthsFunc = func(cfg *config.Config, authDir string, parser synthesizer.PluginAuthParser) []*coreauth.Auth {
 				auths := originalSnapshot(cfg, authDir, parser)
-				// reloadClients cached the new hash before publishing its matching auth.
+				// reloadClients 在发布其匹配的认证之前缓存了新哈希。
 				if phase == "after_scan" {
-					// Suspend the event after observation, before content processing.
+					// 在观测之后、内容处理之前暂停该事件。
 					w.observeAuthFile(path)
 				} else {
 					w.handleEvent(fsnotify.Event{Name: path, Op: fsnotify.Write})
@@ -291,7 +291,7 @@ func TestDispatchAuthUpdatesRejectsDelayedScan(t *testing.T) {
 			w := &Watcher{authDir: dir, config: &config.Config{AuthDir: dir}}
 			w.addOrUpdateClient(path)
 			w.authQueue = make(chan AuthUpdate, 10)
-			// Suspend the full-scan pipeline between its state commit and dispatch.
+			// 在全量扫描管道的状态提交与分发之间将其暂停。
 			w.clientsMutex.Lock()
 			delayed := w.prepareAuthUpdatesLocked([]*coreauth.Auth{w.currentAuths["account.json"].Clone()}, true)
 			w.clientsMutex.Unlock()
@@ -366,7 +366,7 @@ func TestRefreshAuthStatePreservesConcurrentProxyUpdate(t *testing.T) {
 
 			finishScan := pauseAuthSnapshot(t, w, false)
 
-			// Match the management fields handler's runtime update and file persistence.
+			// 匹配管理字段处理器的运行时更新与文件持久化。
 			patched := registered.Clone()
 			patched.ProxyURL = testCase.newProxy
 			if testCase.newProxy == "" {
@@ -387,7 +387,7 @@ func TestRefreshAuthStatePreservesConcurrentProxyUpdate(t *testing.T) {
 			if got := w.currentAuths[initial.ID].ProxyURL; got != testCase.newProxy {
 				t.Errorf("watcher proxy_url = %q, want %q after concurrent patch", got, testCase.newProxy)
 			}
-			// Consume the final queued snapshot as the service does, without writing it back yet.
+			// 像服务那样消费最终排队的快照，暂时不写回。
 			pending, okPending := w.pendingUpdates[initial.ID]
 			if !okPending || pending.Auth == nil {
 				t.Fatal("missing queued auth update")

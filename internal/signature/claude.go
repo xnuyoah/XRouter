@@ -8,10 +8,10 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-// StripInvalidClaudeThinkingBlocks removes Claude thinking blocks whose
-// signatures are empty or not valid Claude thinking signatures after stripping
-// an optional cache prefix, unless the validation options allow an empty
-// thinking placeholder.
+// StripInvalidClaudeThinkingBlocks 移除签名
+// 为空、或在剥离可选 cache 前缀后不是有效 Claude thinking 签名
+// 的 Claude thinking 块，除非校验选项允许空的
+// thinking 占位符。
 func StripInvalidClaudeThinkingBlocks(payload []byte, opts ...ClaudeSignatureValidationOptions) []byte {
 	messages := gjson.GetBytes(payload, "messages")
 	if !messages.IsArray() {
@@ -52,8 +52,8 @@ func StripInvalidClaudeThinkingBlocks(payload []byte, opts ...ClaudeSignatureVal
 	return output
 }
 
-// StripInvalidClaudeThinkingBlocksAndEmptyMessages also removes messages whose
-// content becomes empty after invalid thinking blocks are removed.
+// StripInvalidClaudeThinkingBlocksAndEmptyMessages 还会移除在移除无效
+// thinking 块后内容变为空的消息。
 func StripInvalidClaudeThinkingBlocksAndEmptyMessages(payload []byte, opts ...ClaudeSignatureValidationOptions) []byte {
 	stripped := StripInvalidClaudeThinkingBlocks(payload, opts...)
 	if bytes.Equal(stripped, payload) {

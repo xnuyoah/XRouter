@@ -6,15 +6,15 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// APIKeyModelIsCompat reports whether the selected API-key model enables
-// compatibility handling for Claude thinking blocks.
+// APIKeyModelIsCompat 报告所选的 API-key 模型是否启用
+// 对 Claude thinking 块的兼容处理。
 func APIKeyModelIsCompat(req cliproxyexecutor.Request) bool {
 	modelInfo, ok := cliproxyauth.ResolvedModelInfo(req)
 	return ok && modelInfo != nil && modelInfo.IsCompat
 }
 
-// ApplyRequestThinking preserves the registry lookup path unless the auth
-// manager bound authoritative model capabilities to this execution attempt.
+// ApplyRequestThinking 保留注册表查找路径，除非 auth
+// 管理器将权威模型能力绑定到本次执行尝试。
 func ApplyRequestThinking(body []byte, req cliproxyexecutor.Request, opts cliproxyexecutor.Options, fromFormat, toFormat, provider string, normalizedUpdatesChanged ...bool) ([]byte, error) {
 	originalSource := opts.OriginalRequest
 	if len(originalSource) == 0 {

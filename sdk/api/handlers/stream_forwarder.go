@@ -9,11 +9,11 @@ import (
 	"golang.org/x/net/context"
 )
 
-// ExecuteStreamWithPreFTKeepAlive executes a streaming request via ExecuteStreamWithAuthManager.
-// When keepAliveC is non-nil (streaming.send-keepalive-before-ft is enabled and keepalive-seconds > 0),
-// it runs the synchronous bootstrap in a goroutine and invokes writeKeepAlive on each tick while waiting.
-// It returns (dataChan, upstreamHeaders, errChan, ok), where ok is false if the request context was canceled
-// or writeKeepAlive returned false.
+// ExecuteStreamWithPreFTKeepAlive 通过 ExecuteStreamWithAuthManager 执行流式请求。
+// 当 keepAliveC 非 nil 时（streaming.send-keepalive-before-ft 已启用且 keepalive-seconds > 0），
+// 它会在一个 goroutine 中运行同步引导过程，并在等待期间每个 tick 调用一次 writeKeepAlive。
+// 它返回 (dataChan, upstreamHeaders, errChan, ok)，若请求上下文被取消
+// 或 writeKeepAlive 返回 false，则 ok 为 false。
 func (h *BaseAPIHandler) ExecuteStreamWithPreFTKeepAlive(
 	c *gin.Context,
 	cliCtx context.Context,
@@ -62,7 +62,7 @@ func (h *BaseAPIHandler) ExecuteStreamWithPreFTKeepAlive(
 	}
 }
 
-// PendingStreamError returns an immediately available non-nil stream error.
+// PendingStreamError 返回一个立即可用的非 nil 流错误。
 func PendingStreamError(errs <-chan *interfaces.ErrorMessage) (*interfaces.ErrorMessage, bool) {
 	if errs == nil {
 		return nil, false
@@ -78,41 +78,41 @@ func PendingStreamError(errs <-chan *interfaces.ErrorMessage) (*interfaces.Error
 }
 
 type StreamForwardOptions struct {
-	// KeepAliveInterval overrides the configured streaming keep-alive interval.
-	// If nil, the configured default is used. If set to <= 0, keep-alives are disabled.
+	// KeepAliveInterval 覆盖已配置的流式 keep-alive 间隔。
+	// 若为 nil，则使用配置的默认值。若设置为 <= 0，则禁用 keep-alive。
 	KeepAliveInterval *time.Duration
 
-	// WriteChunk writes a single data chunk to the response body. It should not flush.
+	// WriteChunk 向响应体写入单个数据块。它不应执行 flush。
 	WriteChunk func(chunk []byte)
 
-	// ChunkError optionally reports that WriteChunk emitted a terminal failure.
-	// The failure is passed to cancel without writing another terminal payload.
+	// ChunkError 可选地报告 WriteChunk 产生了终止性失败。
+	// 该失败会被传给 cancel，而不会写入另一个终止载荷。
 	ChunkError func() *interfaces.ErrorMessage
 
-	// ChunkDone reports successful terminal delivery after WriteChunk and Flush.
+	// ChunkDone 报告在 WriteChunk 与 Flush 之后成功完成终止投递。
 	ChunkDone func() bool
 
-	// Flush optionally exposes transport flush errors hidden by http.Flusher.
+	// Flush 可选地暴露被 http.Flusher 隐藏的传输 flush 错误。
 	Flush func() error
 
-	// NormalizeTerminalError optionally replaces an upstream error before it is
-	// written or passed to cancel.
+	// NormalizeTerminalError 可选地在其被写入或
+	// 传给 cancel 之前替换上游错误。
 	NormalizeTerminalError func(errMsg *interfaces.ErrorMessage) *interfaces.ErrorMessage
 
-	// WriteTerminalError writes an error payload to the response body when streaming fails
-	// after headers have already been committed. It should not flush.
+	// WriteTerminalError 在响应头已提交后流式传输失败时，向响应体写入错误载荷。
+	// 它不应执行 flush。
 	WriteTerminalError func(errMsg *interfaces.ErrorMessage)
 
-	// CloseError optionally validates a clean upstream channel close before WriteDone.
-	// Returning an error surfaces it through WriteTerminalError instead of completing the stream.
+	// CloseError 可选地在 WriteDone 之前校验上游通道是否干净关闭。
+	// 返回错误会通过 WriteTerminalError 暴露它，而不是完成该流。
 	CloseError func() *interfaces.ErrorMessage
 
-	// WriteDone optionally writes a terminal marker when the upstream data channel closes
-	// without an error (e.g. OpenAI's `[DONE]`). It should not flush.
+	// WriteDone 可选地在上游数据通道无错误关闭时写入终止标记
+	// （例如 OpenAI 的 `[DONE]`）。它不应执行 flush。
 	WriteDone func()
 
-	// WriteKeepAlive optionally writes a keep-alive heartbeat. It should not flush.
-	// When nil, a standard SSE comment heartbeat is used.
+	// WriteKeepAlive 可选地写入 keep-alive 心跳。它不应执行 flush。
+	// 当为 nil 时，使用标准的 SSE 注释心跳。
 	WriteKeepAlive func()
 }
 
@@ -163,7 +163,7 @@ func (h *BaseAPIHandler) ForwardStream(c *gin.Context, flusher http.Flusher, can
 			return
 		case chunk, ok := <-data:
 			if !ok {
-				// Prefer surfacing a terminal error if one is pending.
+				// 若有终止性错误待处理，优先将其暴露出来。
 				if terminalErr == nil {
 					if errMsg, ok := PendingStreamError(errs); ok {
 						terminalErr = errMsg

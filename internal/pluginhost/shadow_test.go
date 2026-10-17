@@ -169,8 +169,8 @@ func TestRemoveStaleShadowPluginDirsOnlyRemovesDeadProcesses(t *testing.T) {
 	liveDir := filepath.Join(base, shadowPluginProcessDirName(currentPID))
 	deadDir := filepath.Join(base, shadowPluginProcessDirName(deadPID))
 	otherDir := filepath.Join(base, "unrelated")
-	// A directory owned by a different live process must survive the
-	// liveness check itself, not just the current-pid shortcut.
+	// 由另一个存活进程拥有的目录必须能通过存活检查本身，
+	// 而不仅仅依赖当前 pid 的快捷判断。
 	liveOther, liveOtherPID := startWaitingProcess(t)
 	if liveOtherPID == currentPID || liveOtherPID == deadPID {
 		t.Skip("live helper process pid collided with another test pid")

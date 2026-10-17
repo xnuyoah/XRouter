@@ -168,9 +168,9 @@ const observedFable51CAQSNarrationSample = "CAQS1wcKEQgRGAI4AUIJbmFycmF0aW9uEgx5
 
 const observedContextID = "d9743975-4bb0-4936-9e28-d5b0d21bdc48"
 
-// claudeCAISParts builds Claude CAIS signatures field by field so tests can
-// assert both the observed layout and the upstream drift the validator must
-// tolerate or reject.
+// claudeCAISParts 逐字段构建 Claude CAIS 签名，使测试能够
+// 断言观察到的布局，以及校验器必须容忍或拒绝的
+// 上游漂移。
 type claudeCAISParts struct {
 	includeTopEnvelope   bool
 	topEnvelope          uint64
@@ -190,8 +190,8 @@ type claudeCAISParts struct {
 	contextID            string
 }
 
-// defaultClaudeCAISParts mirrors the layout observed on claude-fable-5 and
-// claude-opus-5 responses.
+// defaultClaudeCAISParts 复刻在 claude-fable-5 和
+// claude-opus-5 响应上观察到的布局。
 func defaultClaudeCAISParts(model string) claudeCAISParts {
 	return claudeCAISParts{
 		includeTopEnvelope:   true,
@@ -431,8 +431,8 @@ func TestClaudeCAISSignature_ObservedOpus5Layout(t *testing.T) {
 	}
 }
 
-// TestClaudeCAISSignature_NotCompatibleWithOtherProviders pins that a Claude
-// CAIS signature can only be replayed to a Claude target.
+// TestClaudeCAISSignature_NotCompatibleWithOtherProviders 固定了 Claude
+// CAIS 签名只能重放到 Claude 目标。
 func TestClaudeCAISSignature_NotCompatibleWithOtherProviders(t *testing.T) {
 	for _, target := range []SignatureProvider{SignatureProviderGPT, SignatureProviderKimi, SignatureProviderGrok} {
 		if normalized, ok := CompatibleSignatureForProvider(target, observedFable5Sample); ok || normalized != "" {
@@ -468,10 +468,10 @@ func TestClaudeCAISSignature_CompatibleWithAllClaudeTargets(t *testing.T) {
 	}
 }
 
-// TestClaudeCAISSignature_ToleratesUpstreamFieldDrift pins the deliberately
-// structural validation: rejecting a signature would discard the associated
-// thinking block, so incidental values observed today must not become hard
-// requirements for recognizing the envelope.
+// TestClaudeCAISSignature_ToleratesUpstreamFieldDrift 固定了刻意采用的
+// 结构性校验：拒绝一个签名会丢弃与之关联的
+// thinking 块，因此今天观察到的偶发取值不得成为
+// 识别该封装包的硬性要求。
 func TestClaudeCAISSignature_ToleratesUpstreamFieldDrift(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -559,10 +559,10 @@ func TestClaudeCAISSignature_RejectsMalformedPayloads(t *testing.T) {
 		{"whitespace only", "   "},
 		{"not base64", "CAIS!!!not-base64"},
 		{"truncated payload", truncated},
-		// 'E' prefix is the classic Claude form and must not reach CAIS parsing.
+		// 'E' 前缀是经典 Claude 形式，不得进入 CAIS 解析。
 		{"classic claude prefix", base64.StdEncoding.EncodeToString([]byte{0x12, 0x00})},
-		// 'C' prefix but a non-0x08 marker byte, the only way to reach the marker
-		// check (a 'C' prefix constrains the first byte to 0x08-0x0b).
+		// 'C' 前缀但标记字节非 0x08，这是到达标记
+		// 检查的唯一途径（'C' 前缀将首字节限定在 0x08-0x0b）。
 		{"wrong marker byte", base64.StdEncoding.EncodeToString([]byte{0x0a, 0x00})},
 		{"no container", func() string {
 			p := defaultClaudeCAISParts("claude-opus-5")
@@ -624,9 +624,9 @@ func TestClaudeCAISSignature_RejectsMalformedPayloads(t *testing.T) {
 	}
 }
 
-// TestClaudeCAISSignature_DoesNotShadowClassicClaudeSignature guards the
-// detection order: CAIS validation runs before classic Claude validation, so it
-// must not claim E/R signatures and change how they are normalized.
+// TestClaudeCAISSignature_DoesNotShadowClassicClaudeSignature 守护
+// 检测顺序：CAIS 校验先于经典 Claude 校验运行，因此它
+// 不得认领 E/R 签名并改变它们的规范化方式。
 func TestClaudeCAISSignature_DoesNotShadowClassicClaudeSignature(t *testing.T) {
 	classic := testClaudeThinkingSignature()
 	if IsValidClaudeCAISSignature(classic) {

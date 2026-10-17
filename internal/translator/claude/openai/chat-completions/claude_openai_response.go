@@ -1,8 +1,8 @@
-// Package openai provides response translation functionality for Claude Code to OpenAI API compatibility.
-// This package handles the conversion of Claude Code API responses into OpenAI Chat Completions-compatible
-// JSON format, transforming streaming events and non-streaming responses into the format
-// expected by OpenAI API clients. It supports both streaming and non-streaming modes,
-// handling text content, tool calls, reasoning content, and usage metadata appropriately.
+// Package openai 提供 Claude Code 到 OpenAI API 兼容的响应转换功能。
+// 本包负责把 Claude Code API 响应转换为兼容 OpenAI Chat Completions 的
+// JSON 格式，将流式事件和非流式响应转换为
+// OpenAI API 客户端期望的格式。它同时支持流式和非流式模式，
+// 并适当处理文本内容、工具调用、推理内容和用量元数据。
 package chat_completions
 
 import (
@@ -21,14 +21,14 @@ var (
 	dataTag = []byte("data:")
 )
 
-// ConvertAnthropicResponseToOpenAIParams holds parameters for response conversion
+// ConvertAnthropicResponseToOpenAIParams 保存响应转换所需的参数
 type ConvertAnthropicResponseToOpenAIParams struct {
 	CreatedAt         int64
 	ResponseID        string
 	FinishReason      string
 	Usage             claudeUsageTokens
 	TrailingUsageSent bool
-	// Tool calls accumulator for streaming
+	// 流式场景下的工具调用累加器
 	ToolCallsAccumulator map[int]*ToolCallAccumulator
 	NextToolCallIndex    int
 }
@@ -41,7 +41,7 @@ type claudeUsageTokens struct {
 	HasUsage                 bool
 }
 
-// ToolCallAccumulator holds the state for accumulating tool call data
+// ToolCallAccumulator 保存累加工具调用数据的状态
 type ToolCallAccumulator struct {
 	ID        string
 	Name      string
@@ -77,19 +77,19 @@ func (u claudeUsageTokens) OpenAIUsage() (promptTokens, completionTokens, totalT
 	return promptTokens, completionTokens, totalTokens, cachedTokens, cachedCreationTokens
 }
 
-// ConvertClaudeResponseToOpenAI converts Claude Code streaming response format to OpenAI Chat Completions format.
-// This function processes various Claude Code event types and transforms them into OpenAI-compatible JSON responses.
-// It handles text content, tool calls, reasoning content, and usage metadata, outputting responses that match
-// the OpenAI API format. The function supports incremental updates for streaming responses.
+// ConvertClaudeResponseToOpenAI 将 Claude Code 流式响应格式转换为 OpenAI Chat Completions 格式。
+// 本函数处理各种 Claude Code 事件类型，并将其转换为兼容 OpenAI 的 JSON 响应。
+// 它处理文本内容、工具调用、推理内容和用量元数据，输出符合
+// OpenAI API 格式的响应。该函数支持流式响应的增量更新。
 //
-// Parameters:
-//   - ctx: The context for the request, used for cancellation and timeout handling
-//   - modelName: The name of the model being used for the response
-//   - rawJSON: The raw JSON response from the Claude Code API
-//   - param: A pointer to a parameter object for maintaining state between calls
+// 参数：
+//   - ctx: 请求上下文，用于取消和超时处理
+//   - modelName: 响应所用的模型名
+//   - rawJSON: 来自 Claude Code API 的原始 JSON 响应
+//   - param: 指向参数对象的指针，用于在多次调用之间保持状态
 //
-// Returns:
-//   - [][]byte: A slice of OpenAI-compatible JSON responses
+// 返回：
+//   - [][]byte: 兼容 OpenAI 的 JSON 响应切片
 func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) [][]byte {
 	if *param == nil {
 		*param = &ConvertAnthropicResponseToOpenAIParams{
@@ -107,15 +107,15 @@ func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, original
 	root := gjson.ParseBytes(rawJSON)
 	eventType := root.Get("type").String()
 
-	// Base OpenAI streaming response template
+	// 基础 OpenAI 流式响应模板
 	template := []byte(`{"id":"","object":"chat.completion.chunk","created":0,"model":"","choices":[{"index":0,"delta":{},"finish_reason":null}]}`)
 
-	// Set model
+	// 设置 model
 	if modelName != "" {
 		template, _ = sjson.SetBytes(template, "model", modelName)
 	}
 
-	// Set response ID and creation time
+	// 设置响应 ID 和创建时间
 	if (*param).(*ConvertAnthropicResponseToOpenAIParams).ResponseID != "" {
 		template, _ = sjson.SetBytes(template, "id", (*param).(*ConvertAnthropicResponseToOpenAIParams).ResponseID)
 	}
@@ -125,7 +125,7 @@ func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, original
 
 	switch eventType {
 	case "message_start":
-		// Initialize response with message metadata when a new message begins
+		// 新消息开始时用消息元数据初始化响应
 		if message := root.Get("message"); message.Exists() {
 			(*param).(*ConvertAnthropicResponseToOpenAIParams).ResponseID = message.Get("id").String()
 			(*param).(*ConvertAnthropicResponseToOpenAIParams).CreatedAt = time.Now().Unix()
@@ -134,10 +134,10 @@ func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, original
 			template, _ = sjson.SetBytes(template, "model", modelName)
 			template, _ = sjson.SetBytes(template, "created", (*param).(*ConvertAnthropicResponseToOpenAIParams).CreatedAt)
 
-			// Set initial role to assistant for the response
+			// 为响应设置初始角色 assistant
 			template, _ = sjson.SetBytes(template, "choices.0.delta.role", "assistant")
 
-			// Initialize tool calls accumulator for tracking tool call progress
+			// 初始化工具调用累加器以跟踪工具调用进度
 			if (*param).(*ConvertAnthropicResponseToOpenAIParams).ToolCallsAccumulator == nil {
 				(*param).(*ConvertAnthropicResponseToOpenAIParams).ToolCallsAccumulator = make(map[int]*ToolCallAccumulator)
 			}
@@ -147,12 +147,12 @@ func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, original
 		return [][]byte{template}
 
 	case "content_block_start":
-		// Start of a content block (text, tool use, or reasoning)
+		// 内容块的开始（文本、工具使用或推理）
 		if contentBlock := root.Get("content_block"); contentBlock.Exists() {
 			blockType := contentBlock.Get("type").String()
 
 			if blockType == "tool_use" {
-				// Start of tool call - initialize accumulator to track arguments
+				// 工具调用的开始——初始化累加器以跟踪参数
 				toolCallID := contentBlock.Get("id").String()
 				toolName := contentBlock.Get("name").String()
 				index := int(root.Get("index").Int())
@@ -170,33 +170,33 @@ func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, original
 					Index: toolCallIndex,
 				}
 
-				// Don't output anything yet - wait for complete tool call
+				// 暂不输出任何内容——等待完整的工具调用
 				return [][]byte{}
 			}
 		}
 		return [][]byte{}
 
 	case "content_block_delta":
-		// Handle content delta (text, tool use arguments, or reasoning content)
+		// 处理内容增量（文本、工具使用参数或推理内容）
 		hasContent := false
 		if delta := root.Get("delta"); delta.Exists() {
 			deltaType := delta.Get("type").String()
 
 			switch deltaType {
 			case "text_delta":
-				// Text content delta - send incremental text updates
+				// 文本内容增量——发送增量文本更新
 				if text := delta.Get("text"); text.Exists() {
 					template, _ = sjson.SetBytes(template, "choices.0.delta.content", text.String())
 					hasContent = true
 				}
 			case "thinking_delta":
-				// Accumulate reasoning/thinking content
+				// 累加推理/thinking 内容
 				if thinking := delta.Get("thinking"); thinking.Exists() {
 					template, _ = sjson.SetBytes(template, "choices.0.delta.reasoning_content", thinking.String())
 					hasContent = true
 				}
 			case "input_json_delta":
-				// Tool use input delta - accumulate arguments for tool calls
+				// 工具使用输入增量——为工具调用累加参数
 				if partialJSON := delta.Get("partial_json"); partialJSON.Exists() {
 					index := int(root.Get("index").Int())
 					if (*param).(*ConvertAnthropicResponseToOpenAIParams).ToolCallsAccumulator != nil {
@@ -205,7 +205,7 @@ func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, original
 						}
 					}
 				}
-				// Don't output anything yet - wait for complete tool call
+				// 暂不输出任何内容——等待完整的工具调用
 				return [][]byte{}
 			}
 		}
@@ -216,11 +216,11 @@ func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, original
 		}
 
 	case "content_block_stop":
-		// End of content block - output complete tool call if it's a tool_use block
+		// 内容块结束——若为 tool_use 块则输出完整的工具调用
 		index := int(root.Get("index").Int())
 		if (*param).(*ConvertAnthropicResponseToOpenAIParams).ToolCallsAccumulator != nil {
 			if accumulator, exists := (*param).(*ConvertAnthropicResponseToOpenAIParams).ToolCallsAccumulator[index]; exists {
-				// Build complete tool call with accumulated arguments
+				// 用累加的参数构建完整的工具调用
 				arguments := accumulator.Arguments.String()
 				if arguments == "" {
 					arguments = "{}"
@@ -231,7 +231,7 @@ func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, original
 				template, _ = sjson.SetBytes(template, "choices.0.delta.tool_calls.0.function.name", accumulator.Name)
 				template, _ = sjson.SetBytes(template, "choices.0.delta.tool_calls.0.function.arguments", arguments)
 
-				// Clean up the accumulator for this index
+				// 清理该索引对应的累加器
 				delete((*param).(*ConvertAnthropicResponseToOpenAIParams).ToolCallsAccumulator, index)
 
 				return [][]byte{template}
@@ -240,7 +240,7 @@ func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, original
 		return [][]byte{}
 
 	case "message_delta":
-		// Handle message-level changes including stop reason and usage
+		// 处理消息级变化，包括停止原因和用量
 		if delta := root.Get("delta"); delta.Exists() {
 			if stopReason := delta.Get("stop_reason"); stopReason.Exists() {
 				(*param).(*ConvertAnthropicResponseToOpenAIParams).FinishReason = mapAnthropicStopReasonToOpenAI(stopReason.String())
@@ -248,7 +248,7 @@ func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, original
 			}
 		}
 
-		// Handle usage information for token counts
+		// 处理用于 token 计数的用量信息
 		if usage := root.Get("usage"); usage.Exists() {
 			(*param).(*ConvertAnthropicResponseToOpenAIParams).Usage.Merge(usage)
 			promptTokens, completionTokens, totalTokens, cachedTokens, cachedCreationTokens := (*param).(*ConvertAnthropicResponseToOpenAIParams).Usage.OpenAIUsage()
@@ -262,7 +262,7 @@ func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, original
 		return [][]byte{template}
 
 	case "message_stop":
-		// Final message event - emit standard OpenAI trailing usage chunk with empty choices array if usage was tracked.
+		// 最终消息事件——若跟踪了用量，则发出带空 choices 数组的标准 OpenAI 尾部用量数据块。
 		p := (*param).(*ConvertAnthropicResponseToOpenAIParams)
 		if p.Usage.HasUsage && !p.TrailingUsageSent {
 			p.TrailingUsageSent = true
@@ -288,11 +288,11 @@ func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, original
 		return [][]byte{}
 
 	case "ping":
-		// Ping events for keeping connection alive - no output needed
+		// 用于保持连接存活的 ping 事件——无需输出
 		return [][]byte{}
 
 	case "error":
-		// Error event - format and return error response
+		// 错误事件——格式化并返回错误响应
 		if errorData := root.Get("error"); errorData.Exists() {
 			errorJSON := []byte(`{"error":{"message":"","type":""}}`)
 			errorJSON, _ = sjson.SetBytes(errorJSON, "error.message", errorData.Get("message").String())
@@ -302,12 +302,12 @@ func ConvertClaudeResponseToOpenAI(_ context.Context, modelName string, original
 		return [][]byte{}
 
 	default:
-		// Unknown event type - ignore
+		// 未知事件类型——忽略
 		return [][]byte{}
 	}
 }
 
-// mapAnthropicStopReasonToOpenAI maps Anthropic stop reasons to OpenAI stop reasons
+// mapAnthropicStopReasonToOpenAI 将 Anthropic 停止原因映射为 OpenAI 停止原因
 func mapAnthropicStopReasonToOpenAI(anthropicReason string) string {
 	switch anthropicReason {
 	case "end_turn":
@@ -325,19 +325,19 @@ func mapAnthropicStopReasonToOpenAI(anthropicReason string) string {
 	}
 }
 
-// ConvertClaudeResponseToOpenAINonStream converts a non-streaming Claude Code response to a non-streaming OpenAI response.
-// This function processes the complete Claude Code response and transforms it into a single OpenAI-compatible
-// JSON response. It handles message content, tool calls, reasoning content, and usage metadata, combining all
-// the information into a single response that matches the OpenAI API format.
+// ConvertClaudeResponseToOpenAINonStream 将非流式 Claude Code 响应转换为非流式 OpenAI 响应。
+// 本函数处理完整的 Claude Code 响应，并将其转换为单个兼容 OpenAI 的
+// JSON 响应。它处理消息内容、工具调用、推理内容和用量元数据，把所有
+// 信息合并为一个符合 OpenAI API 格式的响应。
 //
-// Parameters:
-//   - ctx: The context for the request, used for cancellation and timeout handling
-//   - modelName: The name of the model being used for the response (unused in current implementation)
-//   - rawJSON: The raw JSON response from the Claude Code API
-//   - param: A pointer to a parameter object for the conversion (unused in current implementation)
+// 参数：
+//   - ctx: 请求上下文，用于取消和超时处理
+//   - modelName: 响应所用的模型名（当前实现中未使用）
+//   - rawJSON: 来自 Claude Code API 的原始 JSON 响应
+//   - param: 指向转换参数对象的指针（当前实现中未使用）
 //
-// Returns:
-//   - []byte: An OpenAI-compatible JSON response containing all message content and metadata
+// 返回：
+//   - []byte: 包含全部消息内容和元数据的兼容 OpenAI 的 JSON 响应
 func ConvertClaudeResponseToOpenAINonStream(_ context.Context, _ string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, _ *any) []byte {
 	rawJSON, _ = translatorcommon.ClaudeMessagesJSONToSSE(rawJSON)
 	chunks := make([][]byte, 0)
@@ -350,7 +350,7 @@ func ConvertClaudeResponseToOpenAINonStream(_ context.Context, _ string, origina
 		chunks = append(chunks, bytes.TrimSpace(line[5:]))
 	}
 
-	// Base OpenAI non-streaming response template
+	// 基础 OpenAI 非流式响应模板
 	out := []byte(`{"id":"","object":"chat.completion","created":0,"model":"","choices":[{"index":0,"message":{"role":"assistant","content":""},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}`)
 
 	var messageID string
@@ -368,7 +368,7 @@ func ConvertClaudeResponseToOpenAINonStream(_ context.Context, _ string, origina
 
 		switch eventType {
 		case "message_start":
-			// Extract initial message metadata including ID, model, and input token count
+			// 提取初始消息元数据，包括 ID、模型和输入 token 数
 			if message := root.Get("message"); message.Exists() {
 				messageID = message.Get("id").String()
 				model = message.Get("model").String()
@@ -377,14 +377,14 @@ func ConvertClaudeResponseToOpenAINonStream(_ context.Context, _ string, origina
 			}
 
 		case "content_block_start":
-			// Handle different content block types at the beginning
+			// 处理刚开始时不同类型的内容块
 			if contentBlock := root.Get("content_block"); contentBlock.Exists() {
 				blockType := contentBlock.Get("type").String()
 				if blockType == "thinking" {
-					// Start of thinking/reasoning content - skip for now as it's handled in delta
+					// 推理/thinking 内容的开始——此处先跳过，因为它会在 delta 中处理
 					continue
 				} else if blockType == "tool_use" {
-					// Initialize tool call accumulator for this index
+					// 为该索引初始化工具调用累加器
 					index := int(root.Get("index").Int())
 					toolCallsAccumulator[index] = &ToolCallAccumulator{
 						ID:   contentBlock.Get("id").String(),
@@ -394,22 +394,22 @@ func ConvertClaudeResponseToOpenAINonStream(_ context.Context, _ string, origina
 			}
 
 		case "content_block_delta":
-			// Process incremental content updates
+			// 处理增量内容更新
 			if delta := root.Get("delta"); delta.Exists() {
 				deltaType := delta.Get("type").String()
 				switch deltaType {
 				case "text_delta":
-					// Accumulate text content
+					// 累加文本内容
 					if text := delta.Get("text"); text.Exists() {
 						contentParts = append(contentParts, text.String())
 					}
 				case "thinking_delta":
-					// Accumulate reasoning/thinking content
+					// 累加推理/thinking 内容
 					if thinking := delta.Get("thinking"); thinking.Exists() {
 						reasoningParts = append(reasoningParts, thinking.String())
 					}
 				case "input_json_delta":
-					// Accumulate tool call arguments
+					// 累加工具调用参数
 					if partialJSON := delta.Get("partial_json"); partialJSON.Exists() {
 						index := int(root.Get("index").Int())
 						if accumulator, exists := toolCallsAccumulator[index]; exists {
@@ -420,7 +420,7 @@ func ConvertClaudeResponseToOpenAINonStream(_ context.Context, _ string, origina
 			}
 
 		case "content_block_stop":
-			// Finalize tool call arguments for this index when content block ends
+			// 内容块结束时为该索引确定工具调用参数
 			index := int(root.Get("index").Int())
 			if accumulator, exists := toolCallsAccumulator[index]; exists {
 				if accumulator.Arguments.Len() == 0 {
@@ -429,7 +429,7 @@ func ConvertClaudeResponseToOpenAINonStream(_ context.Context, _ string, origina
 			}
 
 		case "message_delta":
-			// Extract stop reason and output token count when message ends
+			// 消息结束时提取停止原因和输出 token 数
 			if delta := root.Get("delta"); delta.Exists() {
 				if sr := delta.Get("stop_reason"); sr.Exists() {
 					stopReason = sr.String()
@@ -451,23 +451,23 @@ func ConvertClaudeResponseToOpenAINonStream(_ context.Context, _ string, origina
 		out, _ = sjson.SetBytes(out, "usage.prompt_tokens_details.cache_write_tokens", cachedCreationTokens)
 	}
 
-	// Set basic response fields including message ID, creation time, and model
+	// 设置基本响应字段，包括消息 ID、创建时间和模型
 	out, _ = sjson.SetBytes(out, "id", messageID)
 	out, _ = sjson.SetBytes(out, "created", createdAt)
 	out, _ = sjson.SetBytes(out, "model", model)
 
-	// Set message content by combining all text parts
+	// 合并所有文本部分作为消息内容
 	messageContent := strings.Join(contentParts, "")
 	out, _ = sjson.SetBytes(out, "choices.0.message.content", messageContent)
 
-	// Add reasoning content if available (following OpenAI reasoning format)
+	// 若有推理内容则添加（遵循 OpenAI reasoning 格式）
 	if len(reasoningParts) > 0 {
 		reasoningContent := strings.Join(reasoningParts, "")
-		// Add reasoning as a separate field in the message
+		// 将推理作为消息中的独立字段添加
 		out, _ = sjson.SetBytes(out, "choices.0.message.reasoning_content", reasoningContent)
 	}
 
-	// Set tool calls if any were accumulated during processing
+	// 若处理过程中累加了工具调用则进行设置
 	if len(toolCallsAccumulator) > 0 {
 		toolCallsCount := 0
 		maxIndex := -1

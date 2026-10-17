@@ -4,30 +4,30 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// GetThinkingText extracts the thinking text from a content part.
-// Handles various formats:
-// - Simple string: { "thinking": "text" } or { "text": "text" }
-// - Wrapped object: { "thinking": { "text": "text", "cache_control": {...} } }
-// - Thought-flagged text: { "thought": true, "text": "text" }
-// Returns the extracted text string.
+// GetThinkingText 从内容部分中提取思考文本。
+// 处理多种格式：
+// - 简单字符串: { "thinking": "text" } 或 { "text": "text" }
+// - 包装对象: { "thinking": { "text": "text", "cache_control": {...} } }
+// - 带思考标记的文本: { "thought": true, "text": "text" }
+// 返回提取出的文本字符串。
 func GetThinkingText(part gjson.Result) string {
-	// Try the direct text field first
+	// 先尝试直接的 text 字段
 	if text := part.Get("text"); text.Exists() && text.Type == gjson.String {
 		return text.String()
 	}
 
-	// Try thinking field
+	// 尝试 thinking 字段
 	thinkingField := part.Get("thinking")
 	if !thinkingField.Exists() {
 		return ""
 	}
 
-	// thinking is a string
+	// thinking 是字符串
 	if thinkingField.Type == gjson.String {
 		return thinkingField.String()
 	}
 
-	// thinking is an object with inner text/thinking
+	// thinking 是带内层 text/thinking 的对象
 	if thinkingField.IsObject() {
 		if inner := thinkingField.Get("text"); inner.Exists() && inner.Type == gjson.String {
 			return inner.String()

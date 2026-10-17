@@ -294,7 +294,7 @@ func TestManagerSessionAffinityRebindOnQuotaPreservesBindingAcrossTransientFailo
 				})
 			}
 
-			// Quota failure (429) must rebind to lowID and stay bound after highID recovers.
+			// 额度失败（429）必须重新绑定到 lowID，并在 highID 恢复后仍保持绑定。
 			manager.MarkResult(ctx, Result{
 				AuthID:   highID,
 				Provider: provider,
@@ -319,7 +319,7 @@ func TestManagerSessionAffinityRebindOnQuotaPreservesBindingAcrossTransientFailo
 				t.Fatalf("binding after quota recovery = %q, want sticky %q", got.ID, lowID)
 			}
 
-			// Auth failure (403) on a new session must also rebind and stay bound.
+			// 新会话上的 auth 失败（403）也必须重新绑定并保持绑定。
 			authFailOpts := cliproxyexecutor.Options{Metadata: map[string]any{
 				cliproxyexecutor.DerivedSessionIDMetadataKey: "auth-error-session",
 			}}
@@ -397,7 +397,7 @@ func TestManagerSessionAffinityRebindOnQuotaLCPPreservesBindingAcrossTransientFa
 	}
 	manager.MarkResult(ctx, Result{AuthID: highID, Provider: provider, Model: model, Success: true, Options: turn1})
 
-	// Turn 2 hits highID, fails with transient 502, fails over to lowID, and succeeds on lowID.
+	// 第 2 轮命中 highID，以瞬时 502 失败，故障转移到 lowID，并在 lowID 上成功。
 	turn2 := makeTurnOpts(`{"messages":[{"role":"user","content":"turn 1 hello"},{"role":"assistant","content":"hi"},{"role":"user","content":"turn 2 question"}]}`)
 	got2Attempt1, _, errPick := manager.pickNext(ctx, provider, model, turn2, nil)
 	if errPick != nil || got2Attempt1 == nil || got2Attempt1.ID != highID {
@@ -419,7 +419,7 @@ func TestManagerSessionAffinityRebindOnQuotaLCPPreservesBindingAcrossTransientFa
 	}
 	manager.MarkResult(ctx, Result{AuthID: lowID, Provider: provider, Model: model, Success: true, Options: turn2Failover})
 
-	// Once highID recovers from transient cooldown, turn 3 must return to highID.
+	// 一旦 highID 从瞬时冷却中恢复，第 3 轮必须回到 highID。
 	expireSessionAffinityPriorityModelCooldown(t, manager, highID, model)
 	turn3 := makeTurnOpts(`{"messages":[{"role":"user","content":"turn 1 hello"},{"role":"assistant","content":"hi"},{"role":"user","content":"turn 2 question"},{"role":"assistant","content":"turn 2 answer"},{"role":"user","content":"turn 3 follow-up"}]}`)
 	got3, _, errPick := manager.pickNext(ctx, provider, model, turn3, nil)
@@ -428,7 +428,7 @@ func TestManagerSessionAffinityRebindOnQuotaLCPPreservesBindingAcrossTransientFa
 	}
 	manager.MarkResult(ctx, Result{AuthID: highID, Provider: provider, Model: model, Success: true, Options: turn3})
 
-	// Now turn 4 fails on highID with 429 quota, fails over to lowID, and must stay on lowID after highID recovers.
+	// 现在第 4 轮在 highID 上以 429 额度失败，故障转移到 lowID，并在 highID 恢复后必须留在 lowID。
 	turn4 := makeTurnOpts(`{"messages":[{"role":"user","content":"turn 1 hello"},{"role":"assistant","content":"hi"},{"role":"user","content":"turn 2 question"},{"role":"assistant","content":"turn 2 answer"},{"role":"user","content":"turn 3 follow-up"},{"role":"assistant","content":"turn 3 answer"},{"role":"user","content":"turn 4 quota"}]}`)
 	got4Attempt1, _, errPick := manager.pickNext(ctx, provider, model, turn4, nil)
 	if errPick != nil || got4Attempt1 == nil || got4Attempt1.ID != highID {
@@ -480,7 +480,7 @@ func TestSessionAffinitySelectorRebindOnQuotaDirectPickRebindsWhenAuthRemovedOrZ
 		t.Fatalf("initial pick = %v (err=%v), want %q", first, errPick, authA.ID)
 	}
 
-	// Weight of authA becomes 0 -> filtered out by positiveWeightAuths; must rebind and stick to the new auth.
+	// authA 的权重变为 0 -> 被 positiveWeightAuths 过滤掉；必须重新绑定并固定到新的 auth。
 	authAZero := &Auth{ID: "auth-a", Status: StatusActive, Attributes: map[string]string{"weight": "0", "priority": "1"}}
 	second, errPick := selector.Pick(ctx, "claude", "claude-3", opts, []*Auth{authAZero, authB, authC})
 	if errPick != nil || second == nil || second.ID == authA.ID {
@@ -527,7 +527,7 @@ func TestSessionAffinitySelectorRebindOnQuotaLCPCompactionPreservesMetadataOnTra
 		Success:  true,
 	})
 
-	// Put high into transient cooldown (502) and send a compacted continuation.
+	// 让 high 进入瞬时冷却（502）并发送压缩后的续传。
 	highTransient := &Auth{
 		ID:             "auth-high",
 		Status:         StatusError,
@@ -562,7 +562,7 @@ func TestSessionAffinitySelectorRebindOnQuotaLCPCompactionPreservesMetadataOnTra
 		Success:  true,
 	})
 
-	// Next turn after high recovers must still route back to high.
+	// high 恢复后的下一轮仍必须路由回 high。
 	nextPayload := []byte(`{"messages":[{"role":"user","content":"<summary>Steps 1 and 2 completed</summary>"},{"role":"assistant","content":"ack 2"},{"role":"user","content":"step 3"},{"role":"user","content":"step 4"},{"role":"assistant","content":"ack 4"}]}`)
 	nextOpts := cliproxyexecutor.Options{
 		SourceFormat:    sdktranslator.FormatOpenAI,
@@ -679,13 +679,13 @@ func TestManagerExecuteAndStreamRebindOnQuotaEndToEnd(t *testing.T) {
 				Headers: http.Header{"Session-Id": []string{"exec-session-1"}},
 			}
 
-			// 1. Cold Execute binds to highID.
+			// 1. 冷启动 Execute 绑定到 highID。
 			resp, errExec := manager.Execute(ctx, []string{provider}, req, opts)
 			if errExec != nil || string(resp.Payload) != highID {
 				t.Fatalf("cold Execute = %q (err=%v), want %q", string(resp.Payload), errExec, highID)
 			}
 
-			// 2. Cascade transient errors on highID (502) and midID (503) during Execute -> fails over to lowID.
+			// 2. Execute 期间 highID（502）与 midID（503）级联瞬时错误 -> 故障转移到 lowID。
 			failAuthErr = map[string]error{
 				highID: &Error{HTTPStatus: http.StatusBadGateway, Message: "502 overloaded"},
 				midID:  &Error{HTTPStatus: http.StatusServiceUnavailable, Message: "503 connect error"},
@@ -695,7 +695,7 @@ func TestManagerExecuteAndStreamRebindOnQuotaEndToEnd(t *testing.T) {
 				t.Fatalf("transient cascade Execute = %q (err=%v), want %q", string(resp.Payload), errExec, lowID)
 			}
 
-			// 3. Clear transient errors and expire cooldowns -> next ExecuteStream returns to highID.
+			// 3. 清除瞬时错误并让冷却过期 -> 下一次 ExecuteStream 回到 highID。
 			failAuthErr = nil
 			if !disableCooling {
 				expireSessionAffinityPriorityModelCooldown(t, manager, highID, model)
@@ -710,7 +710,7 @@ func TestManagerExecuteAndStreamRebindOnQuotaEndToEnd(t *testing.T) {
 				t.Fatalf("ExecuteStream after transient recovery = %q, want %q", string(chunk.Payload), highID)
 			}
 
-			// 4. Transient error on highID during ExecuteStream -> fails over to midID, then returns to highID.
+			// 4. ExecuteStream 期间 highID 发生瞬时错误 -> 故障转移到 midID，随后回到 highID。
 			failAuthErr = map[string]error{
 				highID: &Error{Code: ErrorCodeForceCooldown, Message: "stream completed without any response data"},
 			}
@@ -723,7 +723,7 @@ func TestManagerExecuteAndStreamRebindOnQuotaEndToEnd(t *testing.T) {
 				t.Fatalf("ExecuteStream transient failover = %q, want %q", string(chunk.Payload), midID)
 			}
 
-			// ErrorCodeForceCooldown always schedules a transient cooldown even when disableCooling is true.
+			// 即使 disableCooling 为 true，ErrorCodeForceCooldown 也总会安排瞬时冷却。
 			failAuthErr = nil
 			expireSessionAffinityPriorityModelCooldown(t, manager, highID, model)
 			resp, errExec = manager.Execute(ctx, []string{provider}, req, opts)
@@ -731,7 +731,7 @@ func TestManagerExecuteAndStreamRebindOnQuotaEndToEnd(t *testing.T) {
 				t.Fatalf("Execute after stream transient recovery = %q (err=%v), want %q", string(resp.Payload), errExec, highID)
 			}
 
-			// 5. Quota error (429) on highID -> fails over and rebinds to midID permanently.
+			// 5. highID 上的额度错误（429）-> 故障转移并永久重新绑定到 midID。
 			failAuthErr = map[string]error{
 				highID: &Error{HTTPStatus: http.StatusTooManyRequests, Message: "quota"},
 			}

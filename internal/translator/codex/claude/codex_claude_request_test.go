@@ -165,14 +165,14 @@ func TestConvertClaudeRequestToCodex_PreservesToolAdjacencyWithInterveningSystem
 	result, _ := ConvertClaudeRequestToCodex("gpt-5.4", []byte(inputJSON), false)
 	inputs := gjson.GetBytes(result, "input").Array()
 
-	// Expected item types:
-	// 0: message (role: user, "Execute tools")
-	// 1: function_call (call_id: call_1)
-	// 2: function_call (call_id: call_2)
-	// 3: function_call_output (call_id: call_1)
-	// 4: function_call_output (call_id: call_2)
-	// 5: message (role: user, text: <system-reminder>...)
-	// 6: message (role: user, text: Now summarize)
+	// 期望的条目类型：
+	// 0: message（role: user，"Execute tools"）
+	// 1: function_call（call_id: call_1）
+	// 2: function_call（call_id: call_2）
+	// 3: function_call_output（call_id: call_1）
+	// 4: function_call_output（call_id: call_2）
+	// 5: message（role: user，text: <system-reminder>...）
+	// 6: message（role: user，text: Now summarize）
 	types := make([]string, 0, len(inputs))
 	for _, item := range inputs {
 		types = append(types, item.Get("type").String())
@@ -1081,7 +1081,7 @@ func TestNormalizeToolParameters_PreservesPropertyNamesAndLiteralData(t *testing
 		t.Errorf("expected literal default.$id to be preserved, got %q", gotDefaultID)
 	}
 
-	// Test empty / null / invalid fallback
+	// 测试空值 / null / 无效回退
 	if emptyGot := normalizeToolParameters(""); emptyGot != `{"type":"object","properties":{}}` {
 		t.Errorf("expected empty string to normalize to empty object schema, got %s", emptyGot)
 	}
@@ -1089,7 +1089,7 @@ func TestNormalizeToolParameters_PreservesPropertyNamesAndLiteralData(t *testing
 		t.Errorf("expected null to normalize to empty object schema, got %s", nullGot)
 	}
 
-	// Test array union type preservation (e.g. ["object", "null"])
+	// 测试数组联合类型保留（例如 ["object", "null"]）
 	unionInput := `{"type": ["object", "null"]}`
 	unionGot := normalizeToolParameters(unionInput)
 	unionParsed := gjson.Parse(unionGot)
@@ -1223,11 +1223,11 @@ func TestConvertClaudeRequestToCodex_StripsUnsupportedUnicodePropertyEscapePatte
 	}
 	params := tools[0].Get("parameters")
 
-	// The \p{...} pattern on field must be removed to avoid Python re failure upstream
+	// 必须移除 field 上的 \p{...} 模式，以避免上游 Python re 失败
 	if params.Get("properties.field.pattern").Exists() {
 		t.Errorf("expected properties.field.pattern to be removed, got %v", params.Get("properties.field.pattern").Raw)
 	}
-	// Other attributes on field must be preserved
+	// field 上的其他属性必须保留
 	if got := params.Get("properties.field.type").String(); got != "string" {
 		t.Errorf("expected properties.field.type == 'string', got %q", got)
 	}
@@ -1235,7 +1235,7 @@ func TestConvertClaudeRequestToCodex_StripsUnsupportedUnicodePropertyEscapePatte
 		t.Errorf("expected properties.field.description == 'field to replace', got %q", got)
 	}
 
-	// Valid patterns without unescaped \p must be preserved
+	// 不含未转义 \p 的合法模式必须保留
 	if got := params.Get("properties.asset_id.pattern").String(); got != "^[0-9a-f]{32}$" {
 		t.Errorf("expected asset_id.pattern preserved, got %q", got)
 	}
@@ -1246,7 +1246,7 @@ func TestConvertClaudeRequestToCodex_StripsUnsupportedUnicodePropertyEscapePatte
 		t.Errorf("expected literal_p.pattern preserved, got %q", got)
 	}
 
-	// Nested object with \P{L}+ must have its pattern removed
+	// 含 \P{L}+ 的嵌套对象必须移除其 pattern
 	if params.Get("properties.nested.properties.inner_field.pattern").Exists() {
 		t.Errorf("expected properties.nested.properties.inner_field.pattern to be removed, got %v", params.Get("properties.nested.properties.inner_field.pattern").Raw)
 	}
@@ -1254,12 +1254,12 @@ func TestConvertClaudeRequestToCodex_StripsUnsupportedUnicodePropertyEscapePatte
 		t.Errorf("expected nested inner_field.type preserved, got %q", got)
 	}
 
-	// Union anyOf with \p{N}+ must have its pattern removed
+	// 含 \p{N}+ 的联合 anyOf 必须移除其 pattern
 	if params.Get("properties.union_field.anyOf.0.pattern").Exists() {
 		t.Errorf("expected union_field.anyOf.0.pattern to be removed, got %v", params.Get("properties.union_field.anyOf.0.pattern").Raw)
 	}
 
-	// Required array must be preserved
+	// required 数组必须保留
 	if got := params.Get("required.0").String(); got != "field" {
 		t.Errorf("expected required.0 == 'field', got %q", got)
 	}

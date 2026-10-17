@@ -58,7 +58,7 @@ func TestMarkResultQuotaBackoffEscalatesOncePerWindow(t *testing.T) {
 		t.Fatalf("expected open cooldown window after first failure, got %v", firstState.Quota.NextRecoverAt)
 	}
 
-	// A second in-flight failure lands while the first window is still open.
+	// 第二次在途失败在第一个窗口仍开启时发生。
 	manager.MarkResult(context.Background(), quotaResult(auth.ID, "gpt-5"))
 	second, ok := manager.GetByID(auth.ID)
 	if !ok || second == nil || second.ModelStates["gpt-5"] == nil {
@@ -126,7 +126,7 @@ func TestApplyAuthFailureStateQuotaBackoffOncePerWindow(t *testing.T) {
 		t.Fatalf("expected first window to close at %v, got %v", now.Add(time.Second), firstRecover)
 	}
 
-	// In-window failure keeps the current window and level.
+	// 窗口内失败保持当前窗口与层级。
 	applyAuthFailureState(auth, quotaErr, nil, now.Add(100*time.Millisecond), false)
 	if auth.Quota.BackoffLevel != 1 {
 		t.Fatalf("expected BackoffLevel to stay 1 for in-window failure, got %d", auth.Quota.BackoffLevel)
@@ -135,7 +135,7 @@ func TestApplyAuthFailureStateQuotaBackoffOncePerWindow(t *testing.T) {
 		t.Fatalf("expected NextRecoverAt to stay %v for in-window failure, got %v", firstRecover, auth.Quota.NextRecoverAt)
 	}
 
-	// A failure after the window expired escalates to the next level.
+	// 窗口过期后的失败会升级到下一层级。
 	applyAuthFailureState(auth, quotaErr, nil, now.Add(2*time.Second), false)
 	if auth.Quota.BackoffLevel != 2 {
 		t.Fatalf("expected BackoffLevel 2 after post-window failure, got %d", auth.Quota.BackoffLevel)
@@ -144,7 +144,7 @@ func TestApplyAuthFailureStateQuotaBackoffOncePerWindow(t *testing.T) {
 		t.Fatalf("expected second window to close at %v, got %v", now.Add(4*time.Second), auth.Quota.NextRecoverAt)
 	}
 
-	// A provider supplied retry hint always takes effect, even in-window.
+	// 供应商提供的重试提示始终生效，即使在窗口内。
 	retryAfter := 10 * time.Second
 	applyAuthFailureState(auth, quotaErr, &retryAfter, now.Add(3*time.Second), false)
 	if auth.Quota.BackoffLevel != 2 {
@@ -291,7 +291,7 @@ func TestJitteredCooldownWaitBounds(t *testing.T) {
 		}
 	}
 
-	// maxWait is a hard ceiling: zero headroom disables jitter entirely.
+	// maxWait 是硬上限：零余量会完全禁用抖动。
 	for i := 0; i < 50; i++ {
 		if got := jitteredCooldownWait(30*time.Second, 30*time.Second); got != 30*time.Second {
 			t.Fatalf("expected wait at maxWait to stay unjittered, got %v", got)

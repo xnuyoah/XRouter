@@ -9,9 +9,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// lockAuthMutation acquires the reload barrier, then the credential gate, before
-// m.mu. Keep both until publication completes. Load never takes credential or
-// refresh locks. Store callbacks may read the manager, but must not mutate it.
+// lockAuthMutation 先获取重载屏障，再获取凭据闸门，然后才是
+// m.mu。两者都要持有到发布完成。Load 从不获取凭据锁或
+// 刷新锁。Store 回调可以读取管理器，但不得修改它。
 func (m *Manager) lockAuthMutation(id string) func() {
 	release, _ := m.lockAuthMutationContext(context.Background(), id)
 	return release
@@ -153,7 +153,7 @@ func (m *Manager) beginForegroundStoreSave(ctx context.Context) (func(), error) 
 	return release, nil
 }
 
-// lockAuthMutationContext lets fallible mutations cancel either lock wait.
+// lockAuthMutationContext 允许可能失败的变更取消任一锁等待。
 func (m *Manager) lockAuthMutationContext(ctx context.Context, id string) (func(), error) {
 	return m.lockAuthMutationWithPersistCancel(ctx, id, nil)
 }
@@ -184,7 +184,7 @@ func (m *Manager) lockAuthMutationWithPersistCancel(ctx context.Context, id stri
 	}
 	select {
 	case gate <- struct{}{}:
-		// Cancellation may race with the gate becoming available.
+		// 取消可能与闸门变为可用发生竞态。
 		if errContext := ctx.Err(); errContext != nil {
 			<-gate
 			m.authLoadGate.Release(1)
@@ -218,9 +218,9 @@ func (m *Manager) lockAuthMutationWithPersistCancel(ctx context.Context, id stri
 	}, nil
 }
 
-// persistLocked requires m.mu and the credential mutation gate. Never pass a
-// published object to Store.Save: readers and runtime-only writers remain live
-// during I/O. Only the store's delta is merged back, preserving intervening edits.
+// persistLocked 需要 m.mu 和凭据变更闸门。切勿把已发布的对象
+// 传给 Store.Save：I/O 期间读取者和仅运行时写入者仍然活跃。
+// 只有存储的增量会被合并回来，从而保留期间的编辑。
 func (m *Manager) persistLocked(ctx context.Context, auth *Auth) error {
 	before := auth.Clone()
 	saved := auth.Clone()
@@ -231,10 +231,10 @@ func (m *Manager) persistLocked(ctx context.Context, auth *Auth) error {
 	return err
 }
 
-// mergeAuthSaveDelta handles all exported value fields, not a store-specific
-// allowlist. Map entries are independent fields; nested values are atomic.
-// Identity/version fields belong exclusively to the manager. Store-owned shared
-// objects must be replaced rather than mutated in place (see Store.Save).
+// mergeAuthSaveDelta 处理所有导出的值字段，而非存储特有的
+// 允许列表。map 条目是独立字段；嵌套值是原子的。
+// 身份/版本字段仅属于管理器。存储所拥有的共享
+// 对象必须被替换，而不是原地修改（参见 Store.Save）。
 func mergeAuthSaveDelta(target, before, after *Auth, preserveConcurrent bool) {
 	dst := reflect.ValueOf(target).Elem()
 	base := reflect.ValueOf(before).Elem()
@@ -285,11 +285,11 @@ func equalSaveValue(a, b reflect.Value) bool {
 	return reflect.DeepEqual(a.Interface(), b.Interface())
 }
 
-// PersistMetadataEntry updates a single metadata entry on the runtime auth for
-// the given registration epoch and persists it to the backing store without
-// advancing Generation or firing credential-lifecycle hooks. If a foreground
-// credential mutation contends for the same auth while store I/O is in flight,
-// the metadata save is preempted so foreground operations do not stall.
+// PersistMetadataEntry 在运行时 auth 上为给定的注册世代更新单个
+// 元数据条目，并将其持久化到后端存储，且不推进
+// Generation 也不触发凭据生命周期钩子。如果在存储 I/O 在途时
+// 有前台凭据变更争用同一 auth，
+// 则元数据保存会被抢占，以免前台操作停滞。
 func (m *Manager) PersistMetadataEntry(ctx context.Context, id string, expectedEpoch uint64, key string, value any, validate func(existing *Auth) bool) (bool, bool) {
 	if m == nil || id == "" || key == "" {
 		return false, false

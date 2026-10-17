@@ -1,39 +1,39 @@
 package access
 
-// AccessConfig groups request authentication providers.
+// AccessConfig 汇总请求认证供应商。
 type AccessConfig struct {
-	// Providers lists configured authentication providers.
+	// Providers 列出已配置的认证供应商。
 	Providers []AccessProvider `yaml:"providers,omitempty" json:"providers,omitempty"`
 }
 
-// AccessProvider describes a request authentication provider entry.
+// AccessProvider 描述一个请求认证供应商条目。
 type AccessProvider struct {
-	// Name is the instance identifier for the provider.
+	// Name 是该供应商的实例标识符。
 	Name string `yaml:"name" json:"name"`
 
-	// Type selects the provider implementation registered via the SDK.
+	// Type 选择通过 SDK 注册的供应商实现。
 	Type string `yaml:"type" json:"type"`
 
-	// SDK optionally names a third-party SDK module providing this provider.
+	// SDK 可选地指定提供该供应商的第三方 SDK 模块。
 	SDK string `yaml:"sdk,omitempty" json:"sdk,omitempty"`
 
-	// APIKeys lists inline keys for providers that require them.
+	// APIKeys 列出需要密钥的供应商所用的内联密钥。
 	APIKeys []string `yaml:"api-keys,omitempty" json:"api-keys,omitempty"`
 
-	// Config passes provider-specific options to the implementation.
+	// Config 将供应商特有选项传给实现。
 	Config map[string]any `yaml:"config,omitempty" json:"config,omitempty"`
 }
 
 const (
-	// AccessProviderTypeConfigAPIKey is the built-in provider validating inline API keys.
+	// AccessProviderTypeConfigAPIKey 是校验内联 API key 的内置供应商。
 	AccessProviderTypeConfigAPIKey = "config-api-key"
 
-	// DefaultAccessProviderName is applied when no provider name is supplied.
+	// 未提供供应商名称时使用 DefaultAccessProviderName。
 	DefaultAccessProviderName = "config-inline"
 )
 
-// MakeInlineAPIKeyProvider constructs an inline API key provider configuration.
-// It returns nil when no keys are supplied.
+// MakeInlineAPIKeyProvider 构造内联 API key 供应商配置。
+// 未提供密钥时返回 nil。
 func MakeInlineAPIKeyProvider(keys []string) *AccessProvider {
 	if len(keys) == 0 {
 		return nil

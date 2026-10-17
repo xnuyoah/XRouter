@@ -10,17 +10,17 @@ import (
 
 const claudeCodeAttributionSystemPrefix = "x-anthropic-billing-header:"
 
-// IsClaudeCodeAttributionSystemText reports whether text is the Claude Code
-// attribution block that carries per-request billing and prompt fingerprint data.
+// IsClaudeCodeAttributionSystemText 报告 text 是否为携带
+// 逐请求计费与提示指纹数据的 Claude Code 归属块。
 func IsClaudeCodeAttributionSystemText(text string) bool {
 	text = strings.TrimLeftFunc(text, unicode.IsSpace)
 	return strings.HasPrefix(text, claudeCodeAttributionSystemPrefix)
 }
 
-// StripClaudeCodeAttributionSystem removes Claude Code billing/CCH attribution
-// blocks from a Messages body. Other system content is kept. Providers such as
-// Kimi and Antigravity may treat this block as prompt text, so callers use this
-// helper when the active policy has not explicitly opted into a full CLI profile.
+// StripClaudeCodeAttributionSystem 从 Messages 请求体中移除 Claude Code
+// 计费/CCH 归属块。其他 system 内容会被保留。诸如
+// Kimi 和 Antigravity 之类的供应商可能将该块视为提示文本，因此调用方在
+// 生效策略未明确选择完整 CLI 配置文件时使用此辅助函数。
 func StripClaudeCodeAttributionSystem(payload []byte) []byte {
 	system := gjson.GetBytes(payload, "system")
 	if !system.Exists() {

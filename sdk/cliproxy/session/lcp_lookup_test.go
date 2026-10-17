@@ -13,21 +13,21 @@ func TestMerklePrefixMatcher_LookupSession_PartialExpiration_ControllableClock(t
 
 	ns := "lcp:v1::openai::gpt-4o::caller"
 
-	// 1. Bind turn 1 at T0
+	// 1. 在 T0 绑定第 1 轮
 	bindRes1 := matcher.BindFingerprintsWithResult(ns, []string{"turn1"}, 1, "auth-1")
 	sessionID := bindRes1.SessionID
 	if sessionID == "" {
 		t.Fatalf("expected valid sessionID on bindRes1")
 	}
 
-	// 2. Advance clock by 5 minutes and bind turn 2 (conversation growth)
+	// 2. 将时钟推进 5 分钟并绑定第 2 轮（对话增长）
 	mockNow = mockNow.Add(5 * time.Minute)
 	bindRes2 := matcher.BindFingerprintsWithResult(ns, []string{"turn1", "turn2"}, 1, "auth-1")
 	if bindRes2.SessionID != sessionID {
 		t.Fatalf("expected grown conversation to share sessionID, got %q != %q", bindRes2.SessionID, sessionID)
 	}
 
-	// Record group 2 state
+	// 记录组 2 的状态
 	matcher.mu.Lock()
 	nsObj := matcher.groups[ns]
 	group2 := nsObj.groups[sequenceKey([]string{"turn1", "turn2"})]
@@ -39,7 +39,7 @@ func TestMerklePrefixMatcher_LookupSession_PartialExpiration_ControllableClock(t
 	expectedAccessNumber := group2.lastAccessNumber
 	matcher.mu.Unlock()
 
-	// 3. Explicitly expire group 1 while keeping group 2 active
+	// 3. 显式让组 1 过期，同时保持组 2 活跃
 	matcher.mu.Lock()
 	group1 := nsObj.groups[sequenceKey([]string{"turn1"})]
 	if group1 == nil {
@@ -49,7 +49,7 @@ func TestMerklePrefixMatcher_LookupSession_PartialExpiration_ControllableClock(t
 	group1.expiresAt = mockNow.Add(-time.Minute)
 	matcher.mu.Unlock()
 
-	// 4. LookupSession: must return auth-1 without error, must not report false/unbound
+	// 4. LookupSession：必须无错误地返回 auth-1，不得报告 false/unbound
 	authIDs, nsResult, ok := matcher.LookupSession(sessionID)
 	if !ok {
 		t.Fatalf("expected ok=true for partially expired session, got false")
@@ -61,7 +61,7 @@ func TestMerklePrefixMatcher_LookupSession_PartialExpiration_ControllableClock(t
 		t.Fatalf("expected namespace %q, got %q", ns, nsResult)
 	}
 
-	// 5. Assert group 1 was removed and group 2 was NOT mutated (TTL/accessNumber untouched)
+	// 5. 断言组 1 已被移除，且组 2 未被修改（TTL/accessNumber 保持不变）
 	matcher.mu.Lock()
 	if nsObj.groups[sequenceKey([]string{"turn1"})] != nil {
 		t.Fatalf("expected expired group1 to be removed by LookupSession")
@@ -78,7 +78,7 @@ func TestMerklePrefixMatcher_LookupSession_PartialExpiration_ControllableClock(t
 	}
 	matcher.mu.Unlock()
 
-	// 6. Advance clock past group 2 expiration
+	// 6. 将时钟推进到组 2 过期之后
 	mockNow = mockNow.Add(15 * time.Minute)
 	authIDsExpired, _, okExpired := matcher.LookupSession(sessionID)
 	if okExpired || len(authIDsExpired) > 0 {
@@ -93,7 +93,7 @@ func TestMerklePrefixMatcher_LookupSession_ConflictingTrajectories(t *testing.T)
 	bindRes1 := matcher.BindFingerprintsWithResult(ns, []string{"turnA"}, 1, "auth-a")
 	sessionID := bindRes1.SessionID
 
-	// Manually inject a second group with different authID sharing the same sessionID
+	// 手动注入第二个组，其 authID 不同但共享同一个 sessionID
 	matcher.mu.Lock()
 	groupConflict := &lcpGroup{
 		key:              sequenceKey([]string{"turnA", "turnB"}),

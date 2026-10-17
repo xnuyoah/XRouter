@@ -224,7 +224,7 @@ func (c *hostHTTPClient) newHTTPClientForRequest(ctx context.Context, cfg *confi
 		return client, nil, nil
 	}
 
-	// Priority: request override, then auth proxy, then config proxy.
+	// 优先级：请求覆盖值，其次是认证代理，最后是配置代理。
 	proxyStr := strings.TrimSpace(c.requestProxyURL)
 	if proxyStr == "" && c.auth != nil {
 		proxyStr = strings.TrimSpace(c.auth.ProxyURL)
@@ -273,7 +273,7 @@ func (c *hostHTTPClient) newHTTPClientForRequest(ctx context.Context, cfg *confi
 		}
 	}
 
-	// Priority 3 & 4: Context RoundTripper or Default transport
+	// 优先级 3 与 4：Context RoundTripper 或默认 transport
 	if baseTransport == nil {
 		if ctxTransport != nil {
 			baseTransport = ctxTransport.Clone()
@@ -379,8 +379,8 @@ func (c *hostHTTPClient) newHTTPClientForRequest(ctx context.Context, cfg *confi
 		}
 		origProxyFunc := baseTransport.Proxy
 
-		// For plain HTTP requests, wrapping DialContext intercepts the plaintext HTTP request bytes.
-		// Handshake bytes (like SOCKS5 or direct writes) are bypassed cleanly by NewOrderedRequestConn.
+		// 对于明文 HTTP 请求，包装 DialContext 可拦截明文 HTTP 请求字节。
+		// 握手字节（如 SOCKS5 或直接写入）会被 NewOrderedRequestConn 干净地绕过。
 		baseTransport.DialContext = func(dialCtx context.Context, network, addr string) (net.Conn, error) {
 			conn, errDialContext := origDialContext(dialCtx, network, addr)
 			if errDialContext != nil {
@@ -389,9 +389,9 @@ func (c *hostHTTPClient) newHTTPClientForRequest(ctx context.Context, cfg *confi
 			return httpwire.NewOrderedRequestConn(conn, headerOrderFunc), nil
 		}
 
-		// Configure dynamic proxy function:
-		// For plain HTTP, keep origProxyFunc so standard library forwards HTTP requests to the proxy.
-		// For HTTPS, return nil so that DialTLSContext is always called to perform TLS wrapping.
+		// 配置动态代理函数：
+		// 对于明文 HTTP，保留 origProxyFunc，使标准库将 HTTP 请求转发给代理。
+		// 对于 HTTPS，返回 nil，使 DialTLSContext 总会被调用来执行 TLS 包装。
 		baseTransport.Proxy = func(r *http.Request) (*url.URL, error) {
 			if r != nil && r.URL != nil && r.URL.Scheme == "http" {
 				if origProxyFunc != nil {
@@ -414,7 +414,7 @@ func (c *hostHTTPClient) newHTTPClientForRequest(ctx context.Context, cfg *confi
 			var rawConn net.Conn
 			var errDial error
 			if !isTargetHTTPS {
-				// Target is plain HTTP; standard library called DialTLSContext to connect to an HTTPS proxy itself
+				// 目标是明文 HTTP；标准库自行调用 DialTLSContext 去连接 HTTPS 代理
 				if callerTLSDialer != nil {
 					tlsConn, errTLS := callerTLSDialer(dialCtx, network, addr)
 					if errTLS != nil {
@@ -453,10 +453,10 @@ func (c *hostHTTPClient) newHTTPClientForRequest(ctx context.Context, cfg *confi
 				}
 				return httpwire.NewOrderedRequestConn(tlsConn, headerOrderFunc), nil
 			} else if isConfiguredSOCKS {
-				// Configured SOCKS5 proxy: origDialContext is already the SOCKS5 dialer from BuildHTTPTransport
+				// 已配置 SOCKS5 代理：origDialContext 已是来自 BuildHTTPTransport 的 SOCKS5 拨号器
 				rawConn, errDial = origDialContext(dialCtx, network, addr)
 			} else if targetProxy != nil {
-				// Target is HTTPS; tunnel through the proxy (HTTP/HTTPS/SOCKS) to addr
+				// 目标是 HTTPS；通过代理（HTTP/HTTPS/SOCKS）隧道连接到 addr
 				rawConn, errDial = dialProxyTunnel(dialCtx, origDialContext, callerTLSDialer, targetProxy, addr, baseTransport)
 			} else {
 				if callerTLSDialer != nil {

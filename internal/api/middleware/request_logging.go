@@ -1,6 +1,6 @@
-// Package middleware provides HTTP middleware components for the XRouter server.
-// This file contains the request logging middleware that captures comprehensive
-// request and response data when enabled through configuration.
+// Package middleware 为 XRouter 服务器提供 HTTP 中间件组件。
+// 本文件包含请求日志中间件：当通过配置启用时，
+// 它会捕获完整的请求与响应数据。
 package middleware
 
 import (
@@ -26,10 +26,10 @@ const (
 	maxDeferredErrorRequestBodyBytes     int64 = 32 << 20 // 32 MiB
 )
 
-// RequestLoggingMiddleware creates a Gin middleware that logs HTTP requests and responses.
-// It captures detailed information about the request and response, including headers and body,
-// and uses the provided RequestLogger to record this data. When full request logging is disabled,
-// large and unknown-size bodies are spooled to disk and retained only for error logs.
+// RequestLoggingMiddleware 创建一个记录 HTTP 请求和响应的 Gin 中间件。
+// 它捕获请求和响应的详细信息（包括头部和正文），
+// 并使用提供的 RequestLogger 记录这些数据。当完整请求日志被禁用时，
+// 体积较大和大小未知的正文会被转存到磁盘，且仅保留给错误日志。
 func RequestLoggingMiddleware(logger logging.RequestLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if logger == nil {
@@ -51,7 +51,7 @@ func RequestLoggingMiddleware(logger logging.RequestLogger) gin.HandlerFunc {
 		loggerEnabled := logger.IsEnabled()
 		captureBody := shouldCaptureRequestBody(loggerEnabled, c.Request)
 
-		// Capture request information
+		// 捕获请求信息
 		requestInfo, err := captureRequestInfo(c, captureBody)
 		if err != nil {
 			var maxBytesErr *http.MaxBytesError
@@ -59,13 +59,13 @@ func RequestLoggingMiddleware(logger logging.RequestLogger) gin.HandlerFunc {
 				c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{"error": err.Error()})
 				return
 			}
-			// Log error but continue processing
-			// In a real implementation, you might want to use a proper logger here
+			// 记录错误但继续处理
+			// 在真实实现中，你可能希望在这里使用合适的日志器
 			c.Next()
 			return
 		}
 
-		// Create response writer wrapper
+		// 创建响应写入器包装
 		wrapper := NewResponseWriterWrapper(c.Writer, logger, requestInfo)
 		if !loggerEnabled {
 			wrapper.logOnErrorOnly = true
@@ -74,13 +74,13 @@ func RequestLoggingMiddleware(logger logging.RequestLogger) gin.HandlerFunc {
 		attachRequestLogSources(c, logger, loggerEnabled)
 		attachDeferredRequestBodyCapture(c.Request, logger, requestInfo, loggerEnabled, captureBody)
 
-		// Process the request
+		// 处理请求
 		c.Next()
 
-		// Finalize logging after request processing
+		// 请求处理完成后收尾日志
 		if err = wrapper.Finalize(c); err != nil {
-			// Log error but don't interrupt the response
-			// In a real implementation, you might want to use a proper logger here
+			// 记录错误但不要中断响应
+			// 在真实实现中，你可能希望在这里使用合适的日志器
 		}
 	}
 }
@@ -312,21 +312,21 @@ func shouldCaptureRequestBody(loggerEnabled bool, req *http.Request) bool {
 	return req.ContentLength <= maxErrorOnlyCapturedRequestBodyBytes
 }
 
-// captureRequestInfo extracts relevant information from the incoming HTTP request.
-// It captures the URL, method, headers, and body. The request body is read and then
-// restored so that it can be processed by subsequent handlers.
+// captureRequestInfo 从传入的 HTTP 请求中提取相关信息。
+// 它捕获 URL、方法、头部和正文。请求正文在读取后会被
+// 还原，以便后续处理器可以处理它。
 func captureRequestInfo(c *gin.Context, captureBody bool) (*RequestInfo, error) {
-	// Capture URL with sensitive query parameters masked
+	// 捕获 URL，并掩蔽敏感查询参数
 	maskedQuery := util.MaskSensitiveQuery(c.Request.URL.RawQuery)
 	url := c.Request.URL.Path
 	if maskedQuery != "" {
 		url += "?" + maskedQuery
 	}
 
-	// Capture method
+	// 捕获方法
 	method := c.Request.Method
 
-	// Capture headers
+	// 捕获头部
 	var headers map[string][]string
 	if c.Request.Header != nil {
 		headers = c.Request.Header.Clone()
@@ -334,16 +334,16 @@ func captureRequestInfo(c *gin.Context, captureBody bool) (*RequestInfo, error) 
 		headers = make(map[string][]string)
 	}
 
-	// Capture request body
+	// 捕获请求正文
 	var body []byte
 	if captureBody && c.Request.Body != nil {
-		// Read the body
+		// 读取正文
 		bodyBytes, err := io.ReadAll(c.Request.Body)
 		if err != nil {
 			return nil, err
 		}
 
-		// Restore the body for the actual request processing
+		// 为实际请求处理还原正文
 		c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		maxBytes := c.GetInt64("maxRequestBodyBytes")
 		if maxBytes > 0 {
@@ -471,9 +471,9 @@ func decodeCapturedZstdRequestBodyWithLimit(raw []byte, limit int64) ([]byte, bo
 	return decoded, false, nil
 }
 
-// shouldLogRequest determines whether the request should be logged.
-// It skips management endpoints to avoid leaking secrets but allows
-// all other routes, including module-provided ones, to honor request-log.
+// shouldLogRequest 判断是否应记录该请求。
+// 它跳过管理端点以避免泄露密钥，但允许
+// 所有其他路由（包括模块提供的路由）遵循 request-log。
 func shouldLogRequest(path string) bool {
 	if strings.HasPrefix(path, "/v0/management") || strings.HasPrefix(path, "/v8/management") || strings.HasPrefix(path, "/management") {
 		return false

@@ -10,8 +10,8 @@ import (
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
-// SnapshotAuthFile re-synthesizes one source file without consulting cached auth state.
-// Parse errors are surfaced so deletion reconciliation never relies on fallback auths.
+// SnapshotAuthFile 重新合成单个源文件，不查询缓存的 auth 状态。
+// 解析错误会被上报，因此删除协调绝不依赖回退 auth。
 func (w *Watcher) SnapshotAuthFile(path string) ([]*coreauth.Auth, error) {
 	if w == nil {
 		return nil, fmt.Errorf("file auth snapshot is unavailable")
@@ -24,8 +24,8 @@ func (w *Watcher) SnapshotAuthFile(path string) ([]*coreauth.Auth, error) {
 	if cfg == nil || authDir == "" {
 		return nil, fmt.Errorf("file auth snapshot is not configured")
 	}
-	// Management uploads use absolute paths even when authDir is configured
-	// relatively. Keep both absolute so synthesis retains file-relative IDs.
+	// 即使 authDir 配置为相对路径，管理端上传也使用绝对路径。
+	// 两者都保持为绝对路径，使合成保留相对文件的 ID。
 	absoluteAuthDir, errAbsAuthDir := filepath.Abs(authDir)
 	if errAbsAuthDir != nil {
 		return nil, fmt.Errorf("resolve auth directory: %w", errAbsAuthDir)

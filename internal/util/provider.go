@@ -1,6 +1,6 @@
-// Package util provides utility functions used across the XRouter application.
-// These functions handle common tasks such as determining AI service providers
-// from model names and managing HTTP proxies.
+// Package util 提供 XRouter 应用中使用的工具函数。
+// 这些函数处理常见任务，例如根据模型名称判断 AI 服务供应商，
+// 以及管理 HTTP 代理。
 package util
 
 import (
@@ -14,7 +14,7 @@ import (
 
 const openAICompatibleProviderPrefix = "openai-compatible-"
 
-// OpenAICompatibleProviderKey returns the internal provider key for an OpenAI-compatible provider.
+// OpenAICompatibleProviderKey 返回 OpenAI 兼容供应商的内部供应商标识。
 func OpenAICompatibleProviderKey(name string) string {
 	name = strings.ToLower(strings.TrimSpace(name))
 	if name == "" || name == "openai-compatibility" || strings.HasPrefix(name, openAICompatibleProviderPrefix) {
@@ -26,22 +26,22 @@ func OpenAICompatibleProviderKey(name string) string {
 	return openAICompatibleProviderPrefix + name
 }
 
-// GetProviderName determines all AI service providers capable of serving a registered model.
-// It first queries the global model registry to retrieve the providers backing the supplied model name.
-// When the model has not been registered yet, it falls back to legacy string heuristics to infer
-// potential providers.
+// GetProviderName 确定所有能够服务某个已注册模型的 AI 服务供应商。
+// 它首先查询全局模型注册表，以获取支撑所给模型名称的供应商。
+// 当该模型尚未注册时，它会回退到旧式的字符串启发式规则来推断
+// 可能的供应商。
 //
-// Supported providers include (but are not limited to):
-//   - "codex" for OpenAI GPT-compatible providers
-//   - "claude" for Anthropic models
-//   - "openai-compatibility" for external OpenAI-compatible providers
+// 支持的供应商包括（但不限于）：
+//   - "codex"，用于 OpenAI GPT 兼容供应商
+//   - "claude"，用于 Anthropic 模型
+//   - "openai-compatibility"，用于外部 OpenAI 兼容供应商
 //
-// Parameters:
-//   - modelName: The name of the model to identify providers for.
-//   - cfg: The application configuration containing OpenAI compatibility settings.
+// 参数：
+//   - modelName: 要为其识别供应商的模型名称。
+//   - cfg: 包含 OpenAI 兼容设置的应用配置。
 //
-// Returns:
-//   - []string: All provider identifiers capable of serving the model, ordered by preference.
+// 返回：
+//   - []string: 所有能够服务该模型的供应商标识，按偏好排序。
 func GetProviderName(modelName string) []string {
 	if modelName == "" {
 		return nil
@@ -77,20 +77,20 @@ func GetProviderName(modelName string) []string {
 	return providers
 }
 
-// ResolveAutoModel resolves the "auto" model name to an actual available model.
-// It uses an empty handler type to get any available model from the registry.
+// ResolveAutoModel 把 "auto" 模型名解析为一个实际可用的模型。
+// 它使用空的处理器类型从注册表中获取任意可用模型。
 //
-// Parameters:
-//   - modelName: The model name to check (should be "auto")
+// 参数：
+//   - modelName: 要检查的模型名称（应为 "auto"）
 //
-// Returns:
-//   - string: The resolved model name, or the original if not "auto" or resolution fails
+// 返回：
+//   - string: 解析后的模型名称；如果不是 "auto" 或解析失败则返回原值
 func ResolveAutoModel(modelName string) string {
 	if modelName != "auto" {
 		return modelName
 	}
 
-	// Use empty string as handler type to get any available model
+	// 使用空字符串作为处理器类型以获取任意可用模型
 	firstModel, err := registry.GetGlobalRegistry().GetFirstAvailableModel("")
 	if err != nil {
 		log.Warnf("Failed to resolve 'auto' model: %v, falling back to original model name", err)
@@ -101,15 +101,15 @@ func ResolveAutoModel(modelName string) string {
 	return firstModel
 }
 
-// IsOpenAICompatibilityAlias checks if the given model name is an alias
-// configured for OpenAI compatibility routing.
+// IsOpenAICompatibilityAlias 检查给定的模型名称是否是为
+// OpenAI 兼容路由配置的别名。
 //
-// Parameters:
-//   - modelName: The model name to check
-//   - cfg: The application configuration containing OpenAI compatibility settings
+// 参数：
+//   - modelName: 要检查的模型名称
+//   - cfg: 包含 OpenAI 兼容设置的应用配置
 //
-// Returns:
-//   - bool: True if the model name is an OpenAI compatibility alias, false otherwise
+// 返回：
+//   - bool: 若该模型名称是 OpenAI 兼容别名则返回 true，否则返回 false
 func IsOpenAICompatibilityAlias(modelName string, cfg *config.Config) bool {
 	if cfg == nil {
 		return false
@@ -128,16 +128,16 @@ func IsOpenAICompatibilityAlias(modelName string, cfg *config.Config) bool {
 	return false
 }
 
-// GetOpenAICompatibilityConfig returns the OpenAI compatibility configuration
-// and model details for the given alias.
+// GetOpenAICompatibilityConfig 返回给定别名对应的 OpenAI 兼容配置
+// 和模型详情。
 //
-// Parameters:
-//   - alias: The model alias to find configuration for
-//   - cfg: The application configuration containing OpenAI compatibility settings
+// 参数：
+//   - alias: 要查找其配置的模型别名
+//   - cfg: 包含 OpenAI 兼容设置的应用配置
 //
-// Returns:
-//   - *config.OpenAICompatibility: The matching compatibility configuration, or nil if not found
-//   - *config.OpenAICompatibilityModel: The matching model configuration, or nil if not found
+// 返回：
+//   - *config.OpenAICompatibility: 匹配的兼容配置，未找到时为 nil
+//   - *config.OpenAICompatibilityModel: 匹配的模型配置，未找到时为 nil
 func GetOpenAICompatibilityConfig(alias string, cfg *config.Config) (*config.OpenAICompatibility, *config.OpenAICompatibilityModel) {
 	if cfg == nil {
 		return nil, nil
@@ -156,16 +156,16 @@ func GetOpenAICompatibilityConfig(alias string, cfg *config.Config) (*config.Ope
 	return nil, nil
 }
 
-// InArray checks if a string exists in a slice of strings.
-// It iterates through the slice and returns true if the target string is found,
-// otherwise it returns false.
+// InArray 检查某个字符串是否存在于字符串切片中。
+// 它遍历该切片，若找到目标字符串则返回 true，
+// 否则返回 false。
 //
-// Parameters:
-//   - hystack: The slice of strings to search in
-//   - needle: The string to search for
+// 参数：
+//   - hystack: 要搜索的字符串切片
+//   - needle: 要搜索的字符串
 //
-// Returns:
-//   - bool: True if the string is found, false otherwise
+// 返回：
+//   - bool: 若找到该字符串则返回 true，否则返回 false
 func InArray(hystack []string, needle string) bool {
 	for _, item := range hystack {
 		if needle == item {
@@ -175,13 +175,13 @@ func InArray(hystack []string, needle string) bool {
 	return false
 }
 
-// HideAPIKey obscures an API key for logging purposes, showing only the first and last few characters.
+// HideAPIKey 出于日志目的遮蔽 API key，仅显示开头和结尾的几个字符。
 //
-// Parameters:
-//   - apiKey: The API key to hide.
+// 参数：
+//   - apiKey: 要遮蔽的 API key。
 //
-// Returns:
-//   - string: The obscured API key.
+// 返回：
+//   - string: 遮蔽后的 API key。
 func HideAPIKey(apiKey string) string {
 	if len(apiKey) > 8 {
 		return apiKey[:4] + "..." + apiKey[len(apiKey)-4:]
@@ -193,15 +193,15 @@ func HideAPIKey(apiKey string) string {
 	return apiKey
 }
 
-// maskAuthorizationHeader masks the Authorization header value while preserving the auth type prefix.
-// Common formats: "Bearer <token>", "Basic <credentials>", "ApiKey <key>", etc.
-// It preserves the prefix (e.g., "Bearer ") and only masks the token/credential part.
+// maskAuthorizationHeader 遮蔽 Authorization 头的值，同时保留认证类型前缀。
+// 常见格式："Bearer <token>"、"Basic <credentials>"、"ApiKey <key>" 等。
+// 它保留前缀（例如 "Bearer "），只遮蔽令牌/凭据部分。
 //
-// Parameters:
-//   - value: The Authorization header value
+// 参数：
+//   - value: Authorization 头的值
 //
-// Returns:
-//   - string: The masked Authorization value with prefix preserved
+// 返回：
+//   - string: 已遮蔽且保留前缀的 Authorization 值
 func MaskAuthorizationHeader(value string) string {
 	parts := strings.SplitN(strings.TrimSpace(value), " ", 2)
 	if len(parts) < 2 {
@@ -210,19 +210,19 @@ func MaskAuthorizationHeader(value string) string {
 	return parts[0] + " " + HideAPIKey(parts[1])
 }
 
-// MaskSensitiveHeaderValue masks sensitive header values while preserving expected formats.
+// MaskSensitiveHeaderValue 遮蔽敏感的头值，同时保留预期的格式。
 //
-// Behavior by header key (case-insensitive):
-//   - "Authorization": Preserve the auth type prefix (e.g., "Bearer ") and mask only the credential part.
-//   - Headers containing "api-key": Mask the entire value using HideAPIKey.
-//   - Others: Return the original value unchanged.
+// 按头字段名（不区分大小写）的行为：
+//   - "Authorization"：保留认证类型前缀（例如 "Bearer "），只遮蔽凭据部分。
+//   - 包含 "api-key" 的头：使用 HideAPIKey 遮蔽整个值。
+//   - 其他：原样返回原值。
 //
-// Parameters:
-//   - key:   The HTTP header name to inspect (case-insensitive matching).
-//   - value: The header value to mask when sensitive.
+// 参数：
+//   - key:   要检查的 HTTP 头名称（不区分大小写匹配）。
+//   - value: 敏感时要遮蔽的头值。
 //
-// Returns:
-//   - string: The masked value according to the header type; unchanged if not sensitive.
+// 返回：
+//   - string: 按头类型遮蔽后的值；不敏感时保持不变。
 func MaskSensitiveHeaderValue(key, value string) string {
 	lowerKey := strings.ToLower(strings.TrimSpace(key))
 	switch {
@@ -238,7 +238,7 @@ func MaskSensitiveHeaderValue(key, value string) string {
 	}
 }
 
-// MaskSensitiveQuery masks sensitive query parameters, e.g. auth_token, within the raw query string.
+// MaskSensitiveQuery 在原始查询字符串中遮蔽敏感的查询参数，例如 auth_token。
 func MaskSensitiveQuery(raw string) string {
 	if raw == "" {
 		return ""
@@ -282,8 +282,8 @@ func shouldMaskQueryParam(key string) bool {
 		return false
 	}
 	key = strings.TrimSuffix(key, "[]")
-	// The management API deletes a client API key by ?value=<key>, so a plain
-	// "value" parameter can carry a full secret into the request log.
+	// 管理 API 通过 ?value=<key> 删除客户端 API key，因此一个普通的
+	// "value" 参数可能把完整密钥带入请求日志。
 	if key == "key" || key == "value" || strings.Contains(key, "api-key") || strings.Contains(key, "apikey") || strings.Contains(key, "api_key") {
 		return true
 	}

@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// CooldownView describes an unexpired local retry restriction, not overall
-// credential availability. It contains no credential metadata or raw errors.
+// CooldownView 描述尚未过期的本地重试限制，而非整体
+// 凭据可用性。它不包含凭据元数据或原始错误。
 type CooldownView struct {
 	Scope            string    `json:"scope"`
 	ModelKey         string    `json:"model_key,omitempty"`
@@ -18,17 +18,17 @@ type CooldownView struct {
 	HTTPStatus       int       `json:"http_status,omitempty"`
 }
 
-// CooldownSnapshotForAuth projects a detached auth snapshot without mutating it.
-// It reports timers even when another restriction (such as disablement or an
-// expired token) also prevents execution. An empty result does not imply that
-// the credential is usable. Callers must handle unavailable/remote state separately.
+// CooldownSnapshotForAuth 投影一个独立的 auth 快照而不修改它。
+// 即使存在其他限制（例如禁用或令牌过期），它也会上报
+// 计时器。空结果并不意味着
+// 凭据可用。调用方必须单独处理不可用/远端状态。
 func CooldownSnapshotForAuth(auth *Auth, now time.Time) []CooldownView {
 	views := make([]CooldownView, 0)
 	if auth == nil {
 		return views
 	}
-	// Match the explicit credential-wide gate in isAuthBlockedForModel. Other
-	// auth-level fields can be model aggregates and must not become global gates.
+	// 与 isAuthBlockedForModel 中显式的凭据级门禁保持一致。其他
+	// auth 级字段可能是模型聚合值，不得成为全局门禁。
 	if auth.Quota.Exceeded && auth.Quota.Reason == "credential_quota" && auth.Quota.NextRecoverAt.After(now) {
 		views = append(views, newCooldownView("credential", "", auth.Quota.NextRecoverAt, now, auth.Quota, auth.StatusMessage, auth.LastError))
 	} else if len(auth.ModelStates) == 0 {
@@ -37,7 +37,7 @@ func CooldownSnapshotForAuth(auth *Auth, now time.Time) []CooldownView {
 		}
 	}
 
-	// Sorting source keys makes ties deterministic after selector precedence.
+	// 对来源键排序可使选择器优先级之后的并列结果具有确定性。
 	keys := make([]string, 0, len(auth.ModelStates))
 	for key := range auth.ModelStates {
 		keys = append(keys, key)
@@ -90,8 +90,8 @@ func newCooldownView(scope, model string, next, now time.Time, quota QuotaState,
 		Scope: scope, ModelKey: model, Reason: "unknown",
 		RetryAt: next.UTC(), RemainingSeconds: seconds,
 	}
-	// A shorter quota window must not label a longer non-quota retry timer.
-	// Zero recovery times can occur in legacy quota state with only a retry time.
+	// 较短的额度窗口不得给较长的非额度重试计时器打标签。
+	// 旧版额度状态可能只有重试时间而恢复时间为零。
 	if quota.Exceeded && (quota.NextRecoverAt.IsZero() || !quota.NextRecoverAt.Before(next)) {
 		switch quota.Reason {
 		case "credential_quota", "quota":
@@ -102,7 +102,7 @@ func newCooldownView(scope, model string, next, now time.Time, quota QuotaState,
 	}
 	propagatedQuota := quota.Exceeded && quota.Reason == "credential_quota"
 	if view.Reason == "credential_quota" {
-		// The credential-wide gate takes precedence over stale sibling errors.
+		// 凭据级门禁优先于过期的同级错误。
 		return view
 	}
 	if (view.Reason == "quota" || view.Reason == "cloudflare_challenge") && quota.BackoffLevel >= 0 {
@@ -116,8 +116,8 @@ func newCooldownView(scope, model string, next, now time.Time, quota QuotaState,
 	if view.Reason == "unknown" {
 		view.Reason = cooldownStatusReason(statusMessage)
 	}
-	// Propagation does not replace sibling errors. Avoid attributing a stale
-	// error status to that quota failure, even if a longer retry timer survives.
+	// 传播不会替换同级错误。避免将过期的
+	// 错误状态归因于该额度失败，即使存在更长的重试计时器。
 	if !propagatedQuota && lastErr != nil && lastErr.HTTPStatus >= 400 && lastErr.HTTPStatus <= 599 && errorReason == view.Reason {
 		view.HTTPStatus = lastErr.HTTPStatus
 	}
@@ -152,8 +152,8 @@ func cooldownErrorReason(err *Error) string {
 }
 
 func cooldownStatusReason(message string) string {
-	// Only exact known markers can become public reason codes. Never return
-	// arbitrary status messages, error codes, or upstream response bodies.
+	// 只有确切已知的标记才能成为公开的原因码。绝不返回
+	// 任意状态消息、错误码或上游响应体。
 	switch strings.TrimSpace(message) {
 	case "quota", "quota exhausted":
 		return "quota"

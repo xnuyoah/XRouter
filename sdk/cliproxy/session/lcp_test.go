@@ -104,7 +104,7 @@ func TestExtractCanonicalTurnsBoundsPartsPerTurn(t *testing.T) {
 		t.Fatalf("truncation marker = %q, want <truncated:32 parts>", marker.Value)
 	}
 
-	// The bounded fingerprint must be deterministic across independent extractions.
+	// 有界指纹必须在各次独立提取之间保持确定性。
 	againTurns := ExtractCanonicalTurns(sdktranslator.FormatOpenAI, []byte(payload.String()))
 	if len(againTurns) != 1 {
 		t.Fatalf("ExtractCanonicalTurns() returned %d turns, want 1", len(againTurns))
@@ -112,7 +112,7 @@ func TestExtractCanonicalTurnsBoundsPartsPerTurn(t *testing.T) {
 	if FastTurnFingerprint(againTurns[0]) != FastTurnFingerprint(turns[0]) {
 		t.Fatal("FastTurnFingerprint() is not deterministic for truncated turns")
 	}
-	// A payload with one fewer part must produce a different fingerprint.
+	// 少一个分块的载荷必须产生不同的指纹。
 	var small strings.Builder
 	small.WriteString(`{"messages":[{"role":"user","content":[`)
 	for index := 0; index < maxCanonicalPartsPerTurn+31; index++ {
@@ -130,7 +130,7 @@ func TestExtractCanonicalTurnsBoundsPartsPerTurn(t *testing.T) {
 		t.Fatal("truncation marker did not distinguish differently-sized part lists")
 	}
 
-	// External CanonicalTurn with unbounded Parts must also be safely bounded by normalizeCanonicalTurn / FastTurnFingerprint.
+	// 带有无界 Parts 的外部 CanonicalTurn 也必须被 normalizeCanonicalTurn / FastTurnFingerprint 安全地限定范围。
 	rawParts := make([]CanonicalPart, 0, maxCanonicalPartsPerTurn+50)
 	for index := 0; index < maxCanonicalPartsPerTurn+50; index++ {
 		rawParts = append(rawParts, CanonicalPart{Kind: "text", Value: fmt.Sprintf("ext-part-%d", index)})
@@ -243,8 +243,8 @@ func TestFastTurnFingerprintLargePartUsesBoundedSampling(t *testing.T) {
 func TestFastTurnFingerprintLargePartDigestDetectsUnsampledDifference(t *testing.T) {
 	t.Parallel()
 
-	// 60 KiB payload: sparse sample takes 4 KiB head, 4 KiB middle (at 28 KiB..32 KiB), 4 KiB tail (56 KiB..60 KiB).
-	// Modifying a byte at 10 KiB (in the unsampled gap between head and middle) would collide under naive sampling.
+	// 60 KiB 载荷：稀疏采样取 4 KiB 头部、4 KiB 中部（28 KiB..32 KiB 处）、4 KiB 尾部（56 KiB..60 KiB 处）。
+	// 如果修改 10 KiB 处的一个字节（位于头部与中部之间未被采样的间隙），在朴素采样下会产生碰撞。
 	base := strings.Repeat("a", 60*1024)
 	modified := base[:10*1024] + "z" + base[10*1024+1:]
 
@@ -354,7 +354,7 @@ func TestMerklePrefixMatcherTTLAndAuthInvalidation(t *testing.T) {
 		t.Fatalf("initial match = %#v, %v", match, ok)
 	}
 
-	// Advance mock clock past TTL without wall-clock sleep
+	// 不依赖墙上时钟休眠，直接把模拟时钟推进到超过 TTL
 	current = current.Add(10 * time.Minute)
 	if _, ok := matcher.Match(namespace, turns); ok {
 		t.Fatal("expired matcher entry remained available")
@@ -399,7 +399,7 @@ func TestMerklePrefixMatcherRollingPrefixSessionIDDifferentSystemPrompts(t *test
 	defer matcher.Clear()
 	namespace := "lcp:v1:test:model:caller"
 
-	// Two conversations with different system instructions but identical first user prompt
+	// 两段对话具有不同的系统指令，但首个用户提示完全相同
 	conv1 := []CanonicalTurn{
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "system instruction AAA"}}},
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "common question"}}},
@@ -416,7 +416,7 @@ func TestMerklePrefixMatcherRollingPrefixSessionIDDifferentSystemPrompts(t *test
 		t.Fatalf("expected non-empty session IDs, got sessionID1=%q, sessionID2=%q", sessionID1, sessionID2)
 	}
 
-	// Rolling prefix ensures that because turn 0 differs, the derived session ID for turn 2 differs
+	// 滚动前缀确保：由于第 0 轮不同，第 2 轮派生出的会话 ID 也不同
 	if sessionID1 == sessionID2 {
 		t.Fatalf("expected distinct session IDs for conversations with different system prompts, got same: %q", sessionID1)
 	}
@@ -427,7 +427,7 @@ func TestMerklePrefixMatcherConfigBoundsSanitization(t *testing.T) {
 
 	matcher := NewMerklePrefixMatcherWithConfig(MerklePrefixMatcherConfig{
 		MaxTurns:    10,
-		MaxPrefixes: 2, // Less than MaxTurns
+		MaxPrefixes: 2, // 小于 MaxTurns
 	})
 	defer matcher.Clear()
 
@@ -514,33 +514,33 @@ func TestMerklePrefixMatcherTouchFingerprintsDelayedSuccessProtection(t *testing
 	fingerprints := []string{"fp-1", "fp-2"}
 	minPrefixLength := 1
 
-	// Initial binding to auth-A
+	// 最初绑定到 auth-A
 	matcher.BindFingerprints(namespace, fingerprints, minPrefixLength, "auth-A")
 	match, ok := matcher.MatchFingerprints(namespace, fingerprints, minPrefixLength)
 	if !ok || match.AuthID != "auth-A" {
 		t.Fatalf("initial match = %v, want auth-A", match)
 	}
 
-	// Failover rebinds sequence to auth-B
+	// 故障转移把序列重新绑定到 auth-B
 	matcher.BindFingerprints(namespace, fingerprints, minPrefixLength, "auth-B")
 	match, ok = matcher.MatchFingerprints(namespace, fingerprints, minPrefixLength)
 	if !ok || match.AuthID != "auth-B" {
 		t.Fatalf("rebound match = %v, want auth-B", match)
 	}
 
-	// Delayed success from old request on auth-A calls TouchFingerprints
+	// auth-A 上旧请求的延迟成功会调用 TouchFingerprints
 	refreshed := matcher.TouchFingerprints(namespace, fingerprints, minPrefixLength, "auth-A")
 	if refreshed {
 		t.Fatal("TouchFingerprints with outdated auth-A succeeded unexpectedly")
 	}
 
-	// Active binding must remain auth-B
+	// 活跃绑定必须仍为 auth-B
 	match, ok = matcher.MatchFingerprints(namespace, fingerprints, minPrefixLength)
 	if !ok || match.AuthID != "auth-B" {
 		t.Fatalf("match after delayed success = %v, want auth-B", match)
 	}
 
-	// Success from current auth-B refreshes properly
+	// 当前 auth-B 的成功会正确地刷新
 	if !matcher.TouchFingerprints(namespace, fingerprints, minPrefixLength, "auth-B") {
 		t.Fatal("TouchFingerprints with current auth-B failed")
 	}
@@ -564,15 +564,15 @@ func TestMerklePrefixMatcherTouchExpiredEntry(t *testing.T) {
 	}
 
 	matcher.BindFingerprints(namespace, fingerprints, minPrefixLength, "auth-A")
-	// Advance mock clock past TTL without wall-clock sleep
+	// 不依赖墙上时钟休眠，直接把模拟时钟推进到超过 TTL
 	current = current.Add(25 * time.Minute)
 
-	// After TTL expires, Match should not find the expired binding
+	// TTL 过期后，Match 不应找到已过期的绑定
 	if _, ok := matcher.MatchFingerprints(namespace, fingerprints, minPrefixLength); ok {
 		t.Fatal("expected match to fail after TTL expiry")
 	}
 
-	// Touch after expiration rebinds freshly with new TTL rather than reviving expired state
+	// 过期后的 Touch 会以新的 TTL 重新绑定，而不是复活过期状态
 	if !matcher.TouchFingerprints(namespace, fingerprints, minPrefixLength, "auth-A") {
 		t.Fatal("TouchFingerprints should succeed and re-bind")
 	}
@@ -596,19 +596,19 @@ func TestMerklePrefixMatcherFingerprintsBounding(t *testing.T) {
 		fps[i] = fmt.Sprintf("fp-%d", i)
 	}
 
-	// Binding 50 fingerprints with MaxTurns=10 should truncate to 10
+	// 在 MaxTurns=10 下绑定 50 个指纹应截断为 10 个
 	sid := matcher.BindFingerprints("ns", fps, 2, "auth-1")
 	if sid == "" {
 		t.Fatal("BindFingerprints failed")
 	}
 
-	// Match should succeed with 50 fingerprints (truncated to 10)
+	// 使用 50 个指纹（截断为 10 个）时 Match 应成功
 	match, ok := matcher.MatchFingerprints("ns", fps, 2)
 	if !ok || match.PrefixLength != 10 {
 		t.Fatalf("expected 10 matched turns, got %d (ok=%v)", match.PrefixLength, ok)
 	}
 
-	// Touch and Remove should also handle 50 fingerprints cleanly
+	// Touch 和 Remove 也应能干净地处理 50 个指纹
 	if !matcher.TouchFingerprints("ns", fps, 2, "auth-1") {
 		t.Fatal("TouchFingerprints failed")
 	}
@@ -649,17 +649,17 @@ func TestMerklePrefixMatcherForkLineageTree(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-fork:model:caller"
 
-	// 4 test sequences:
-	// Seq 1: 1 2 3 4 5 6 7 A
-	// Seq 2: 1 2 3 4 5 6 7 8
-	// Seq 3: 1 2 3 C 12
-	// Seq 4: 1 2 3 C D
+	// 4 个测试序列：
+	// 序列 1：1 2 3 4 5 6 7 A
+	// 序列 2：1 2 3 4 5 6 7 8
+	// 序列 3：1 2 3 C 12
+	// 序列 4：1 2 3 C D
 	seq1 := turnsFromTexts("1", "2", "3", "4", "5", "6", "7", "A")
 	seq2 := turnsFromTexts("1", "2", "3", "4", "5", "6", "7", "8")
 	seq3 := turnsFromTexts("1", "2", "3", "C", "12")
 	seq4 := turnsFromTexts("1", "2", "3", "C", "D")
 
-	// 1. Seq 1: Initial root establishment
+	// 1. 序列 1：建立初始根
 	res1 := matcher.BindWithResult(namespace, seq1, "auth-root")
 	if res1.SessionID == "" {
 		t.Fatal("seq1 bind returned empty session ID")
@@ -671,7 +671,7 @@ func TestMerklePrefixMatcherForkLineageTree(t *testing.T) {
 		t.Fatalf("seq1 parentSessionID = %q, want empty", res1.ParentSessionID)
 	}
 
-	// 2. Seq 2: Forks from Seq 1 at depth 7 ("8" vs "A")
+	// 2. 序列 2：在第 7 层从序列 1 分叉（"8" 与 "A"）
 	match2, ok2 := matcher.Match(namespace, seq2)
 	if !ok2 {
 		t.Fatal("seq2 match failed")
@@ -696,7 +696,7 @@ func TestMerklePrefixMatcherForkLineageTree(t *testing.T) {
 		t.Fatalf("seq2 bind result mismatch: bind=%+v, match=%+v", res2, match2)
 	}
 
-	// 3. Seq 3: Forks from root tree at depth 3 ("C" vs "4")
+	// 3. 序列 3：在第 3 层从根树分叉（"C" 与 "4"）
 	match3, ok3 := matcher.Match(namespace, seq3)
 	if !ok3 {
 		t.Fatal("seq3 match failed")
@@ -721,7 +721,7 @@ func TestMerklePrefixMatcherForkLineageTree(t *testing.T) {
 		t.Fatalf("seq3 bind result mismatch: bind=%+v, match=%+v", res3, match3)
 	}
 
-	// 4. Seq 4: Nested fork from Seq 3 at depth 4 ("D" vs "12")
+	// 4. 序列 4：在第 4 层从序列 3 嵌套分叉（"D" 与 "12"）
 	match4, ok4 := matcher.Match(namespace, seq4)
 	if !ok4 {
 		t.Fatal("seq4 match failed")
@@ -738,7 +738,7 @@ func TestMerklePrefixMatcherForkLineageTree(t *testing.T) {
 	if match4.SessionID == res1.SessionID || match4.SessionID == res2.SessionID || match4.SessionID == res3.SessionID {
 		t.Fatalf("seq4 sessionID = %q collided with earlier sessions", match4.SessionID)
 	}
-	// Crucial: seq4's parent should be seq3's branch session ID (prefix 4: 1 2 3 C)
+	// 关键：seq4 的父级应为 seq3 的分支会话 ID（前缀 4：1 2 3 C）
 	if match4.ParentSessionID != res3.SessionID {
 		t.Fatalf("seq4 parentSessionID = %q, want seq3 session ID %q", match4.ParentSessionID, res3.SessionID)
 	}
@@ -747,7 +747,7 @@ func TestMerklePrefixMatcherForkLineageTree(t *testing.T) {
 		t.Fatalf("seq4 bind result mismatch: bind=%+v, match=%+v", res4, match4)
 	}
 
-	// 5. Linear continuation of Seq 4 (Seq 4.2: 1 2 3 C D E)
+	// 5. 序列 4 的线性延续（序列 4.2：1 2 3 C D E）
 	seq4Cont := turnsFromTexts("1", "2", "3", "C", "D", "E")
 	match4Cont, ok4Cont := matcher.Match(namespace, seq4Cont)
 	if !ok4Cont {
@@ -787,15 +787,15 @@ func TestMerklePrefixMatcherShorterGroupDoesNotMaskLongerTrajectory(t *testing.T
 	defer matcher.Clear()
 	namespace := "lcp:v1:mask-test:model:caller"
 
-	// 1. Bind long trajectory [1, 2, 3]
+	// 1. 绑定长轨迹 [1, 2, 3]
 	longTrunk := turnsFromTexts("1", "2", "3")
 	matcher.Bind(namespace, longTrunk, "auth-root")
 
-	// 2. Bind shorter exact-prefix group [1, 2] afterwards (more recently accessed)
+	// 2. 随后绑定更短的精确前缀分组 [1, 2]（更近被访问）
 	shortPrefix := turnsFromTexts("1", "2")
 	matcher.Bind(namespace, shortPrefix, "auth-root")
 
-	// 3. Query a fork [1, 2, 4] diverging at turn 3 from the long trunk
+	// 3. 查询一个在第 3 轮从长主干分叉的支系 [1, 2, 4]
 	fork := turnsFromTexts("1", "2", "4")
 	match, ok := matcher.Match(namespace, fork)
 	if !ok {
@@ -819,30 +819,30 @@ func TestMerklePrefixMatcherRemoveFingerprintsBeforeGenerationGuard(t *testing.T
 	turns := turnsFromTexts("1", "2")
 	fps, minPrefix := matcher.Prepare(turns)
 
-	// 1. Initial bind at generation G1
+	// 1. 在代号 G1 处进行初始绑定
 	res1 := matcher.BindFingerprintsWithResult(namespace, fps, minPrefix, "auth-1")
 	g1 := res1.AccessNumber
 	if g1 == 0 {
 		t.Fatal("expected non-zero access generation")
 	}
 
-	// 2. Concurrent success touches entry and advances to generation G2 > G1
+	// 2. 并发成功触碰条目并推进到代号 G2 > G1
 	if !matcher.TouchFingerprints(namespace, fps, minPrefix, "auth-1") {
 		t.Fatal("TouchFingerprints failed")
 	}
 
-	// 3. Stale failure from request 1 attempts to remove with generation G1
+	// 3. 请求 1 的陈旧失败尝试以代号 G1 移除
 	removedStale := matcher.RemoveFingerprintsBefore(namespace, fps, "auth-1", g1)
 	if removedStale {
 		t.Fatal("stale RemoveFingerprintsBefore should not delete entry refreshed by newer touch")
 	}
 
-	// Entry must remain active
+	// 条目必须保持活跃
 	if _, ok := matcher.MatchFingerprints(namespace, fps, minPrefix); !ok {
 		t.Fatal("entry should still be present after stale removal attempt")
 	}
 
-	// 4. Current failure with generation 0 (unconditional) removes it
+	// 4. 代号为 0（无条件）的当前失败会移除它
 	removedCurrent := matcher.RemoveFingerprints(namespace, fps, "auth-1")
 	if !removedCurrent {
 		t.Fatal("unconditional RemoveFingerprints should succeed")
@@ -867,13 +867,13 @@ func TestMerklePrefixMatcherRemoveSessionBeforeGenerationGuard(t *testing.T) {
 		t.Fatalf("expected non-empty session and generation, got %+v", res1)
 	}
 
-	// Match advances generation of the group beyond res1.AccessNumber.
+	// Match 会把该分组的代号推进到超过 res1.AccessNumber。
 	match, ok := matcher.MatchFingerprints(namespace, fps, minPrefix)
 	if !ok || match.AccessNumber <= res1.AccessNumber {
 		t.Fatalf("expected match generation > %d, got ok=%v match=%+v", res1.AccessNumber, ok, match)
 	}
 
-	// Stale generation must not remove the session group.
+	// 陈旧的代号不得移除该会话分组。
 	if matcher.RemoveSessionBefore(namespace, res1.SessionID, "auth-1", res1.AccessNumber) {
 		t.Fatal("stale RemoveSessionBefore should not remove refreshed group")
 	}
@@ -881,7 +881,7 @@ func TestMerklePrefixMatcherRemoveSessionBeforeGenerationGuard(t *testing.T) {
 		t.Fatal("group should still be present after stale RemoveSessionBefore")
 	}
 
-	// Current generation removes the session group.
+	// 当前代号会移除该会话分组。
 	latestMatch, ok := matcher.MatchFingerprints(namespace, fps, minPrefix)
 	if !ok {
 		t.Fatal("expected match before current-generation removal")
@@ -901,27 +901,27 @@ func TestMerklePrefixMatcherClearPreservesMonotonicGeneration(t *testing.T) {
 	fps := []string{"fp-1", "fp-2"}
 	minPrefix := 1
 
-	// Bind initial sequence and record generation
+	// 绑定初始序列并记录代号
 	res1 := matcher.BindFingerprintsWithResult(namespace, fps, minPrefix, "auth-old")
 	if res1.AccessNumber == 0 {
 		t.Fatal("expected non-zero generation for initial bind")
 	}
 
-	// Clear matcher
+	// 清空匹配器
 	matcher.Clear()
 
-	// Rebind same sequence under new auth post-clear
+	// 清空后在新的 auth 下重新绑定同一序列
 	res2 := matcher.BindFingerprintsWithResult(namespace, fps, minPrefix, "auth-new")
 	if res2.AccessNumber <= res1.AccessNumber {
 		t.Fatalf("expected generation to increase monotonically across Clear(), got %d <= %d", res2.AccessNumber, res1.AccessNumber)
 	}
 
-	// Pre-clear generation should NOT be able to evict post-clear binding
+	// 清空前的代号不应能驱逐清空后的绑定
 	if matcher.RemoveFingerprintsBefore(namespace, fps, "auth-new", res1.AccessNumber) {
 		t.Fatal("stale pre-clear generation should not evict post-clear binding")
 	}
 
-	// The binding must remain intact
+	// 该绑定必须保持完好
 	match, ok := matcher.MatchFingerprints(namespace, fps, minPrefix)
 	if !ok || match.AuthID != "auth-new" {
 		t.Fatalf("binding should remain intact, got ok=%v match=%+v", ok, match)
@@ -935,14 +935,14 @@ func TestMerklePrefixMatcherCompactionSubsequenceContinuation(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-compaction:model:caller"
 
-	// Pre-compaction sequence: 5 turns
+	// 压缩前的序列：5 轮
 	initial := turnsFromTexts("turn1", "turn2", "turn3", "turn4", "turn5")
 	initialRes := matcher.BindWithResult(namespace, initial, "auth-parent")
 	if initialRes.SessionID == "" {
 		t.Fatal("initial bind returned empty session ID")
 	}
 
-	// Post-compaction sequence: early turns (1..3) collapsed into summary, preserving turns 4..5 and appending turn 6
+	// 压缩后的序列：早期轮次（1..3）被折叠为摘要，保留第 4..5 轮并追加第 6 轮
 	compacted := turnsFromTexts("compacted-summary-of-1-to-3", "turn4", "turn5", "turn6")
 	match, ok := matcher.Match(namespace, compacted)
 	if !ok {
@@ -964,7 +964,7 @@ func TestMerklePrefixMatcherCompactionSubsequenceContinuation(t *testing.T) {
 		t.Fatalf("nodeKind = %q, want compaction", match.NodeKind)
 	}
 
-	// Bind post-compaction continuation
+	// 绑定压缩后的延续
 	resCompacted := matcher.BindWithResult(namespace, compacted, "auth-parent")
 	if resCompacted.ParentSessionID != initialRes.SessionID {
 		t.Fatalf("bind parentSessionID = %q, want %q", resCompacted.ParentSessionID, initialRes.SessionID)
@@ -979,7 +979,7 @@ func TestMerklePrefixMatcherCompactionSubsequenceContinuation(t *testing.T) {
 		t.Fatalf("bind nodeKind = %q, want compaction", resCompacted.NodeKind)
 	}
 
-	// Subsequent turn grows linearly from compaction boundary
+	// 后续轮次从压缩边界处线性增长
 	subsequent := turnsFromTexts("compacted-summary-of-1-to-3", "turn4", "turn5", "turn6", "turn7")
 	subMatch, okSub := matcher.Match(namespace, subsequent)
 	if !okSub {
@@ -995,7 +995,7 @@ func TestMerklePrefixMatcherCompactionSubsequenceContinuation(t *testing.T) {
 		t.Fatal("subsequent turn should continue linearly on trunk, not fork")
 	}
 
-	// Multi-tenant isolation: other tenant in different caller namespace must not coalesce
+	// 多租户隔离：不同调用方命名空间中的其他租户不得被合并
 	otherNamespace := "lcp:v1:test-compaction:model:other-caller"
 	if _, okOther := matcher.Match(otherNamespace, compacted); okOther {
 		t.Fatal("compacted sequence unexpectedly matched across caller namespaces")
@@ -1009,11 +1009,11 @@ func TestMerklePrefixMatcherSlidingWindowTruncation(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-sliding-window:model:caller"
 
-	// Parent sequence: 4 turns [A, B, C, D]
+	// 父序列：4 轮 [A, B, C, D]
 	parent := turnsFromTexts("turnA", "turnB", "turnC", "turnD")
 	parentRes := matcher.BindWithResult(namespace, parent, "auth-parent")
 
-	// Sliding-window truncated continuation: [C, D, E] (turns A and B dropped without summary)
+	// 滑动窗口截断后的延续：[C, D, E]（轮次 A 和 B 在没有摘要的情况下被丢弃）
 	truncated := turnsFromTexts("turnC", "turnD", "turnE")
 	match, ok := matcher.Match(namespace, truncated)
 	if !ok {
@@ -1043,7 +1043,7 @@ func TestMerklePrefixMatcherCompactionSystemPromptIsolation(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-sys-isolation:model:caller"
 
-	// Session A with system instruction A
+	// 会话 A，带有系统指令 A
 	sessA := []CanonicalTurn{
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "System instruction A"}}},
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "turn1"}}},
@@ -1052,7 +1052,7 @@ func TestMerklePrefixMatcherCompactionSystemPromptIsolation(t *testing.T) {
 	}
 	matcher.BindWithResult(namespace, sessA, "auth-A")
 
-	// Candidate with DIFFERENT system instruction B, sharing common tail turns
+	// 带有不同系统指令 B 的候选，共享相同的尾部轮次
 	candB := []CanonicalTurn{
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "System instruction B"}}},
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "turn2"}}},
@@ -1071,13 +1071,13 @@ func TestMerklePrefixMatcherCompactionAmbiguityRejection(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-ambiguity:model:caller"
 
-	// Two distinct active sessions in same namespace that happen to share identical tail turns
+	// 同一命名空间中两个不同的活跃会话，恰好共享相同的尾部轮次
 	sess1 := turnsFromTexts("branch1", "turn2", "turn3", "sharedTailA", "sharedTailB")
 	sess2 := turnsFromTexts("branch2", "turnX", "turnY", "sharedTailA", "sharedTailB")
 	matcher.BindWithResult(namespace, sess1, "auth-1")
 	matcher.BindWithResult(namespace, sess2, "auth-2")
 
-	// Candidate matching both with identical overlap length
+	// 候选与两者匹配且重叠长度相同
 	cand := turnsFromTexts("summary", "sharedTailA", "sharedTailB", "newTurn")
 	if _, ok := matcher.Match(namespace, cand); ok {
 		t.Fatal("ambiguous candidate matching multiple active sessions equally must be rejected")
@@ -1091,7 +1091,7 @@ func TestMerklePrefixMatcherCompactionLongConversationActualTail(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-long-tail:model:caller"
 
-	// Long conversation with 1200 turns (exceeds default maxTurns=1024 prefix window)
+	// 包含 1200 轮的长对话（超过默认的 maxTurns=1024 前缀窗口）
 	totalTurns := 1200
 	texts := make([]string, totalTurns)
 	for i := 0; i < totalTurns; i++ {
@@ -1103,7 +1103,7 @@ func TestMerklePrefixMatcherCompactionLongConversationActualTail(t *testing.T) {
 		t.Fatal("parent bind returned empty session ID")
 	}
 
-	// Compacted continuation: summary replaces early turns, keeping the actual tail (turns 1190..1199) and adding 1200
+	// 压缩后的延续：摘要替换早期轮次，保留实际尾部（第 1190..1199 轮）并添加第 1200 轮
 	candTexts := make([]string, 0, 15)
 	candTexts = append(candTexts, "summary of turns 0-1189")
 	for i := 1190; i < totalTurns; i++ {
@@ -1137,7 +1137,7 @@ func TestMerklePrefixMatcherCompactionMultiSystemTurnIsolation(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-multi-sys:model:caller"
 
-	// Parent session with two system turns
+	// 带有两个系统轮次的父会话
 	parent := []CanonicalTurn{
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "System instruction part 1"}}},
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "Developer instruction part 2"}}},
@@ -1147,7 +1147,7 @@ func TestMerklePrefixMatcherCompactionMultiSystemTurnIsolation(t *testing.T) {
 	}
 	parentRes := matcher.BindWithResult(namespace, parent, "auth-multi-sys")
 
-	// Candidate A: same first system turn, different second system turn -> REJECT
+	// 候选 A：第一个系统轮次相同，第二个系统轮次不同 -> 拒绝
 	candDiffSecond := []CanonicalTurn{
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "System instruction part 1"}}},
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "DIFFERENT second part"}}},
@@ -1159,7 +1159,7 @@ func TestMerklePrefixMatcherCompactionMultiSystemTurnIsolation(t *testing.T) {
 		t.Fatal("candidate with different second system turn must be rejected")
 	}
 
-	// Candidate B: missing system turns completely -> REJECT
+	// 候选 B：完全缺少系统轮次 -> 拒绝
 	candNoSys := []CanonicalTurn{
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "summary without sys"}}},
 		{Role: "assistant", Parts: []CanonicalPart{{Kind: "text", Value: "ack1"}}},
@@ -1169,7 +1169,7 @@ func TestMerklePrefixMatcherCompactionMultiSystemTurnIsolation(t *testing.T) {
 		t.Fatal("candidate missing system turns must be rejected against parent with system turns")
 	}
 
-	// Candidate C: identical system turns -> MATCH
+	// 候选 C：系统轮次完全相同 -> 匹配
 	candIdenticalSys := []CanonicalTurn{
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "System instruction part 1"}}},
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "Developer instruction part 2"}}},
@@ -1194,13 +1194,13 @@ func TestMerklePrefixMatcherCompactionBucketBound(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-bucket-bound:model:caller"
 
-	// Register 25 distinct sessions sharing identical tail turns (exceeds maxTailsPerKey=16)
+	// 注册 25 个共享相同尾部轮次的不同会话（超过 maxTailsPerKey=16）
 	for i := 0; i < 25; i++ {
 		sess := turnsFromTexts(fmt.Sprintf("unique-head-%d", i), "turnX", "sharedTailA", "sharedTailB")
 		matcher.BindWithResult(namespace, sess, fmt.Sprintf("auth-%d", i))
 	}
 
-	// Candidate matching the common tail: should be rejected due to ambiguity, without panicking or infinite loop
+	// 匹配共同尾部的候选：由于存在歧义应被拒绝，且不得 panic 或陷入死循环
 	cand := turnsFromTexts("summary", "sharedTailA", "sharedTailB", "newTurn")
 	if _, ok := matcher.Match(namespace, cand); ok {
 		t.Fatal("matching ambiguous bucket must be safely rejected")
@@ -1214,7 +1214,7 @@ func TestMerklePrefixMatcherCompactionBucketBoundOverflowRemoval(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-overflow-rem:model:caller"
 
-	// 1. Register 18 distinct sessions sharing identical tail turns (maxTailsPerKey=16)
+	// 1. 注册 18 个共享相同尾部轮次的不同会话（maxTailsPerKey=16）
 	sessList := make([][]CanonicalTurn, 18)
 	for i := 0; i < 18; i++ {
 		sessList[i] = turnsFromTexts(fmt.Sprintf("unique-head-%d", i), "turnX", "sharedTailA", "sharedTailB")
@@ -1223,28 +1223,28 @@ func TestMerklePrefixMatcherCompactionBucketBoundOverflowRemoval(t *testing.T) {
 
 	cand := turnsFromTexts("summary", "sharedTailA", "sharedTailB", "newTurn")
 
-	// 2. 18 sessions: overflow state. Match must be rejected.
+	// 2. 18 个会话：溢出状态。Match 必须被拒绝。
 	if _, ok := matcher.Match(namespace, cand); ok {
 		t.Fatal("expected match to be rejected on overflowed bucket (18 items)")
 	}
 
-	// 3. Remove 1 session (leaving 17 items > 16): still overflowed. Match must be rejected.
+	// 3. 移除 1 个会话（剩余 17 项 > 16）：仍然溢出。Match 必须被拒绝。
 	matcher.Remove(namespace, sessList[17], "auth-17")
 	if _, ok := matcher.Match(namespace, cand); ok {
 		t.Fatal("expected match to still be rejected on overflowed bucket (17 items)")
 	}
 
-	// 4. Re-add session 17 and remove sessions 1..15, leaving sessions 0, 16, 17 (count 3 <= 16)
+	// 4. 重新加入会话 17 并移除会话 1..15，剩余会话 0、16、17（数量 3 <= 16）
 	matcher.BindWithResult(namespace, sessList[17], "auth-17")
 	for i := 1; i < 16; i++ {
 		matcher.Remove(namespace, sessList[i], fmt.Sprintf("auth-%d", i))
 	}
-	// With 3 remaining sessions sharing tail, must still be rejected due to ambiguity
+	// 剩余 3 个共享尾部的会话时，由于存在歧义仍必须被拒绝
 	if _, okAmbiguous := matcher.Match(namespace, cand); okAmbiguous {
 		t.Fatal("expected match to be rejected due to ambiguity between remaining sessions 0, 16, 17")
 	}
 
-	// 5. Remove sessions 0 and 16, leaving ONLY session 17 (which was added when bucket had > 16 items)
+	// 5. 移除会话 0 和 16，只留下会话 17（它是在桶中超过 16 项时加入的）
 	matcher.Remove(namespace, sessList[0], "auth-0")
 	matcher.Remove(namespace, sessList[16], "auth-16")
 	matchUnique, okUnique := matcher.Match(namespace, cand)
@@ -1272,7 +1272,7 @@ func TestMerklePrefixMatcherCompactionBucketOverflowExpirationRecovery(t *testin
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-overflow-exp:model:caller"
 
-	// 1. Register 18 distinct sessions sharing identical tail turns at T0
+	// 1. 在 T0 时刻注册 18 个共享相同尾部轮次的不同会话
 	sessList := make([][]CanonicalTurn, 18)
 	for i := 0; i < 18; i++ {
 		sessList[i] = turnsFromTexts(fmt.Sprintf("unique-head-%d", i), "turnX", "sharedTailA", "sharedTailB")
@@ -1281,12 +1281,12 @@ func TestMerklePrefixMatcherCompactionBucketOverflowExpirationRecovery(t *testin
 
 	cand := turnsFromTexts("summary", "sharedTailA", "sharedTailB", "newTurn")
 
-	// 2. All 18 sessions alive at T0: overflow rejected
+	// 2. 18 个会话在 T0 时刻全部存活：因溢出被拒绝
 	if _, ok := matcher.Match(namespace, cand); ok {
 		t.Fatal("expected match to be rejected on overflowed bucket (18 live items)")
 	}
 
-	// 3. Advance clock by 30 minutes, touch session 0 so it expires at T0 + 1h30m
+	// 3. 将时钟推进 30 分钟，触碰会话 0 使其在 T0 + 1h30m 过期
 	nowMu.Lock()
 	currentTime = currentTime.Add(30 * time.Minute)
 	nowMu.Unlock()
@@ -1294,12 +1294,12 @@ func TestMerklePrefixMatcherCompactionBucketOverflowExpirationRecovery(t *testin
 		t.Fatal("Touch failed on session 0")
 	}
 
-	// 4. Advance clock past T0 + 1h (to T0 + 1h15m): sessions 1..17 are now expired, only session 0 is alive
+	// 4. 将时钟推进到超过 T0 + 1h（即 T0 + 1h15m）：会话 1..17 现已过期，只有会话 0 存活
 	nowMu.Lock()
 	currentTime = currentTime.Add(45 * time.Minute)
 	nowMu.Unlock()
 
-	// 5. Match must immediately recover unique affinity to session 0 without waiting for lazy cleanup cycle
+	// 5. Match 必须立即恢复对会话 0 的唯一亲和性，而不等待惰性清理周期
 	matchUnique, okUnique := matcher.Match(namespace, cand)
 	if !okUnique {
 		t.Fatal("expected unique match after 17 competing sessions expired")
@@ -1316,7 +1316,7 @@ func TestMerklePrefixMatcherCompactionCandidateOver1024Turns(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-long-candidate:model:caller"
 
-	// 1. Parent session with 2000 turns
+	// 1. 包含 2000 轮的父会话
 	totalParentTurns := 2000
 	parentTexts := make([]string, totalParentTurns)
 	for i := 0; i < totalParentTurns; i++ {
@@ -1325,13 +1325,13 @@ func TestMerklePrefixMatcherCompactionCandidateOver1024Turns(t *testing.T) {
 	parentTurns := turnsFromTexts(parentTexts...)
 	parentRes := matcher.BindWithResult(namespace, parentTurns, "auth-parent-2000")
 
-	// 2. Candidate post-compaction request that is STILL 1100 turns long (> 1024 maxTurns prefix limit)
+	// 2. 压缩后的候选请求仍有 1100 轮长（> 1024 的 maxTurns 前缀上限）
 	candTexts := make([]string, 0, 1100)
 	candTexts = append(candTexts, "summary of earlier turns 0..900")
 	for i := 901; i < totalParentTurns; i++ {
 		candTexts = append(candTexts, parentTexts[i])
 	}
-	candTexts = append(candTexts, "new-turn-2001") // 1 + 1099 + 1 = 1101 turns
+	candTexts = append(candTexts, "new-turn-2001") // 1 + 1099 + 1 = 1101 轮
 	candTurns := turnsFromTexts(candTexts...)
 
 	match, ok := matcher.Match(namespace, candTurns)
@@ -1356,7 +1356,7 @@ func TestMerklePrefixMatcherCompactionMiddleSystemTurnIsolation(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-middle-sys:model:caller"
 
-	// Parent has system instruction inserted in the middle of conversation
+	// 父级在对话中间插入了系统指令
 	parent := []CanonicalTurn{
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "start user"}}},
 		{Role: "assistant", Parts: []CanonicalPart{{Kind: "text", Value: "start ack"}}},
@@ -1366,7 +1366,7 @@ func TestMerklePrefixMatcherCompactionMiddleSystemTurnIsolation(t *testing.T) {
 	}
 	parentRes := matcher.BindWithResult(namespace, parent, "auth-middle-sys")
 
-	// Candidate A: does NOT have the middle developer directive -> REJECT
+	// 候选 A：没有中间的开发者指令 -> 拒绝
 	candWithout := []CanonicalTurn{
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "summary without middle sys"}}},
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "step 3"}}},
@@ -1377,7 +1377,7 @@ func TestMerklePrefixMatcherCompactionMiddleSystemTurnIsolation(t *testing.T) {
 		t.Fatal("candidate missing middle system directive must be rejected")
 	}
 
-	// Candidate B: HAS the identical middle developer directive -> MATCH
+	// 候选 B：具有完全相同的中间开发者指令 -> 匹配
 	candWith := []CanonicalTurn{
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "summary with middle sys"}}},
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "middle developer directive"}}},
@@ -1401,7 +1401,7 @@ func TestMerklePrefixMatcherCompactionLongSessionTouchEnvironmentUpdate(t *testi
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-long-touch-env:model:caller"
 
-	// 1. Initial 1100-turn conversation without system instructions
+	// 1. 初始的 1100 轮对话，不含系统指令
 	totalTurns := 1100
 	initialTexts := make([]string, totalTurns)
 	for i := 0; i < totalTurns; i++ {
@@ -1410,7 +1410,7 @@ func TestMerklePrefixMatcherCompactionLongSessionTouchEnvironmentUpdate(t *testi
 	initialTurns := turnsFromTexts(initialTexts...)
 	parentRes := matcher.BindWithResult(namespace, initialTurns, "auth-long-env")
 
-	// 2. Conversation continues past 1024 turns and appends a new developer/system instruction in later turns
+	// 2. 对话越过 1024 轮继续，并在后续轮次中追加新的开发者/系统指令
 	updatedTurns := make([]CanonicalTurn, 0, totalTurns+3)
 	updatedTurns = append(updatedTurns, initialTurns...)
 	updatedTurns = append(updatedTurns, CanonicalTurn{
@@ -1426,12 +1426,12 @@ func TestMerklePrefixMatcherCompactionLongSessionTouchEnvironmentUpdate(t *testi
 		Parts: []CanonicalPart{{Kind: "text", Value: "turn 1101 ack"}},
 	})
 
-	// Touch updates the long trajectory with both new tail turns and the updated environment digest
+	// Touch 用新的尾部轮次和更新后的环境摘要来更新长轨迹
 	if !matcher.Touch(namespace, updatedTurns, "auth-long-env") {
 		t.Fatal("Touch failed on updated long conversation")
 	}
 
-	// 3a. Compacted continuation candidate preserving the new system instruction + tail turns: MUST MATCH
+	// 3a. 保留新系统指令 + 尾部轮次的压缩后续候选：必须匹配
 	candMatching := []CanonicalTurn{
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "summary of turns 0..1095"}}},
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "Appended mid-conversation developer directive"}}},
@@ -1447,7 +1447,7 @@ func TestMerklePrefixMatcherCompactionLongSessionTouchEnvironmentUpdate(t *testi
 		t.Fatalf("parentSessionID = %q, want %q", match.ParentSessionID, parentRes.SessionID)
 	}
 
-	// 3b. Stale candidate without the updated system instruction: MUST BE REJECTED
+	// 3b. 不含更新后系统指令的陈旧候选：必须被拒绝
 	candStale := []CanonicalTurn{
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "summary of turns 0..1095"}}},
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "turn 1101"}}},
@@ -1466,7 +1466,7 @@ func TestMerklePrefixMatcherCompactionSystemPromptRemovalViaTouch(t *testing.T) 
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-sys-removal:model:caller"
 
-	// 1. Initial 1100-turn session without system instructions
+	// 1. 初始的 1100 轮会话，不含系统指令
 	totalTurns := 1100
 	initialTexts := make([]string, totalTurns)
 	for i := 0; i < totalTurns; i++ {
@@ -1474,7 +1474,7 @@ func TestMerklePrefixMatcherCompactionSystemPromptRemovalViaTouch(t *testing.T) 
 	}
 	initialTurns := turnsFromTexts(initialTexts...)
 
-	// 2. Initial state includes an appended mid-conversation developer directive at turn 1100
+	// 2. 初始状态包含在第 1100 轮追加的对话中途开发者指令
 	withSysTurns := make([]CanonicalTurn, 0, totalTurns+1)
 	withSysTurns = append(withSysTurns, initialTurns...)
 	withSysTurns = append(withSysTurns, CanonicalTurn{
@@ -1483,7 +1483,7 @@ func TestMerklePrefixMatcherCompactionSystemPromptRemovalViaTouch(t *testing.T) 
 	})
 	parentRes := matcher.BindWithResult(namespace, withSysTurns, "auth-sys-rem")
 
-	// 3. Conversation continues past 1024 turns and DROPS the temporary developer instruction (empty envDigest)
+	// 3. 对话越过 1024 轮继续，并丢弃临时的开发者指令（envDigest 为空）
 	withoutSysTurns := make([]CanonicalTurn, 0, totalTurns+2)
 	withoutSysTurns = append(withoutSysTurns, initialTurns...)
 	withoutSysTurns = append(withoutSysTurns, CanonicalTurn{
@@ -1499,7 +1499,7 @@ func TestMerklePrefixMatcherCompactionSystemPromptRemovalViaTouch(t *testing.T) 
 		t.Fatal("Touch failed on updated turns with system instruction removed")
 	}
 
-	// 4a. Candidate WITHOUT system prompt: MUST MATCH (envDigest matches updated empty state)
+	// 4a. 不带系统提示的候选：必须匹配（envDigest 与更新后的空状态一致）
 	candNoSys := []CanonicalTurn{
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "summary of turns 0..1095"}}},
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "turn 1101"}}},
@@ -1514,7 +1514,7 @@ func TestMerklePrefixMatcherCompactionSystemPromptRemovalViaTouch(t *testing.T) 
 		t.Fatalf("parentSessionID = %q, want %q", match.ParentSessionID, parentRes.SessionID)
 	}
 
-	// 4b. Stale candidate with the old temporary system prompt: MUST BE REJECTED
+	// 4b. 带有旧临时系统提示的陈旧候选：必须被拒绝
 	candWithOldSys := []CanonicalTurn{
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "Temporary developer instruction"}}},
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "summary of turns 0..1095"}}},
@@ -1534,7 +1534,7 @@ func TestMerklePrefixMatcherCompactionPreservingInitialPrefix(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-prefix-compaction:model:caller"
 
-	// Parent session with system turn + 4 turns [Sys, A, B, C, D]
+	// 父会话含系统轮次 + 4 轮 [Sys, A, B, C, D]
 	parent := []CanonicalTurn{
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "System instruction directive"}}},
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "turn A"}}},
@@ -1544,9 +1544,9 @@ func TestMerklePrefixMatcherCompactionPreservingInitialPrefix(t *testing.T) {
 	}
 	parentRes := matcher.BindWithResult(namespace, parent, "auth-parent-prefix")
 
-	// Compacted continuation preserves system turn (prefix length 1), summarizes A-B, preserves C-D, and appends E
-	// Under naive fork logic, prefix length 1 would be falsely classified as a divergent fork.
-	// Compaction tail matching must recognize it as in-place compaction continuation.
+	// 压缩后的延续保留系统轮次（前缀长度为 1），摘要 A-B，保留 C-D，并追加 E
+	// 在朴素的分叉逻辑下，前缀长度为 1 会被错误地归类为分歧分叉。
+	// 压缩尾部匹配必须将其识别为原地压缩延续。
 	compacted := []CanonicalTurn{
 		{Role: "system", Parts: []CanonicalPart{{Kind: "text", Value: "System instruction directive"}}},
 		{Role: "user", Parts: []CanonicalPart{{Kind: "text", Value: "summary of turns A and B"}}},
@@ -1586,11 +1586,11 @@ func TestMerklePrefixMatcherCompactionMultiToolBatchTrailingTurns(t *testing.T) 
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-multi-tool:model:caller"
 
-	// Parent sequence [A, B, C, D]
+	// 父序列 [A, B, C, D]
 	parent := turnsFromTexts("msgA", "msgB", "msgC", "msgD")
 	parentRes := matcher.BindWithResult(namespace, parent, "auth-multi-tool")
 
-	// Compacted sequence preserving C, D, followed by 6 appended turns (multiple tool calls/results + prompt)
+	// 保留 C、D 的压缩后序列，其后追加 6 轮（多次工具调用/结果 + 提示）
 	compacted := turnsFromTexts(
 		"compacted summary",
 		"msgC",
@@ -1623,11 +1623,11 @@ func TestMerklePrefixMatcherCompactionPreservingUserPrefix(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-user-prefix:model:caller"
 
-	// Parent session [UserA, UserB, UserC, UserD] (turn 0 is a user message)
+	// 父会话 [UserA, UserB, UserC, UserD]（第 0 轮是一条用户消息）
 	parent := turnsFromTexts("userA", "userB", "userC", "userD")
 	parentRes := matcher.BindWithResult(namespace, parent, "auth-user-prefix")
 
-	// Compacted continuation preserves turn 0 ("userA"), summarizes B, preserves C-D, and appends E
+	// 压缩后的延续保留第 0 轮（"userA"），摘要 B，保留 C-D，并追加 E
 	compacted := turnsFromTexts("userA", "summary of turn B", "userC", "userD", "userE")
 	match, ok := matcher.Match(namespace, compacted)
 	if !ok {
@@ -1651,11 +1651,11 @@ func TestMerklePrefixMatcherSingleTurnTruncation(t *testing.T) {
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-single-trunc:model:caller"
 
-	// Parent [A, B, C]
+	// 父级 [A, B, C]
 	parent := turnsFromTexts("turnA", "turnB", "turnC")
 	parentRes := matcher.BindWithResult(namespace, parent, "auth-single-trunc")
 
-	// Candidate [B, C, D] (only 1 turn, turnA, dropped)
+	// 候选 [B, C, D]（只有 1 轮，turnA 被丢弃）
 	truncated := turnsFromTexts("turnB", "turnC", "turnD")
 	match, ok := matcher.Match(namespace, truncated)
 	if !ok {
@@ -1679,21 +1679,21 @@ func TestMerklePrefixMatcherConsecutiveCompactionSharedTailLineageResolution(t *
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-consec-comp:model:caller"
 
-	// 1. Initial parent session [A, B, C, D]
+	// 1. 初始父会话 [A, B, C, D]
 	sess1 := turnsFromTexts("turnA", "turnB", "turnC", "turnD")
 	res1 := matcher.BindWithResult(namespace, sess1, "auth-root")
 
-	// 2. First compaction continuation: [Summary1, C, D]
+	// 2. 第一次压缩延续：[Summary1, C, D]
 	sess2 := turnsFromTexts("summary-1", "turnC", "turnD")
 	res2 := matcher.BindWithResult(namespace, sess2, "auth-root")
 	if res2.ParentSessionID != res1.SessionID {
 		t.Fatalf("first compaction parent = %q, want %q", res2.ParentSessionID, res1.SessionID)
 	}
 
-	// 3. Second compaction continuation: [Summary2, C, D, E]
-	// Both sess1 and sess2 share tail [turnC, turnD] and are active in the namespace.
-	// Because sess2 is the direct descendant of sess1 on the same conversation trunk,
-	// the matcher must resolve the ambiguity in favor of the leaf session sess2.
+	// 3. 第二次压缩延续：[Summary2, C, D, E]
+	// sess1 和 sess2 都共享尾部 [turnC, turnD]，且都在该命名空间中活跃。
+	// 由于 sess2 是同一对话主干上 sess1 的直接后代，
+	// 匹配器必须把这一歧义解析为叶子会话 sess2。
 	sess3 := turnsFromTexts("summary-2", "turnC", "turnD", "turnE")
 	match3, ok3 := matcher.Match(namespace, sess3)
 	if !ok3 {
@@ -1717,25 +1717,25 @@ func TestMerklePrefixMatcherCompactionAmbiguityWithAncestorAndUnrelatedCompetito
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-comp-ambig-unrel:model:caller"
 
-	// 1. Ancestor A [turnA, turnB, turnC, turnD]
+	// 1. 祖先 A [turnA, turnB, turnC, turnD]
 	sessA := turnsFromTexts("turnA", "turnB", "turnC", "turnD")
 	resA := matcher.BindWithResult(namespace, sessA, "auth-A")
 
-	// 2. Descendant A_child [summary-A, turnC, turnD]
+	// 2. 后代 A_child [summary-A, turnC, turnD]
 	sessAChild := turnsFromTexts("summary-A", "turnC", "turnD")
 	resAChild := matcher.BindWithResult(namespace, sessAChild, "auth-A")
 	if resAChild.ParentSessionID != resA.SessionID {
 		t.Fatalf("A_child parent = %q, want %q", resAChild.ParentSessionID, resA.SessionID)
 	}
 
-	// 3. Completely unrelated session R [unrel1, unrel2, turnC, turnD]
+	// 3. 完全无关的会话 R [unrel1, unrel2, turnC, turnD]
 	sessR := turnsFromTexts("unrel1", "unrel2", "turnC", "turnD")
 	matcher.BindWithResult(namespace, sessR, "auth-R")
 
-	// 4. Candidate [summary-new, turnC, turnD, turnE]
-	// Matches A, A_child, and R with overlap 2.
-	// A is ancestor of A_child, leaving A_child and R as surviving leaves.
-	// Because A_child and R are distinct leaves, this must be safely rejected due to ambiguity.
+	// 4. 候选 [summary-new, turnC, turnD, turnE]
+	// 与 A、A_child 和 R 匹配，重叠为 2。
+	// A 是 A_child 的祖先，因此 A_child 和 R 成为存活的叶子。
+	// 由于 A_child 和 R 是不同的叶子，这里必须因歧义而被安全地拒绝。
 	cand := turnsFromTexts("summary-new", "turnC", "turnD", "turnE")
 	if _, ok := matcher.Match(namespace, cand); ok {
 		t.Fatal("expected candidate matching both descendant leaf and unrelated competitor to be rejected")
@@ -1749,13 +1749,13 @@ func TestMerklePrefixMatcherLongCandidateWithDivergentHeadRejected(t *testing.T)
 	defer matcher.Clear()
 	namespace := "lcp:v1:test-long-unrelated:model:caller"
 
-	// Parent session [A, B, C, D]
+	// 父会话 [A, B, C, D]
 	parent := turnsFromTexts("turnA", "turnB", "turnC", "turnD")
 	matcher.BindWithResult(namespace, parent, "auth-parent")
 
-	// Unrelated long candidate with 40 turns: [Q0 ... Q37, C, D]
-	// Shares tail [turnC, turnD], but has 38 non-matching turns preceding the tail.
-	// Must NOT be treated as compaction continuation.
+	// 无关的 40 轮长候选：[Q0 ... Q37, C, D]
+	// 共享尾部 [turnC, turnD]，但尾部之前有 38 个不匹配的轮次。
+	// 不得被视为压缩延续。
 	unrelTexts := make([]string, 0, 40)
 	for i := 0; i < 38; i++ {
 		unrelTexts = append(unrelTexts, fmt.Sprintf("unrelated-turn-%d", i))

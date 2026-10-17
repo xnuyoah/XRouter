@@ -1,6 +1,6 @@
-// Package main provides the entry point for the XRouter server.
-// This server acts as a proxy that provides OpenAI/Claude compatible API interfaces
-// for CLI models, allowing CLI models to be used with tools and libraries designed for standard AI APIs.
+// Package main 提供 XRouter 服务器的入口点。
+// 该服务器作为代理，为 CLI 模型提供 OpenAI/Claude 兼容的 API 接口，
+// 使 CLI 模型能够搭配为标准 AI API 设计的工具和库使用。
 package main
 
 import (
@@ -46,7 +46,7 @@ var (
 	DefaultConfigPath = ""
 )
 
-// init initializes the shared logger setup.
+// init 初始化共享的日志记录器设置。
 func init() {
 	logging.SetupBaseLogger()
 	buildinfo.Version = Version
@@ -61,9 +61,9 @@ func shouldEnableExampleAPIKeySafeMode(cfg *config.Config, cloudConfigMissing, h
 	return safemode.HasExampleAPIKeys(cfg.APIKeys)
 }
 
-// main is the entry point of the application.
-// It parses command-line flags, loads configuration, and starts the appropriate
-// service based on the provided flags (login, codex-login, or server mode).
+// main 是应用程序的入口点。
+// 它解析命令行标志、加载配置，并根据所给的标志
+// （login、codex-login 或 server 模式）启动相应的服务。
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "discover" {
 		discoverFlags := flag.NewFlagSet("discover", flag.ExitOnError)
@@ -90,14 +90,14 @@ func main() {
 		os.Exit(code)
 	}
 
-	// For legacy --discover-json flag or JSON requests, keep stdout clean
+	// 对于旧版 --discover-json 标志或 JSON 请求，保持 stdout 干净
 	isJSONDiscover := argvEnablesBoolFlag(os.Args[1:], "discover-json")
 	isDiscoverMode := isJSONDiscover || argvEnablesBoolFlag(os.Args[1:], "discover")
 	if !isJSONDiscover {
 		fmt.Printf("XRouter Version: %s, Commit: %s, BuiltAt: %s\n", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
 	}
 
-	// Command-line flags to control the application's behavior.
+	// 用于控制应用程序行为的命令行标志。
 	var discoverGateways bool
 	var discoverTimeout int
 	var discoverJSON bool
@@ -109,7 +109,7 @@ func main() {
 	var homeJWT string
 	var homeDisableClusterDiscovery bool
 
-	// Define command-line flags for different operation modes.
+	// 为不同的运行模式定义命令行标志。
 	flag.BoolVar(&discoverGateways, "discover", false, "Discover local AI gateways and CPA instances on the LAN")
 	flag.IntVar(&discoverTimeout, "discover-timeout", 3, "Timeout in seconds for LAN discovery (default 3s)")
 	flag.BoolVar(&discoverJSON, "discover-json", false, "Output discovered gateways in JSON format")
@@ -156,7 +156,7 @@ func main() {
 		}
 	}
 
-	// Parse the command-line flags.
+	// 解析命令行标志。
 	flag.Parse()
 
 	if discoverGateways || discoverJSON {
@@ -172,7 +172,7 @@ func main() {
 		os.Exit(code)
 	}
 
-	// Core application variables.
+	// 核心应用程序变量。
 	var err error
 	var cfg *config.Config
 	var isCloudDeploy bool
@@ -209,7 +209,7 @@ func main() {
 		return
 	}
 
-	// Load environment variables from .env if present.
+	// 如果存在 .env 则从中加载环境变量。
 	if errLoad := godotenv.Load(filepath.Join(wd, ".env")); errLoad != nil {
 		if !errors.Is(errLoad, os.ErrNotExist) {
 			log.WithError(errLoad).Warn("failed to load .env file")
@@ -287,15 +287,15 @@ func main() {
 		objectStoreLocalPath = value
 	}
 
-	// Check for cloud deploy mode only on first execution
-	// Read env var name in uppercase: DEPLOY
+	// 仅在首次执行时检查云部署模式
+	// 以大写形式读取环境变量名：DEPLOY
 	deployEnv := os.Getenv("DEPLOY")
 	if deployEnv == "cloud" {
 		isCloudDeploy = true
 	}
 
-	// Determine and load the configuration file.
-	// Prefer the Postgres store when configured, otherwise fallback to git or local files.
+	// 确定并加载配置文件。
+	// 若已配置 Postgres 存储则优先使用，否则回退到 git 或本地文件。
 	var configFilePath string
 	if strings.TrimSpace(homeJWT) != "" {
 		configLoadedFromHome = true
@@ -388,15 +388,15 @@ func main() {
 		}
 		cfg = parsed
 
-		// Keep a non-empty config path for downstream components (log paths, management assets, etc),
-		// but do not require the file to exist when loading config from home.
+		// 为下游组件（日志路径、管理资产等）保留非空的配置路径，
+		// 但从 home 加载配置时不要求该文件存在。
 		if strings.TrimSpace(configPath) != "" {
 			configFilePath = configPath
 		} else {
 			configFilePath = filepath.Join(wd, "config.yaml")
 		}
 
-		// Local stores are intentionally disabled when config is loaded from home.
+		// 当配置从 home 加载时，本地存储会被有意禁用。
 		usePostgresStore = false
 		useObjectStore = false
 		useGitStore = false
@@ -561,22 +561,22 @@ func main() {
 		cfg = &config.Config{}
 	}
 
-	// In cloud deploy mode, check if we have a valid configuration
+	// 在云部署模式下，检查我们是否有有效的配置
 	var configFileExists bool
 	if isCloudDeploy {
 		if configLoadedFromHome && cfg != nil {
 			configFileExists = cfg.Port != 0
 		} else {
 			if info, errStat := os.Stat(configFilePath); errStat != nil {
-				// Don't mislead: API server will not start until configuration is provided.
+				// 不要造成误导：在提供配置之前 API 服务器不会启动。
 				log.Info("Cloud deploy mode: No configuration file detected; standing by for configuration")
 				configFileExists = false
 			} else if info.IsDir() {
 				log.Info("Cloud deploy mode: Config path is a directory; standing by for configuration")
 				configFileExists = false
 			} else if cfg.Port == 0 {
-				// LoadConfigOptional returns empty config when file is empty or invalid.
-				// Config file exists but is empty or invalid; treat as missing config
+				// LoadConfigOptional 在文件为空或无效时返回空配置。
+				// 配置文件存在但为空或无效；按缺少配置处理
 				log.Info("Cloud deploy mode: Configuration file is empty or invalid; standing by for valid configuration")
 				configFileExists = false
 			} else {
@@ -597,7 +597,7 @@ func main() {
 
 	log.Infof("XRouter Version: %s, Commit: %s, BuiltAt: %s", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
 
-	// Set the log level based on the configuration.
+	// 根据配置设置日志级别。
 	util.SetLogLevel(cfg)
 
 	if resolvedAuthDir, errResolveAuthDir := util.ResolveAuthDir(cfg.AuthDir); errResolveAuthDir != nil {
@@ -618,7 +618,7 @@ func main() {
 		serverOptions = append(serverOptions, api.WithExampleAPIKeySafeMode())
 	}
 
-	// Register the shared token store once so all components use the same persistence backend.
+	// 只注册一次共享的令牌存储，使所有组件使用相同的持久化后端。
 	if usePostgresStore {
 		sdkAuth.RegisterTokenStore(pgStoreInst)
 	} else if useObjectStore {
@@ -629,7 +629,7 @@ func main() {
 		sdkAuth.RegisterTokenStore(sdkAuth.NewFileTokenStore())
 	}
 
-	// Register built-in access providers before constructing services.
+	// 在构建服务之前注册内置的访问供应商。
 	configaccess.Register(&cfg.SDKConfig)
 	pluginHost.ApplyConfig(context.Background(), cfg)
 	if configLoadedFromHome && homePluginStatusReady {
@@ -646,8 +646,8 @@ func main() {
 		}
 	}
 	if homeClient != nil {
-		// The bootstrap client is not owned by the runtime service. Close it after
-		// the final startup report so it cannot retain an idle RESP connection.
+		// bootstrap 客户端不归运行时服务所有。在最后一份启动报告之后
+		// 关闭它，使它无法保留空闲的 RESP 连接。
 		homeClient.Close()
 		homeClient = nil
 	}
@@ -660,20 +660,20 @@ func main() {
 		}
 	}
 
-	// In cloud deploy mode without config file, just wait for shutdown signals
+	// 在无配置文件的云部署模式下，仅等待关闭信号
 	if isCloudDeploy && !configFileExists {
-		// No config file available, just wait for shutdown
+		// 没有可用的配置文件，仅等待关闭
 		cmd.WaitForCloudDeploy()
 		return
 	}
-	// Start the main proxy service
+	// 启动主代理服务
 	cmd.StartServiceWithPluginHost(cfg, configFilePath, password, pluginHost, serverOptions...)
 }
 
-// persistSeededConfig persists a config file freshly copied from the template. The file
-// is first rewritten as the startup load would, so a plaintext management secret never
-// reaches the remote store. When that fails, the copy is removed and an error returned,
-// so every start refuses the template instead of running from an unpersisted config.
+// persistSeededConfig 持久化刚从模板复制来的配置文件。该文件
+// 会先按启动加载的方式重写，因此明文管理密钥绝不会
+// 到达远程存储。当该操作失败时，副本会被删除并返回错误，
+// 从而使每次启动都拒绝该模板，而不是从不持久化的配置运行。
 func persistSeededConfig(ctx context.Context, configFilePath string, persist func(context.Context) error) error {
 	if errPrepare := config.PrepareConfigFileForUpload(configFilePath); errPrepare != nil {
 		if errRemove := os.Remove(configFilePath); errRemove != nil {

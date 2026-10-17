@@ -14,38 +14,38 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// ApplyPayloadConfigWithRoot behaves like applyPayloadConfig but treats all parameter
-// paths as relative to the provided root path and restricts matches to the given
-// protocol when supplied. Defaults are checked
-// against the original payload when provided. requestedModel carries the client-visible
-// model name before alias resolution so payload rules can target aliases precisely.
-// requestPath is the inbound HTTP request path (when available) used for endpoint-scoped gates.
+// ApplyPayloadConfigWithRoot 的行为类似 applyPayloadConfig，但它把所有参数
+// 路径视为相对于所提供 root 路径，并在给出 protocol 时
+// 将匹配限制为该协议。给出原始载荷时会针对它
+// 检查默认值。requestedModel 携带别名解析之前
+// 客户端可见的模型名，使载荷规则可以精确地针对别名。
+// requestPath 是入站 HTTP 请求路径（若可用），用于端点作用域的门控。
 func ApplyPayloadConfigWithRoot(cfg *config.Config, model, protocol, root string, payload, original []byte, requestedModel string, requestPath string) []byte {
 	return ApplyPayloadConfigWithRequest(cfg, model, protocol, "", root, payload, original, requestedModel, requestPath, nil)
 }
 
-// ApplyPayloadConfigWithRequest applies payload config using source protocol and request header gates.
+// ApplyPayloadConfigWithRequest 使用来源协议和请求头门控来应用载荷配置。
 func ApplyPayloadConfigWithRequest(cfg *config.Config, model, protocol, fromProtocol, root string, payload, original []byte, requestedModel string, requestPath string, headers http.Header) []byte {
 	out, _ := ApplyPayloadConfigWithRequestTracked(cfg, model, protocol, fromProtocol, root, payload, original, requestedModel, requestPath, headers, "")
 	return out
 }
 
-// ApplyPayloadConfigWithRequestForExecutor applies payload config with explicit target executor context.
+// ApplyPayloadConfigWithRequestForExecutor 带着显式的目标执行器上下文应用载荷配置。
 func ApplyPayloadConfigWithRequestForExecutor(cfg *config.Config, targetExecutor, model, protocol, fromProtocol, root string, payload, original []byte, requestedModel string, requestPath string, headers http.Header) []byte {
 	out, _ := ApplyPayloadConfigWithTrackedPathsForExecutor(cfg, targetExecutor, model, protocol, fromProtocol, root, payload, original, requestedModel, requestPath, headers)
 	return out
 }
 
-// ApplyPayloadConfigWithTrackedPaths applies payload config and reports which
-// tracked paths (or their descendants) were targeted by an applied rule.
+// ApplyPayloadConfigWithTrackedPaths 应用载荷配置，并报告哪些
+// 被跟踪路径（或其后代）被某条已应用的规则命中。
 func ApplyPayloadConfigWithTrackedPaths(cfg *config.Config, model, protocol, fromProtocol, root string, payload, original []byte, requestedModel string, requestPath string, headers http.Header, trackedPaths ...string) ([]byte, map[string]bool) {
 	return ApplyPayloadConfigWithTrackedPathsForExecutor(cfg, "", model, protocol, fromProtocol, root, payload, original, requestedModel, requestPath, headers, trackedPaths...)
 }
 
-// ApplyPayloadConfigWithTrackedPathsForExecutor applies payload config with target executor awareness.
-// When headers indicate a Codex client and the target executor is not Codex or Codex WebSocket,
-// it normalizes tool parameter integer types to satisfy client-side integer deserialization (#6237).
-// For Codex and Codex WebSocket targets, integer normalization is skipped (#6244).
+// ApplyPayloadConfigWithTrackedPathsForExecutor 带着目标执行器感知应用载荷配置。
+// 当请求头表明是 Codex 客户端且目标执行器不是 Codex 或 Codex WebSocket 时，
+// 它规范化工具参数的整数类型，以满足客户端的整数反序列化（#6237）。
+// 对 Codex 和 Codex WebSocket 目标则跳过整数规范化（#6244）。
 func ApplyPayloadConfigWithTrackedPathsForExecutor(cfg *config.Config, targetExecutor, model, protocol, fromProtocol, root string, payload, original []byte, requestedModel string, requestPath string, headers http.Header, trackedPaths ...string) ([]byte, map[string]bool) {
 	touched := make(map[string]bool)
 	if len(payload) == 0 {
@@ -65,8 +65,8 @@ func ApplyPayloadConfigWithTrackedPathsForExecutor(cfg *config.Config, targetExe
 		}
 	}
 
-	// Apply disable-image-generation filtering before payload rules so config payload
-	// overrides can explicitly re-enable image_generation when desired.
+	// 在载荷规则之前应用 disable-image-generation 过滤，这样配置载荷
+	// 覆盖项在需要时可以显式重新启用 image_generation。
 	if shouldStripImageGeneration(cfg.DisableImageGeneration, requestPath) {
 		out = removeToolTypeFromPayloadWithRoot(out, root, "image_generation")
 		out = removeToolChoiceFromPayloadWithRoot(out, root, "image_generation")
@@ -84,7 +84,7 @@ func ApplyPayloadConfigWithTrackedPathsForExecutor(cfg *config.Config, targetExe
 				source = payload
 			}
 			appliedDefaults := make(map[string]struct{})
-			// Apply default rules: first write wins per field across all matching rules.
+			// 应用 default 规则：在所有匹配的规则中，每个字段以首次写入为准。
 			for i := range rules.Default {
 				rule := &rules.Default[i]
 				if !payloadModelRulesMatch(rule.Models, protocol, fromProtocol, headers, out, root, candidates) {
@@ -112,7 +112,7 @@ func ApplyPayloadConfigWithTrackedPathsForExecutor(cfg *config.Config, targetExe
 					}
 				}
 			}
-			// Apply default raw rules: first write wins per field across all matching rules.
+			// 应用 default raw 规则：在所有匹配的规则中，每个字段以首次写入为准。
 			for i := range rules.DefaultRaw {
 				rule := &rules.DefaultRaw[i]
 				if !payloadModelRulesMatch(rule.Models, protocol, fromProtocol, headers, out, root, candidates) {
@@ -144,7 +144,7 @@ func ApplyPayloadConfigWithTrackedPathsForExecutor(cfg *config.Config, targetExe
 					}
 				}
 			}
-			// Apply override rules: last write wins per field across all matching rules.
+			// 应用 override 规则：在所有匹配的规则中，每个字段以最后写入为准。
 			for i := range rules.Override {
 				rule := &rules.Override[i]
 				if !payloadModelRulesMatch(rule.Models, protocol, fromProtocol, headers, out, root, candidates) {
@@ -164,7 +164,7 @@ func ApplyPayloadConfigWithTrackedPathsForExecutor(cfg *config.Config, targetExe
 					}
 				}
 			}
-			// Apply override raw rules: last write wins per field across all matching rules.
+			// 应用 override raw 规则：在所有匹配的规则中，每个字段以最后写入为准。
 			for i := range rules.OverrideRaw {
 				rule := &rules.OverrideRaw[i]
 				if !payloadModelRulesMatch(rule.Models, protocol, fromProtocol, headers, out, root, candidates) {
@@ -188,7 +188,7 @@ func ApplyPayloadConfigWithTrackedPathsForExecutor(cfg *config.Config, targetExe
 					}
 				}
 			}
-			// Apply filter rules: remove matching paths from payload.
+			// 应用 filter 规则：从载荷中移除匹配的路径。
 			for i := range rules.Filter {
 				rule := &rules.Filter[i]
 				if !payloadModelRulesMatch(rule.Models, protocol, fromProtocol, headers, out, root, candidates) {
@@ -216,8 +216,8 @@ func ApplyPayloadConfigWithTrackedPathsForExecutor(cfg *config.Config, targetExe
 	return out, touched
 }
 
-// ApplyPayloadConfigWithRequestTracked applies payload config and reports whether
-// an applied rule targeted trackedPath or one of its descendants.
+// ApplyPayloadConfigWithRequestTracked 应用载荷配置，并报告是否
+// 有某条已应用的规则命中了 trackedPath 或其某个后代。
 func ApplyPayloadConfigWithRequestTracked(cfg *config.Config, model, protocol, fromProtocol, root string, payload, original []byte, requestedModel string, requestPath string, headers http.Header, trackedPath string) ([]byte, bool) {
 	out, touched := ApplyPayloadConfigWithTrackedPaths(cfg, model, protocol, fromProtocol, root, payload, original, requestedModel, requestPath, headers, trackedPath)
 	return out, touched[trackedPath]
@@ -231,7 +231,7 @@ func isImagesEndpointRequestPath(path string) bool {
 	if path == "/v1/images/generations" || path == "/v1/images/edits" {
 		return true
 	}
-	// Be tolerant of prefix routers that may report a longer matched route.
+	// 对可能报告更长匹配路由的前缀路由器保持宽容。
 	if strings.HasSuffix(path, "/v1/images/generations") || strings.HasSuffix(path, "/v1/images/edits") {
 		return true
 	}
@@ -241,12 +241,12 @@ func isImagesEndpointRequestPath(path string) bool {
 	return false
 }
 
-// shouldStripImageGeneration reports whether the built-in image_generation tool must be
-// removed from the outbound payload for the given mode and request path.
-//   - All: strip on every endpoint.
-//   - Chat: strip only on non-images endpoints; keep it on /v1/images/* endpoints.
-//   - Off / Passthrough: never strip. Off injects the tool elsewhere; Passthrough forwards
-//     the client payload untouched.
+// shouldStripImageGeneration 报告对于给定模式和请求路径，内置的 image_generation 工具
+// 是否必须从出站载荷中移除。
+//   - All：在所有端点上剥离。
+//   - Chat：仅在非图片端点上剥离；在 /v1/images/* 端点上保留。
+//   - Off / Passthrough：从不剥离。Off 会在别处注入该工具；Passthrough 原样转发
+//     客户端载荷。
 func shouldStripImageGeneration(mode config.DisableImageGenerationMode, requestPath string) bool {
 	switch mode {
 	case config.DisableImageGenerationAll:
@@ -523,9 +523,9 @@ func payloadModelCandidates(model, requestedModel string) []string {
 	return candidates
 }
 
-// buildPayloadPath combines an optional root path with a relative parameter path.
-// When root is empty, the parameter path is used as-is. When root is non-empty,
-// the parameter path is treated as relative to root.
+// buildPayloadPath 把可选的 root 路径与相对参数路径组合起来。
+// 当 root 为空时，参数路径按原样使用。当 root 非空时，
+// 参数路径被视为相对于 root。
 func buildPayloadPath(root, path string) string {
 	r := strings.TrimSpace(root)
 	p := strings.TrimSpace(path)
@@ -989,12 +989,12 @@ func PayloadRequestPath(opts cliproxyexecutor.Options) string {
 	}
 }
 
-// matchModelPattern performs simple wildcard matching where '*' matches zero or more characters.
-// Examples:
+// matchModelPattern 执行简单的通配符匹配，其中 '*' 匹配零个或多个字符。
+// 示例：
 //
-//	"*-5" matches "gpt-5"
-//	"gpt-*" matches "gpt-5" and "gpt-4"
-//	"claude-*-sonnet" matches "claude-3-7-sonnet".
+//	"*-5" 匹配 "gpt-5"
+//	"gpt-*" 匹配 "gpt-5" 和 "gpt-4"
+//	"claude-*-sonnet" 匹配 "claude-3-7-sonnet"。
 func matchModelPattern(pattern, model string) bool {
 	pattern = strings.TrimSpace(pattern)
 	model = strings.TrimSpace(model)
@@ -1004,7 +1004,7 @@ func matchModelPattern(pattern, model string) bool {
 	if pattern == "*" {
 		return true
 	}
-	// Iterative glob-style matcher supporting only '*' wildcard.
+	// 迭代式 glob 风格匹配器，仅支持 '*' 通配符。
 	pi, si := 0, 0
 	starIdx := -1
 	matchIdx := 0

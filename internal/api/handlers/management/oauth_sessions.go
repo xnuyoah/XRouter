@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	// oauthSessionTTL must cover plugin device-code flows (typically 15-30m).
+	// oauthSessionTTL 必须覆盖插件设备码流程（通常 15-30 分钟）。
 	oauthSessionTTL          = 30 * time.Minute
 	oauthCompletedSessionTTL = time.Minute
 	maxOAuthStateLength      = 128
@@ -229,8 +229,8 @@ func (s *oauthSessionStore) IsPending(state, provider string) bool {
 	return strings.EqualFold(session.Provider, provider)
 }
 
-// Cancel removes a pending OAuth session so background waiters exit without saving credentials.
-// Returns true when a pending session was cancelled.
+// Cancel 移除待处理的 OAuth 会话，使后台等待者退出而不保存凭据。
+// 当待处理会话被取消时返回 true。
 func (s *oauthSessionStore) Cancel(state string) bool {
 	state = strings.TrimSpace(state)
 	if state == "" {
@@ -301,10 +301,10 @@ func IsOAuthSessionPending(state, provider string) bool {
 	return oauthSessions.IsPending(state, provider)
 }
 
-// guardOAuthSessionPendingForSave returns errOAuthSessionNotPending when the session
-// is no longer pending (cancelled, completed, errored, or expired).
-// Call immediately before persisting credentials so a cancel that races with token
-// exchange or metadata fetch cannot save credentials for a cancelled flow.
+// guardOAuthSessionPendingForSave 在会话不再处于待处理状态
+// （已取消、已完成、出错或过期）时返回 errOAuthSessionNotPending。
+// 在持久化凭据之前立即调用，这样与令牌交换或元数据
+// 获取竞争的取消就不会为已取消的流程保存凭据。
 func guardOAuthSessionPendingForSave(state, provider string) error {
 	if IsOAuthSessionPending(state, provider) {
 		return nil
@@ -312,8 +312,8 @@ func guardOAuthSessionPendingForSave(state, provider string) error {
 	return errOAuthSessionNotPending
 }
 
-// CancelOAuthSession cancels a pending OAuth session by state.
-// Background callback and device-code waiters observe IsOAuthSessionPending as false and exit without saving credentials.
+// CancelOAuthSession 按 state 取消待处理的 OAuth 会话。
+// 后台回调与设备码等待者会观察到 IsOAuthSessionPending 为 false，并退出而不保存凭据。
 func CancelOAuthSession(state string) bool {
 	return oauthSessions.Cancel(state)
 }
@@ -360,15 +360,15 @@ func ValidateOAuthState(state string) error {
 	return nil
 }
 
-// NormalizeOAuthProvider lowercases and sanitizes a provider name for OAuth flows.
-// OAuth is plugin-only: all built-in provider aliases were removed, so the generic
-// plugin provider sanitization is the only normalization left. Exported because
-// sdk/api re-exports it for embedding.
+// NormalizeOAuthProvider 为 OAuth 流程将供应商名转为小写并做净化处理。
+// OAuth 仅支持插件：所有内置供应商别名都已移除，因此只剩下
+// 通用的插件供应商净化。导出是因为
+// sdk/api 会为嵌入场景重新导出它。
 func NormalizeOAuthProvider(provider string) (string, error) {
 	return NormalizePluginOAuthCallbackProvider(provider)
 }
 
-// NormalizeOAuthCallbackProvider normalizes the provider reported on an OAuth callback.
+// NormalizeOAuthCallbackProvider 规范化 OAuth 回调上报的供应商。
 func NormalizeOAuthCallbackProvider(provider string) (string, error) {
 	return NormalizeOAuthProvider(provider)
 }
@@ -430,7 +430,7 @@ func writeOAuthCallbackFile(authDir, canonicalProvider, state, code, errorMessag
 	if err != nil {
 		return "", fmt.Errorf("marshal oauth callback payload: %w", err)
 	}
-	// Publish complete JSON atomically so background waiters cannot read a partial callback.
+	// 原子地发布完整 JSON，使后台等待者不会读到不完整的回调。
 	tmp, errCreate := os.CreateTemp(authDir, ".oauth-callback-*")
 	if errCreate != nil {
 		return "", fmt.Errorf("create oauth callback file: %w", errCreate)

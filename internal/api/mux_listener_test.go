@@ -35,7 +35,7 @@ func TestMuxListener_CloseDrainsAndClosesQueuedConnections(t *testing.T) {
 		t.Fatalf("Close failed: %v", err)
 	}
 
-	// Since c1 was queued and listener is closed, c1 should be closed, so reads on c2 should return EOF/io.ErrClosedPipe
+	// 由于 c1 已入队且监听器已关闭，c1 应被关闭，因此对 c2 的读取应返回 EOF/io.ErrClosedPipe
 	buf := make([]byte, 1)
 	_ = c2.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 	_, errRead := c2.Read(buf)
@@ -43,7 +43,7 @@ func TestMuxListener_CloseDrainsAndClosesQueuedConnections(t *testing.T) {
 		t.Fatalf("expected queued net.Pipe peer to observe connection close after listener Close")
 	}
 
-	// Accept after close on empty/drained listener should return net.ErrClosed
+	// 在空/已耗尽的监听器上关闭后调用 Accept 应返回 net.ErrClosed
 	_, errAccept := l.Accept()
 	if !errors.Is(errAccept, net.ErrClosed) {
 		t.Fatalf("Accept after Close returned %v, want %v", errAccept, net.ErrClosed)
@@ -55,7 +55,7 @@ func TestMuxListener_ConcurrentBlockedPutDuringClose(t *testing.T) {
 	const numGoroutines = 16
 	l := newMuxListener(&net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 8080}, bufferSize)
 
-	// Fill the buffer so subsequent Put calls block
+	// 填满缓冲区，使后续 Put 调用阻塞
 	for i := 0; i < bufferSize; i++ {
 		c1, c2 := net.Pipe()
 		defer func() {
@@ -91,7 +91,7 @@ func TestMuxListener_ConcurrentBlockedPutDuringClose(t *testing.T) {
 	readyCount.Wait()
 	close(started)
 
-	// Close listener while Puts are in-flight/blocked
+	// 在 Put 进行中/阻塞时关闭监听器
 	if err := l.Close(); err != nil {
 		t.Fatalf("Close failed: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestMuxListener_ConcurrentBlockedPutDuringClose(t *testing.T) {
 		}
 	}
 
-	// Listener should remain closed and reject new Accept calls
+	// 监听器应保持关闭并拒绝新的 Accept 调用
 	if _, err := l.Accept(); !errors.Is(err, net.ErrClosed) {
 		t.Fatalf("Accept after Close returned %v, want %v", err, net.ErrClosed)
 	}

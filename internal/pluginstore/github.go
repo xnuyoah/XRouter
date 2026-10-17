@@ -18,12 +18,12 @@ import (
 const userAgent = "XRouter"
 const maxPluginStoreRedirects = 10
 
-// HTTPDoer abstracts the HTTP client used to execute requests.
+// HTTPDoer 抽象了用于执行请求的 HTTP 客户端。
 type HTTPDoer = httpfetch.Doer
 
 type Client struct {
 	HTTPClient HTTPDoer
-	// NetworkScope distinguishes request state for different proxy/egress configurations.
+	// NetworkScope 区分不同代理/出口配置下的请求状态。
 	NetworkScope          string
 	RateLimiter           *GitHubRateLimiter
 	RegistryURL           string
@@ -61,8 +61,8 @@ func (c Client) FetchRegistry(ctx context.Context) (Registry, error) {
 	return registry, nil
 }
 
-// FetchLatestRelease returns the latest published release of the plugin's
-// GitHub repository, mirroring the WebUI panel update check.
+// FetchLatestRelease 返回插件 GitHub 仓库的最新已发布版本，
+// 与 WebUI 面板的更新检查保持一致。
 func (c Client) FetchLatestRelease(ctx context.Context, plugin Plugin) (Release, error) {
 	owner, repo, errRepository := GitHubRepositoryParts(plugin.Repository)
 	if errRepository != nil {
@@ -84,7 +84,7 @@ func (c Client) FetchLatestRelease(ctx context.Context, plugin Plugin) (Release,
 	return release, nil
 }
 
-// FetchReleaseByTag returns a published release by its exact GitHub tag.
+// FetchReleaseByTag 按精确的 GitHub tag 返回已发布版本。
 func (c Client) FetchReleaseByTag(ctx context.Context, plugin Plugin, tag string) (Release, error) {
 	owner, repo, errRepository := GitHubRepositoryParts(plugin.Repository)
 	if errRepository != nil {
@@ -111,8 +111,8 @@ func (c Client) FetchReleaseByTag(ctx context.Context, plugin Plugin, tag string
 	return release, nil
 }
 
-// ReleaseVersion derives the plugin version from the release tag, stripping a
-// leading "v"/"V" and validating the result.
+// ReleaseVersion 从发布 tag 推导插件版本，去掉开头的
+// "v"/"V" 并校验结果。
 func ReleaseVersion(release Release) (string, error) {
 	version := normalizeVersion(release.TagName)
 	if !validPluginVersion(version) {
@@ -279,7 +279,7 @@ func readPluginStoreResponse(resp *http.Response, maxSize int64, authenticated b
 		}
 	}()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		// Apply header-based limits before reading a potentially slow body.
+		// 在读取可能较慢的正文之前应用基于头部的限制。
 		if errLimit := limiter.observe(rateKey, resp.StatusCode, resp.Header, nil); errLimit != nil {
 			return nil, errLimit
 		}

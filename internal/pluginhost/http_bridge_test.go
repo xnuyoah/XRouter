@@ -332,7 +332,7 @@ func TestHostHTTPClientWireProfile_ClosesIdleConnectionsOnCompletion(t *testing.
 
 	select {
 	case <-closedConns:
-		// Confirmed idle connection was actively closed by cleanup
+		// 确认空闲连接已被清理逻辑主动关闭
 	case <-time.After(3 * time.Second):
 		t.Fatal("expected idle connection to be closed by transport cleanup, but timed out")
 	}
@@ -352,13 +352,13 @@ func TestHostHTTPClientWireProfile_ProxyPriorityOverContextRoundTripper(t *testi
 	}))
 	t.Cleanup(proxyServer.Close)
 
-	// Auth has proxy configured
+	// Auth 已配置代理
 	auth := &coreauth.Auth{
 		ProxyURL: proxyServer.URL,
 	}
 	client := New().newHTTPClient(auth)
 
-	// Context contains a dummy roundtripper
+	// Context 包含一个假的 roundtripper
 	ctx := context.WithValue(context.Background(), "cliproxy.roundtripper", &dummyRoundTripper{})
 
 	resp, errDo := client.Do(ctx, pluginapi.HTTPRequest{
@@ -376,7 +376,7 @@ func TestHostHTTPClientWireProfile_ProxyPriorityOverContextRoundTripper(t *testi
 
 	select {
 	case <-proxyReceived:
-		// Confirmed auth proxy was used instead of context roundtripper
+		// 确认使用了 auth 代理而非 context roundtripper
 	case <-time.After(3 * time.Second):
 		t.Fatal("expected auth proxy to receive request, timed out")
 	}
@@ -397,11 +397,11 @@ func TestHostHTTPClientWireProfile_HTTPToHTTPSRedirect(t *testing.T) {
 	}))
 	t.Cleanup(httpServer.Close)
 
-	// Pass the TLS test server's client transport certificate to the host
+	// 将 TLS 测试服务器的客户端传输证书传递给宿主
 	host := New()
 	client := host.newHTTPClient(nil).(*hostHTTPClient)
 
-	// Provide a base transport that trusts the test TLS certificate
+	// 提供信任测试 TLS 证书的基础 transport
 	customTransport := httpsServer.Client().Transport.(*http.Transport).Clone()
 	ctx := context.WithValue(context.Background(), "cliproxy.roundtripper", customTransport)
 
@@ -566,7 +566,7 @@ func TestHostHTTPClientWireProfile_HTTPSTargetThroughSOCKS5Proxy(t *testing.T) {
 	}
 	client := New().newHTTPClient(auth)
 
-	// Trust the self-signed test TLS certificate
+	// 信任自签名的测试 TLS 证书
 	tlsTransport := httpsBackend.Client().Transport.(*http.Transport).Clone()
 	ctx := context.WithValue(context.Background(), "cliproxy.roundtripper", tlsTransport)
 
@@ -694,7 +694,7 @@ func TestHostHTTPClientWireProfile_CustomHTTPMethod(t *testing.T) {
 func TestHostHTTPClientWireProfile_CustomTLSDialerRejectsHTTP2(t *testing.T) {
 	t.Parallel()
 
-	// An HTTPS server supporting h2
+	// 一个支持 h2 的 HTTPS 服务器
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -702,7 +702,7 @@ func TestHostHTTPClientWireProfile_CustomTLSDialerRejectsHTTP2(t *testing.T) {
 	server.StartTLS()
 	t.Cleanup(server.Close)
 
-	// Custom transport that negotiates h2 via custom DialTLSContext
+	// 通过自定义 DialTLSContext 协商 h2 的自定义 transport
 	customTransport := server.Client().Transport.(*http.Transport).Clone()
 	customTransport.DialTLSContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		rawConn, errDial := net.Dial("tcp", addr)
@@ -830,7 +830,7 @@ func TestHostHTTPClientWireProfile_CONNECTProxyAuthPrecedence(t *testing.T) {
 		receivedAuthHeader <- req.Header.Get("Proxy-Authorization")
 		_, _ = conn.Write([]byte("HTTP/1.1 200 Connection established\r\n\r\n"))
 
-		// Read TLS ClientHello and close
+		// 读取 TLS ClientHello 并关闭
 		buf := make([]byte, 1024)
 		_, _ = conn.Read(buf)
 	}()
@@ -847,7 +847,7 @@ func TestHostHTTPClientWireProfile_CONNECTProxyAuthPrecedence(t *testing.T) {
 		User:   url.UserPassword("user", "pass"),
 	}
 
-	// Dial through proxy tunnel
+	// 通过代理隧道拨号
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
@@ -896,7 +896,7 @@ func TestHostHTTPClientWireProfile_HTTP1OnlyWithoutHeaderProfile_RejectsHTTP2(t 
 	_, errDo := client.Do(ctx, pluginapi.HTTPRequest{
 		URL: server.URL + "/h2-test",
 		WireProfile: &pluginapi.HTTPWireProfile{
-			HTTP1Only: true, // Notice: NO HeaderProfile set!
+			HTTP1Only: true, // 注意：未设置 HeaderProfile！
 		},
 	})
 	if errDo == nil {
@@ -936,7 +936,7 @@ func TestHostHTTPClientWireProfile_DirectProxyModeInheritsDefaultTransport(t *te
 	if transport.Proxy != nil {
 		t.Fatal("expected nil proxy for direct mode")
 	}
-	// Verify it inherited default transport dial timeouts
+	// 验证它继承了默认 transport 的拨号超时
 	if transport.IdleConnTimeout == 0 {
 		t.Fatal("expected inherited IdleConnTimeout from DefaultTransport")
 	}
@@ -1215,7 +1215,7 @@ func TestHostHTTPClientWireProfile_CustomTLSDialerUsedForHTTPSProxy(t *testing.T
 func TestHostHTTPClientWireProfile_HTTPSProxyForwardingHTTPS_WithCustomTLSDialer(t *testing.T) {
 	t.Parallel()
 
-	// HTTPS backend
+	// HTTPS 后端
 	backendServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("backend-secure-ok"))
@@ -1321,10 +1321,10 @@ func TestHostHTTPClientWireProfile_CONNECTCancellationClosesConnection(t *testin
 		defer conn.Close()
 
 		proxyReceived <- struct{}{}
-		// Do not reply to CONNECT, wait until client cancels and closes the conn
+		// 不回复 CONNECT，等待客户端取消并关闭连接
 		buf := make([]byte, 1024)
 		_, _ = conn.Read(buf)
-		// Wait for EOF when client closes
+		// 客户端关闭时等待 EOF
 		_, _ = conn.Read(buf)
 		connClosed <- struct{}{}
 	}()
@@ -1337,7 +1337,7 @@ func TestHostHTTPClientWireProfile_CONNECTCancellationClosesConnection(t *testin
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		<-proxyReceived
-		// Cancel while CONNECT response is pending
+		// 在 CONNECT 响应待处理期间取消
 		cancel()
 	}()
 
@@ -1348,7 +1348,7 @@ func TestHostHTTPClientWireProfile_CONNECTCancellationClosesConnection(t *testin
 
 	select {
 	case <-connClosed:
-		// Succeeded: canceled context closed the connection promptly
+		// 成功：被取消的 context 及时关闭了连接
 	case <-time.After(3 * time.Second):
 		t.Fatal("connection was not closed promptly upon context cancellation")
 	}

@@ -12,8 +12,8 @@ const (
 	maxQuotaSignalValue   = 512
 )
 
-// ProviderSupportsQuotaObservation reports whether the named provider emits a
-// passive credential-level quota snapshot understood by collectQuotaSignals.
+// ProviderSupportsQuotaObservation 报告指定的供应商是否会发出
+// collectQuotaSignals 能识别的、被动的凭据级额度快照。
 func ProviderSupportsQuotaObservation(provider string) bool {
 	switch strings.ToLower(strings.TrimSpace(provider)) {
 	case "claude", "codex":
@@ -23,17 +23,17 @@ func ProviderSupportsQuotaObservation(provider string) bool {
 	}
 }
 
-// ObserveResponseHeadersForProvider replaces the passive quota snapshot with the
-// signals carried by the current upstream response.
+// ObserveResponseHeadersForProvider 用当前上游响应携带的信号
+// 替换被动的额度快照。
 //
-// The snapshot is replaced rather than merged: a watermark such as Retry-After
-// or a "limit reached" flag only appears on the response that produced it, so
-// accumulating signals across responses would leave an expired value visible
-// indefinitely. Responses that carry no quota signal at all (transport
-// failures, 5xx, unrelated endpoints) leave the previous snapshot untouched.
+// 快照是被替换而非合并：像 Retry-After 或 "limit reached" 标志这样的水印
+// 只会出现在产生它的那个响应上，因此跨响应累积信号会使一个已过期的
+// 值无限期地保持可见。完全不携带额度信号的响应（传输失败、
+// 5xx、不相关的端点）都不会改动
+// 先前的快照。
 //
-// This function only ever touches ObservedAt and Signals. Cooldown and
-// scheduling fields are never read or written here.
+// 此函数只会改动 ObservedAt 和 Signals。冷却和
+// 调度字段在这里绝不读取或写入。
 func (q *QuotaState) ObserveResponseHeadersForProvider(provider string, headers http.Header, observedAt time.Time) bool {
 	if q == nil {
 		return false
@@ -53,8 +53,8 @@ func (q *QuotaState) ObserveResponseHeadersForProvider(provider string, headers 
 	return true
 }
 
-// ClearObservationSignals removes only passive observation data. It leaves
-// cooldown and scheduler state untouched.
+// ClearObservationSignals 只移除被动的观测数据。它不会
+// 改动冷却和调度器状态。
 func (q *QuotaState) ClearObservationSignals() bool {
 	if q == nil || (len(q.Signals) == 0 && q.ObservedAt.IsZero()) {
 		return false
@@ -64,8 +64,8 @@ func (q *QuotaState) ClearObservationSignals() bool {
 	return true
 }
 
-// cooldownFieldsOf copies only scheduler cooldown fields. Observation data is
-// omitted so cooldown persistence and restore cannot replace a live snapshot.
+// cooldownFieldsOf 只复制调度器的冷却字段。观测数据会被
+// 省略，因此冷却的持久化与恢复无法替换实时快照。
 func cooldownFieldsOf(q QuotaState) QuotaState {
 	return QuotaState{
 		Exceeded:      q.Exceeded,
@@ -75,9 +75,9 @@ func cooldownFieldsOf(q QuotaState) QuotaState {
 	}
 }
 
-// applyCooldownFields writes only scheduler cooldown fields. ObservedAt and
-// Signals are left untouched so a cooldown transition cannot erase the last
-// upstream watermark.
+// applyCooldownFields 只写入调度器的冷却字段。ObservedAt 和
+// Signals 保持不变，因此冷却状态切换不会抹掉最近一次的
+// 上游水印。
 func applyCooldownFields(dst *QuotaState, cooldown QuotaState) {
 	if dst == nil {
 		return
@@ -88,7 +88,7 @@ func applyCooldownFields(dst *QuotaState, cooldown QuotaState) {
 	dst.BackoffLevel = cooldown.BackoffLevel
 }
 
-// collectQuotaSignals builds the bounded snapshot for a single response.
+// collectQuotaSignals 为单个响应构建有界的快照。
 func collectQuotaSignals(provider string, headers http.Header) map[string]string {
 	if len(headers) == 0 {
 		return nil
@@ -112,8 +112,8 @@ func collectQuotaSignals(provider string, headers http.Header) map[string]string
 	if len(names) == 0 {
 		return nil
 	}
-	// Rank then sort so truncation is deterministic and keeps credential-level
-	// watermarks (plan, credits, primary) ahead of additional-limit namespaces.
+	// 先分级再排序，使截断具有确定性，并让凭据级
+	// 水印（plan、credits、primary）排在额外限额命名空间之前。
 	sort.Slice(names, func(i, j int) bool {
 		ri, rj := quotaSignalRetentionRank(names[i]), quotaSignalRetentionRank(names[j])
 		if ri != rj {
@@ -131,9 +131,9 @@ func collectQuotaSignals(provider string, headers http.Header) map[string]string
 	return signals
 }
 
-// validQuotaSignalValue rejects empty, oversized, and control-character values.
-// Observed values reach the plain-text upstream request log, so a value
-// containing CR/LF could otherwise forge a header line there.
+// validQuotaSignalValue 拒绝为空、超大以及含控制字符的值。
+// 观测到的值会写入纯文本的上游请求日志，因此含有 CR/LF 的
+// 值否则可能在那里伪造出一行头部信息。
 func validQuotaSignalValue(value string) bool {
 	if value == "" || len(value) > maxQuotaSignalValue {
 		return false
@@ -177,9 +177,9 @@ func isQuotaSignalHeaderForProvider(provider, name string) bool {
 		return provider == "claude"
 	}
 	if strings.HasPrefix(name, "x-ratelimit-") {
-		// Observed Codex responses do not carry x-ratelimit-* headers. The rule
-		// is kept so a future Codex rollout is captured without another change,
-		// but it is expected to be inert today.
+		// 观测到的 Codex 响应不携带 x-ratelimit-* 头。保留该规则
+		// 是为了将来 Codex 推出相关能力时无需再次修改即可捕获，
+		// 但预计目前它是无效的。
 		return provider == "codex"
 	}
 	if !strings.HasPrefix(name, "x-codex-") {
@@ -192,10 +192,10 @@ func isQuotaSignalHeaderForProvider(provider, name string) bool {
 		strings.HasPrefix(name, "x-codex-credits-") {
 		return true
 	}
-	// Codex namespaces each additional limit by a short name on the HTTP path
-	// (x-codex-bengalfox-primary-used-percent) and by limit name on the
-	// websocket path (x-codex-additional-<limit>-primary-used-percent), so the
-	// suffix is matched instead of an exhaustive header list.
+	// Codex 在 HTTP 路径上用短名（x-codex-bengalfox-primary-used-percent）
+	// 为每个额外限额做命名空间，而在 websocket 路径上用限额名
+	// （x-codex-additional-<limit>-primary-used-percent），因此这里匹配
+	// 后缀，而不是穷举头列表。
 	for _, marker := range []string{
 		"-allowed",
 		"-limit-reached",
@@ -213,9 +213,9 @@ func isQuotaSignalHeaderForProvider(provider, name string) bool {
 	return false
 }
 
-// mergeQuotaObservation keeps the newest observation snapshot instead of
-// unioning signals captured at different times, so merging an older snapshot
-// can never resurrect a stale watermark.
+// mergeQuotaObservation 保留最新的观测快照，而不是对
+// 在不同时刻捕获的信号取并集，因此合并较旧的快照
+// 绝不会让过期水印复活。
 func mergeQuotaObservation(target, source QuotaState) QuotaState {
 	if source.ObservedAt.IsZero() || source.ObservedAt.Before(target.ObservedAt) {
 		return target

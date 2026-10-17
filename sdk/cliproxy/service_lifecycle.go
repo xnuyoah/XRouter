@@ -20,15 +20,15 @@ import (
 	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
-// Run starts the service and blocks until the context is cancelled or the server stops.
-// It initializes all components including authentication, file watching, HTTP server,
-// and starts processing requests. The method blocks until the context is cancelled.
+// Run 启动服务并阻塞，直到上下文被取消或服务器停止。
+// 它会初始化所有组件，包括认证、文件监听、HTTP 服务器，
+// 并开始处理请求。该方法会阻塞，直到上下文被取消。
 //
-// Parameters:
-//   - ctx: The context for controlling the service lifecycle
+// 参数：
+//   - ctx: 用于控制服务生命周期的上下文
 //
-// Returns:
-//   - error: An error if the service fails to start or run
+// 返回：
+//   - error: 服务启动或运行失败时返回的错误
 func (s *Service) Run(ctx context.Context) error {
 	if s == nil {
 		return fmt.Errorf("cliproxy: service is nil")
@@ -115,17 +115,17 @@ func (s *Service) Run(ctx context.Context) error {
 		}
 	}
 
-	// legacy clients removed; no caches to refresh
+	// 旧版客户端已移除；没有需要刷新的缓存
 
 	if homeEnabled {
 		s.registerAvailableExecutors(ctx, executorRegistrationOptions{
 			includeBaseline: true,
 		})
-		// Home mode does not expose in-process Redis RESP usage output; usage is forwarded to home instead.
+		// Home 模式不暴露进程内的 Redis RESP 用量输出；用量改为转发到 home。
 		redisqueue.SetEnabled(true)
 	}
 
-	// handlers no longer depend on legacy clients; pass nil slice initially
+	// 处理器不再依赖旧版客户端；初始传入 nil 切片
 	s.server = api.NewServer(cfg, s.coreManager, s.accessManager, s.configPath, s.serverOptions...)
 	s.syncPluginRuntimeConfig(ctx)
 	if homeEnabled {
@@ -212,15 +212,15 @@ func (s *Service) Run(ctx context.Context) error {
 	}
 }
 
-// Shutdown stops background workers and immediately closes the HTTP server.
-// It ensures all resources are properly cleaned up and connections are closed.
-// The shutdown is idempotent and can be called multiple times safely.
+// Shutdown 停止后台工作协程并立即关闭 HTTP 服务器。
+// 它确保所有资源被正确清理、连接被关闭。
+// 关闭是幂等的，可以安全地多次调用。
 //
-// Parameters:
-//   - ctx: The context for controlling the shutdown timeout
+// 参数：
+//   - ctx: 用于控制关闭超时的上下文
 //
-// Returns:
-//   - error: An error if shutdown fails
+// 返回：
+//   - error: 关闭失败时返回的错误
 func (s *Service) Shutdown(ctx context.Context) error {
 	if s == nil {
 		return nil
@@ -284,7 +284,7 @@ func (s *Service) Shutdown(ctx context.Context) error {
 		}
 		s.homeLifecycleMu.Unlock()
 
-		// legacy refresh loop removed; only stopping core auth manager below
+		// 旧版刷新循环已移除；下面只停止 core auth 管理器
 
 		s.cfgMu.RLock()
 		watcherCancel := s.watcherCancel
@@ -320,7 +320,7 @@ func (s *Service) Shutdown(ctx context.Context) error {
 			}
 		}
 
-		// no legacy clients to persist
+		// 没有需要持久化的旧版客户端
 
 		if s.server != nil {
 			if errStop := s.server.Stop(ctx); errStop != nil {

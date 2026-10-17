@@ -26,26 +26,26 @@ func TestInstanceID_PersistenceAndFormat(t *testing.T) {
 		ResetCachedInstanceID()
 	}()
 
-	// 1. Generate new ID
+	// 1. 生成新的 ID
 	id1 := GetOrGenerateInstanceID(tmpDir)
 	if len(id1) != 4 {
 		t.Errorf("expected 4-char hex ID, got %s (len %d)", id1, len(id1))
 	}
 
-	// 2. Retrieve again from same dir, should be identical
+	// 2. 从同一目录再次获取，应当完全一致
 	id2 := GetOrGenerateInstanceID(tmpDir)
 	if id1 != id2 {
 		t.Errorf("expected persistent ID %s, got %s", id1, id2)
 	}
 
-	// 3. Format instance name with default
+	// 3. 使用默认值格式化实例名
 	name1 := FormatInstanceName("", id1)
 	expectedName := "CPA-" + id1
 	if name1 != expectedName {
 		t.Errorf("expected %s, got %s", expectedName, name1)
 	}
 
-	// 4. Test concurrent calls produce identical ID
+	// 4. 测试并发调用产生相同的 ID
 	ResetCachedInstanceID()
 	var wg sync.WaitGroup
 	results := make([]string, 10)
@@ -63,7 +63,7 @@ func TestInstanceID_PersistenceAndFormat(t *testing.T) {
 		}
 	}
 
-	// 5. Test directory isolation
+	// 5. 测试目录隔离
 	tmpDirB, errB := os.MkdirTemp("", "cpa-discovery-test-b-*")
 	if errB == nil {
 		defer func() {
@@ -77,7 +77,7 @@ func TestInstanceID_PersistenceAndFormat(t *testing.T) {
 		}
 	}
 
-	// 6. Custom names stay unique by appending the persistent short ID
+	// 6. 自定义名称通过追加持久化的短 ID 保持唯一
 	name2 := FormatInstanceName("My-Custom-Node", id1)
 	if name2 != "My-Custom-Node-"+id1 {
 		t.Errorf("expected custom name with instance ID suffix, got %s", name2)
@@ -117,7 +117,7 @@ func TestBuildTXTRecords_SizeAndKeys(t *testing.T) {
 
 	parsed := ParseTXTRecords(records)
 
-	// Verify required keys
+	// 校验必需的键
 	if parsed["version"] != "1" {
 		t.Errorf("expected version=1, got %s", parsed["version"])
 	}
@@ -145,7 +145,7 @@ func TestBuildTXTRecords_SizeAndKeys(t *testing.T) {
 		t.Errorf("expected features=%s, got %s", expectedFeatures, parsed["features"])
 	}
 
-	// Calculate total bytes
+	// 计算总字节数
 	totalBytes := 0
 	for _, r := range records {
 		totalBytes += len(r) + 1
@@ -164,7 +164,7 @@ func TestParseTXTRecords_NormalizesKeys(t *testing.T) {
 
 func TestBuildTXTRecords_OversizedAndRFCEnforcement(t *testing.T) {
 	opts := DefaultTXTOptions()
-	// Giant 500-byte product and feature strings
+	// 巨大的 500 字节 product 与 feature 字符串
 	opts.Product = strings.Repeat("A", 500)
 	opts.Features = []string{strings.Repeat("F", 300)}
 	opts.NodeRole = strings.Repeat("R", 200)
@@ -189,7 +189,7 @@ func TestBuildTXTRecords_OversizedAndRFCEnforcement(t *testing.T) {
 }
 
 func TestValidation_ServiceTypeAndLabels(t *testing.T) {
-	// Valid service types
+	// 合法的服务类型
 	if err := validateServiceType("_ai-gateway._tcp"); err != nil {
 		t.Errorf("expected valid, got: %v", err)
 	}
@@ -197,15 +197,15 @@ func TestValidation_ServiceTypeAndLabels(t *testing.T) {
 		t.Errorf("expected valid, got: %v", err)
 	}
 
-	// Invalid service types
+	// 非法的服务类型
 	invalidTypes := []string{
-		"ai-gateway._tcp",                 // Missing leading underscore
-		"_ai-gateway.tcp",                 // Missing underscore on protocol
-		"_toolongservicenamemoret15._tcp", // Exceeds 15 chars (RFC 6335)
-		"_-invalid._tcp",                  // Leading hyphen
-		"_invalid-._tcp",                  // Trailing hyphen
-		"_ai_gateway._tcp",                // Underscore in name (RFC 6335)
-		"_ai-gateway._udp",                // CPA is TCP-only
+		"ai-gateway._tcp",                 // 缺少前导下划线
+		"_ai-gateway.tcp",                 // 协议部分缺少下划线
+		"_toolongservicenamemoret15._tcp", // 超过 15 个字符（RFC 6335）
+		"_-invalid._tcp",                  // 前导连字符
+		"_invalid-._tcp",                  // 尾随连字符
+		"_ai_gateway._tcp",                // 名称中包含下划线（RFC 6335）
+		"_ai-gateway._udp",                // CPA 仅支持 TCP
 	}
 	for _, it := range invalidTypes {
 		if err := validateServiceType(it); err == nil {
@@ -213,14 +213,14 @@ func TestValidation_ServiceTypeAndLabels(t *testing.T) {
 		}
 	}
 
-	// Subtype sanitization
+	// 子类型净化
 	if s := sanitizeSubtype("responses"); s != SubtypeResponses {
 		t.Errorf("expected %s, got %s", SubtypeResponses, s)
 	}
 	if s := sanitizeSubtype(SubtypeResponses); s != SubtypeResponses {
 		t.Errorf("expected %s, got %s", SubtypeResponses, s)
 	}
-	// Invalid subtypes (RFC 6763 §7.1 violation)
+	// 非法子类型（违反 RFC 6763 §7.1）
 	if s := sanitizeSubtype("_responses._sub"); s != "" {
 		t.Errorf("expected empty for _responses._sub, got %s", s)
 	}
@@ -240,7 +240,7 @@ func TestValidation_ServiceTypeAndLabels(t *testing.T) {
 		t.Error("expected 63-character subtype payload to be rejected")
 	}
 
-	// Endpoint path sanitization (defense against traversal and protocol-relative SSRF)
+	// 端点路径净化（防御目录穿越与协议相对 SSRF）
 	if p := sanitizeEndpointPath("/v1"); p != "/v1" {
 		t.Errorf("expected /v1, got %s", p)
 	}
@@ -260,8 +260,8 @@ func TestValidation_ServiceTypeAndLabels(t *testing.T) {
 		t.Errorf("expected empty for traversal, got %s", p)
 	}
 
-	// Instance name UTF-8 rune boundary sanitization
-	// 20 Chinese characters = 60 bytes (valid), 22 Chinese characters = 66 bytes (exceeds 63)
+	// 实例名 UTF-8 符文边界净化
+	// 20 个中文字符 = 60 字节（合法），22 个中文字符 = 66 字节（超过 63）
 	longChinese := strings.Repeat("网", 22)
 	truncated := sanitizeInstanceName(longChinese)
 	if len(truncated) > 63 {
@@ -286,7 +286,7 @@ func TestFilterUsableIPs(t *testing.T) {
 }
 
 func TestInterfaceFiltering_Helpers(t *testing.T) {
-	// Test isVirtualOrTunnel
+	// 测试 isVirtualOrTunnel
 	virtualNames := []string{"docker0", "veth45a", "utun3", "tailscale0", "wg0", "tun1", "tap0", "br-123", "awdl0", "llw0"}
 	for _, name := range virtualNames {
 		if !isVirtualOrTunnel(name) {
@@ -309,7 +309,7 @@ func TestInterfaceFiltering_Helpers(t *testing.T) {
 		}
 	}
 
-	// Test matchesAny
+	// 测试 matchesAny
 	if !matchesAny("docker0", []string{"docker*"}) {
 		t.Errorf("expected wildcard match for docker*")
 	}
@@ -431,13 +431,13 @@ func TestEntryToDiscoveredLimitsTXTLists(t *testing.T) {
 }
 
 func TestFilterInterfaces_RealMachine(t *testing.T) {
-	// Testing real interface filter on current test environment
+	// 在当前测试环境中测试真实的网卡过滤
 	ifaces, err := FilterInterfaces(nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error filtering interfaces: %v", err)
 	}
 
-	// Verify no excluded interfaces slipped in
+	// 校验没有应排除的网卡混入
 	for _, iface := range ifaces {
 		name := strings.ToLower(iface.Name)
 		if isVirtualOrTunnel(name) {
@@ -449,7 +449,7 @@ func TestFilterInterfaces_RealMachine(t *testing.T) {
 func TestAdvertiser_IdempotenceAndShutdown(t *testing.T) {
 	adv := NewZeroconfAdvertiser()
 
-	// Stopping an unstarted advertiser should be safe
+	// 停止一个尚未启动的通告器应当是安全的
 	if err := adv.Stop(); err != nil {
 		t.Errorf("unexpected error stopping unstarted advertiser: %v", err)
 	}
@@ -469,22 +469,22 @@ func TestAdvertiser_IdempotenceAndShutdown(t *testing.T) {
 
 	errStart := adv.Start(ctx, spec)
 	if errStart != nil {
-		// In some restricted CI environments multicast bind may fail; handle gracefully
+		// 在某些受限的 CI 环境中多播绑定可能失败；需优雅处理
 		t.Logf("multicast start failed (likely restricted sandbox network): %v", errStart)
 		return
 	}
 
-	// Calling Start again while running should fail
+	// 在运行中再次调用 Start 应当失败
 	if errSecond := adv.Start(ctx, spec); errSecond == nil {
 		t.Errorf("expected error on duplicate Start(), got nil")
 	}
 
-	// Calling Stop should cleanly shutdown
+	// 调用 Stop 应当干净地关闭
 	if errStop := adv.Stop(); errStop != nil {
 		t.Errorf("unexpected error on Stop(): %v", errStop)
 	}
 
-	// Calling Stop a second time should be idempotent
+	// 第二次调用 Stop 应当是幂等的
 	if errStop2 := adv.Stop(); errStop2 != nil {
 		t.Errorf("unexpected error on second Stop(): %v", errStop2)
 	}

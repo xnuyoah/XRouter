@@ -77,10 +77,10 @@ func TestUnixPluginReloadAfterShutdownUsesReplacedFile(t *testing.T) {
 
 	client.Shutdown()
 
-	// The Go runtime of a loaded plugin stays resident in the host process
-	// even after the logical shutdown: unloading a Go c-shared image is not
-	// safe, so the handle and host callback state must be retained while the
-	// callback instance is closed for further work.
+	// 已加载插件的 Go 运行时在逻辑关闭之后
+	// 仍驻留在 host 进程中：卸载 Go c-shared 镜像并不
+	// 安全，因此在关闭回调实例以便后续工作之后，
+	// handle 与 host 回调状态必须保留。
 	if first.handle == nil || first.handle != firstHandle {
 		t.Fatalf("handle after Shutdown() = %v, want retained handle %v (library must stay mapped)", first.handle, firstHandle)
 	}
@@ -97,9 +97,9 @@ func TestUnixPluginReloadAfterShutdownUsesReplacedFile(t *testing.T) {
 		t.Fatal("callback instance not closed by Shutdown(); stale runtime could still perform work")
 	}
 
-	// Replace the plugin binary under the same path (update) and load again
-	// without restarting the process. It must map the new image, not reuse
-	// the previously loaded one.
+	// 在同一路径下替换插件二进制（更新）并再次加载，
+	// 而无需重启进程。它必须映射新镜像，而不是复用
+	// 此前已加载的镜像。
 	buildReloadTestPlugin(t, 2, pluginPath)
 	file.Version = "2"
 	secondClient, errOpenSecond := dynamicLibraryLoader{}.Open(file, host)
@@ -124,9 +124,9 @@ func TestUnixPluginReloadAfterShutdownUsesReplacedFile(t *testing.T) {
 
 	secondClient.Shutdown()
 
-	// Reopening without a content change must reuse the already resident
-	// image instead of mapping a second copy of the same runtime, and the
-	// shutdown above must have reached that image exactly once.
+	// 内容未变化时重新打开必须复用已驻留的
+	// 镜像，而不是映射同一运行时的第二份副本，并且
+	// 上面的关闭必须恰好作用于该镜像一次。
 	thirdClient, errOpenThird := dynamicLibraryLoader{}.Open(file, host)
 	if errOpenThird != nil {
 		t.Fatalf("Open() third error = %v", errOpenThird)
@@ -176,9 +176,9 @@ func TestUnixPluginOpenFailureKeepsImageUsableOnRetry(t *testing.T) {
 		t.Fatal("Open() with failing plugin init succeeded, want error")
 	}
 
-	// The failed load must not unload the image: retrying the same file
-	// must fail the same way instead of crashing or spinning, and loading
-	// a fixed build under the same path must succeed afterwards.
+	// 加载失败不得卸载镜像：重试同一文件必须以
+	// 相同方式失败，而不是崩溃或空转，并且之后在同一路径
+	// 加载修复后的构建必须成功。
 	if _, errOpen := loader.Open(file, host); errOpen == nil {
 		t.Fatal("Open() retry with failing plugin init succeeded, want error")
 	}

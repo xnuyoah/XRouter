@@ -19,9 +19,9 @@ func IsValidGPTReasoningSignature(rawSignature string) bool {
 	return err == nil
 }
 
-// InspectGPTReasoningSignature validates the Fernet-like outer format used
-// by GPT/Codex reasoning encrypted_content. This is only a transport-shape
-// check; it does not prove decryptability.
+// InspectGPTReasoningSignature 校验 GPT/Codex 推理 encrypted_content
+// 所使用的类 Fernet 外层格式。这只是一次传输形态检查；
+// 并不证明其可解密性。
 func InspectGPTReasoningSignature(rawSignature string) (*GPTReasoningSignatureInfo, error) {
 	sig := strings.TrimSpace(rawSignature)
 	if sig == "" {
@@ -30,11 +30,11 @@ func InspectGPTReasoningSignature(rawSignature string) (*GPTReasoningSignatureIn
 	if len(sig) > MaxGPTReasoningSignatureLen {
 		return nil, fmt.Errorf("GPT reasoning signature exceeds maximum length (%d bytes)", MaxGPTReasoningSignatureLen)
 	}
-	// The literal prefix is the cheapest discriminator and rejects every other
-	// provider's envelope outright, so it runs before the full charset scan.
-	// Probing this validator is on the hot path for signatures of every provider,
-	// and scanning a multi-kilobyte payload only to reject it on five bytes was
-	// pure waste.
+	// 字面前缀是最廉价的判别依据，能直接排除其他所有
+	// 供应商的封装，因此它在完整字符集扫描之前执行。
+	// 该校验器探测位于所有供应商签名的热路径上，
+	// 而扫描数 KB 的载荷只为在五个字节处拒绝它纯属
+	// 浪费。
 	if !strings.HasPrefix(sig, "gAAAA") {
 		return nil, fmt.Errorf("invalid GPT reasoning signature: expected gAAAA prefix")
 	}
@@ -74,13 +74,13 @@ func decodeGPTReasoningSignature(sig string) ([]byte, error) {
 	return nil, fmt.Errorf("invalid GPT reasoning signature: base64url decode failed")
 }
 
-// gptReasoningSignatureCharSet is the base64url alphabet, padding included.
+// gptReasoningSignatureCharSet 是 base64url 字符集，包含填充字符。
 var gptReasoningSignatureCharSet = base64AlphabetSet("-_=")
 
-// firstInvalidGPTReasoningSignatureChar scans bytes against a lookup table for the
-// same reason as its Grok counterpart: every legal character is ASCII, and a
-// comparison chain mispredicts on nearly every byte of a multi-kilobyte reasoning
-// blob. The offending rune is decoded only for the error message.
+// firstInvalidGPTReasoningSignatureChar 使用查表法扫描字节，与其 Grok
+// 对应实现的原因相同：所有合法字符都是 ASCII，而比较链在数 KB 的
+// 推理数据上几乎每个字节都会预测失败。
+// 只有为了构造错误消息才会解码出问题的 rune。
 func firstInvalidGPTReasoningSignatureChar(sig string) (int, rune, bool) {
 	for index := 0; index < len(sig); index++ {
 		if !gptReasoningSignatureCharSet[sig[index]] {

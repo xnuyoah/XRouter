@@ -320,7 +320,7 @@ func TestQuotaProvider_VersionReloadInvalidatesCache(t *testing.T) {
 		t.Fatal("expected host not to recognize provider-v2 before upgrade")
 	}
 
-	// Reload with version 2.0.0 supporting provider-v2 instead
+	// 以支持 provider-v2 的版本 2.0.0 重新加载
 	providerV2 := &testQuotaProvider{
 		identifier: "dynamic-quota",
 		describeFn: func(ctx context.Context, req pluginapi.QuotaDescribeRequest) (pluginapi.QuotaDescribeResponse, error) {
@@ -393,9 +393,9 @@ func TestQuotaProvider_ContextCancellation(t *testing.T) {
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // cancel immediately
+	cancel() // 立即取消
 
-	// Searching for unknown provider with canceled context should terminate promptly without error
+	// 使用已取消的上下文查找未知供应商应迅速终止且不报错
 	if host.HasQuotaProviderContext(ctx, "non-existent-provider") {
 		t.Fatal("expected false for canceled context search")
 	}
@@ -433,16 +433,16 @@ func TestQuotaProvider_InterleavedReloadDiscardStaleCache(t *testing.T) {
 		},
 	})
 
-	// Run Describe in goroutine
+	// 在 goroutine 中运行 Describe
 	go func() {
 		defer close(goroutineDone)
 		_ = host.HasQuotaProvider("stale-provider")
 	}()
 
-	// Wait for describe to start
+	// 等待 describe 开始
 	<-describeStarted
 
-	// Trigger reload of same plugin with version 1.0.0 supporting "fresh-provider", incrementing generation
+	// 以支持 "fresh-provider" 的版本 1.0.0 触发同一插件的重载，使代次递增
 	providerV2 := &testQuotaProvider{
 		identifier: "interleaved-provider",
 		describeFn: func(ctx context.Context, req pluginapi.QuotaDescribeRequest) (pluginapi.QuotaDescribeResponse, error) {
@@ -462,12 +462,12 @@ func TestQuotaProvider_InterleavedReloadDiscardStaleCache(t *testing.T) {
 		},
 	})
 
-	// Allow the old DescribeQuota call to finally return
+	// 让旧的 DescribeQuota 调用最终返回
 	close(allowDescribeFinish)
-	// Wait for old goroutine to fully finish
+	// 等待旧 goroutine 完全结束
 	<-goroutineDone
 
-	// Verify that the stale-provider is NOT cached on host because generation changed
+	// 验证由于代次变化，stale-provider 未被缓存在主机上
 	if host.HasQuotaProvider("stale-provider") {
 		t.Fatal("stale-provider should not be cached after generation change")
 	}
@@ -485,7 +485,7 @@ func TestRegisterRPCPlugin_ContextCancellation(t *testing.T) {
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // pre-canceled context
+	cancel() // 预取消的上下文
 
 	host := New()
 	_, err := registerRPCPlugin(ctx, host, "cancel-register-plugin", lookup, pluginabi.MethodPluginRegister, nil)
@@ -551,9 +551,9 @@ func TestQuotaProviderPluginIDsMatchesQuotaProviderRecordPrecedence(t *testing.T
 	}
 	host := newHostWithRecords(
 		capabilityRecord{id: "a-multi", plugin: pluginapi.Plugin{Capabilities: pluginapi.Capabilities{QuotaProvider: multi}}},
-		// Same-pass collision: the earlier record wins "foo" over z-foo.
+		// 同一轮冲突：较早的记录让 "foo" 胜过 z-foo。
 		capabilityRecord{id: "b-foo", plugin: pluginapi.Plugin{Capabilities: pluginapi.Capabilities{QuotaProvider: &testQuotaProvider{identifier: "foo"}}}},
-		// AuthProvider alias is a first-pass match and beats a-multi's SupportedProviders for "bar".
+		// AuthProvider 别名在第一轮匹配，对 "bar" 胜过 a-multi 的 SupportedProviders。
 		capabilityRecord{id: "m-bar-auth", plugin: pluginapi.Plugin{Capabilities: pluginapi.Capabilities{
 			QuotaProvider: &testQuotaProvider{identifier: "m-quota"},
 			AuthProvider:  fakeAuthProvider{identifier: " Bar "},

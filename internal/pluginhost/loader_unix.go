@@ -121,11 +121,11 @@ func (dynamicLibraryLoader) Open(file pluginFile, host *Host) (pluginClient, err
 		removeShadowPlugin(loadPath)
 		return nil, fmt.Errorf("dlopen %s: %s", file.Path, dlerrorString())
 	}
-	// From here on the image must never be unloaded: dlopen may already
-	// have started the plugin runtime, and a Go c-shared runtime cannot be
-	// removed from the host process safely. Failure paths below only detach
-	// the client logically and deliberately leak the mapped image together
-	// with any host callback state the runtime may reference.
+	// 从这里开始，该映像绝不能卸载：dlopen 可能已经
+	// 启动了插件运行时，而 Go c-shared 运行时无法
+	// 从宿主进程中安全移除。下面的失败路径只是
+	// 在逻辑上分离客户端，并有意泄漏已映射的映像
+	// 以及运行时可能引用的任何宿主回调状态。
 
 	cSymbol := C.CString("cliproxy_plugin_init")
 	initSymbol := C.cliproxy_dlsym(handle, cSymbol)
@@ -226,14 +226,14 @@ func (c *dynamicLibraryClient) closeAfterOpenFailure() {
 	c.close()
 }
 
-// close detaches the client logically without unloading the plugin image.
-// Go plugin libraries are not safe to hot-unload from the host process: the
-// plugin runtime, its threads and its signal handlers stay resident after
-// dlclose, so a later load in the same process forwards signals into
-// unmapped memory and spins. This also applies when initialization failed,
-// because dlopen may already have started the runtime. The plugin was
-// loaded from a shadow copy, so keeping the image mapped does not block
-// deleting or replacing the source artifact.
+// close 在逻辑上分离客户端，但不卸载插件映像。
+// Go 插件库无法从宿主进程安全地热卸载：
+// dlclose 之后插件运行时、其线程和信号处理器仍然常驻，
+// 因此同一进程后续加载时会把信号转发到
+// 未映射的内存并空转。初始化失败时也是如此，
+// 因为 dlopen 可能已经启动了运行时。该插件是
+// 从影子副本加载的，因此保持映像映射不会阻碍
+// 删除或替换源产物。
 func (c *dynamicLibraryClient) close() {
 	if c == nil {
 		return
@@ -249,11 +249,11 @@ func (c *dynamicLibraryClient) close() {
 	c.api.call = nil
 	c.api.free_buffer = nil
 	if c.hostCtx != nil {
-		// Drop the callback registration so repeated reloads do not pin the
-		// host forever. The C host context and host API block themselves are
-		// deliberately leaked: the resident plugin runtime may still pass
-		// the context back into cliproxyHostCall, which reads the callback
-		// id from it before failing the lookup.
+		// 移除回调注册，使反复重载不会
+		// 永久固定宿主。C host context 和 host API 块本身
+		// 被有意泄漏：常驻的插件运行时可能仍会把
+		// 该 context 传回 cliproxyHostCall，后者在查找失败前
+		// 会从中读取回调 id。
 		id := uintptr(*(*C.uintptr_t)(c.hostCtx))
 		hostCallbackEntries.Delete(id)
 	}

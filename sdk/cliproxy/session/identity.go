@@ -1,4 +1,4 @@
-// Package session derives stable conversation identities from protocol request roots.
+// Package session 从协议请求根派生稳定的会话身份。
 package session
 
 import (
@@ -40,7 +40,7 @@ type canonicalPart struct {
 
 var canonicalUUIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
-// CandidateSessionPrefixes lists recognized protocol-specific session prefixes used in affinity lookup and routing.
+// CandidateSessionPrefixes 列出在亲和性查找和路由中使用的、已识别的协议特定会话前缀。
 var CandidateSessionPrefixes = []string{
 	"lcp:v1:", "lcp:",
 	"codex:", "claude:", "header:", "session:",
@@ -49,10 +49,10 @@ var CandidateSessionPrefixes = []string{
 	"pck:", "user:", "execution:", "agy:", "derived:",
 }
 
-// knownSessionPrefixes tracks legacy protocol-specific session prefixes that need to be
-// unwrapped before projecting to canonical UUIDv8.
-// Deprecated: This transitional table and string-stripping mechanism are scheduled to be
-// removed once session extraction directly produces canonical UUIDv8s at ingress.
+// knownSessionPrefixes 跟踪需要在投影为规范 UUIDv8 之前
+// 解包的遗留协议特定会话前缀。
+// Deprecated: 一旦会话提取在入口处直接产生规范 UUIDv8，
+// 这张过渡表和字符串剥离机制就会被移除。
 var knownSessionPrefixes = []string{
 	"lcp:v1:", "lcp:",
 	"ctx:v1:", "ctx:",
@@ -62,29 +62,29 @@ var knownSessionPrefixes = []string{
 	"pck:", "user:", "execution:", "agy:", "derived:",
 }
 
-// NormalizeToCanonicalUUID deterministically normalizes any session identifier to a
-// canonical 36-character lowercase UUID (RFC 4122 / RFC 9562 compliant):
-//  1. If rawID (or rawID without known protocol prefix) is already a standard UUID (e.g. Codex UUIDv7,
-//     Claude UUIDv4, Header UUID), it strips the prefix and returns the lowercase UUID.
-//  2. If rawID has known protocol prefixes, they are stripped iteratively (supporting chained
-//     wrappers such as "derived:ctx:v1:"). If no identifier remains after stripping, it returns empty.
-//  3. If rawID is not a standard UUID (e.g. LCP 64-hex hash, subagent hierarchy, or custom string),
-//     it deterministically projects it to an RFC 9562 UUIDv8 using SHA-256 with domain separation.
-//  4. Idempotent: NormalizeToCanonicalUUID(NormalizeToCanonicalUUID(x)) == NormalizeToCanonicalUUID(x).
+// NormalizeToCanonicalUUID 以确定性方式把任意会话标识符规范化为一个
+// 规范的 36 字符小写 UUID（兼容 RFC 4122 / RFC 9562）：
+//  1. 如果 rawID（或去掉已知协议前缀后的 rawID）已经是标准 UUID（例如 Codex UUIDv7、
+//     Claude UUIDv4、Header UUID），则剥离前缀并返回小写 UUID。
+//  2. 如果 rawID 带有已知协议前缀，则迭代地剥离它们（支持链式
+//     包装，如 "derived:ctx:v1:"）。如果剥离后不剩任何标识符，则返回空。
+//  3. 如果 rawID 不是标准 UUID（例如 LCP 64 位十六进制哈希、子代理层级或自定义字符串），
+//     则用带域分隔的 SHA-256 确定性地把它投影为 RFC 9562 UUIDv8。
+//  4. 幂等：NormalizeToCanonicalUUID(NormalizeToCanonicalUUID(x)) == NormalizeToCanonicalUUID(x)。
 func NormalizeToCanonicalUUID(rawID string) string {
 	clean := strings.TrimSpace(rawID)
 	if clean == "" {
 		return ""
 	}
 
-	// 1. Direct UUID match (already clean UUID)
+	// 1. 直接 UUID 匹配（已是干净的 UUID）
 	if canonicalUUIDPattern.MatchString(clean) {
 		return strings.ToLower(clean)
 	}
 
-	// 2. Strip known protocol prefixes iteratively to unwrap layered prefixes (e.g., "derived:ctx:v1:...").
-	// TODO: Deprecate and remove this legacy prefix stripping once all session extractors
-	// natively emit canonical UUIDv8 at the protocol ingress boundary.
+	// 2. 迭代地剥离已知协议前缀，以解开分层前缀（例如 "derived:ctx:v1:..."）。
+	// TODO: 一旦所有会话提取器都在协议入口边界原生输出规范
+	// UUIDv8，就废弃并移除这套遗留的前缀剥离。
 	for {
 		stripped := false
 		for _, p := range knownSessionPrefixes {
@@ -99,8 +99,8 @@ func NormalizeToCanonicalUUID(rawID string) string {
 			break
 		}
 	}
-	// If only prefix was provided without an identifier body (e.g. "slot:", "task:"), return empty
-	// rather than projecting empty string into a shared ghost UUIDv8.
+	// 如果只提供了前缀而没有标识符主体（例如 "slot:"、"task:"），就返回空，
+	// 而不是把空字符串投影为一个共享的幽灵 UUIDv8。
 	if clean == "" {
 		return ""
 	}
@@ -108,7 +108,7 @@ func NormalizeToCanonicalUUID(rawID string) string {
 		return strings.ToLower(clean)
 	}
 
-	// 3. Check if any generic prefix "prefix:<uuid>" exists
+	// 3. 检查是否存在任何通用前缀 "prefix:<uuid>"
 	if idx := strings.Index(clean, ":"); idx > 0 {
 		candidate := strings.TrimSpace(clean[idx+1:])
 		if canonicalUUIDPattern.MatchString(candidate) {
@@ -116,18 +116,18 @@ func NormalizeToCanonicalUUID(rawID string) string {
 		}
 	}
 
-	// 4. Deterministic projection to RFC 9562 UUIDv8 for LCP hashes and arbitrary non-UUID strings
+	// 4. 为 LCP 哈希和任意非 UUID 字符串确定性地投影为 RFC 9562 UUIDv8
 	sum := sha256.Sum256([]byte("cpa:canonical-uuid:v1\x00" + clean))
 	u := [16]byte(sum[:16])
-	u[6] = (u[6] & 0x0f) | 0x80 // RFC 9562 Version 8
-	u[8] = (u[8] & 0x3f) | 0x80 // RFC 4122 / RFC 9562 Variant
+	u[6] = (u[6] & 0x0f) | 0x80 // RFC 9562 版本 8
+	u[8] = (u[8] & 0x3f) | 0x80 // RFC 4122 / RFC 9562 变体
 
 	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
 		u[0:4], u[4:6], u[6:8], u[8:10], u[10:16])
 }
 
-// NormalizeExplicitID validates an explicit client-provided session identifier.
-// It preserves opaque printable values while rejecting oversized or control-bearing IDs.
+// NormalizeExplicitID 校验一个客户端显式提供的会话标识符。
+// 它保留不透明的可打印值，同时拒收过大或包含控制字符的 ID。
 func NormalizeExplicitID(raw string) string {
 	for _, r := range raw {
 		if unicode.IsControl(r) {
@@ -141,7 +141,7 @@ func NormalizeExplicitID(raw string) string {
 	return raw
 }
 
-// ClaudeMetadataIdentities extracts session_id, parent_session_id, and agent_id from Claude user_id metadata.
+// ClaudeMetadataIdentities 从 Claude user_id 元数据中提取 session_id、parent_session_id 和 agent_id。
 func ClaudeMetadataIdentities(payload []byte) (sessionID, parentSessionID, agentID string) {
 	if len(payload) == 0 {
 		return "", "", ""
@@ -191,21 +191,21 @@ func ClaudeMetadataIdentities(payload []byte) (sessionID, parentSessionID, agent
 	return "", "", ""
 }
 
-// ClaudeMetadataSessionID extracts the explicit Claude Code session from
-// current JSON metadata or the legacy user_id suffix before bounding the
-// surrounding metadata container.
+// ClaudeMetadataSessionID 在限定周围的元数据容器之前，
+// 从当前 JSON 元数据或遗留的 user_id 后缀中提取
+// 显式的 Claude Code 会话。
 func ClaudeMetadataSessionID(payload []byte) string {
 	sessionID, _, _ := ClaudeMetadataIdentities(payload)
 	return sessionID
 }
 
-// ClaudeMetadataParentSessionID extracts parent_session_id from Claude user_id metadata if present.
+// ClaudeMetadataParentSessionID 从 Claude user_id 元数据中提取 parent_session_id（若存在）。
 func ClaudeMetadataParentSessionID(payload []byte) string {
 	_, parentSessionID, _ := ClaudeMetadataIdentities(payload)
 	return parentSessionID
 }
 
-// CallerScope returns an irreversible namespace for a downstream caller credential.
+// CallerScope 为下游调用方凭据返回一个不可逆的命名空间。
 func CallerScope(value string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -215,7 +215,7 @@ func CallerScope(value string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// DerivedID returns a derived session identity stored in execution metadata.
+// DerivedID 返回存储在执行元数据中的派生会话身份。
 func DerivedID(metadata map[string]any) string {
 	if metadata == nil {
 		return ""
@@ -224,10 +224,10 @@ func DerivedID(metadata map[string]any) string {
 	return strings.TrimSpace(value)
 }
 
-// Enrich derives a session identity once and places it in both request and option metadata.
-// When opts.OriginalRequest is unset, it shares req.Payload as the read-only original request
-// baseline to avoid multi-megabyte allocations on large payloads. Callers that mutate req.Payload
-// in-place after Enrich must explicitly provide an independent opts.OriginalRequest.
+// Enrich 派生一次会话身份，并把它同时放入请求元数据和选项元数据。
+// 当 opts.OriginalRequest 未设置时，它把 req.Payload 作为只读的原始请求
+// 基线共享，以避免在大载荷上产生数兆字节的分配。在 Enrich 之后原地修改
+// req.Payload 的调用方必须显式提供一个独立的 opts.OriginalRequest。
 func Enrich(req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Request, cliproxyexecutor.Options) {
 	payload := opts.OriginalRequest
 	if len(payload) == 0 && len(req.Payload) > 0 {
@@ -262,7 +262,7 @@ func Enrich(req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (clipro
 		return req, opts
 	}
 
-	// Metadata-provided canonical or LCP session (e.g. embeddable SDK callers or pre-routed stages)
+	// 由元数据提供的规范会话或 LCP 会话（例如可嵌入 SDK 调用方或已预路由的阶段）
 	if canonicalID := firstNormalizedMetadataID(cliproxyexecutor.CanonicalSessionIDMetadataKey, opts.Metadata, req.Metadata); canonicalID != "" {
 		req.Metadata = metadataWithoutKey(req.Metadata, cliproxyexecutor.DerivedSessionIDMetadataKey)
 		opts.Metadata = metadataWithoutKey(opts.Metadata, cliproxyexecutor.DerivedSessionIDMetadataKey)
@@ -384,8 +384,8 @@ func hasExplicitSession(headers map[string][]string, payload []byte) bool {
 	if len(payload) == 0 {
 		return false
 	}
-	// Parsing without copying matters here: this runs on every request and the
-	// payload can be multiple megabytes.
+	// 这里用不拷贝的方式解析很重要：它会在每个请求上运行，而
+	// 载荷可能有好几兆字节。
 	root := newSessionObject(util.ParseGJSONBytesNoCopy(payload))
 	reqRoot := root
 	req := root.Get("request")
@@ -487,7 +487,7 @@ func headerValue(headers map[string][]string, name string) string {
 	return ""
 }
 
-// DeriveID builds a stable identity from leading instructions and the first complete user input.
+// DeriveID 从开头的指令和第一条完整的用户输入构建稳定的身份。
 func DeriveID(format sdktranslator.Format, payload []byte, callerScope string) string {
 	if len(payload) == 0 {
 		return ""

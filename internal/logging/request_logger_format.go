@@ -66,9 +66,9 @@ func (l *FileRequestLogger) writeNonStreamingLog(
 		return errWrite
 	}
 	if isWebsocketTranscript {
-		// Intentionally omit the generic downstream HTTP response section for websocket
-		// transcripts. The durable session exchange is captured in WEBSOCKET TIMELINE,
-		// and appending a one-off upgrade response snapshot would dilute that transcript.
+		// 对 websocket 记录有意省略通用的下游 HTTP 响应区段。
+		// 持久化的会话交互记录在 WEBSOCKET TIMELINE 中，
+		// 附加一次性的升级响应快照会稀释该记录。
 		return nil
 	}
 	return writeResponseSection(w, statusCode, true, responseHeaders, bytes.NewReader(response), decompressErr, true)
@@ -429,29 +429,29 @@ func responseBodyStartsWithLeadingNewline(reader *bufio.Reader) bool {
 	return false
 }
 
-// formatLogContent creates the complete log content for non-streaming requests.
+// formatLogContent 为非流式请求创建完整的日志内容。
 //
-// Parameters:
-//   - url: The request URL
-//   - method: The HTTP method
-//   - headers: The request headers
-//   - body: The request body
-//   - websocketTimeline: The downstream websocket event timeline
-//   - apiRequest: The API request data
-//   - apiResponse: The API response data
-//   - response: The raw response data
-//   - status: The response status code
-//   - responseHeaders: The response headers
+// 参数：
+//   - url: 请求 URL
+//   - method: HTTP 方法
+//   - headers: 请求头
+//   - body: 请求体
+//   - websocketTimeline: 下游 websocket 事件时间线
+//   - apiRequest: API 请求数据
+//   - apiResponse: API 响应数据
+//   - response: 原始响应数据
+//   - status: 响应状态码
+//   - responseHeaders: 响应头
 //
-// Returns:
-//   - string: The formatted log content
+// 返回：
+//   - string: 格式化后的日志内容
 func (l *FileRequestLogger) formatLogContent(url, method string, headers map[string][]string, body, websocketTimeline, apiRequest, apiResponse, apiWebsocketTimeline, response []byte, status int, responseHeaders map[string][]string, apiResponseErrors []*interfaces.ErrorMessage) string {
 	var content strings.Builder
 	isWebsocketTranscript := hasSectionPayload(websocketTimeline)
 	downstreamTransport := inferDownstreamTransport(headers, websocketTimeline, nil)
 	upstreamTransport := inferUpstreamTransport(apiRequest, nil, apiResponse, nil, apiWebsocketTimeline, nil, apiResponseErrors)
 
-	// Request info
+	// 请求信息
 	content.WriteString(l.formatRequestInfo(url, method, headers, body, downstreamTransport, upstreamTransport, !isWebsocketTranscript))
 
 	if len(websocketTimeline) > 0 {
@@ -518,12 +518,12 @@ func (l *FileRequestLogger) formatLogContent(url, method string, headers map[str
 	}
 
 	if isWebsocketTranscript {
-		// Mirror writeNonStreamingLog: websocket transcripts end with the dedicated
-		// timeline sections instead of a generic downstream HTTP response block.
+		// 与 writeNonStreamingLog 保持一致：websocket 记录以专门的
+		// 时间线区段结尾，而不是通用的下游 HTTP 响应块。
 		return content.String()
 	}
 
-	// Response section
+	// 响应区段
 	content.WriteString("=== RESPONSE ===\n")
 	content.WriteString(fmt.Sprintf("Status: %d\n", status))
 
@@ -542,21 +542,21 @@ func (l *FileRequestLogger) formatLogContent(url, method string, headers map[str
 	return content.String()
 }
 
-// decompressResponse decompresses response data based on Content-Encoding header.
+// decompressResponse 根据 Content-Encoding 头解压响应数据。
 //
-// Parameters:
-//   - responseHeaders: The response headers
-//   - response: The response data to decompress
+// 参数：
+//   - responseHeaders: 响应头
+//   - response: 要解压的响应数据
 //
-// Returns:
-//   - []byte: The decompressed response data
-//   - error: An error if decompression fails, nil otherwise
+// 返回：
+//   - []byte: 解压后的响应数据
+//   - error: 解压失败时的错误，否则为 nil
 func (l *FileRequestLogger) decompressResponse(responseHeaders map[string][]string, response []byte) ([]byte, error) {
 	if responseHeaders == nil || len(response) == 0 {
 		return response, nil
 	}
 
-	// Check Content-Encoding header
+	// 检查 Content-Encoding 头
 	var contentEncoding string
 	for key, values := range responseHeaders {
 		if strings.ToLower(key) == "content-encoding" && len(values) > 0 {
@@ -575,19 +575,19 @@ func (l *FileRequestLogger) decompressResponse(responseHeaders map[string][]stri
 	case "zstd":
 		return l.decompressZstd(response)
 	default:
-		// No compression or unsupported compression
+		// 无压缩或不支持的压缩
 		return response, nil
 	}
 }
 
-// decompressGzip decompresses gzip-encoded data.
+// decompressGzip 解压 gzip 编码的数据。
 //
-// Parameters:
-//   - data: The gzip-encoded data to decompress
+// 参数：
+//   - data: 要解压的 gzip 编码数据
 //
-// Returns:
-//   - []byte: The decompressed data
-//   - error: An error if decompression fails, nil otherwise
+// 返回：
+//   - []byte: 解压后的数据
+//   - error: 解压失败时的错误，否则为 nil
 func (l *FileRequestLogger) decompressGzip(data []byte) ([]byte, error) {
 	reader, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
@@ -607,14 +607,14 @@ func (l *FileRequestLogger) decompressGzip(data []byte) ([]byte, error) {
 	return decompressed, nil
 }
 
-// decompressDeflate decompresses deflate-encoded data.
+// decompressDeflate 解压 deflate 编码的数据。
 //
-// Parameters:
-//   - data: The deflate-encoded data to decompress
+// 参数：
+//   - data: 要解压的 deflate 编码数据
 //
-// Returns:
-//   - []byte: The decompressed data
-//   - error: An error if decompression fails, nil otherwise
+// 返回：
+//   - []byte: 解压后的数据
+//   - error: 解压失败时的错误，否则为 nil
 func (l *FileRequestLogger) decompressDeflate(data []byte) ([]byte, error) {
 	reader := flate.NewReader(bytes.NewReader(data))
 	defer func() {
@@ -631,14 +631,14 @@ func (l *FileRequestLogger) decompressDeflate(data []byte) ([]byte, error) {
 	return decompressed, nil
 }
 
-// decompressBrotli decompresses brotli-encoded data.
+// decompressBrotli 解压 brotli 编码的数据。
 //
-// Parameters:
-//   - data: The brotli-encoded data to decompress
+// 参数：
+//   - data: 要解压的 brotli 编码数据
 //
-// Returns:
-//   - []byte: The decompressed data
-//   - error: An error if decompression fails, nil otherwise
+// 返回：
+//   - []byte: 解压后的数据
+//   - error: 解压失败时的错误，否则为 nil
 func (l *FileRequestLogger) decompressBrotli(data []byte) ([]byte, error) {
 	reader := brotli.NewReader(bytes.NewReader(data))
 
@@ -650,14 +650,14 @@ func (l *FileRequestLogger) decompressBrotli(data []byte) ([]byte, error) {
 	return decompressed, nil
 }
 
-// decompressZstd decompresses zstd-encoded data.
+// decompressZstd 解压 zstd 编码的数据。
 //
-// Parameters:
-//   - data: The zstd-encoded data to decompress
+// 参数：
+//   - data: 要解压的 zstd 编码数据
 //
-// Returns:
-//   - []byte: The decompressed data
-//   - error: An error if decompression fails, nil otherwise
+// 返回：
+//   - []byte: 解压后的数据
+//   - error: 解压失败时的错误，否则为 nil
 func (l *FileRequestLogger) decompressZstd(data []byte) ([]byte, error) {
 	decoder, err := zstd.NewReader(bytes.NewReader(data))
 	if err != nil {
@@ -673,16 +673,16 @@ func (l *FileRequestLogger) decompressZstd(data []byte) ([]byte, error) {
 	return decompressed, nil
 }
 
-// formatRequestInfo creates the request information section of the log.
+// formatRequestInfo 创建日志的请求信息区段。
 //
-// Parameters:
-//   - url: The request URL
-//   - method: The HTTP method
-//   - headers: The request headers
-//   - body: The request body
+// 参数：
+//   - url: 请求 URL
+//   - method: HTTP 方法
+//   - headers: 请求头
+//   - body: 请求体
 //
-// Returns:
-//   - string: The formatted request information
+// 返回：
+//   - string: 格式化后的请求信息
 func (l *FileRequestLogger) formatRequestInfo(url, method string, headers map[string][]string, body []byte, downstreamTransport string, upstreamTransport string, includeBody bool) string {
 	var content strings.Builder
 

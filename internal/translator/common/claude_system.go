@@ -12,15 +12,15 @@ const (
 	claudeSystemReminderEnd   = "</system-reminder>"
 )
 
-// SystemReminderText wraps text in the <system-reminder> envelope so non-Claude
-// upstream formats treat demoted mid-session system or developer instructions
-// as system directives rather than user speech.
+// SystemReminderText 用 <system-reminder> 包装文本，使非 Claude
+// 上游格式把降级后的会话中途系统或开发者指令当作
+// 系统指令，而不是用户发言。
 func SystemReminderText(text string) string {
 	return claudeSystemReminderStart + "\n" + text + "\n" + claudeSystemReminderEnd
 }
 
-// ClaudeMessageSystemReminderText converts a Claude message-level system value
-// into ordinary user-visible reminder text for non-Claude upstream formats.
+// ClaudeMessageSystemReminderText 将 Claude 消息级的 system 值
+// 转换为面向非 Claude 上游格式的普通用户可见提醒文本。
 func ClaudeMessageSystemReminderText(content gjson.Result) (string, bool) {
 	parts := claudeSystemTextParts(content)
 	if len(parts) == 0 {
@@ -62,9 +62,9 @@ func claudeSystemTextParts(content gjson.Result) []string {
 	return parts
 }
 
-// BuildClaudeStructuredOutputInstruction formats structured output settings
-// (from Chat Completions response_format or Responses text.format) as explicit
-// instructions to inject into Claude's system prompt.
+// BuildClaudeStructuredOutputInstruction 将结构化输出设置
+// （来自 Chat Completions 的 response_format 或 Responses 的 text.format）格式化为显式的
+// 指令，以注入 Claude 的系统提示词。
 func BuildClaudeStructuredOutputInstruction(format gjson.Result) string {
 	if !format.Exists() {
 		return ""

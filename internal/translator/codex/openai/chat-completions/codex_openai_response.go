@@ -1,8 +1,8 @@
-// Package openai provides response translation functionality for Codex to OpenAI API compatibility.
-// This package handles the conversion of Codex API responses into OpenAI Chat Completions-compatible
-// JSON format, transforming streaming events and non-streaming responses into the format
-// expected by OpenAI API clients. It supports both streaming and non-streaming modes,
-// handling text content, tool calls, reasoning content, and usage metadata appropriately.
+// Package openai 提供 Codex 到 OpenAI API 兼容格式的响应转换功能。
+// 本包处理 Codex API 响应到 OpenAI Chat Completions 兼容
+// JSON 格式的转换，将流式事件和非流式响应转换为
+// OpenAI API 客户端期望的格式。它同时支持流式和非流式模式，
+// 并妥善处理文本内容、工具调用、推理内容和用量元数据。
 package chat_completions
 
 import (
@@ -35,7 +35,7 @@ type toolCallStreamState struct {
 	Done             bool
 }
 
-// ConvertCliToOpenAIParams holds parameters for response conversion.
+// ConvertCliToOpenAIParams 保存响应转换的参数。
 type ConvertCliToOpenAIParams struct {
 	ServiceTier           string
 	ResponseID            string
@@ -49,20 +49,20 @@ type ConvertCliToOpenAIParams struct {
 	LastImageHashByItemID map[string][32]byte
 }
 
-// ConvertCodexResponseToOpenAI translates a single chunk of a streaming response from the
-// Codex API format to the OpenAI Chat Completions streaming format.
-// It processes various Codex event types and transforms them into OpenAI-compatible JSON responses.
-// The function handles text content, tool calls, reasoning content, and usage metadata, outputting
-// responses that match the OpenAI API format. It supports incremental updates for streaming responses.
+// ConvertCodexResponseToOpenAI 将流式响应中的单个分块从
+// Codex API 格式转换为 OpenAI Chat Completions 流式格式。
+// 它处理各种 Codex 事件类型，并将其转换为 OpenAI 兼容的 JSON 响应。
+// 该函数处理文本内容、工具调用、推理内容和用量元数据，输出
+// 与 OpenAI API 格式匹配的响应。它支持流式响应的增量更新。
 //
-// Parameters:
-//   - ctx: The context for the request, used for cancellation and timeout handling
-//   - modelName: The name of the model being used for the response
-//   - rawJSON: The raw JSON response from the Codex API
-//   - param: A pointer to a parameter object for maintaining state between calls
+// 参数：
+//   - ctx: 请求的上下文，用于取消和超时处理
+//   - modelName: 响应所使用的模型名
+//   - rawJSON: 来自 Codex API 的原始 JSON 响应
+//   - param: 指向参数对象的指针，用于在多次调用之间保持状态
 //
-// Returns:
-//   - [][]byte: A slice of OpenAI-compatible JSON responses
+// 返回：
+//   - [][]byte: OpenAI 兼容 JSON 响应的切片
 func ConvertCodexResponseToOpenAI(_ context.Context, modelName string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) [][]byte {
 	if *param == nil {
 		*param = &ConvertCliToOpenAIParams{
@@ -81,7 +81,7 @@ func ConvertCodexResponseToOpenAI(_ context.Context, modelName string, originalR
 	}
 	rawJSON = bytes.TrimSpace(rawJSON[5:])
 
-	// Initialize the OpenAI SSE template.
+	// 初始化 OpenAI SSE 模板。
 	template := []byte(`{"id":"","object":"chat.completion.chunk","created":12345,"model":"model","choices":[{"index":0,"delta":{},"finish_reason":null,"native_finish_reason":null}]}`)
 
 	rootResult := gjson.ParseBytes(rawJSON)
@@ -108,7 +108,7 @@ func ConvertCodexResponseToOpenAI(_ context.Context, modelName string, originalR
 		return [][]byte{}
 	}
 
-	// Extract and set the model version.
+	// 提取并设置模型版本。
 	cachedModel := (*param).(*ConvertCliToOpenAIParams).Model
 	if modelResult := gjson.GetBytes(rawJSON, "model"); modelResult.Exists() {
 		template, _ = sjson.SetBytes(template, "model", modelResult.String())
@@ -120,10 +120,10 @@ func ConvertCodexResponseToOpenAI(_ context.Context, modelName string, originalR
 
 	template, _ = sjson.SetBytes(template, "created", (*param).(*ConvertCliToOpenAIParams).CreatedAt)
 
-	// Extract and set the response ID.
+	// 提取并设置响应 ID。
 	template, _ = sjson.SetBytes(template, "id", (*param).(*ConvertCliToOpenAIParams).ResponseID)
 
-	// Extract and set usage metadata (token counts).
+	// 提取并设置用量元数据（token 计数）。
 	if usageResult := gjson.GetBytes(rawJSON, "response.usage"); usageResult.Exists() {
 		if outputTokensResult := usageResult.Get("output_tokens"); outputTokensResult.Exists() {
 			template, _ = sjson.SetBytes(template, "usage.completion_tokens", outputTokensResult.Int())
@@ -221,7 +221,7 @@ func ConvertCodexResponseToOpenAI(_ context.Context, modelName string, originalR
 			return [][]byte{}
 		}
 
-		// Increment index for this new tool call item.
+		// 为该新工具调用项递增索引。
 		p := (*param).(*ConvertCliToOpenAIParams)
 		p.FunctionCallIndex++
 		state := &toolCallStreamState{Index: p.FunctionCallIndex, Patch: isOriginalCustomPatch(originalRequestRawJSON, itemResult)}
@@ -231,7 +231,7 @@ func ConvertCodexResponseToOpenAI(_ context.Context, modelName string, originalR
 		functionCallItemTemplate, _ = sjson.SetBytes(functionCallItemTemplate, "index", state.Index)
 		functionCallItemTemplate, _ = sjson.SetBytes(functionCallItemTemplate, "id", itemResult.Get("call_id").String())
 
-		// Restore original tool name if it was shortened.
+		// 若工具名被缩短，则还原为原始名称。
 		name := itemResult.Get("name").String()
 		rev := buildReverseMapFromOriginalOpenAI(originalRequestRawJSON)
 		if orig, ok := rev[name]; ok {
@@ -274,7 +274,7 @@ func ConvertCodexResponseToOpenAI(_ context.Context, modelName string, originalR
 			return [][]byte{}
 		}
 
-		// Fallback: no delta events were received, emit the full arguments as a single chunk.
+		// 回退：未收到任何 delta 事件，将完整参数作为单个分块发出。
 		fullArgsField := "arguments"
 		if dataType == "response.custom_tool_call_input.done" {
 			fullArgsField = "input"
@@ -359,8 +359,8 @@ func ConvertCodexResponseToOpenAI(_ context.Context, modelName string, originalR
 				return [][]byte{}
 			}
 
-			// The tool was announced, but no argument event arrived. Emit only the
-			// completed arguments so the id and name are not duplicated.
+			// 该工具已被声明，但未收到参数事件。仅发出
+			// 已完成的参数，以免 id 和名称被重复。
 			state.ArgumentsEmitted = true
 			fullArgs := codexToolCallArguments(itemResult)
 			if state.Patch {
@@ -377,7 +377,7 @@ func ConvertCodexResponseToOpenAI(_ context.Context, modelName string, originalR
 			return [][]byte{template}
 		}
 
-		// Fallback path: model skipped output_item.added, so emit the complete tool call now.
+		// 回退路径：模型跳过了 output_item.added，因此现在发出完整的工具调用。
 		p.FunctionCallIndex++
 		state = &toolCallStreamState{Index: p.FunctionCallIndex, ArgumentsEmitted: true, Done: true, Patch: isOriginalCustomPatch(originalRequestRawJSON, itemResult)}
 		registerToolCallState(p, rootResult, itemResult, state)
@@ -388,7 +388,7 @@ func ConvertCodexResponseToOpenAI(_ context.Context, modelName string, originalR
 		template, _ = sjson.SetRawBytes(template, "choices.0.delta.tool_calls", []byte(`[]`))
 		functionCallItemTemplate, _ = sjson.SetBytes(functionCallItemTemplate, "id", itemResult.Get("call_id").String())
 
-		// Restore original tool name if it was shortened.
+		// 若工具名被缩短，则还原为原始名称。
 		name := itemResult.Get("name").String()
 		rev := buildReverseMapFromOriginalOpenAI(originalRequestRawJSON)
 		if orig, ok := rev[name]; ok {
@@ -411,22 +411,22 @@ func ConvertCodexResponseToOpenAI(_ context.Context, modelName string, originalR
 	return [][]byte{template}
 }
 
-// ConvertCodexResponseToOpenAINonStream converts a non-streaming Codex response to a non-streaming OpenAI response.
-// This function processes the complete Codex response and transforms it into a single OpenAI-compatible
-// JSON response. It handles message content, tool calls, reasoning content, and usage metadata, combining all
-// the information into a single response that matches the OpenAI API format.
+// ConvertCodexResponseToOpenAINonStream 将非流式 Codex 响应转换为非流式 OpenAI 响应。
+// 该函数处理完整的 Codex 响应，并将其转换为单个 OpenAI 兼容
+// JSON 响应。它处理消息内容、工具调用、推理内容和用量元数据，将
+// 所有信息合并为一个与 OpenAI API 格式匹配的响应。
 //
-// Parameters:
-//   - ctx: The context for the request, used for cancellation and timeout handling
-//   - modelName: The name of the model being used for the response (unused in current implementation)
-//   - rawJSON: The raw JSON response from the Codex API
-//   - param: A pointer to a parameter object for the conversion (unused in current implementation)
+// 参数：
+//   - ctx: 请求的上下文，用于取消和超时处理
+//   - modelName: 响应所使用的模型名（当前实现中未使用）
+//   - rawJSON: 来自 Codex API 的原始 JSON 响应
+//   - param: 指向转换参数对象的指针（当前实现中未使用）
 //
-// Returns:
-//   - []byte: An OpenAI-compatible JSON response containing all message content and metadata
+// 返回：
+//   - []byte: 包含所有消息内容和元数据的 OpenAI 兼容 JSON 响应
 func ConvertCodexResponseToOpenAINonStream(_ context.Context, _ string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, _ *any) []byte {
 	rootResult := gjson.ParseBytes(rawJSON)
-	// Verify this is a terminal response event.
+	// 校验这是一个终态响应事件。
 	responseType := rootResult.Get("type").String()
 	if responseType != "response.completed" && responseType != "response.incomplete" {
 		return []byte{}
@@ -444,24 +444,24 @@ func ConvertCodexResponseToOpenAINonStream(_ context.Context, _ string, original
 		template, _ = sjson.SetBytes(template, "service_tier", tier)
 	}
 
-	// Extract and set the model version.
+	// 提取并设置模型版本。
 	if modelResult := responseResult.Get("model"); modelResult.Exists() {
 		template, _ = sjson.SetBytes(template, "model", modelResult.String())
 	}
 
-	// Extract and set the creation timestamp.
+	// 提取并设置创建时间戳。
 	if createdAtResult := responseResult.Get("created_at"); createdAtResult.Exists() {
 		template, _ = sjson.SetBytes(template, "created", createdAtResult.Int())
 	} else {
 		template, _ = sjson.SetBytes(template, "created", unixTimestamp)
 	}
 
-	// Extract and set the response ID.
+	// 提取并设置响应 ID。
 	if idResult := responseResult.Get("id"); idResult.Exists() {
 		template, _ = sjson.SetBytes(template, "id", idResult.String())
 	}
 
-	// Extract and set usage metadata (token counts).
+	// 提取并设置用量元数据（token 计数）。
 	if usageResult := responseResult.Get("usage"); usageResult.Exists() {
 		if outputTokensResult := usageResult.Get("output_tokens"); outputTokensResult.Exists() {
 			template, _ = sjson.SetBytes(template, "usage.completion_tokens", outputTokensResult.Int())
@@ -481,7 +481,7 @@ func ConvertCodexResponseToOpenAINonStream(_ context.Context, _ string, original
 		}
 	}
 
-	// Process the output array for content and function calls
+	// 处理 output 数组以获取内容和函数调用
 	var toolCalls [][]byte
 	var images [][]byte
 	outputResult := responseResult.Get("output")
@@ -498,7 +498,7 @@ func ConvertCodexResponseToOpenAINonStream(_ context.Context, _ string, original
 
 			switch outputType {
 			case "reasoning":
-				// Extract reasoning content from summary
+				// 从 summary 中提取推理内容
 				if summaryResult := outputItem.Get("summary"); summaryResult.IsArray() {
 					summaryArray := summaryResult.Array()
 					for _, summaryItem := range summaryArray {
@@ -510,7 +510,7 @@ func ConvertCodexResponseToOpenAINonStream(_ context.Context, _ string, original
 						}
 					}
 				}
-				// Extract reasoning content from content
+				// 从 content 中提取推理内容
 				if contentResult := outputItem.Get("content"); contentResult.IsArray() {
 					contentArray := contentResult.Array()
 					for _, contentItem := range contentArray {
@@ -522,7 +522,7 @@ func ConvertCodexResponseToOpenAINonStream(_ context.Context, _ string, original
 					}
 				}
 			case "message":
-				// Extract message content and URL citations.
+				// 提取消息内容和 URL 引用。
 				if contentResult := outputItem.Get("content"); contentResult.IsArray() {
 					for _, contentItem := range contentResult.Array() {
 						if contentItem.Get("type").String() != "output_text" {
@@ -539,7 +539,7 @@ func ConvertCodexResponseToOpenAINonStream(_ context.Context, _ string, original
 					}
 				}
 			case "function_call", "custom_tool_call":
-				// Handle function and custom tool call content.
+				// 处理函数调用和自定义工具调用的内容。
 				functionCallTemplate := []byte(`{"id":"","type":"function","function":{"name":"","arguments":""}}`)
 
 				if callIdResult := outputItem.Get("call_id"); callIdResult.Exists() {
@@ -578,7 +578,7 @@ func ConvertCodexResponseToOpenAINonStream(_ context.Context, _ string, original
 			}
 		}
 
-		// Set content and reasoning content if found
+		// 若找到内容与推理内容，则进行设置
 		if contentText != "" {
 			template, _ = sjson.SetBytes(template, "choices.0.message.content", contentText)
 		}
@@ -591,18 +591,18 @@ func ConvertCodexResponseToOpenAINonStream(_ context.Context, _ string, original
 			template, _ = sjson.SetRawBytes(template, "choices.0.message.annotations", translatorcommon.JoinRawArray(messageAnnotations))
 		}
 
-		// Add tool calls if any
+		// 若有工具调用则添加
 		if len(toolCalls) > 0 {
 			template, _ = sjson.SetRawBytes(template, "choices.0.message.tool_calls", translatorcommon.JoinRawArray(toolCalls))
 		}
 
-		// Add images if any
+		// 若有图像则添加
 		if len(images) > 0 {
 			template, _ = sjson.SetRawBytes(template, "choices.0.message.images", translatorcommon.JoinRawArray(images))
 		}
 	}
 
-	// Extract and set the finish reason based on status.
+	// 根据状态提取并设置结束原因。
 	if statusResult := responseResult.Get("status"); statusResult.Exists() {
 		status := statusResult.String()
 		finishReason := ""
@@ -763,8 +763,8 @@ func codexToolCallArguments(itemResult gjson.Result) string {
 	return itemResult.Get("arguments").String()
 }
 
-// buildReverseMapFromOriginalOpenAI builds a map of shortened tool name -> original tool name
-// from the original OpenAI-style request JSON using the same shortening logic.
+// buildReverseMapFromOriginalOpenAI 使用相同的缩短逻辑，
+// 从原始 OpenAI 风格请求 JSON 构建「缩短后的工具名 -> 原始工具名」的映射。
 func buildReverseMapFromOriginalOpenAI(original []byte) map[string]string {
 	rev := map[string]string{}
 	names := collectRequestToolNames(original)
@@ -798,7 +798,7 @@ func mimeTypeFromCodexOutputFormat(outputFormat string) string {
 	}
 }
 
-// codexResponseServiceTier returns only an actual nonempty upstream tier.
+// codexResponseServiceTier 仅返回真实非空的上游档位。
 func codexResponseServiceTier(response gjson.Result) string {
 	tier := response.Get("service_tier")
 	if tier.Type != gjson.String || strings.TrimSpace(tier.Str) == "" {
@@ -807,7 +807,7 @@ func codexResponseServiceTier(response gjson.Result) string {
 	return strings.TrimSpace(tier.Str)
 }
 
-// setCodexCacheWriteTokens preserves the upstream integer without float conversion.
+// setCodexCacheWriteTokens 保留上游整数值，不做浮点转换。
 func setCodexCacheWriteTokens(template []byte, usage gjson.Result) []byte {
 	value := usage.Get("input_tokens_details.cache_write_tokens")
 	if !value.Exists() || value.Type == gjson.Null {
@@ -829,13 +829,13 @@ func setCodexCacheWriteTokens(template []byte, usage gjson.Result) []byte {
 	return template
 }
 
-// isOriginalCustomPatch never promotes an ordinary same-name function to custom.
+// isOriginalCustomPatch 绝不把同名的普通函数提升为自定义工具。
 func isOriginalCustomPatch(original []byte, item gjson.Result) bool {
 	if item.Get("type").String() != "custom_tool_call" {
 		return false
 	}
 	name := util.QualifyResponsesNamespaceToolName(item.Get("namespace").String(), item.Get("name").String())
-	// Chat Completions prefers ordinary functions for ambiguous names, regardless of order.
+	// Chat Completions 对歧义名称优先选择普通函数，与顺序无关。
 	for _, tool := range gjson.GetBytes(original, "tools").Array() {
 		if tool.Get("type").String() == "function" && tool.Get("function.name").String() == name {
 			return false

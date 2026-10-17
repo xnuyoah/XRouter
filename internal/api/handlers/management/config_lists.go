@@ -36,7 +36,7 @@ func rejectInvalidCredentialWeight(c *gin.Context, field string, weight *int) bo
 	return false
 }
 
-// Generic helpers for list[string]
+// list[string] 的通用辅助函数
 func (h *Handler) putStringList(c *gin.Context, set func([]string), after func()) {
 	data, err := c.GetRawData()
 	if err != nil {
@@ -63,8 +63,8 @@ func (h *Handler) putStringList(c *gin.Context, set func([]string), after func()
 	h.persistLocked(c)
 }
 
-// patchStringList resolves the list through targetOf under h.mu, so it edits the
-// current config instead of one a reload has replaced.
+// patchStringList 在 h.mu 下通过 targetOf 解析列表，因此它编辑的是
+// 当前配置，而不是已被重载替换掉的配置。
 func (h *Handler) patchStringList(c *gin.Context, targetOf func() *[]string, after func()) {
 	var body struct {
 		Old   *string `json:"old"`
@@ -108,8 +108,8 @@ func (h *Handler) patchStringList(c *gin.Context, targetOf func() *[]string, aft
 	c.JSON(400, gin.H{"error": "missing fields"})
 }
 
-// deleteFromStringList resolves the list through targetOf under h.mu, so it edits
-// the current config instead of one a reload has replaced.
+// deleteFromStringList 在 h.mu 下通过 targetOf 解析列表，因此它编辑的是
+// 当前配置，而不是已被重载替换掉的配置。
 func (h *Handler) deleteFromStringList(c *gin.Context, targetOf func() *[]string, after func()) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -644,7 +644,7 @@ func normalizeOpenAICompatibilityEntry(entry *config.OpenAICompatibility) {
 	if entry == nil {
 		return
 	}
-	// Trim base-url; empty base-url indicates provider should be removed by sanitization
+	// 裁剪 base-url；空的 base-url 表示该供应商应被清洗流程移除
 	entry.BaseURL = strings.TrimSpace(entry.BaseURL)
 	entry.Headers = config.NormalizeHeaders(entry.Headers)
 	existing := make(map[string]struct{}, len(entry.APIKeyEntries))

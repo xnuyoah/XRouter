@@ -172,13 +172,13 @@ func TestPutOpenAICompatConcurrentWithAuthFieldsPatch_Issue6559(t *testing.T) {
 	close(start)
 	wg.Wait()
 
-	// Ensure the final persisted configuration is reloaded through the watcher pipeline
-	// and verify both the patched auth prefix and final openai-compatibility model are registered.
+	// 确保最终持久化的配置经由监听器流水线重新加载
+	// 并验证修补后的 auth 前缀与最终的 openai-compatibility 模型都已注册。
 	service.reloadConfigFromWatcher()
 	service.registerConfigAPIKeyAuths(ctx, service.currentConfig())
 
-	// The auth is file-backed with provider "openai", so it serves the native OpenAI
-	// family's default catalog under its patched prefix.
+	// 该 auth 由文件支撑且供应商为 "openai"，因此它在该修补后的前缀下提供原生 OpenAI
+	// 家族的默认目录。
 	finalPrefixModel := fmt.Sprintf("pfx-%d/gpt-5.6-luna", iterations-1)
 	if !reg.ClientSupportsModel(authID, finalPrefixModel) {
 		t.Fatalf("expected auth %s to support final prefixed model %q", authID, finalPrefixModel)

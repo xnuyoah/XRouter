@@ -12,8 +12,8 @@ import (
 
 var benchmarkSanitizeOpenAIResponsesReasoningOutput []byte
 
-// claudeCAISSignatureSample is a Claude CAIS-shaped encrypted reasoning payload
-// that the OpenAI Responses sanitizer must classify as a foreign signature.
+// claudeCAISSignatureSample 是一个 Claude CAIS 形态的加密推理载荷，
+// OpenAI Responses 清洗器必须将其归类为外来签名。
 const claudeCAISSignatureSample = "CAISqwIKiAEIEBgCKkBHRlRBsNiptQUWfPoOhuQKwi5LnncZVO9bB5jqOs76D7uBtgktML0zqJtNmLHXHHcgD6lk4MQu4QBXzFd1lbC3Mg5jbGF1ZGUtZmFibGUtNTgBQgh0aGlua2luZ1okZDk3NDM5NzUtNGJiMC00OTM2LTllMjgtZDViMGQyMWJkYzQ4EgxCGh+XVFFFeySAjtAaDL/A1LltGu6MMJ+eXSIwsN0oBpDrqLv22UBfkMnTotnIbkvkOyb9xZHgigG6OZVHaI3gThm+maLKmgO5PrFLKlDFYp+YZksy/wKwszJlnLTPzAK+NUlfzagOE1ymtZTXhAYK260XyFYmg/te/C231+Fr/hoX+EJoUBnrn0gD7hqMISOT+TaFEuOXYsN517GfaxgB"
 
 func assertEmptyReasoningContent(t *testing.T, body []byte, path string) {
@@ -84,8 +84,8 @@ func TestSanitizeOpenAIResponsesReasoningEncryptedContent_KeepsIDsWhenStoreEnabl
 }
 
 func TestSanitizeOpenAIResponsesReasoningEncryptedContent_MovesCleartextContentToSummary(t *testing.T) {
-	// Codex Desktop replays third-party thinking as reasoning.content[reasoning_text].
-	// Official Codex upstream rejects that shape with array_above_max_length (maxItems: 0).
+	// Codex Desktop 会把第三方 thinking 作为 reasoning.content[reasoning_text] 重放。
+	// 官方 Codex 上游会以 array_above_max_length（maxItems: 0）拒绝该形态。
 	body := []byte(`{"store":false,"input":[` +
 		`{"type":"reasoning","summary":[],"content":[{"type":"reasoning_text","text":"The model thinking process from a previous turn with a third-party provider..."}],"encrypted_content":null},` +
 		`{"id":"msg_1","type":"message","role":"user","content":[{"type":"input_text","text":"hi"}]}` +
@@ -170,9 +170,9 @@ func TestSanitizeOpenAIResponsesReasoningEncryptedContent_NoopReturnsOriginalBod
 }
 
 // TestSanitizeOpenAIResponsesReasoningEncryptedContent_SignatureValidity
-// pins how the sanitizer treats reasoning encrypted_content by shape: a valid
-// GPT/Codex signature is replayed, while a malformed one and a well-formed but
-// foreign (non-GPT) signature are both dropped.
+// 固定清洗器如何按形态处理 reasoning encrypted_content：合法的
+// GPT/Codex 签名会被重放，而格式错误的签名与格式良好但
+// 外来（非 GPT）的签名都会被丢弃。
 func TestSanitizeOpenAIResponsesReasoningEncryptedContent_SignatureValidity(t *testing.T) {
 	valid := validOpenAIResponsesReasoningEncryptedContentForTest()
 	body := []byte(`{"store":false,"input":[` +

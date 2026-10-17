@@ -172,8 +172,8 @@ func TestConvertCodexResponseToClaude_StreamThinkingWithoutReasoningItemStillInc
 	}
 }
 
-// codexThinkingStreamDigest collects the thinking-related events produced by a Codex
-// stream so tests can assert block/signature counts and the reassembled thinking text.
+// codexThinkingStreamDigest 收集 Codex 流产生的与 thinking 相关的事件，
+// 以便测试断言块/签名数量以及重新拼装的 thinking 文本。
 type codexThinkingStreamDigest struct {
 	Starts     int
 	Stops      int
@@ -265,7 +265,7 @@ func TestConvertCodexResponseToClaude_StreamThinkingEmitsSingleSignatureAcrossMu
 	if len(digest.Signatures) != 1 {
 		t.Fatalf("expected one signature_delta for one reasoning item, got %d: %v", len(digest.Signatures), digest.Signatures)
 	}
-	// output_item.done omitted encrypted_content here, so the pre-content fallback is expected.
+	// 此处 output_item.done 省略了 encrypted_content，因此预期使用内容前的回退值。
 	if digest.Signatures[0] != "enc_sig_multipart" {
 		t.Fatalf("unexpected signature delta: %q", digest.Signatures[0])
 	}
@@ -274,10 +274,10 @@ func TestConvertCodexResponseToClaude_StreamThinkingEmitsSingleSignatureAcrossMu
 	}
 }
 
-// TestConvertCodexResponseToClaude_StreamThinkingNeverEmitsPreContentEncryptedContent guards the
-// real-world shape earlier tests missed: output_item.added carries a fixed-size pre-content
-// snapshot of encrypted_content that always differs from the final value on output_item.done.
-// Emitting that snapshot makes the client replay bogus reasoning items for the rest of the session.
+// TestConvertCodexResponseToClaude_StreamThinkingNeverEmitsPreContentEncryptedContent 守护
+// 早期测试遗漏的真实形态：output_item.added 携带一个固定大小的内容前
+// encrypted_content 快照，它总是与 output_item.done 上的最终值不同。
+// 发出该快照会使客户端在会话剩余期间重放虚假的推理项。
 func TestConvertCodexResponseToClaude_StreamThinkingNeverEmitsPreContentEncryptedContent(t *testing.T) {
 	digest := digestCodexThinkingStream(t, [][]byte{
 		[]byte("data: {\"type\":\"response.output_item.added\",\"item\":{\"type\":\"reasoning\",\"encrypted_content\":\"enc_sig_pre_content_snapshot\"}}"),
@@ -307,8 +307,8 @@ func TestConvertCodexResponseToClaude_StreamThinkingNeverEmitsPreContentEncrypte
 	}
 }
 
-// TestConvertCodexResponseToClaude_StreamThinkingEmitsOneBlockPerReasoningItem checks that two
-// consecutive reasoning items stay separate blocks, each signed with its own final value.
+// TestConvertCodexResponseToClaude_StreamThinkingEmitsOneBlockPerReasoningItem 检查两个
+// 连续的推理项保持为独立的块，各自用自己的最终值签名。
 func TestConvertCodexResponseToClaude_StreamThinkingEmitsOneBlockPerReasoningItem(t *testing.T) {
 	digest := digestCodexThinkingStream(t, [][]byte{
 		[]byte("data: {\"type\":\"response.output_item.added\",\"item\":{\"type\":\"reasoning\",\"encrypted_content\":\"enc_pre_1\"}}"),

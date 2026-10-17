@@ -282,7 +282,7 @@ func TestAvailableAuthsForRouteModel_CrossCandidateModelErrorPrioritizedOverNewe
 		Unavailable:   true,
 		Status:        StatusError,
 		StatusMessage: candidateBGlobalErr,
-		UpdatedAt:     now.Add(-10 * time.Second), // Newer timestamp, but only auth-level
+		UpdatedAt:     now.Add(-10 * time.Second), // 时间戳更新，但仅是 auth 级别
 	}
 
 	manager := NewManager(nil, nil, nil)
@@ -354,7 +354,7 @@ func TestMixedUnavailableErrorLocked_GlobalModelErrorPriorityAcrossShards(t *tes
 		Unavailable:   true,
 		Status:        StatusError,
 		StatusMessage: openaiAuthErr,
-		UpdatedAt:     now.Add(-10 * time.Second), // Newer timestamp, but only auth-level on openai
+		UpdatedAt:     now.Add(-10 * time.Second), // 时间戳更新，但仅是 openai 上的 auth 级别
 	}); err != nil {
 		t.Fatalf("manager.Register(openai): %v", err)
 	}
@@ -386,7 +386,7 @@ func TestErrorWithCause_IsDoesNotPanicOnNonComparableError(t *testing.T) {
 	cause := nonComparableSliceError{"err1", "err2"}
 	wrapped := WithCause(&Error{Code: "auth_unavailable", Message: "no auth available"}, cause)
 	target := nonComparableSliceError{"err1", "err2"}
-	// Must not panic on non-comparable error target
+	// 在不可比较的错误目标上不得 panic
 	_ = errors.Is(wrapped, target)
 }
 

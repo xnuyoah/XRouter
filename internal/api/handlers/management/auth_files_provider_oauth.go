@@ -12,9 +12,9 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
-// CancelAuthSession cancels a pending OAuth session identified by state.
-// Protected by management auth. Safe for both callback and device-code flows:
-// waiters check IsOAuthSessionPending and exit without saving credentials.
+// CancelAuthSession 取消由 state 标识的待处理 OAuth 会话。
+// 受管理端认证保护。对回调和设备码流程都安全：
+// 等待方检查 IsOAuthSessionPending 并在不保存凭据的情况下退出。
 func (h *Handler) CancelAuthSession(c *gin.Context) {
 	state := strings.TrimSpace(c.Query("state"))
 	if state == "" {
@@ -153,7 +153,7 @@ func (h *Handler) rollbackSavedTokenRecords(ctx context.Context, savedPaths []st
 	}
 }
 
-// PopulateAuthContext extracts request info and adds it to the context
+// PopulateAuthContext 提取请求信息并将其加入上下文
 func PopulateAuthContext(ctx context.Context, c *gin.Context) context.Context {
 	info := &coreauth.RequestInfo{
 		Query:   c.Request.URL.Query(),

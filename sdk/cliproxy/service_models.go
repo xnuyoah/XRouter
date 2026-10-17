@@ -13,7 +13,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
-// registerModelsForAuth (re)binds provider models in the global registry using the core auth ID as client identifier.
+// registerModelsForAuth 以核心 auth ID 作为客户端标识符，在全局注册表中（重新）绑定供应商模型。
 func (s *Service) registerModelsForAuth(ctx context.Context, a *coreauth.Auth) {
 	s.registerModelsForAuthWithCache(ctx, a, nil)
 }
@@ -32,9 +32,9 @@ func (s *Service) registerModelsForAuthWithConfigAndCache(ctx context.Context, c
 	if ctx.Err() != nil {
 		return
 	}
-	// Capture the publication fence before any runtime read or model
-	// resolution: a registration superseded while it is being computed must
-	// not overwrite or remove the newer registration when it finishes last.
+	// 在任何运行时读取或模型解析之前先捕获发布栅栏：
+	// 一个在计算过程中被取代的注册，在其最后完成时
+	// 不得覆盖或移除更新的注册。
 	fence := newModelRegistrationFence(a)
 	if a.Disabled {
 		if s != nil && s.coreManager != nil {
@@ -51,7 +51,7 @@ func (s *Service) registerModelsForAuthWithConfigAndCache(ctx context.Context, c
 		}
 	}
 	authKind := a.AuthKind()
-	// Unregister legacy client ID (if present) to avoid double counting
+	// 注销遗留客户端 ID（若存在）以避免重复计数
 	if a.Runtime != nil {
 		if idGetter, ok := a.Runtime.(interface{ GetClientID() string }); ok {
 			if rid := idGetter.GetClientID(); rid != "" && rid != a.ID {
@@ -65,8 +65,8 @@ func (s *Service) registerModelsForAuthWithConfigAndCache(ctx context.Context, c
 		provider = "openai-compatibility"
 	}
 	excluded := oauthExcludedModelsForConfig(cfg, provider, authKind)
-	// The synthesizer pre-merges per-account and global exclusions into the "excluded_models" attribute.
-	// If this attribute is present, it represents the complete list of exclusions and overrides the global config.
+	// 合成器会把按账号的排除项和全局排除项预合并进 "excluded_models" 属性。
+	// 如果该属性存在，它就代表完整的排除列表并覆盖全局配置。
 	if a.Attributes != nil {
 		if val, ok := a.Attributes["excluded_models"]; ok && strings.TrimSpace(val) != "" {
 			excluded = strings.Split(val, ",")
@@ -81,8 +81,8 @@ func (s *Service) registerModelsForAuthWithConfigAndCache(ctx context.Context, c
 	var models []*ModelInfo
 	switch provider {
 	case constant.OpenAI, constant.Deepseek, constant.Nvidia, constant.Agnes:
-		// Native OpenAI-wire families: the credential's declared models replace the
-		// family defaults (see config.NativeAPIEffectiveModels).
+		// 原生 OpenAI 线路族类：凭据所声明的模型会替换
+		// 该族类的默认值（见 config.NativeAPIEffectiveModels）。
 		entry := resolveNativeAPIKeyEntryForConfig(cfg, a, provider)
 		models = buildNativeAPIConfigModels(entry, provider)
 		if entry != nil && authKind == "apikey" {
@@ -90,7 +90,7 @@ func (s *Service) registerModelsForAuthWithConfigAndCache(ctx context.Context, c
 		}
 		models = applyExcludedModels(models, excluded)
 	default:
-		// Handle OpenAI-compatibility providers by name using config
+		// 使用配置按名称处理 OpenAI 兼容供应商
 		if cfg != nil {
 			providerKey := provider
 			compatName := strings.TrimSpace(a.Provider)
@@ -188,7 +188,7 @@ func (s *Service) registerModelsForAuthWithConfigAndCache(ctx context.Context, c
 				if len(models) > 0 {
 					s.registerResolvedModelsForAuthFenced(a, fence, providerKey, applyModelPrefixes(models, a.Prefix, cfg.ForceModelPrefix))
 				} else {
-					// No matching provider found or models removed entirely; drop any prior registration.
+					// 未找到匹配的供应商或模型被完全移除；丢弃任何先前的注册。
 					s.unregisterModelsForAuthFenced(a, fence)
 				}
 				return
@@ -216,13 +216,13 @@ func (s *Service) registerModelsForAuthWithConfigAndCache(ctx context.Context, c
 	s.unregisterModelsForAuthFenced(a, fence)
 }
 
-// refreshModelRegistrationForAuth re-applies the latest model registration for
-// one auth and reconciles any concurrent auth changes that race with the
-// refresh. Callers are expected to pre-filter provider membership.
+// refreshModelRegistrationForAuth 为单个 auth 重新应用最新的模型注册，
+// 并调和任何与刷新竞争的并发 auth 改动。调用方应当
+// 预先过滤供应商成员资格。
 //
-// Re-registration is deliberate: most providers start a fresh registry snapshot.
-// Native Antigravity catalogs instead use fenced replacement to preserve quota
-// and suspension state while account entitlement refreshes are pending.
+// 重新注册是刻意的：大多数供应商会开启新的注册表快照。
+// 而原生 Antigravity 目录使用带栅栏的替换，以在账号权益
+// 刷新尚未完成时保留额度和暂停状态。
 func (s *Service) refreshModelRegistrationForAuth(current *coreauth.Auth) bool {
 	return s.refreshModelRegistrationForAuthWithContext(context.Background(), current, nil)
 }
@@ -253,21 +253,21 @@ func (s *Service) refreshModelRegistrationForAuthWithContext(ctx context.Context
 	latest, ok := s.latestAuthForModelRegistration(current.ID)
 	if !ok || latest.Disabled {
 		if ok && latest != nil {
-			// Conditional cleanup: only remove the registration that
-			// still belongs to the disabled snapshot just observed. A
-			// concurrent re-enable/re-register advances identity or
-			// epoch and must not lose its newer publication.
+			// 有条件的清理：只移除仍属于刚刚观测到的
+			// 那个已禁用快照的注册。并发的重新启用/重新注册
+			// 会推进身份或代次，不能丢失它更新的
+			// 发布。
 			s.unregisterModelsForAuthFenced(latest, newModelRegistrationFence(latest))
 		}
-		// If the auth is absent, applyCoreAuthRemoval owns unregistration;
-		// a stale refresh must not delete a later re-registration.
+		// 如果 auth 不存在，则注销由 applyCoreAuthRemoval 负责；
+		// 过期的刷新不得删除之后的重新注册。
 		s.coreManager.RefreshSchedulerEntry(current.ID)
 		return false
 	}
 
-	// Re-apply the latest auth snapshot so concurrent auth updates cannot leave
-	// stale model registrations behind. This may duplicate registration work when
-	// no auth fields changed, but keeps the refresh path simple and correct.
+	// 重新应用最新的 auth 快照，使并发的 auth 更新不会留下
+	// 过期的模型注册。当没有 auth 字段变化时这可能会重复
+	// 注册工作，但能让刷新路径保持简单且正确。
 	s.ensureExecutorsForAuthWithContext(ctx, latest, false)
 	s.registerModelsForAuthWithCache(ctx, latest, compatCache)
 	if ctx.Err() != nil {
@@ -278,9 +278,9 @@ func (s *Service) refreshModelRegistrationForAuthWithContext(ctx context.Context
 	return true
 }
 
-// latestAuthForModelRegistration returns the latest auth snapshot regardless of
-// provider membership. Callers use this after a registration attempt to restore
-// whichever state currently owns the client ID in the global registry.
+// latestAuthForModelRegistration 返回最新的 auth 快照，无论
+// 供应商成员资格如何。调用方在一次注册尝试之后用它来恢复到
+// 当前在全局注册表中拥有该客户端 ID 的那个状态。
 func (s *Service) latestAuthForModelRegistration(authID string) (*coreauth.Auth, bool) {
 	if s == nil || s.coreManager == nil || authID == "" {
 		return nil, false
@@ -347,8 +347,8 @@ func resolveConfigAgnesKeyForConfig(cfg *config.Config, auth *coreauth.Auth) *co
 	return resolveConfigNativeAPIKey(auth, cfg.AgnesKey)
 }
 
-// resolveNativeAPIKeyEntryForConfig resolves the config entry backing an auth for
-// one native OpenAI-wire provider family.
+// resolveNativeAPIKeyEntryForConfig 为一个原生 OpenAI 线路
+// 供应商族类解析支撑某个 auth 的配置条目。
 func resolveNativeAPIKeyEntryForConfig(cfg *config.Config, auth *coreauth.Auth, provider string) *config.NativeAPIKey {
 	switch strings.ToLower(strings.TrimSpace(provider)) {
 	case constant.OpenAI:
@@ -503,19 +503,19 @@ func applyModelPrefixes(models []*ModelInfo, prefix string, forceModelPrefix boo
 	return out
 }
 
-// matchWildcard performs case-insensitive wildcard matching where '*' matches any substring.
+// matchWildcard 执行大小写不敏感的通配符匹配，其中 '*' 匹配任意子串。
 func matchWildcard(pattern, value string) bool {
 	if pattern == "" {
 		return false
 	}
 
-	// Fast path for exact match (no wildcard present).
+	// 精确匹配的快速路径（不存在通配符）。
 	if !strings.Contains(pattern, "*") {
 		return pattern == value
 	}
 
 	parts := strings.Split(pattern, "*")
-	// Handle prefix.
+	// 处理前缀。
 	if prefix := parts[0]; prefix != "" {
 		if !strings.HasPrefix(value, prefix) {
 			return false
@@ -523,7 +523,7 @@ func matchWildcard(pattern, value string) bool {
 		value = value[len(prefix):]
 	}
 
-	// Handle suffix.
+	// 处理后缀。
 	if suffix := parts[len(parts)-1]; suffix != "" {
 		if !strings.HasSuffix(value, suffix) {
 			return false
@@ -531,7 +531,7 @@ func matchWildcard(pattern, value string) bool {
 		value = value[:len(value)-len(suffix)]
 	}
 
-	// Handle middle segments in order.
+	// 按顺序处理中间片段。
 	for i := 1; i < len(parts)-1; i++ {
 		segment := parts[i]
 		if segment == "" {
@@ -933,8 +933,8 @@ func applyOAuthSettingEntries(settings []config.OAuthModelSetting, models []*Mod
 	return out
 }
 
-// reconcileRegisteredModelStates republishes the auth's registry model states
-// after model registration so routing sees the freshly registered catalog.
+// reconcileRegisteredModelStates 在模型注册之后重新发布
+// 该 auth 的注册表模型状态，使路由能看到刚注册的目录。
 func (s *Service) reconcileRegisteredModelStates(ctx context.Context, auth *coreauth.Auth) {
 	if auth == nil || s.coreManager == nil {
 		return

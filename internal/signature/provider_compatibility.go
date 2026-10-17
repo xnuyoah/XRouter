@@ -8,18 +8,18 @@ const (
 	SignatureProviderUnknown SignatureProvider = "unknown"
 	SignatureProviderClaude  SignatureProvider = "claude"
 	SignatureProviderGPT     SignatureProvider = "gpt"
-	// SignatureProviderKimi is identified by fixed signature size rather than by
-	// an envelope. See kimi_validation.go for the empirical basis and its limits.
+	// SignatureProviderKimi 通过固定的签名长度而非信封来识别。
+	// 经验依据及其局限见 kimi_validation.go。
 	SignatureProviderKimi SignatureProvider = "kimi"
-	// SignatureProviderGrok is a target-only family. DetectSignatureProvider never
-	// returns it: xAI emits no envelope, no version byte and no fixed length, and
-	// its ciphertext is statistically indistinguishable from uniform random bytes,
-	// so any positive claim would also capture every other opaque blob. This
-	// package therefore neither classifies nor decides Grok targets: callers
-	// establish provenance on their own and use InspectGrokEncryptedContent as a
-	// replay-safety shape check.
+	// SignatureProviderGrok 是仅作为目标端的家族。DetectSignatureProvider
+	// 从不返回它：xAI 不发出信封、没有版本字节也没有固定长度，且
+	// 其密文在统计上与均匀随机字节无法区分，
+	// 因此任何肯定性判定也会把其他所有不透明数据块囊括进来。本
+	// 包因此既不分类也不判定 Grok 目标：调用方
+	// 自行确立来源，并把 InspectGrokEncryptedContent 用作
+	// 重放安全性的形状检查。
 	SignatureProviderGrok SignatureProvider = "grok"
-	// SignatureProviderSWE represents Cognition's SWE model family emitting sealed.v1 envelopes.
+	// SignatureProviderSWE 表示产出 sealed.v1 信封的 Cognition SWE 模型家族。
 	SignatureProviderSWE SignatureProvider = "swe"
 )
 
@@ -51,10 +51,10 @@ type SignatureCompatibilityDecision struct {
 	Reason               string
 }
 
-// selfDescribingSignatureFirstChars are the base64 first characters that a
-// self-describing provider envelope can produce. A base64 first character is
-// exactly the first payload byte shifted right by two, so a single character
-// comparison rules out every known envelope without decoding anything:
+// selfDescribingSignatureFirstChars 是自描述供应商信封可能产生的 base64
+// 首字符。base64 首字符恰好是载荷首字节右移两位的结果，
+// 因此单字符比较就能排除所有已知信封，
+// 无需做任何解码：
 //
 //	'C' -> 0x08..0x0b : Claude CAIS (0x08)
 //	'E' -> 0x10..0x13 : Claude single-layer (0x12)
@@ -62,18 +62,18 @@ type SignatureCompatibilityDecision struct {
 //	'R' -> 0x44..0x47 : Claude double-layer R (0x45, inner 'E')
 //	'g' -> 0x80..0x83 : GPT Fernet reasoning (0x80)
 //
-// Any provider added here must also be validated in
-// DetectSignatureProviderForBlock, otherwise its signatures would fall through
-// to the residual class. TestSelfDescribingSignatureFirstChars_CoversEveryKnownEnvelope
-// fails when a replay-safe envelope is missing from this set.
+// 在此添加的任何供应商也必须在
+// DetectSignatureProviderForBlock 中校验，否则其签名会落入
+// 残余类别。当某个可安全重放的信封缺失于该集合时，
+// TestSelfDescribingSignatureFirstChars_CoversEveryKnownEnvelope 会失败。
 const selfDescribingSignatureFirstChars = "CEQRg"
 
-// base64AlphabetSet builds a byte lookup table for the alphanumeric base64 core
-// plus the alphabet-specific characters in extra. Signature charset validation
-// runs over multi-kilobyte payloads, and a comparison chain over base64 text
-// mispredicts on nearly every byte because the characters are effectively random;
-// a single table load is branch-free and measures about an order of magnitude
-// faster on the observed corpora.
+// base64AlphabetSet 为 base64 的字母数字核心部分以及 extra 中的
+// 字母表特定字符构建字节查找表。签名字符集校验
+// 需要处理数 KB 的载荷，而对 base64 文本使用比较链
+// 几乎会在每个字节上预测失败，因为这些字符实际上是随机的；
+// 单次表查找无分支，在观察到的语料上约快
+// 一个数量级。
 func base64AlphabetSet(extra string) [256]bool {
 	var set [256]bool
 	for c := byte('A'); c <= 'Z'; c++ {
@@ -91,12 +91,12 @@ func base64AlphabetSet(extra string) [256]bool {
 	return set
 }
 
-// maybeSelfDescribingSignatureEnvelope reports whether rawSignature can possibly
-// be a self-describing provider envelope. It is a structural pre-filter, not a
-// classifier: a false result is conclusive, a true result only narrows the
-// candidate set. Opaque ciphertext that carries no envelope (xAI/Grok
-// encrypted_content) is uniformly distributed over the byte space, so this
-// rejects most of it with one comparison and no allocation.
+// maybeSelfDescribingSignatureEnvelope 报告 rawSignature 是否可能
+// 是自描述供应商信封。它是结构化预过滤，而非
+// 分类器：false 结果具有结论性，true 结果只是缩小
+// 候选集合。不携带信封的不透明密文（xAI/Grok 的
+// encrypted_content）在字节空间上均匀分布，因此这能
+// 通过一次比较、零分配地拒掉其中大部分。
 func maybeSelfDescribingSignatureEnvelope(rawSignature string) bool {
 	if rawSignature == "" {
 		return false
@@ -104,14 +104,14 @@ func maybeSelfDescribingSignatureEnvelope(rawSignature string) bool {
 	return strings.IndexByte(selfDescribingSignatureFirstChars, rawSignature[0]) >= 0
 }
 
-// DetectSignatureProvider classifies the provider family that can replay
-// rawSignature.
+// DetectSignatureProvider 对能够重放
+// rawSignature 的供应商家族进行分类。
 func DetectSignatureProvider(rawSignature string) SignatureProvider {
 	return DetectSignatureProviderForBlock(rawSignature, SignatureBlockKindUnknown)
 }
 
-// DetectSignatureProviderForBlock classifies rawSignature with block-kind
-// context.
+// DetectSignatureProviderForBlock 结合块类型上下文对
+// rawSignature 进行分类。
 func DetectSignatureProviderForBlock(rawSignature string, blockKind SignatureBlockKind) SignatureProvider {
 	sig := strings.TrimSpace(rawSignature)
 	if sig == "" {
@@ -119,8 +119,8 @@ func DetectSignatureProviderForBlock(rawSignature string, blockKind SignatureBlo
 	}
 
 	if prefixedProvider, unprefixed, ok := SplitSignatureProviderPrefix(sig); ok {
-		// Validators may strip cache prefixes themselves; never let a second
-		// prefix make detection disagree with the payload used for replay.
+		// 校验器可能自行剥离缓存前缀；绝不要让第二个前缀
+		// 使检测结果与实际用于重放的载荷不一致。
 		if strings.Contains(unprefixed, "#") {
 			return SignatureProviderUnknown
 		}
@@ -147,17 +147,17 @@ func DetectSignatureProviderForBlock(rawSignature string, blockKind SignatureBlo
 	if strings.HasPrefix(sig, "sealed.v1.") {
 		return SignatureProviderSWE
 	}
-	// Probes run from the strongest marker to the weakest:
-	//   1. GPT carries the literal "gAAAA" prefix, which pins both the version
-	//      byte and the high timestamp bytes.
-	//   2. Claude CAIS/CAQS carries marker 0x08 with nested container/channel structure.
-	//   3. Claude single/double-layer carries marker 0x12 plus the same literal.
+	// 探测从最强的标记到最弱的标记依次进行：
+	//   1. GPT 携带字面量 "gAAAA" 前缀，它同时固定了版本
+	//      字节和高位时间戳字节。
+	//   2. Claude CAIS/CAQS 携带标记 0x08 以及嵌套的容器/通道结构。
+	//   3. Claude 单层/双层携带标记 0x12 加同样的字面量。
 	//
-	// The envelope pre-filter gates only the envelope probes. A blob that cannot
-	// be an envelope skips straight to the size probe below rather than returning
-	// early, because Kimi's uniformly distributed base64 starts with one of
-	// "CEQRg" about 8% of the time and would otherwise be dropped by whichever
-	// side of the gate it happened to land on.
+	// 信封预过滤只对信封类探测生效。无法成为信封的数据块
+	// 会直接跳到下方的长度探测，而不是提前返回，
+	// 因为 Kimi 均匀分布的 base64 约有 8% 的概率以
+	// "CEQRg" 之一开头，否则就会因恰好落在闸门的哪一侧而被丢弃。
+	// 闸门的哪一侧。
 	if maybeSelfDescribingSignatureEnvelope(sig) {
 		if IsValidGPTReasoningSignature(sig) {
 			return SignatureProviderGPT
@@ -169,25 +169,25 @@ func DetectSignatureProviderForBlock(rawSignature string, blockKind SignatureBlo
 			return SignatureProviderClaude
 		}
 	}
-	// Kimi carries no envelope, so it can only be claimed once every
-	// self-describing probe above has declined. Ordering it last means a length
-	// coincidence can never capture another provider's signature, and a future
-	// drift in Kimi's sizes costs Kimi its own identification rather than
-	// corrupting a neighbouring family.
+	// Kimi 不携带信封，因此只有在上述所有自描述探测都
+	// 拒绝之后才能判定为它。把它放在最后意味着长度上的
+	// 巧合永远无法捕获其他供应商的签名，而 Kimi 长度的未来
+	// 漂移只会让 Kimi 失去自身的识别，而不会
+	// 破坏相邻的家族。
 	if IsValidKimiThinkingSignature(sig) {
 		return SignatureProviderKimi
 	}
 	return SignatureProviderUnknown
 }
 
-// DecideSignatureCompatibility returns the safe handling policy for replaying a
-// signed block into targetProvider.
+// DecideSignatureCompatibility 返回把带签名的块重放到目标供应商的
+// 安全处理策略。
 func DecideSignatureCompatibility(targetProvider SignatureProvider, rawSignature string, blockKind SignatureBlockKind) SignatureCompatibilityDecision {
 	return DecideSignatureCompatibilityForModel(targetProvider, "", rawSignature, blockKind)
 }
 
-// DecideSignatureCompatibilityForModel returns the safe handling policy for replaying a
-// signed block into targetProvider for targetModel.
+// DecideSignatureCompatibilityForModel 返回把带签名的块重放到
+// targetProvider 的 targetModel 时的安全处理策略。
 func DecideSignatureCompatibilityForModel(targetProvider SignatureProvider, targetModel string, rawSignature string, blockKind SignatureBlockKind) SignatureCompatibilityDecision {
 	if blockKind == "" {
 		blockKind = SignatureBlockKindUnknown
@@ -200,8 +200,8 @@ func DecideSignatureCompatibilityForModel(targetProvider SignatureProvider, targ
 		BlockKind:        blockKind,
 	}
 
-	// Recognizing a Claude envelope does not authorize a Google transport
-	// wrapper on native Claude endpoints. Antigravity has its own replay gate.
+	// 识别出 Claude 信封并不等于授权在原生 Claude 端点上使用 Google 传输
+	// 包装。Antigravity 有自己的重放闸门。
 	if targetProvider == SignatureProviderClaude && detected == SignatureProviderClaude &&
 		strings.HasPrefix(SignaturePayloadWithoutProviderPrefix(rawSignature), "Q") {
 		decision.Action = SignatureActionDropBlock
@@ -210,8 +210,8 @@ func DecideSignatureCompatibilityForModel(targetProvider SignatureProvider, targ
 	}
 
 	if signatureProviderMatchesTarget(targetProvider, detected) {
-		// A matching family is not sufficient: replay also requires successful
-		// normalization. Otherwise sanitizers could preserve the original input.
+		// 家族匹配并不充分：重放还要求规范化成功。
+		// 否则清洗器就可能保留原始输入。
 		if normalized := normalizeCompatibleSignatureForProvider(targetProvider, rawSignature); normalized != "" {
 			decision.Compatible = true
 			decision.Action = SignatureActionPreserve
@@ -248,10 +248,10 @@ func SplitSignatureProviderPrefix(rawSignature string) (SignatureProvider, strin
 	return provider, strings.TrimSpace(rest), true
 }
 
-// SignatureProviderFromCachePrefix maps this repo's explicit provider-prefix
-// envelope to a provider family. It recognizes only the fixed alias set below,
-// so arbitrary names such as "claude-cache#..." cannot be mistaken for trusted
-// provider provenance.
+// SignatureProviderFromCachePrefix 把本仓库显式的供应商前缀
+// 信封映射到供应商家族。它只识别下面固定的别名集合，
+// 因此诸如 "claude-cache#..." 这样的任意名称不会被误认为
+// 可信的供应商来源。
 func SignatureProviderFromCachePrefix(prefix string) SignatureProvider {
 	switch strings.ToLower(strings.TrimSpace(prefix)) {
 	case "claude", "anthropic", "cais", "claude-cais", "claude_cais", "ccmax", "claude-code-max", "claude_code_max":
@@ -265,9 +265,9 @@ func SignatureProviderFromCachePrefix(prefix string) SignatureProvider {
 	}
 }
 
-// SignaturePayloadWithoutProviderPrefix strips this repo's provider cache prefix
-// when present. The returned string is the value that should be replayed to an
-// upstream provider.
+// SignaturePayloadWithoutProviderPrefix 在本仓库的供应商缓存前缀存在时
+// 剥离它。返回的字符串就是应重放给上游供应商的
+// 值。
 func SignaturePayloadWithoutProviderPrefix(rawSignature string) string {
 	if _, unprefixed, ok := SplitSignatureProviderPrefix(rawSignature); ok {
 		return unprefixed
@@ -275,15 +275,15 @@ func SignaturePayloadWithoutProviderPrefix(rawSignature string) string {
 	return strings.TrimSpace(rawSignature)
 }
 
-// CompatibleSignatureForProvider returns a replayable provider-native signature
-// for targetProvider. It strips this repo's provider prefix and normalizes
-// Claude signatures to the format expected by the target when possible.
+// CompatibleSignatureForProvider 返回 targetProvider 可重放的、供应商原生的
+// 签名。它剥离本仓库的供应商前缀，并在可能时把
+// Claude 签名规范化为目标端期望的格式。
 func CompatibleSignatureForProvider(targetProvider SignatureProvider, rawSignature string) (string, bool) {
 	return CompatibleSignatureForProviderBlock(targetProvider, rawSignature, SignatureBlockKindUnknown)
 }
 
-// CompatibleSignatureForProviderBlock returns a replayable provider-native
-// signature for targetProvider when the source block kind is known.
+// CompatibleSignatureForProviderBlock 在源块类型已知时返回
+// targetProvider 可重放的供应商原生签名。
 func CompatibleSignatureForProviderBlock(targetProvider SignatureProvider, rawSignature string, blockKind SignatureBlockKind) (string, bool) {
 	decision := DecideSignatureCompatibility(targetProvider, rawSignature, blockKind)
 	if !decision.Compatible || decision.NormalizedSignature == "" {
@@ -292,10 +292,10 @@ func CompatibleSignatureForProviderBlock(targetProvider SignatureProvider, rawSi
 	return decision.NormalizedSignature, true
 }
 
-// claudeCompatibleSignatureReason explains why a matching signature is
-// replayable. Claude CAIS signatures carry the issuing model inside the payload,
-// so the embedded model and the target model are both reported to make signature
-// decisions traceable in debug logs.
+// claudeCompatibleSignatureReason 解释为什么匹配的签名
+// 可重放。Claude CAIS 签名在载荷内携带签发模型，
+// 因此会同时报告内嵌模型和目标模型，以便在调试日志中
+// 追踪签名决策。
 func claudeCompatibleSignatureReason(targetProvider SignatureProvider, rawSignature, targetModel string) string {
 	const genericReason = "signature provider matches target provider"
 	if targetProvider != SignatureProviderClaude {
@@ -326,10 +326,10 @@ func signatureProviderMatchesTarget(target, detected SignatureProvider) bool {
 	case SignatureProviderGPT:
 		return detected == SignatureProviderGPT
 	default:
-		// Detection never yields SignatureProviderGrok, and no other target
-		// family is decided by a detected-provider match here: callers establish
-		// Grok provenance themselves and treat InspectGrokEncryptedContent as a
-		// replay-safety check.
+		// 检测永远不会产出 SignatureProviderGrok，此处也不会用检测到的
+		// 供应商匹配来判定其他目标家族：调用方自己确立
+		// Grok 来源，并把 InspectGrokEncryptedContent 视为
+		// 重放安全性检查。
 		return false
 	}
 }

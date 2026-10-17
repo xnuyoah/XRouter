@@ -254,13 +254,13 @@ func TestStartLoginPassesMetadataAndClonesMap(t *testing.T) {
 		t.Fatalf("receivedMetadata = %#v, want region=us-east-1", receivedMetadata)
 	}
 
-	// Verify metadata cloning: mutating original meta map must not mutate received map
+	// 验证元数据克隆：修改原始 meta map 不得改动接收到的 map
 	meta["region"] = "mutated"
 	if receivedMetadata["region"] != "us-east-1" {
 		t.Fatalf("receivedMetadata was mutated when caller map changed: %#v", receivedMetadata)
 	}
 
-	// Verify calling StartLogin without metadata sets req.Metadata to nil
+	// 验证在不带元数据的情况下调用 StartLogin 会将 req.Metadata 置为 nil
 	called = false
 	receivedMetadata = nil
 	_, _, errNoMeta := host.StartLogin(context.Background(), "plugin-provider", "http://localhost:8080/login")

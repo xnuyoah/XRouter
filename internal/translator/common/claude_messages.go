@@ -5,7 +5,7 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-// ClaudeMessageAccumulator groups consecutive Claude messages by role.
+// ClaudeMessageAccumulator 按角色对连续 Claude 消息进行分组。
 type ClaudeMessageAccumulator struct {
 	messages     [][]byte
 	role         string
@@ -13,14 +13,14 @@ type ClaudeMessageAccumulator struct {
 	toolUseParts [][]byte
 }
 
-// NewClaudeMessageAccumulator creates an accumulator sized for the expected messages.
+// NewClaudeMessageAccumulator 创建一个按预期消息数量预分配的累加器。
 func NewClaudeMessageAccumulator(capacity int) *ClaudeMessageAccumulator {
 	return &ClaudeMessageAccumulator{
 		messages: NewRawArrayItems(int64(capacity)),
 	}
 }
 
-// Append adds one Claude-shaped message to the current role turn.
+// Append 将一条 Claude 形态的消息添加到当前角色轮次。
 func (a *ClaudeMessageAccumulator) Append(message []byte) {
 	if len(message) == 0 {
 		return
@@ -47,7 +47,7 @@ func (a *ClaudeMessageAccumulator) Append(message []byte) {
 	}
 }
 
-// Flush closes the current role turn while keeping accumulated messages.
+// Flush 结束当前角色轮次，同时保留已累加的消息。
 func (a *ClaudeMessageAccumulator) Flush() {
 	if a.role == "" {
 		return
@@ -70,15 +70,15 @@ func (a *ClaudeMessageAccumulator) Flush() {
 	a.toolUseParts = nil
 }
 
-// Messages flushes the final turn and returns all accumulated messages.
+// Messages 刷新最后一个轮次并返回所有已累加的消息。
 func (a *ClaudeMessageAccumulator) Messages() [][]byte {
 	a.Flush()
 	return a.messages
 }
 
-// AlignClaudeToolResults orders tool_result blocks by the preceding tool_use IDs,
-// preserving non-result content blocks at their existing indexes. If a complete
-// one-to-one match is unavailable, the original content is returned.
+// AlignClaudeToolResults 按前面的 tool_use ID 对 tool_result 块排序，
+// 同时将非 result 的内容块保留在其原有索引处。如果无法得到
+// 完整的一一匹配，则返回原始内容。
 func AlignClaudeToolResults(content gjson.Result, toolUseIDs []string) gjson.Result {
 	if !content.IsArray() || len(toolUseIDs) == 0 {
 		return content

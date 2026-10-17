@@ -15,7 +15,7 @@ type OAuthSettingsSummary struct {
 	count int
 }
 
-// SummarizeOAuthSettings summarizes OAuth model settings per channel.
+// SummarizeOAuthSettings 按渠道汇总 OAuth 模型设置。
 func SummarizeOAuthSettings(entries map[string][]config.OAuthModelSetting) map[string]OAuthSettingsSummary {
 	if len(entries) == 0 {
 		return nil
@@ -34,7 +34,7 @@ func SummarizeOAuthSettings(entries map[string][]config.OAuthModelSetting) map[s
 	return out
 }
 
-// DiffOAuthSettingsChanges compares OAuth model settings maps.
+// DiffOAuthSettingsChanges 比较 OAuth 模型设置映射。
 func DiffOAuthSettingsChanges(oldMap, newMap map[string][]config.OAuthModelSetting) ([]string, []string) {
 	oldSummary := SummarizeOAuthSettings(oldMap)
 	newSummary := SummarizeOAuthSettings(newMap)

@@ -252,7 +252,7 @@ func TestMergeRefreshedAuth(t *testing.T) {
 		}
 		updated := &Auth{
 			ID:       "auth6",
-			ProxyURL: "http://proxy.old:8080", // executor didn't touch ProxyURL, it inherited from base
+			ProxyURL: "http://proxy.old:8080", // 执行器未触碰 ProxyURL，它继承自基线
 			Metadata: map[string]any{
 				"access_token": "tok-new",
 				"proxy_url":    "http://proxy.old:8080",
@@ -433,8 +433,8 @@ func TestMergeRefreshedAuth(t *testing.T) {
 }
 
 func TestMergeExistingAuthMetadataMetaDoesNotRestoreOldKey(t *testing.T) {
-	// A new device login can succeed while API key minting fails.
-	// Its DCA credential must not inherit the previous login's API key.
+	// 新的设备登录可能成功，而 API key 铸造失败。
+	// 其 DCA 凭据不得继承上一次登录的 API key。
 	auth := &Auth{Provider: "meta", Metadata: map[string]any{"access_token": "dca:new", "dca_token": "dca:new"}}
 	MergeExistingAuthMetadata(auth, map[string]any{"api_key": "LLM|old", "dca_expired": "old expiry", "dca_expires_at": 42, "priority": 3})
 	for _, key := range []string{"api_key", "dca_expired", "dca_expires_at"} {
@@ -448,7 +448,7 @@ func TestMergeExistingAuthMetadataMetaDoesNotRestoreOldKey(t *testing.T) {
 }
 
 func TestMergeRefreshedAndExistingAuthMetadataPreservesSIWC(t *testing.T) {
-	// 1. MergeExistingAuthMetadata must preserve siwc and use_siwc when re-logging into Codex
+	// 1. 重新登录 Codex 时，MergeExistingAuthMetadata 必须保留 siwc 和 use_siwc
 	target := &Auth{
 		Provider: "codex",
 		Metadata: map[string]any{
@@ -480,7 +480,7 @@ func TestMergeRefreshedAndExistingAuthMetadataPreservesSIWC(t *testing.T) {
 		t.Fatalf("siwc not preserved: %#v", target.Metadata["siwc"])
 	}
 
-	// 2. MergeRefreshedAuth and CredentialsChanged when only SIWC is refreshed
+	// 2. 仅 SIWC 被刷新时的 MergeRefreshedAuth 与 CredentialsChanged
 	base := &Auth{
 		ID:       "codex-1",
 		Provider: "codex",

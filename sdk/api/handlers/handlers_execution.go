@@ -18,7 +18,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-// PluginExecutorHost executes a routed request with a specific plugin executor.
+// PluginExecutorHost 使用特定的插件执行器执行已路由的请求。
 type PluginExecutorHost interface {
 	ExecutePluginExecutor(context.Context, string, coreexecutor.Request, coreexecutor.Options) (coreexecutor.Response, error)
 	ExecutePluginExecutorStream(context.Context, string, coreexecutor.Request, coreexecutor.Options) (*coreexecutor.StreamResult, error)
@@ -29,13 +29,13 @@ type pluginExecutorFormatResolver interface {
 	PluginExecutorRequestToFormat(string, coreexecutor.Request, coreexecutor.Options) sdktranslator.Format
 }
 
-// ExecuteWithAuthManager executes a non-streaming request via the core auth manager.
-// This path is the only supported execution route.
+// ExecuteWithAuthManager 通过核心 auth 管理器执行非流式请求。
+// 该路径是唯一受支持的执行路由。
 func (h *BaseAPIHandler) ExecuteWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) ([]byte, http.Header, *interfaces.ErrorMessage) {
 	return h.executeWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, false)
 }
 
-// ExecuteImageWithAuthManager executes an OpenAI-compatible image endpoint request.
+// ExecuteImageWithAuthManager 执行 OpenAI 兼容的图像端点请求。
 func (h *BaseAPIHandler) ExecuteImageWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) ([]byte, http.Header, *interfaces.ErrorMessage) {
 	return h.executeWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, true)
 }
@@ -46,7 +46,7 @@ func (h *BaseAPIHandler) executeWithAuthManager(ctx context.Context, handlerType
 
 func (h *BaseAPIHandler) executeWithAuthManagerFormats(ctx context.Context, entryProtocol, exitProtocol, modelName string, rawJSON []byte, alt string, allowImageModel bool, execOptions modelExecutionOptions) ([]byte, http.Header, *interfaces.ErrorMessage) {
 	originalRequestedModel := modelName
-	// Speech-only models are reachable solely through the speech entry protocol.
+	// 仅语音模型只能通过语音入口协议访问。
 	execOptions.AllowSpeechModel = isModelExecutionSpeechProtocol(entryProtocol)
 	routeDecision := h.applyModelRouter(ctx, entryProtocol, modelName, rawJSON, false, execOptions)
 	responseProtocol := modelExecutionResponseProtocol(entryProtocol, exitProtocol)
@@ -115,8 +115,8 @@ func (h *BaseAPIHandler) executeWithAuthManagerFormats(ctx context.Context, entr
 	return body, responseHeaders, nil
 }
 
-// ExecuteCountWithAuthManager executes a non-streaming request via the core auth manager.
-// This path is the only supported execution route.
+// ExecuteCountWithAuthManager 通过核心 auth 管理器执行非流式请求。
+// 该路径是唯一受支持的执行路由。
 func (h *BaseAPIHandler) ExecuteCountWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) ([]byte, http.Header, *interfaces.ErrorMessage) {
 	return h.executeCountWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, modelExecutionOptions{})
 }

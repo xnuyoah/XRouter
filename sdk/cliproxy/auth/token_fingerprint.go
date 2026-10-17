@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// AccessTokenSHA256 returns the normalized OAuth access-token fingerprint used
-// to fence asynchronous Home execution results without exposing the token.
+// AccessTokenSHA256 返回规范化后的 OAuth 访问令牌指纹，用于
+// 在不暴露令牌的情况下隔离异步 Home 执行结果。
 func AccessTokenSHA256(auth *Auth) string {
 	accessToken := accessTokenForFingerprint(auth)
 	if accessToken == "" {
@@ -30,9 +30,9 @@ func withAccessTokenFingerprintObserver(ctx context.Context, observer func(*Auth
 	return context.WithValue(ctx, accessTokenFingerprintObserverContextKey{}, observer)
 }
 
-// NotifyAccessTokenFingerprint reports the auth snapshot actually used by an
-// executor that may refresh its local token before sending upstream. The
-// observer derives the fingerprint and can reuse that snapshot for recovery.
+// NotifyAccessTokenFingerprint 报告某个执行器实际使用的 auth 快照，
+// 该执行器可能在向上游发送前刷新其本地令牌。观测方
+// 据此推导指纹，并可复用该快照进行恢复。
 func NotifyAccessTokenFingerprint(ctx context.Context, auth *Auth) {
 	if ctx == nil || auth == nil || AccessTokenSHA256(auth) == "" {
 		return

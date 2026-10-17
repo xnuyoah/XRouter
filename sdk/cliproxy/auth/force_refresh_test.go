@@ -32,7 +32,7 @@ func TestManager_ForceRefreshAuth_ClearsErrorAndRefreshes(t *testing.T) {
 		t.Fatalf("register auth: %v", errRegister)
 	}
 
-	// Verify before: hasUnauthorizedAuthFailure is true
+	// 验证初始状态：hasUnauthorizedAuthFailure 为 true
 	if !hasUnauthorizedAuthFailure(auth) {
 		t.Fatal("expected hasUnauthorizedAuthFailure to be true initially")
 	}
@@ -97,7 +97,7 @@ func TestManager_ForceRefreshAll(t *testing.T) {
 func TestManager_ForceRefreshAuth_PreservesErrorOnFailure(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	// No executor registered, so refresh will fail
+	// 未注册执行器，因此刷新会失败
 
 	auth := &Auth{
 		ID:          "ag-fail",
@@ -210,12 +210,12 @@ func TestManager_ForceRefreshAll_WorkersBounded(t *testing.T) {
 		close(done)
 	}()
 
-	// Wait for 2 workers to enter Refresh
+	// 等待 2 个 worker 进入 Refresh
 	<-executor.enteredCh
 	<-executor.enteredCh
 
-	// If unbounded, remaining goroutines also enter Refresh
-	// Release the blocked workers
+	// 若无上限，剩余的 goroutine 也会进入 Refresh
+	// 释放被阻塞的 worker
 	close(executor.releaseCh)
 	<-done
 
@@ -270,7 +270,7 @@ func TestManager_ForceRefreshAll_CanceledContextSkipsExecutors(t *testing.T) {
 	}
 }
 
-// refreshCommitStore observes the commit context without writing credential files.
+// refreshCommitStore 观测提交上下文而不写入凭据文件。
 type refreshCommitStore struct {
 	*memoryAuthTestStore
 	checkContext func(context.Context)
@@ -325,14 +325,14 @@ func TestManager_ForceRefreshAll_DynamicCancellationSkipsRemaining(t *testing.T)
 		close(done)
 	}()
 
-	// Wait for 2 workers to enter Refresh
+	// 等待 2 个 worker 进入 Refresh
 	<-executor.enteredCh
 	<-executor.enteredCh
 
-	// Cancel context while first batch is in flight
+	// 在第一批进行中时取消上下文
 	cancel()
 
-	// Release the blocked workers
+	// 释放被阻塞的 worker
 	close(executor.releaseCh)
 	<-done
 
@@ -340,8 +340,8 @@ func TestManager_ForceRefreshAll_DynamicCancellationSkipsRemaining(t *testing.T)
 		t.Fatalf("expected 6 results, got %d", len(results))
 	}
 
-	// Exactly 2 workers entered Refresh; remaining 4 were canceled in queue.
-	// Successful rotations must be saved and published despite cancellation.
+	// 恰好 2 个 worker 进入了 Refresh；其余 4 个在队列中被取消。
+	// 即使发生取消，成功的轮换也必须被保存并发布。
 	if entered := executor.totalEntered.Load(); entered != 2 {
 		t.Fatalf("expected exactly 2 entered calls, got %d", entered)
 	}
@@ -381,24 +381,24 @@ func TestManager_ForceRefreshAll_DynamicCancellationSkipsRemaining(t *testing.T)
 func TestManager_RefreshWorkersResolution(t *testing.T) {
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
 
-	// Default when config is empty
+	// 配置为空时的默认值
 	if w := manager.refreshWorkers(); w != 16 {
 		t.Fatalf("expected default 16 workers, got %d", w)
 	}
 
-	// Zero should keep default 16
+	// 零值应保持默认值 16
 	manager.runtimeConfig.Store(&internalconfig.Config{AuthAutoRefreshWorkers: 0})
 	if w := manager.refreshWorkers(); w != 16 {
 		t.Fatalf("expected 16 workers for 0, got %d", w)
 	}
 
-	// Negative should keep default 16
+	// 负数应保持默认值 16
 	manager.runtimeConfig.Store(&internalconfig.Config{AuthAutoRefreshWorkers: -5})
 	if w := manager.refreshWorkers(); w != 16 {
 		t.Fatalf("expected 16 workers for -5, got %d", w)
 	}
 
-	// Positive override
+	// 正数覆盖
 	manager.runtimeConfig.Store(&internalconfig.Config{AuthAutoRefreshWorkers: 4})
 	if w := manager.refreshWorkers(); w != 4 {
 		t.Fatalf("expected 4 workers, got %d", w)

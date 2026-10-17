@@ -274,15 +274,15 @@ func TestMergeModelStateKeepsNewestObservationSnapshot(t *testing.T) {
 	if target.Quota.Signals["X-Codex-Active-Limit"] != "codex_bengalfox" {
 		t.Fatalf("newest snapshot was lost: %#v", target.Quota.Signals)
 	}
-	// Unioning snapshots taken at different times would resurrect the older
-	// watermark, so the stale key must be gone.
+	// 合并不同时刻采集的快照会让较旧的
+	// 水位线复活，因此过期的键必须被移除。
 	if _, ok := target.Quota.Signals["X-Codex-Plan-Type"]; ok {
 		t.Fatalf("stale snapshot key survived the merge: %#v", target.Quota.Signals)
 	}
 }
 
-// A watermark such as Retry-After only appears on the response that produced it.
-// Later responses must not keep advertising it.
+// 诸如 Retry-After 的水位线只会出现在产生它的响应上。
+// 后续响应不得继续宣称它。
 func TestObserveResponseHeadersReplacesStaleWatermarks(t *testing.T) {
 	var quota QuotaState
 	if !quota.ObserveResponseHeadersForProvider("codex", http.Header{
@@ -311,8 +311,8 @@ func TestObserveResponseHeadersReplacesStaleWatermarks(t *testing.T) {
 	}
 }
 
-// Responses without any quota header (transport failures, 5xx) must not erase
-// the last known snapshot.
+// 不含任何额度头的响应（传输失败、5xx）绝不能抹掉
+// 最后已知的快照。
 func TestObserveResponseHeadersKeepsSnapshotWhenResponseCarriesNoSignal(t *testing.T) {
 	quota := QuotaState{
 		ObservedAt: time.Unix(100, 0),
@@ -328,8 +328,8 @@ func TestObserveResponseHeadersKeepsSnapshotWhenResponseCarriesNoSignal(t *testi
 	}
 }
 
-// ObservedAt must advance even when the watermark values are unchanged,
-// otherwise consumers cannot tell a fresh reading from a stale one.
+// 即使水位线的取值未变，ObservedAt 也必须推进，
+// 否则消费者无法区分新读取值与过期值。
 func TestObserveResponseHeadersAdvancesObservedAtOnRepeatedValues(t *testing.T) {
 	var quota QuotaState
 	headers := http.Header{"X-Codex-Primary-Used-Percent": []string{"5"}}
@@ -340,8 +340,8 @@ func TestObserveResponseHeadersAdvancesObservedAtOnRepeatedValues(t *testing.T) 
 	}
 }
 
-// Observed values reach the plain-text upstream request log, so control
-// characters must never be stored.
+// 观测值会进入纯文本的上游请求日志，因此控制
+// 字符绝不能存储。
 func TestObserveResponseHeadersRejectsControlCharacterValues(t *testing.T) {
 	var quota QuotaState
 	if quota.ObserveResponseHeadersForProvider("codex", http.Header{
@@ -354,7 +354,7 @@ func TestObserveResponseHeadersRejectsControlCharacterValues(t *testing.T) {
 	}
 }
 
-// Truncation at the header cap must not depend on map iteration order.
+// 头部上限处的截断不得依赖 map 迭代顺序。
 func TestObserveResponseHeadersTruncatesDeterministically(t *testing.T) {
 	headers := make(http.Header, maxQuotaSignalHeaders*2)
 	for i := 0; i < maxQuotaSignalHeaders*2; i++ {

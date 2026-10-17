@@ -50,7 +50,7 @@ func TestExtractSessionInfoDoesNotRescanLargePayload(t *testing.T) {
 		}
 	})
 
-	// A request without session fields must not rescan a large message for every candidate key.
+	// 不带会话字段的请求不得为每个候选键重新扫描大型消息。
 	if extraction.NsPerOp() > singleLookup.NsPerOp()*12 {
 		t.Fatalf("session extraction rescans large payload: extraction %d ns/op, single lookup %d ns/op", extraction.NsPerOp(), singleLookup.NsPerOp())
 	}

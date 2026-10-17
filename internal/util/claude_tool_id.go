@@ -13,9 +13,9 @@ var (
 	claudeToolUseIDCounter      uint64
 )
 
-// SanitizeClaudeToolID ensures the given id conforms to Claude's
-// tool_use.id regex ^[a-zA-Z0-9_-]+$.  Non-conforming characters are
-// replaced with '_'; an empty result gets a generated fallback.
+// SanitizeClaudeToolID 确保给定 id 符合 Claude 的
+// tool_use.id 正则 ^[a-zA-Z0-9_-]+$。不符合的字符会被
+// 替换为 '_'；结果为空时会生成回退值。
 func SanitizeClaudeToolID(id string) string {
 	s := claudeToolUseIDSanitizer.ReplaceAllString(id, "_")
 	if s == "" {
@@ -24,9 +24,9 @@ func SanitizeClaudeToolID(id string) string {
 	return s
 }
 
-// SanitizeClaudeFunctionName ensures a function or tool name conforms to Claude's
-// requirements: ^[a-zA-Z0-9_-]{1,64}$. Non-conforming characters (including dots and colons
-// commonly emitted by MCP tools) are replaced with '_'.
+// SanitizeClaudeFunctionName 确保函数或工具名称符合 Claude 的
+// 要求：^[a-zA-Z0-9_-]{1,64}$。不符合的字符（包括 MCP 工具常输出的
+// 点和冒号）会被替换为 '_'。
 func SanitizeClaudeFunctionName(name string) string {
 	if name == "" {
 		return ""

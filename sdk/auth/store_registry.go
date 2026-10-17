@@ -11,14 +11,14 @@ var (
 	registeredStore coreauth.Store
 )
 
-// RegisterTokenStore sets the global token store used by the authentication helpers.
+// RegisterTokenStore 设置认证辅助函数所使用的全局令牌存储。
 func RegisterTokenStore(store coreauth.Store) {
 	storeMu.Lock()
 	registeredStore = store
 	storeMu.Unlock()
 }
 
-// GetTokenStore returns the globally registered token store.
+// GetTokenStore 返回全局注册的令牌存储。
 func GetTokenStore() coreauth.Store {
 	storeMu.RLock()
 	s := registeredStore

@@ -160,7 +160,7 @@ func (h *Host) interceptRequest(ctx context.Context, req pluginapi.RequestInterc
 	return current
 }
 
-// CompleteRequest schedules terminal notifications without blocking response delivery.
+// CompleteRequest 安排终态通知而不阻塞响应投递。
 func (h *Host) CompleteRequest(ctx context.Context, completion pluginapi.RequestCompletion) {
 	h.CompleteRequestExcept(ctx, completion, "")
 }
@@ -206,7 +206,7 @@ func (h *Host) ObserveWebSocketResponseEventExcept(ctx context.Context, event pl
 	}
 }
 
-// CompleteRequestExcept notifies lifecycle plugins except the plugin that initiated a nested host execution.
+// CompleteRequestExcept 通知生命周期插件，但发起嵌套 host 执行的那个插件除外。
 func (h *Host) CompleteRequestExcept(ctx context.Context, completion pluginapi.RequestCompletion, skipPluginID string) {
 	if h == nil {
 		return
@@ -287,8 +287,8 @@ func (h *Host) InterceptStreamChunkExcept(ctx context.Context, req pluginapi.Str
 		nextReq := req
 		nextReq.RequestHeaders = cloneHeader(req.RequestHeaders)
 		nextReq.ResponseHeaders = cloneHeader(current.Headers)
-		// Schema v3+ omits request bodies on payload chunks to avoid re-sending multi-MB
-		// prompts across cgo/JSON for every frame. Legacy plugins still receive them.
+		// Schema v3+ 在载荷分块中省略请求体，以避免每帧都通过 cgo/JSON
+		// 重发数 MB 的 prompt。旧版插件仍会收到它们。
 		if req.ChunkIndex != pluginapi.StreamChunkHeaderInitIndex && streamChunkOmitsRequestBodies(record.plugin.SchemaVersion) {
 			nextReq.OriginalRequest = nil
 			nextReq.RequestBody = nil
@@ -297,8 +297,8 @@ func (h *Host) InterceptStreamChunkExcept(ctx context.Context, req pluginapi.Str
 			nextReq.RequestBody = bytes.Clone(req.RequestBody)
 		}
 		nextReq.Body = bytes.Clone(current.Body)
-		// Schema v5+ omits HistoryChunks on payload chunks to avoid cloning and re-encoding
-		// recent chunk windows across cgo/JSON for every frame. Legacy plugins still receive them.
+		// Schema v5+ 在载荷分块中省略 HistoryChunks，以避免每帧都通过 cgo/JSON
+		// 克隆并重新编码近期分块窗口。旧版插件仍会收到它们。
 		if req.ChunkIndex != pluginapi.StreamChunkHeaderInitIndex && streamChunkOmitsHistory(record.plugin.SchemaVersion) {
 			nextReq.HistoryChunks = nil
 		} else {
@@ -333,9 +333,9 @@ func (h *Host) HasStreamInterceptors() bool {
 	return false
 }
 
-// StreamChunkPayloadIncludesRequestBody reports whether any active stream chunk
-// interceptor still requires OriginalRequest/RequestBody on payload chunks
-// (schema_version < SchemaVersionStreamChunkOmitRequestBody).
+// StreamChunkPayloadIncludesRequestBody 报告是否有任何活跃的流式分块
+// 拦截器仍需要载荷分块上的 OriginalRequest/RequestBody
+// （schema_version < SchemaVersionStreamChunkOmitRequestBody）。
 func (h *Host) StreamChunkPayloadIncludesRequestBody() bool {
 	if h == nil {
 		return false
@@ -355,9 +355,9 @@ func streamChunkOmitsRequestBodies(schemaVersion uint32) bool {
 	return schemaVersion >= pluginabi.SchemaVersionStreamChunkOmitRequestBody
 }
 
-// StreamChunkPayloadIncludesHistory reports whether any active stream chunk
-// interceptor still requires HistoryChunks on payload chunks
-// (schema_version < SchemaVersionStreamChunkOmitHistory).
+// StreamChunkPayloadIncludesHistory 报告是否有任何活跃的流式分块
+// 拦截器仍需要载荷分块上的 HistoryChunks
+// （schema_version < SchemaVersionStreamChunkOmitHistory）。
 func (h *Host) StreamChunkPayloadIncludesHistory() bool {
 	if h == nil {
 		return false
@@ -631,7 +631,7 @@ func cloneInterceptorMetadataReflectValue(value reflect.Value, visited map[metad
 		return out
 	case reflect.Struct:
 		out := reflect.New(value.Type()).Elem()
-		// Preserve unexported fields and deep-clone exported fields on a best-effort basis.
+		// 尽力保留未导出字段并对导出字段做深拷贝。
 		out.Set(value)
 		for i := 0; i < value.NumField(); i++ {
 			field := value.Field(i)

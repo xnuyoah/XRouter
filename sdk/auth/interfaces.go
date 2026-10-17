@@ -11,8 +11,8 @@ import (
 
 var ErrRefreshNotSupported = errors.New("cliproxy auth: refresh not supported")
 
-// LoginOptions captures generic knobs shared across authenticators.
-// Provider-specific logic can inspect Metadata for extra parameters.
+// LoginOptions 保存各认证器共享的通用开关。
+// 供应商特定逻辑可检查 Metadata 以获取额外参数。
 type LoginOptions struct {
 	NoBrowser    bool
 	ProjectID    string
@@ -21,7 +21,7 @@ type LoginOptions struct {
 	Prompt       func(prompt string) (string, error)
 }
 
-// Authenticator manages login and optional refresh flows for a provider.
+// Authenticator 管理某个供应商的登录以及可选的刷新流程。
 type Authenticator interface {
 	Provider() string
 	Login(ctx context.Context, cfg *config.Config, opts *LoginOptions) (*coreauth.Auth, error)

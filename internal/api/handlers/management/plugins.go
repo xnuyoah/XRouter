@@ -64,7 +64,7 @@ type pluginMenuInfo struct {
 	Description string `json:"description"`
 }
 
-// ListPlugins returns discovered, configured, and registered plugin entries.
+// ListPlugins 返回已发现、已配置和已注册的插件条目。
 func (h *Handler) ListPlugins(c *gin.Context) {
 	if h == nil || h.cfg == nil {
 		c.JSON(http.StatusOK, pluginListResponse{
@@ -160,7 +160,7 @@ func (h *Handler) ListPlugins(c *gin.Context) {
 	})
 }
 
-// GetPluginConfig returns the preserved plugins.configs.<id> object as JSON.
+// GetPluginConfig 以 JSON 形式返回保留的 plugins.configs.<id> 对象。
 func (h *Handler) GetPluginConfig(c *gin.Context) {
 	id, okID := pluginIDFromRequest(c)
 	if !okID {
@@ -214,7 +214,7 @@ func (h *Handler) GetPluginConfig(c *gin.Context) {
 	c.JSON(http.StatusNotFound, gin.H{"error": "plugin_not_found", "message": "plugin not found"})
 }
 
-// PatchPluginEnabled updates plugins.configs.<id>.enabled without touching plugins.enabled.
+// PatchPluginEnabled 更新 plugins.configs.<id>.enabled，而不触碰 plugins.enabled。
 func (h *Handler) PatchPluginEnabled(c *gin.Context) {
 	id, okID := pluginIDFromRequest(c)
 	if !okID {
@@ -250,7 +250,7 @@ func (h *Handler) PatchPluginEnabled(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
-// PutPluginConfig replaces plugins.configs.<id> with the request object.
+// PutPluginConfig 用请求对象替换 plugins.configs.<id>。
 func (h *Handler) PutPluginConfig(c *gin.Context) {
 	id, okID := pluginIDFromRequest(c)
 	if !okID {
@@ -278,7 +278,7 @@ func (h *Handler) PutPluginConfig(c *gin.Context) {
 	h.persistLocked(c)
 }
 
-// PatchPluginConfig shallow-merges plugins.configs.<id> with the request object.
+// PatchPluginConfig 将 plugins.configs.<id> 与请求对象进行浅合并。
 func (h *Handler) PatchPluginConfig(c *gin.Context) {
 	id, okID := pluginIDFromRequest(c)
 	if !okID {
@@ -320,7 +320,7 @@ func (h *Handler) PatchPluginConfig(c *gin.Context) {
 	h.persistLocked(c)
 }
 
-// DeletePlugin removes the selected local plugin file and its saved config.
+// DeletePlugin 删除所选本地插件文件及其已保存的配置。
 func (h *Handler) DeletePlugin(c *gin.Context) {
 	id, okID := pluginIDFromRequest(c)
 	if !okID {

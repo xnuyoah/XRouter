@@ -27,23 +27,23 @@ var quotaCooldownDisabled atomic.Bool
 
 var transientErrorCooldownSeconds atomic.Int64
 
-// SetQuotaCooldownDisabled toggles auth/model cooldown scheduling globally.
+// SetQuotaCooldownDisabled 全局切换 auth/model 冷却调度。
 func SetQuotaCooldownDisabled(disable bool) {
 	quotaCooldownDisabled.Store(disable)
 }
 
-// SetTransientErrorCooldownSeconds configures cooldowns for 408/500/502/503/504.
-// 0 keeps the legacy default; negative values disable transient error cooldowns.
+// SetTransientErrorCooldownSeconds 配置 408/500/502/503/504 的冷却。
+// 0 保持旧有默认值；负值会禁用瞬时错误冷却。
 func SetTransientErrorCooldownSeconds(seconds int) {
 	transientErrorCooldownSeconds.Store(int64(seconds))
 }
 
-// QuotaCooldownDisabledForAuth returns whether cooling is disabled for the auth under global settings.
+// QuotaCooldownDisabledForAuth 返回在全局设置下该 auth 是否禁用冷却。
 func QuotaCooldownDisabledForAuth(auth *Auth) bool {
 	return quotaCooldownDisabledForAuth(auth)
 }
 
-// QuotaCooldownDisabledForAuthWithConfig returns whether cooling is disabled for the auth with the given config.
+// QuotaCooldownDisabledForAuthWithConfig 返回在给定配置下该 auth 是否禁用冷却。
 func QuotaCooldownDisabledForAuthWithConfig(auth *Auth, cfg *internalconfig.Config) bool {
 	return quotaCooldownDisabledForAuthWithConfig(auth, cfg)
 }
@@ -53,7 +53,7 @@ func quotaCooldownDisabledForAuth(auth *Auth) bool {
 }
 
 func quotaCooldownDisabledForAuthWithConfig(auth *Auth, cfg *internalconfig.Config) bool {
-	// Home owns cooldown state, so downstream instances must not schedule local cooldowns.
+	// Home 拥有冷却状态，因此下游实例不得调度本地冷却。
 	if cfg != nil && cfg.Home.Enabled {
 		return true
 	}
@@ -123,8 +123,8 @@ func recoverableFailureRetryAfterWithHint(now time.Time, retryAfter *time.Durati
 	return now.Add(time.Duration(seconds) * time.Second)
 }
 
-// SetConfig updates the runtime config snapshot used by request-time helpers.
-// Callers should provide the latest config on reload so per-credential alias mapping stays in sync.
+// SetConfig 更新请求期辅助函数使用的运行时配置快照。
+// 调用方应在重载时提供最新配置，以便每个凭据的别名映射保持同步。
 func (m *Manager) SetConfig(cfg *internalconfig.Config) {
 	if m == nil {
 		return
@@ -136,8 +136,8 @@ func (m *Manager) SetConfig(cfg *internalconfig.Config) {
 	}
 }
 
-// SetConfigSnapshot updates only in-memory configuration state. It reports whether
-// a caller must persist cleared cooldown state after its commit critical section.
+// SetConfigSnapshot 仅更新内存中的配置状态。它报告调用方是否
+// 必须在其提交临界区之后持久化已清除的冷却状态。
 func (m *Manager) SetConfigSnapshot(cfg *internalconfig.Config) bool {
 	if m == nil {
 		return false
@@ -176,9 +176,9 @@ func (m *Manager) setConfigSnapshotLocked(cfg *internalconfig.Config) bool {
 	return clearedCooldowns
 }
 
-// ApplyConfigWithCooldownStateStore serializes a config update with its cooldown
-// store transition. It persists the resulting state to the captured old store before
-// exposing the resolved replacement store.
+// ApplyConfigWithCooldownStateStore 将配置更新与其冷却存储切换
+// 串行化。它先将结果状态持久化到捕获的旧存储，然后再
+// 暴露解析出的替换存储。
 func (m *Manager) ApplyConfigWithCooldownStateStore(ctx context.Context, cfg *internalconfig.Config, store CooldownStateStore) bool {
 	if m == nil {
 		return false
@@ -214,13 +214,13 @@ func (m *Manager) ApplyConfigWithCooldownStateStore(ctx context.Context, cfg *in
 	return true
 }
 
-// PersistCooldownStates writes the current cooldown snapshot using ctx.
+// PersistCooldownStates 使用 ctx 写入当前冷却快照。
 func (m *Manager) PersistCooldownStates(ctx context.Context) {
 	m.persistCooldownStates(ctx)
 }
 
-// SwapCooldownStateStore persists cleared state to the old store before replacing it.
-// Persistence is deliberately performed without holding the manager lock.
+// SwapCooldownStateStore 在替换之前将已清除的状态持久化到旧存储。
+// 持久化刻意在不持有管理器锁的情况下执行。
 func (m *Manager) SwapCooldownStateStore(ctx context.Context, store CooldownStateStore, persistOld bool) bool {
 	if m == nil {
 		return false
@@ -295,7 +295,7 @@ func (m *Manager) clearDisabledCooldownStates(cfg *internalconfig.Config) bool {
 	return len(snapshots) > 0
 }
 
-// RestoreCooldownStates restores unexpired persisted cooldown records into registered auths.
+// RestoreCooldownStates 将未过期的已持久化冷却记录恢复到已注册的 auth 中。
 func (m *Manager) RestoreCooldownStates(ctx context.Context) error {
 	if m == nil {
 		return nil
@@ -459,7 +459,7 @@ func dedupeStrings(values []string) []string {
 	return out
 }
 
-// ResetQuota clears quota/cooldown state for an auth and resumes registry routing.
+// ResetQuota 清除某个 auth 的额度/冷却状态并恢复注册表路由。
 func (m *Manager) ResetQuota(ctx context.Context, authID string) (*Auth, []string, error) {
 	if m == nil {
 		return nil, nil, nil
@@ -747,9 +747,9 @@ func cooldownReason(statusMessage string, quota QuotaState, lastErr *Error) stri
 	return ""
 }
 
-// nextExecutionSeq stamps a new upstream dispatch with the next monotonic
-// execution sequence. The stamp travels on the execution's Result so that
-// MarkResult can order the execution against cooldowns recorded meanwhile.
+// nextExecutionSeq 用下一个单调递增的执行序号标记新的上游调度。
+// 该标记随执行的 Result 传递，以便 MarkResult 能够将此次执行
+// 与期间记录的冷却进行排序。
 func (m *Manager) nextExecutionSeq() uint64 {
 	if m == nil {
 		return 0
@@ -757,9 +757,9 @@ func (m *Manager) nextExecutionSeq() uint64 {
 	return m.executionSeq.Add(1)
 }
 
-// currentExecutionSeq returns the latest execution sequence issued so far.
-// Capturing it as the cooldown watermark when a cooldown is recorded marks
-// every execution dispatched up to that moment as predating the cooldown.
+// currentExecutionSeq 返回目前发出的最新执行序号。
+// 在记录冷却时将其捕获为冷却水位线，会把该时刻之前调度的
+// 每一次执行都标记为早于该冷却。
 func (m *Manager) currentExecutionSeq() uint64 {
 	if m == nil {
 		return 0
@@ -767,8 +767,8 @@ func (m *Manager) currentExecutionSeq() uint64 {
 	return m.executionSeq.Load()
 }
 
-// isStaleExecutionResult reports whether an execution result originated from a superseded
-// credential version or an earlier registration epoch than the currently active auth.
+// isStaleExecutionResult 报告某执行结果是否来自已被取代的凭据版本，
+// 或比当前活跃 auth 更早的注册纪元。
 func isStaleExecutionResult(result Result, current *Auth) bool {
 	if current == nil {
 		return false
@@ -778,7 +778,7 @@ func isStaleExecutionResult(result Result, current *Auth) bool {
 	return staleVersion || staleEpoch
 }
 
-// MarkResult records an execution result and notifies hooks.
+// MarkResult 记录执行结果并通知钩子。
 func (m *Manager) MarkResult(ctx context.Context, result Result) {
 	if result.AuthID == "" {
 		return
@@ -835,10 +835,10 @@ func (m *Manager) MarkResult(ctx context.Context, result Result) {
 		}
 		wasTerminalUnauthorized := hasUnauthorizedAuthFailure(auth)
 
-		// retainModelCooldown pins a still-live model cooldown against a success
-		// from an execution dispatched before that cooldown was recorded. Such a
-		// success predates the failure and proves nothing about recovery, so the
-		// state transition it normally causes is skipped entirely.
+		// retainModelCooldown 会保留仍然有效的模型冷却，以对抗来自
+		// 该冷却被记录之前所调度执行的“成功”。这样的成功
+		// 早于失败，无法证明已恢复，因此它通常引发的
+		// 状态转换会被完全跳过。
 		retainModelCooldown := modelKey != "" && !wasTerminalUnauthorized && result.ExecutionSeq > 0
 		if retainModelCooldown {
 			if existing := existingModelState(auth, modelKey); existing != nil && isModelStateActiveCooldown(existing, now) &&
@@ -859,9 +859,9 @@ func (m *Manager) MarkResult(ctx context.Context, result Result) {
 					resetModelState(state, now)
 				}
 			} else if auth.Quota.Reason == "credential_quota" && auth.Quota.NextRecoverAt.After(now) {
-				// Retain active credential-scoped cooldown
+				// 保留仍然有效的凭据级冷却
 			} else if retainModelCooldown || retainAuthCooldown {
-				// Retain a cooldown recorded after this execution was dispatched.
+				// 保留在此次执行被调度之后记录的冷却。
 			} else if modelKey != "" {
 				state := ensureModelState(auth, modelKey)
 				modelState = state
@@ -995,8 +995,8 @@ func (m *Manager) MarkResult(ctx context.Context, result Result) {
 											otherQuotaNext = otherState.Quota.NextRecoverAt
 										}
 										otherRetryAfter := otherQuotaNext
-										// Propagation only extends a sibling's still-live
-										// per-model deadline; it never shortens one.
+										// 传播只会延长同级仍然有效的
+										// 单模型截止时间；绝不会缩短它。
 										if !otherState.NextRetryAfter.IsZero() && otherState.NextRetryAfter.After(otherRetryAfter) {
 											otherRetryAfter = otherState.NextRetryAfter
 										}
@@ -1040,17 +1040,17 @@ func (m *Manager) MarkResult(ctx context.Context, result Result) {
 						state.NextRetryAfter = now.Add(transientErrorCooldown)
 						state.Unavailable = true
 					}
-					// A later failure only extends a still-live cooldown; it never
-					// shortens one. A deliberate zero write (disableCooling) still
-					// clears the deadline.
+					// 后续的失败只会延长仍然有效的冷却，绝不会
+					// 缩短它。刻意的零值写入（disableCooling）仍会
+					// 清除截止时间。
 					if !state.NextRetryAfter.IsZero() && prevModelRetryAfter.After(state.NextRetryAfter) && prevModelRetryAfter.After(now) {
 						state.NextRetryAfter = prevModelRetryAfter
 					}
-					// Capture the dispatch watermark of the cooldown just recorded.
-					// Credential-scoped cooldowns were propagated to the auth and
-					// every sibling state inside the failure branch; their watermarks
-					// are stamped here so a sibling's later, longer model-scoped
-					// cooldown can re-stamp only its own state.
+					// 捕获刚刚记录的冷却的调度水位线。
+					// 凭据级冷却已在失败分支内传播到该 auth 以及
+					// 每个同级状态；它们的水位线在此处打戳，
+					// 以便同级之后更长的模型级冷却只能重新给
+					// 自己的状态打戳。
 					cooldownSeq := m.currentExecutionSeq()
 					state.cooldownRecordedSeq = cooldownSeq
 					if result.CredentialScope && !disableCooling && statusCodeFromResult(result.Error) == 429 {
@@ -1162,7 +1162,7 @@ func (m *Manager) recordExecutionResult(ctx context.Context, result Result, auth
 	m.reportHomeResult(ctx, result, auth)
 }
 
-// reportHomeResult only observes a Home dispatch result and never updates local auth state.
+// reportHomeResult 仅观察 Home 调度结果，绝不更新本地 auth 状态。
 func (m *Manager) reportHomeResult(ctx context.Context, result Result, auth *Auth) {
 	if m == nil || result.AuthID == "" {
 		return
@@ -1306,10 +1306,10 @@ func mergeModelState(target, source *ModelState) *ModelState {
 	if source.UpdatedAt.After(merged.UpdatedAt) {
 		merged.UpdatedAt = source.UpdatedAt
 	}
-	// Keep the strongest cooldown watermark from either side so merging a
-	// restored or alias-migrated state into a live auth cannot reopen the
-	// stale-success race. Both sides stay zero across a process restart,
-	// where restored cooldowns must remain clearable by any success.
+	// 保留两侧中最强的冷却水位线，这样将恢复的或别名迁移的状态
+	// 合并进活跃 auth 时，不会重新打开
+	// “陈旧成功”竞态。进程重启后两侧都保持为零，
+	// 此时恢复的冷却必须仍可被任何成功清除。
 	merged.cooldownRecordedSeq = target.cooldownRecordedSeq
 	if source.cooldownRecordedSeq > merged.cooldownRecordedSeq {
 		merged.cooldownRecordedSeq = source.cooldownRecordedSeq
@@ -1435,8 +1435,8 @@ func updateAggregatedAvailability(auth *Auth, now time.Time) {
 	if auth == nil {
 		return
 	}
-	// A terminal unauthorized credential stays blocked until its tokens change.
-	// Model-level results must not make it selectable again.
+	// 终止性的未授权凭据会一直被阻塞，直到其令牌发生变化。
+	// 模型级结果不得使其重新变为可选。
 	if hasUnauthorizedAuthFailure(auth) {
 		auth.Unavailable = true
 		return
@@ -1508,7 +1508,7 @@ func updateAggregatedAvailability(auth *Auth, now time.Time) {
 		auth.Quota.NextRecoverAt = quotaRecover
 		auth.Quota.BackoffLevel = maxBackoffLevel
 	} else if auth.Quota.Exceeded && auth.Quota.NextRecoverAt.After(now) {
-		// Retain active auth-level quota cooldown
+		// 保留仍然有效的 auth 级额度冷却
 	} else {
 		auth.Quota.Exceeded = false
 		auth.Quota.Reason = ""
@@ -1567,8 +1567,8 @@ func clearAuthStateOnSuccess(auth *Auth, now time.Time) {
 	auth.UpdatedAt = now
 }
 
-// isAuthActiveCooldown reports whether the auth carries a still-live
-// auth-level cooldown recorded without a model key.
+// isAuthActiveCooldown 报告该 auth 是否带有仍然有效的、
+// 未使用模型键记录的 auth 级冷却。
 func isAuthActiveCooldown(auth *Auth, now time.Time) bool {
 	if auth == nil || auth.Disabled || auth.Status == StatusDisabled {
 		return false
@@ -1646,18 +1646,18 @@ func resultErrorFromError(err error) *Error {
 			resultErr.Code = "model_not_found"
 		}
 	case isRequestScopedError(err) || isRequestInvalidError(err):
-		// Prefer true request-scoped faults (including Claude OAuth cancellation)
-		// over the broader connection-lifecycle classification.
+		// 优先采用真正的请求级故障（包括 Claude OAuth 取消），
+		// 而不是更宽泛的连接生命周期分类。
 		resultErr.Code = requestScopedErrorCode
 	case isConfiguredTLSHandshakeTimeoutError(err):
-		// An internal TLS establishment deadline is a transient transport
-		// failure, not a caller-owned context lifecycle event.
+		// 内部的 TLS 建立截止时间属于瞬时传输故障，
+		// 而不是调用方拥有的上下文生命周期事件。
 		if resultErr.Code == "" || resultErr.Code == transientTransportErrorCode {
 			resultErr.Code = transientTransportErrorCode
 		}
 	case isConnectionLifecycleError(err):
-		// Preserve lifecycle classification for MarkResult without making the error
-		// request-scoped (which would also stop credential fallback).
+		// 为 MarkResult 保留生命周期分类，同时不将该错误变为
+		// 请求级（那也会停止凭据回退）。
 		if resultErr.Code == "" || resultErr.Code == connectionLifecycleErrorCode {
 			resultErr.Code = connectionLifecycleErrorCode
 		}
@@ -1669,9 +1669,9 @@ func resultErrorFromError(err error) *Error {
 	return resultErr
 }
 
-// shouldSkipCredentialCooldown reports failures that must not mark auth/model cooling.
-// Connection lifecycle is intentionally separate from request_scoped so transport
-// drops do not also stop credential rotation via isRequestInvalidError.
+// shouldSkipCredentialCooldown 报告不得标记 auth/model 冷却的失败。
+// 连接生命周期有意与 request_scoped 分开，这样传输层中断
+// 不会同时通过 isRequestInvalidError 停止凭据轮换。
 func shouldSkipCredentialCooldown(err *Error) bool {
 	if err != nil && err.Code == ErrorCodeForceCooldown {
 		return false
@@ -1679,13 +1679,13 @@ func shouldSkipCredentialCooldown(err *Error) bool {
 	return isRequestScopedResultError(err) || isConnectionLifecycleResultError(err) || isTransientTransportResultError(err)
 }
 
-// isConnectionLifecycleError reports transport/session lifecycle failures that must
-// not cool credentials: client cancellation and WebSocket/HTTP/2 close/EOF disconnects.
+// isConnectionLifecycleError 报告不得冷却凭据的传输/会话生命周期失败：
+// 客户端取消以及 WebSocket/HTTP/2 关闭/EOF 断开。
 func isConnectionLifecycleError(err error) bool {
 	if err == nil {
 		return false
 	}
-	// Typed WebSocket close codes are an unambiguous connection lifecycle signal.
+	// 带类型的 WebSocket 关闭码是明确的连接生命周期信号。
 	var closeErr *websocket.CloseError
 	if errors.As(err, &closeErr) && closeErr != nil {
 		switch closeErr.Code {
@@ -1693,14 +1693,14 @@ func isConnectionLifecycleError(err error) bool {
 			return true
 		}
 	}
-	// Credential/auth/quota statuses must never be reclassified from response text.
+	// 凭据/auth/额度状态绝不能根据响应文本重新分类。
 	if statusCodeFromError(err) != 0 {
 		return false
 	}
 	if isConfiguredTLSHandshakeTimeoutError(err) {
 		return false
 	}
-	// Client abort and request-scoped timeouts are not credential faults.
+	// 客户端中止和请求级超时不是凭据故障。
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 		return true
 	}
@@ -1717,8 +1717,8 @@ func isConnectionLifecycleResultError(err *Error) bool {
 	if err.Code == transientTransportErrorCode {
 		return false
 	}
-	// Message fallback only when no HTTP status is attached, so 401/429/5xx
-	// response bodies cannot suppress credential cooldown.
+	// 仅在未附带 HTTP 状态时才回退到消息判断，这样 401/429/5xx
+	// 的响应体无法抑制凭据冷却。
 	if statusCodeFromResult(err) != 0 {
 		return false
 	}
@@ -1734,13 +1734,13 @@ func isConnectionLifecycleMessage(message string) bool {
 	case "context canceled", "context deadline exceeded", "eof", "unexpected eof":
 		return true
 	}
-	// gorilla/websocket CloseError.Error() and common wrappers.
+	// gorilla/websocket 的 CloseError.Error() 以及常见包装。
 	if strings.Contains(lower, "websocket: close 1000") ||
 		strings.Contains(lower, "websocket: close 1001") ||
 		strings.Contains(lower, "websocket: close 1006") {
 		return true
 	}
-	// Wrapped transport disconnects (e.g. "read tcp ...: unexpected EOF").
+	// 被包装的传输断开（例如 "read tcp ...: unexpected EOF"）。
 	if strings.Contains(lower, "unexpected eof") || isHTTP2ClosedConnectionMessage(lower) {
 		return true
 	}
@@ -1748,16 +1748,16 @@ func isConnectionLifecycleMessage(message string) bool {
 }
 
 func isHTTP2ClosedConnectionMessage(lower string) bool {
-	// x/net/http2 keeps these errors unexported; allow common wrappers such as url.Error.
+	// x/net/http2 将这些错误保持为未导出；允许 url.Error 等常见包装。
 	return strings.Contains(lower, "http2: client connection force closed via clientconn.close") ||
 		strings.Contains(lower, "http2: client conn is closed")
 }
 
-// isConfiguredTLSHandshakeTimeoutError identifies the typed internal
-// establishment deadline produced by the configured TLS handshake bound.
-// Delegating to the shared executor predicate ensures classification is
-// based on error identity rather than message text and that any
-// caller-owned context error outside a configured-timeout subtree wins.
+// isConfiguredTLSHandshakeTimeoutError 识别由已配置的 TLS 握手界限
+// 产生的带类型内部建立截止时间。
+// 委托给共享的执行器判定函数可确保分类基于
+// 错误身份而非消息文本，并确保配置超时子树之外的
+// 任何调用方拥有的上下文错误优先。
 func isConfiguredTLSHandshakeTimeoutError(err error) bool {
 	if err == nil || statusCodeFromError(err) != 0 {
 		return false
@@ -1765,13 +1765,13 @@ func isConfiguredTLSHandshakeTimeoutError(err error) bool {
 	return cliproxyexecutor.IsConfiguredTLSHandshakeTimeoutError(err)
 }
 
-// isTransientTransportError reports pre-HTTP dial/TLS/DNS/reset failures that
-// should retry under request-retry without cooling the selected credential.
+// isTransientTransportError 报告 HTTP 之前的拨号/TLS/DNS/重置失败，
+// 这些失败应在请求重试下重试，而不冷却所选凭据。
 func isTransientTransportError(err error) bool {
 	if err == nil {
 		return false
 	}
-	// HTTP-status failures stay on the credential/status retry path.
+	// 带 HTTP 状态的失败仍走凭据/状态重试路径。
 	if statusCodeFromError(err) != 0 {
 		return false
 	}
@@ -1812,11 +1812,11 @@ func isTransientTransportResultError(err *Error) bool {
 	if statusCodeFromResult(err) != 0 {
 		return false
 	}
-	// Once an error has been reduced to a Result message, typed identity is
-	// no longer available. An explicit transient code assigned by
-	// resultErrorFromError is authoritative for configured handshake
-	// timeouts; matching text alone must not promote an external or
-	// caller-owned deadline that happens to use the same phrase.
+	// 一旦错误被归约为 Result 消息，类型身份就不再
+	// 可用。由 resultErrorFromError 赋予的显式瞬时错误码
+	// 对于已配置的握手超时具有权威性；仅文本匹配
+	// 不得把恰好使用相同措辞的外部或调用方拥有的
+	// 截止时间提升为该分类。
 	if strings.Contains(strings.ToLower(err.Message), "tls handshake timeout") {
 		return false
 	}
@@ -1888,8 +1888,8 @@ func hasUnauthorizedAuthFailure(auth *Auth) bool {
 	return false
 }
 
-// HasUnauthorizedAuthFailure reports whether the auth has a terminal unauthorized error
-// with no pending refresh scheduled.
+// HasUnauthorizedAuthFailure 报告该 auth 是否存在终止性的未授权错误
+// 且没有待处理的刷新。
 func HasUnauthorizedAuthFailure(auth *Auth) bool {
 	return hasUnauthorizedAuthFailure(auth)
 }
@@ -1908,7 +1908,7 @@ func hasDisabledInvalidGrantFailure(auth *Auth) bool {
 	return false
 }
 
-// HasDisabledInvalidGrantFailure reports whether the auth is disabled and has encountered an invalid_grant error.
+// HasDisabledInvalidGrantFailure 报告该 auth 是否已禁用并遇到了 invalid_grant 错误。
 func HasDisabledInvalidGrantFailure(auth *Auth) bool {
 	return hasDisabledInvalidGrantFailure(auth)
 }
@@ -2059,10 +2059,10 @@ func isCloudflareChallengeErrorMessage(message string) bool {
 		(strings.Contains(lower, "just a moment") && strings.Contains(lower, "cloudflare"))
 }
 
-// isCloudflareChallengeError checks whether err is a Cloudflare bot/waf challenge.
-// Cloudflare challenges are served with HTTP 403. HTTP status >= 500 indicates an
-// upstream gateway/origin failure (such as 520-526 origin errors) and takes precedence
-// over challenge classification.
+// isCloudflareChallengeError 检查 err 是否为 Cloudflare 机器人/WAF 质询。
+// Cloudflare 质询以 HTTP 403 返回。HTTP 状态 >= 500 表示
+// 上游网关/源站故障（例如 520-526 源站错误），并优先于
+// 质询分类。
 func isCloudflareChallengeError(err error) bool {
 	if err == nil {
 		return false
@@ -2073,9 +2073,9 @@ func isCloudflareChallengeError(err error) bool {
 	return isCloudflareChallengeErrorMessage(err.Error())
 }
 
-// isCloudflareChallengeResultError checks whether err is a Cloudflare bot/waf challenge.
-// Responses with HTTP status >= 500 represent upstream gateway/origin failures
-// (such as Cloudflare 520-526) and are excluded from challenge classification.
+// isCloudflareChallengeResultError 检查 err 是否为 Cloudflare 机器人/WAF 质询。
+// HTTP 状态 >= 500 的响应表示上游网关/源站故障
+// （例如 Cloudflare 520-526），被排除在质询分类之外。
 func isCloudflareChallengeResultError(err *Error) bool {
 	if err == nil {
 		return false
@@ -2367,9 +2367,9 @@ func isMissingModelPhrase(value string) bool {
 	}
 }
 
-// isRequestInvalidError returns true if the error represents a client request
-// error that should neither rotate nor penalize credentials. Model-support
-// errors remain eligible for alternate routing and keep their model-level state.
+// isRequestInvalidError 在错误表示客户端请求错误时返回 true，
+// 此类错误既不应轮换也不应惩罚凭据。模型支持类
+// 错误仍可用于备用路由，并保留其模型级状态。
 func isRequestInvalidError(err error) bool {
 	if err == nil {
 		return false
@@ -2392,8 +2392,8 @@ func isRequestInvalidError(err error) bool {
 	}
 	var authErr *Error
 	if errors.As(err, &authErr) && authErr != nil && authErr.Message != "" {
-		// When authErr.Code is non-empty, Error() formats as "Code: Message" which
-		// breaks JSON parsing in clienterror. Re-evaluate against the raw Message body.
+		// 当 authErr.Code 非空时，Error() 会格式化为 "Code: Message"，
+		// 这会破坏 clienterror 中的 JSON 解析。改为针对原始 Message 内容重新求值。
 		if clienterror.IsRequestFault(status, errors.New(authErr.Message)) {
 			return true
 		}
@@ -2500,8 +2500,8 @@ func applyAuthFailureState(auth *Auth, resultErr *Error, retryAfter *time.Durati
 			auth.Unavailable = !auth.NextRetryAfter.IsZero()
 		}
 	}
-	// A later failure only extends a still-live credential cooldown; a
-	// deliberate zero write (disableCooling) still clears it.
+	// 后续的失败只会延长仍然有效的凭据冷却；
+	// 刻意的零值写入（disableCooling）仍会将其清除。
 	if !auth.NextRetryAfter.IsZero() && prevAuthRetryAfter.After(auth.NextRetryAfter) && prevAuthRetryAfter.After(now) {
 		auth.NextRetryAfter = prevAuthRetryAfter
 	}
@@ -2511,11 +2511,11 @@ func applyAuthFailureState(auth *Auth, resultErr *Error, retryAfter *time.Durati
 	}
 }
 
-// quotaCooldownAfterFailure returns the recovery deadline and backoff level for
-// a quota failure observed at now. Failures that land while a previous quota
-// window is still open reuse that window instead of escalating, so a burst of
-// concurrent in-flight failures advances the backoff ladder at most once per
-// window.
+// quotaCooldownAfterFailure 返回在 now 观测到的额度失败的
+// 恢复截止时间和退避级别。在先前额度窗口仍然打开期间
+// 发生的失败会复用该窗口而不升级，因此一批并发的
+// 在途失败每个窗口最多只会让退避阶梯前进
+// 一次。
 func quotaCooldownAfterFailure(quota QuotaState, now time.Time) (time.Time, int) {
 	if quota.NextRecoverAt.After(now) {
 		return quota.NextRecoverAt, quota.BackoffLevel
@@ -2528,7 +2528,7 @@ func quotaCooldownAfterFailure(quota QuotaState, now time.Time) (time.Time, int)
 	return next, nextLevel
 }
 
-// nextQuotaCooldown returns the next cooldown duration and updated backoff level for repeated quota errors.
+// nextQuotaCooldown 返回重复额度错误的下一个冷却时长和更新后的退避级别。
 func nextQuotaCooldown(prevLevel int, disableCooling bool) (time.Duration, int) {
 	if prevLevel < 0 {
 		prevLevel = 0

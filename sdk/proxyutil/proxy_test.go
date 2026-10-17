@@ -519,8 +519,8 @@ func TestBuildHTTPTransportHTTPSProxyH2Negotiation(t *testing.T) {
 			return
 		}
 
-		// When ALPN negotiates h2, a proxy expecting HTTP/2 frames will reject
-		// plain HTTP/1.1 CONNECT requests (reproducing unexpected EOF / bogus greeting).
+		// 当 ALPN 协商出 h2 时，期望 HTTP/2 帧的代理会拒绝
+		// 纯 HTTP/1.1 CONNECT 请求（重现意外 EOF / 错误问候）。
 		if tlsConn.ConnectionState().NegotiatedProtocol == "h2" {
 			proxyDone <- fmt.Errorf("proxy negotiated h2 ALPN: client must negotiate http/1.1 for CONNECT proxy leg")
 			return
@@ -567,7 +567,7 @@ func TestBuildHTTPTransportHTTPSProxyH2Negotiation(t *testing.T) {
 		t.Fatalf("mode = %d, want %d", mode, ModeProxy)
 	}
 
-	// Trust proxy cert in DialTLSContext and target cert in TLSClientConfig
+	// 在 DialTLSContext 中信任代理证书，在 TLSClientConfig 中信任目标证书
 	certPool := x509.NewCertPool()
 	certPool.AddCert(proxyCert.Leaf)
 	parsedProxyURL, _ := url.Parse(proxyURL)
@@ -664,7 +664,7 @@ func TestBuildHTTPTransportHTTPSProxyHTTPTarget(t *testing.T) {
 			proxyDone <- fmt.Errorf("read request failed: %w", errRead)
 			return
 		}
-		// Plain HTTP target via forward proxy sends standard GET http://host/path
+		// 经由正向代理的纯 HTTP 目标会发送标准的 GET http://host/path
 		if req.Method != http.MethodGet {
 			proxyDone <- fmt.Errorf("method = %s, want GET", req.Method)
 			return
@@ -884,7 +884,7 @@ func TestBuildHTTPTransportHTTPSProxyTLSHandshakeTimeout(t *testing.T) {
 			return
 		}
 		defer func() { _ = conn.Close() }()
-		// Stall indefinitely without performing TLS handshake
+		// 无限期停滞而不执行 TLS 握手
 		time.Sleep(2 * time.Second)
 	}()
 

@@ -1,8 +1,8 @@
-// Package claude provides response translation functionality for OpenAI to Anthropic API.
-// This package handles the conversion of OpenAI Chat Completions API responses into Anthropic API-compatible
-// JSON format, transforming streaming events and non-streaming responses into the format
-// expected by Anthropic API clients. It supports both streaming and non-streaming modes,
-// handling text content, tool calls, and usage metadata appropriately.
+// Package claude 提供从 OpenAI 到 Anthropic API 的响应转换功能。
+// 该包负责将 OpenAI Chat Completions API 响应转换为 Anthropic API 兼容的
+// JSON 格式，把流式事件和非流式响应转换为 Anthropic API 客户端
+// 所期望的格式。它同时支持流式和非流式模式，
+// 并妥善处理文本内容、工具调用和用量元数据。
 package claude
 
 import (
@@ -23,81 +23,81 @@ var (
 	dataTag = []byte("data:")
 )
 
-// ConvertOpenAIResponseToAnthropicParams holds parameters for response conversion
+// ConvertOpenAIResponseToAnthropicParams 保存响应转换的参数
 type ConvertOpenAIResponseToAnthropicParams struct {
 	MessageID   string
 	Model       string
 	CreatedAt   int64
 	ToolNameMap map[string]string
-	// SawToolCall is true once at least one tool_use content_block_start has
-	// been emitted on the wire. Using raw upstream tool_calls presence here
-	// can produce stop_reason=tool_use with zero announced tool blocks.
+	// 一旦线上至少发出过一次 tool_use 的 content_block_start，
+	// SawToolCall 即为 true。此处若依据上游原始 tool_calls 的存在性，
+	// 可能产生 stop_reason=tool_use 却没有任何已声明的工具块。
 	SawToolCall bool
-	// Content accumulator for streaming
+	// 流式内容累加器
 	ContentAccumulator strings.Builder
-	// Tool calls accumulator for streaming
+	// 流式工具调用累加器
 	ToolCallsAccumulator map[int]*ToolCallAccumulator
-	// Track if text content block has been started
+	// 跟踪文本内容块是否已开始
 	TextContentBlockStarted bool
-	// Track if thinking content block has been started
+	// 跟踪 thinking 内容块是否已开始
 	ThinkingContentBlockStarted bool
-	// Track finish reason for later use
+	// 跟踪结束原因以备后用
 	FinishReason string
-	// Track if content blocks have been stopped
+	// 跟踪内容块是否已停止
 	ContentBlocksStopped bool
-	// Track if message_delta has been sent
+	// 跟踪 message_delta 是否已发送
 	MessageDeltaSent bool
-	// Track if message_start has been sent
+	// 跟踪 message_start 是否已发送
 	MessageStarted bool
-	// Track if message_stop has been sent
+	// 跟踪 message_stop 是否已发送
 	MessageStopSent bool
-	// Tool call content block index mapping
+	// 工具调用内容块索引映射
 	ToolCallBlockIndexes map[int]int
-	// Index assigned to text content block
+	// 分配给文本内容块的索引
 	TextContentBlockIndex int
-	// Index assigned to thinking content block
+	// 分配给 thinking 内容块的索引
 	ThinkingContentBlockIndex int
-	// Next available content block index
+	// 下一个可用的内容块索引
 	NextContentBlockIndex int
-	// Currently open tool call index (-1 if none)
+	// 当前打开的工具调用索引（没有则为 -1）
 	OpenToolCallIndex int
-	// Queue of interleaved text or thinking chunks arriving while a tool call is open
+	// 工具调用打开期间到达的交错文本或 thinking 分块队列
 	InterleavedContentChunks []InterleavedContentChunk
-	// Usage metrics cached from streaming chunks
+	// 从流式分块中缓存的用量指标
 	UsageInputTokens      int64
 	UsageOutputTokens     int64
 	UsageCachedTokens     int64
 	UsageCacheWriteTokens int64
 }
 
-// InterleavedContentChunk stores a buffered chunk of text or thinking arriving while a tool call is open
+// InterleavedContentChunk 存储工具调用打开期间到达的一段缓冲文本或 thinking
 type InterleavedContentChunk struct {
-	Type string // "text" or "thinking"
+	Type string // "text" 或 "thinking"
 	Text string
 }
 
-// ToolCallAccumulator holds the state for accumulating tool call data
+// ToolCallAccumulator 保存累加工具调用数据的状态
 type ToolCallAccumulator struct {
 	ID        string
 	Name      string
 	Arguments strings.Builder
-	// StartEmitted tracks whether content_block_start has already been sent
-	// for this tool index.
+	// StartEmitted 跟踪是否已为该工具索引发送过
+	// content_block_start。
 	StartEmitted bool
 }
 
-// ConvertOpenAIResponseToClaude converts OpenAI streaming response format to Anthropic API format.
-// This function processes OpenAI streaming chunks and transforms them into Anthropic-compatible JSON responses.
-// It handles text content, tool calls, and usage metadata, outputting responses that match the Anthropic API format.
+// ConvertOpenAIResponseToClaude 将 OpenAI 流式响应格式转换为 Anthropic API 格式。
+// 该函数处理 OpenAI 流式分块并将其转换为 Anthropic 兼容的 JSON 响应。
+// 它处理文本内容、工具调用和用量元数据，输出符合 Anthropic API 格式的响应。
 //
-// Parameters:
-//   - ctx: The context for the request.
-//   - modelName: The name of the model.
-//   - rawJSON: The raw JSON response from the OpenAI API.
-//   - param: A pointer to a parameter object for the conversion.
+// 参数：
+//   - ctx: 请求的上下文。
+//   - modelName: 模型名称。
+//   - rawJSON: 来自 OpenAI API 的原始 JSON 响应。
+//   - param: 指向转换参数对象的指针。
 //
-// Returns:
-//   - [][]byte: A slice of byte chunks, each containing an Anthropic-compatible JSON response.
+// 返回：
+//   - [][]byte: 字节分块切片，每个分块包含一个 Anthropic 兼容的 JSON 响应。
 func ConvertOpenAIResponseToClaude(_ context.Context, _ string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) [][]byte {
 	if *param == nil {
 		*param = &ConvertOpenAIResponseToAnthropicParams{
@@ -135,7 +135,7 @@ func ConvertOpenAIResponseToClaude(_ context.Context, _ string, originalRequestR
 		(*param).(*ConvertOpenAIResponseToAnthropicParams).ToolNameMap = util.ToolNameMapFromClaudeRequest(originalRequestRawJSON)
 	}
 
-	// Check if this is the [DONE] marker
+	// 检查这是否为 [DONE] 标记
 	if bytes.Equal(bytes.TrimSpace(rawJSON), []byte("[DONE]")) {
 		return convertOpenAIDoneToAnthropic((*param).(*ConvertOpenAIResponseToAnthropicParams))
 	}
@@ -200,12 +200,12 @@ func terminalOpenAIFinishReason(param *ConvertOpenAIResponseToAnthropicParams) s
 	return "stop"
 }
 
-// convertOpenAIStreamingChunkToAnthropic converts OpenAI streaming chunk to Anthropic streaming events
+// convertOpenAIStreamingChunkToAnthropic 将 OpenAI 流式分块转换为 Anthropic 流式事件
 func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAIResponseToAnthropicParams) [][]byte {
 	root := gjson.ParseBytes(rawJSON)
 	var results [][]byte
 
-	// Initialize parameters if needed
+	// 如需要则初始化参数
 	if param.MessageID == "" {
 		param.MessageID = root.Get("id").String()
 	}
@@ -216,21 +216,21 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 		param.CreatedAt = root.Get("created").Int()
 	}
 
-	// Emit message_start on the very first chunk, regardless of whether it has a role field.
-	// Some providers (like Copilot) may send tool_calls in the first chunk without a role field.
+	// 在第一个分块就发出 message_start，无论其是否带 role 字段。
+	// 某些供应商（例如 Copilot）可能在第一个分块中不带 role 字段就发送 tool_calls。
 	if delta := root.Get("choices.0.delta"); delta.Exists() {
 		if !param.MessageStarted {
-			// Send message_start event
+			// 发送 message_start 事件
 			messageStartJSON := []byte(`{"type":"message_start","message":{"id":"","type":"message","role":"assistant","model":"","content":[],"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":0,"output_tokens":0}}}`)
 			messageStartJSON, _ = sjson.SetBytes(messageStartJSON, "message.id", param.MessageID)
 			messageStartJSON, _ = sjson.SetBytes(messageStartJSON, "message.model", param.Model)
 			results = append(results, translatorcommon.AppendSSEEventBytes(nil, "message_start", messageStartJSON, 2))
 			param.MessageStarted = true
 
-			// Don't send content_block_start for text here - wait for actual content
+			// 此处不要为文本发送 content_block_start —— 等待实际内容
 		}
 
-		// Handle reasoning content delta
+		// 处理推理内容增量
 		for _, reasoningText := range collectOpenAIObjectReasoningTexts(delta) {
 			if reasoningText == "" {
 				continue
@@ -266,11 +266,11 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 			}
 		}
 
-		// Handle content delta
+		// 处理内容增量
 		if content := delta.Get("content"); content.Exists() && content.String() != "" {
 			if param.OpenToolCallIndex != -1 {
-				// Tool call content block is currently active on the wire.
-				// Buffer this text so content blocks remain strictly sequential.
+				// 工具调用内容块当前在线上处于活动状态。
+				// 缓冲此文本，以保持内容块严格顺序。
 				if n := len(param.InterleavedContentChunks); n > 0 && param.InterleavedContentChunks[n-1].Type == "text" {
 					param.InterleavedContentChunks[n-1].Text += content.String()
 				} else {
@@ -281,7 +281,7 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 				}
 				param.ContentAccumulator.WriteString(content.String())
 			} else {
-				// Send content_block_start for text if not already sent
+				// 如果尚未发送，则为文本发送 content_block_start
 				if !param.TextContentBlockStarted {
 					stopThinkingContentBlock(param, &results)
 					if param.TextContentBlockIndex == -1 {
@@ -301,12 +301,12 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 				contentDeltaJSONBytes, _ = sjson.SetBytes(contentDeltaJSONBytes, "delta.text", content.String())
 				results = append(results, translatorcommon.AppendSSEEventBytes(nil, "content_block_delta", contentDeltaJSONBytes, 2))
 
-				// Accumulate content
+				// 累加内容
 				param.ContentAccumulator.WriteString(content.String())
 			}
 		}
 
-		// Handle tool calls
+		// 处理工具调用
 		if toolCalls := delta.Get("tool_calls"); toolCalls.Exists() && toolCalls.IsArray() {
 			if param.ToolCallsAccumulator == nil {
 				param.ToolCallsAccumulator = make(map[int]*ToolCallAccumulator)
@@ -318,35 +318,35 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 					index = int(arrayIndex.Int())
 				}
 
-				// Initialize accumulator if needed
+				// 如需要则初始化累加器
 				if _, exists := param.ToolCallsAccumulator[index]; !exists {
 					param.ToolCallsAccumulator[index] = &ToolCallAccumulator{}
 				}
 
 				accumulator := param.ToolCallsAccumulator[index]
 
-				// Handle tool call ID. Only accept JSON-string, non-empty
-				// values so malformed upstream fields do not overwrite a
-				// valid ID or coerce into a content_block.id.
+				// 处理工具调用 ID。仅接受 JSON 字符串且非空的
+				// 值，这样畸形的上游字段不会覆盖
+				// 有效 ID 或被强制转换为 content_block.id。
 				if id := toolCall.Get("id"); id.Exists() && id.Type == gjson.String {
 					if idStr := id.String(); idStr != "" {
 						accumulator.ID = idStr
 					}
 				}
 
-				// Handle function name and arguments
+				// 处理函数名和参数
 				if function := toolCall.Get("function"); function.Exists() {
-					// Only record the name until content_block_start has been
-					// emitted. Some upstreams send "name": "" or repeat the
-					// field across chunks; reassigning after start could drift
-					// from what was already announced.
+					// 仅在 content_block_start 发出之前记录名称。
+					// 某些上游会发送 "name": "" 或在多个分块中
+					// 重复该字段；在 start 之后重新赋值可能偏离
+					// 已经声明的内容。
 					if !accumulator.StartEmitted {
 						if name := function.Get("name"); name.Exists() && name.Type == gjson.String && name.String() != "" {
 							accumulator.Name = util.MapToolName(param.ToolNameMap, name.String())
 						}
 					}
 
-					// Handle function arguments
+					// 处理函数参数
 					if args := function.Get("arguments"); args.Exists() {
 						argsText := args.String()
 						if argsText != "" {
@@ -355,11 +355,11 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 					}
 				}
 
-				// Re-check on every chunk, not only chunks with a function
-				// object. Some upstreams split function.name and id across
-				// separate deltas.
-				// Anthropic requires strictly sequential content blocks.
-				// Only emit mid-stream start if no other tool call block is currently open.
+				// 在每个分块都重新检查，而不仅是带 function
+				// 对象的分块。某些上游会把 function.name 和 id 拆分到
+				// 不同的增量中。
+				// Anthropic 要求内容块严格顺序。
+				// 仅当当前没有其他工具调用块打开时才发出流中途的 start。
 				if !accumulator.StartEmitted && accumulator.Name != "" && accumulator.ID != "" && !param.ContentBlocksStopped {
 					if param.OpenToolCallIndex == -1 {
 						emitToolUseStart(param, index, accumulator, &results)
@@ -371,7 +371,7 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 		}
 	}
 
-	// Handle finish_reason (but don't send message_delta/message_stop yet)
+	// 处理 finish_reason（但暂不发送 message_delta/message_stop）
 	if finishReason := root.Get("choices.0.finish_reason"); finishReason.Exists() && finishReason.String() != "" {
 		reason := finishReason.String()
 		switch {
@@ -393,21 +393,21 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 
 		finalizeOpenAIAnthropicContentBlocks(param, &results)
 
-		// Don't send message_delta here - wait for usage info or [DONE]
+		// 此处不要发送 message_delta —— 等待用量信息或 [DONE]
 	}
 
-	// Cache usage information whenever present
+	// 只要存在就缓存用量信息
 	usage := root.Get("usage")
 	hasUsage := usage.Exists() && usage.Type != gjson.Null
 	if hasUsage {
 		param.UsageInputTokens, param.UsageOutputTokens, param.UsageCachedTokens, param.UsageCacheWriteTokens = extractOpenAIUsage(usage)
 	}
 
-	// Emit message_delta and message_stop only when generation is finished:
-	// - Upstream sent a trailing usage-only chunk (choices array is empty or absent) after content/tools started, or
-	// - Upstream sent [DONE] (handled in convertOpenAIDoneToAnthropic).
-	// Content chunks with finish_reason and preliminary usage must not emit message_delta early,
-	// because authoritative token counts (such as cached_tokens) can arrive in the trailing usage-only chunk.
+	// 仅在生成结束时才发出 message_delta 和 message_stop：
+	// - 上游在内容/工具开始后发送了仅含用量的末尾分块（choices 数组为空或不存在），或
+	// - 上游发送了 [DONE]（在 convertOpenAIDoneToAnthropic 中处理）。
+	// 带 finish_reason 和初步用量的内容分块不得提前发出 message_delta，
+	// 因为权威的 token 计数（例如 cached_tokens）可能出现在末尾的仅含用量分块中。
 	isTrailingUsageChunk := hasUsage && !root.Get("choices.0").Exists() &&
 		(param.FinishReason != "" || param.SawToolCall || param.TextContentBlockStarted || param.ThinkingContentBlockStarted || param.ContentAccumulator.Len() > 0 || len(param.InterleavedContentChunks) > 0)
 
@@ -420,7 +420,7 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 	return results
 }
 
-// convertOpenAIDoneToAnthropic handles the [DONE] marker and sends final events
+// convertOpenAIDoneToAnthropic 处理 [DONE] 标记并发送最终事件
 func convertOpenAIDoneToAnthropic(param *ConvertOpenAIResponseToAnthropicParams) [][]byte {
 	var results [][]byte
 
@@ -435,7 +435,7 @@ func convertOpenAIDoneToAnthropic(param *ConvertOpenAIResponseToAnthropicParams)
 	return results
 }
 
-// convertOpenAINonStreamingToAnthropic converts OpenAI non-streaming response to Anthropic format
+// convertOpenAINonStreamingToAnthropic 将 OpenAI 非流式响应转换为 Anthropic 格式
 func convertOpenAINonStreamingToAnthropic(rawJSON []byte) [][]byte {
 	root := gjson.ParseBytes(rawJSON)
 
@@ -443,9 +443,9 @@ func convertOpenAINonStreamingToAnthropic(rawJSON []byte) [][]byte {
 	out, _ = sjson.SetBytes(out, "id", root.Get("id").String())
 	out, _ = sjson.SetBytes(out, "model", root.Get("model").String())
 
-	// Process message content and tool calls
+	// 处理消息内容和工具调用
 	if choices := root.Get("choices"); choices.Exists() && choices.IsArray() && len(choices.Array()) > 0 {
-		choice := choices.Array()[0] // Take first choice
+		choice := choices.Array()[0] // 取第一个 choice
 		var contentBlocks [][]byte
 
 		for _, reasoningText := range collectOpenAIObjectReasoningTexts(choice.Get("message")) {
@@ -457,14 +457,14 @@ func convertOpenAINonStreamingToAnthropic(rawJSON []byte) [][]byte {
 			contentBlocks = append(contentBlocks, block)
 		}
 
-		// Handle text content
+		// 处理文本内容
 		if content := choice.Get("message.content"); content.Exists() && content.String() != "" {
 			block := []byte(`{"type":"text","text":""}`)
 			block, _ = sjson.SetBytes(block, "text", content.String())
 			contentBlocks = append(contentBlocks, block)
 		}
 
-		// Handle tool calls
+		// 处理工具调用
 		if toolCalls := choice.Get("message.tool_calls"); toolCalls.Exists() && toolCalls.IsArray() {
 			toolCalls.ForEach(func(_, toolCall gjson.Result) bool {
 				toolUseBlock := []byte(`{"type":"tool_use","id":"","name":"","input":{}}`)
@@ -492,13 +492,13 @@ func convertOpenAINonStreamingToAnthropic(rawJSON []byte) [][]byte {
 			out = translatorcommon.SetRawArrayItems(out, "content", contentBlocks)
 		}
 
-		// Set stop reason
+		// 设置结束原因
 		if finishReason := choice.Get("finish_reason"); finishReason.Exists() {
 			out, _ = sjson.SetBytes(out, "stop_reason", mapOpenAIFinishReasonToAnthropic(finishReason.String()))
 		}
 	}
 
-	// Set usage information
+	// 设置用量信息
 	if usage := root.Get("usage"); usage.Exists() {
 		inputTokens, outputTokens, cachedTokens, cacheWriteTokens := extractOpenAIUsage(usage)
 		out, _ = sjson.SetBytes(out, "usage.input_tokens", inputTokens)
@@ -514,7 +514,7 @@ func convertOpenAINonStreamingToAnthropic(rawJSON []byte) [][]byte {
 	return [][]byte{out}
 }
 
-// mapOpenAIFinishReasonToAnthropic maps OpenAI finish reasons to Anthropic equivalents
+// mapOpenAIFinishReasonToAnthropic 将 OpenAI 结束原因映射为 Anthropic 的对应值
 func mapOpenAIFinishReasonToAnthropic(openAIReason string) string {
 	switch openAIReason {
 	case "stop":
@@ -524,8 +524,8 @@ func mapOpenAIFinishReasonToAnthropic(openAIReason string) string {
 	case "tool_calls":
 		return "tool_use"
 	case "content_filter":
-		return "end_turn" // Anthropic doesn't have direct equivalent
-	case "function_call": // Legacy OpenAI
+		return "end_turn" // Anthropic 没有直接对应值
+	case "function_call": // 旧版 OpenAI
 		return "tool_use"
 	default:
 		return "end_turn"
@@ -632,12 +632,12 @@ func emitToolUseStart(param *ConvertOpenAIResponseToAnthropicParams, openAIToolI
 	param.OpenToolCallIndex = openAIToolIndex
 }
 
-// emitBelatedToolUseStart finalizes a tool_use block that never received a
-// mid-stream start. Some OpenAI-compatible providers leave function.name empty
-// for the whole stream; dropping those calls loses tool_use for Claude Code and
-// can trigger retry loops. When name is still empty but the call has an id
-// and/or arguments, synthesize tool_<index> instead of silently discarding it.
-// Returns false when the accumulator has no usable tool-call signal.
+// emitBelatedToolUseStart 完成一个从未收到流中途 start 的 tool_use 块。
+// 某些 OpenAI 兼容供应商在整个流中都不填 function.name；
+// 丢弃这些调用会让 Claude Code 失去 tool_use，
+// 并可能触发重试循环。当名称仍为空但该调用有 id
+// 和/或参数时，合成 tool_<index>，而不是静默丢弃它。
+// 当累加器没有可用的工具调用信号时返回 false。
 func emitBelatedToolUseStart(param *ConvertOpenAIResponseToAnthropicParams, openAIToolIndex int, accumulator *ToolCallAccumulator, results *[][]byte) bool {
 	if accumulator == nil {
 		return false
@@ -667,7 +667,7 @@ func finalizeSingleToolCall(param *ConvertOpenAIResponseToAnthropicParams, openA
 	}
 	blockIndex := param.toolContentBlockIndex(openAIToolIndex)
 
-	// Send complete input_json_delta with all accumulated arguments
+	// 发送包含所有已累加参数的完整 input_json_delta
 	if accumulator.Arguments.Len() > 0 {
 		inputDeltaJSON := []byte(`{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":""}}`)
 		inputDeltaJSON, _ = sjson.SetBytes(inputDeltaJSON, "index", blockIndex)
@@ -777,16 +777,16 @@ func toolCallAccumulatorIndexes(accumulators map[int]*ToolCallAccumulator) []int
 	return indexes
 }
 
-// ConvertOpenAIResponseToClaudeNonStream converts a non-streaming OpenAI response to a non-streaming Anthropic response.
+// ConvertOpenAIResponseToClaudeNonStream 将非流式 OpenAI 响应转换为非流式 Anthropic 响应。
 //
-// Parameters:
-//   - ctx: The context for the request.
-//   - modelName: The name of the model.
-//   - rawJSON: The raw JSON response from the OpenAI API.
-//   - param: A pointer to a parameter object for the conversion.
+// 参数：
+//   - ctx: 请求的上下文。
+//   - modelName: 模型名称。
+//   - rawJSON: 来自 OpenAI API 的原始 JSON 响应。
+//   - param: 指向转换参数对象的指针。
 //
-// Returns:
-//   - []byte: An Anthropic-compatible JSON response.
+// 返回：
+//   - []byte: Anthropic 兼容的 JSON 响应。
 func ConvertOpenAIResponseToClaudeNonStream(_ context.Context, _ string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, _ *any) []byte {
 	_ = requestRawJSON
 

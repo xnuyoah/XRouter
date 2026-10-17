@@ -24,58 +24,58 @@ const (
 	defaultFableResponsesMaxTokens  = 64000
 )
 
-// ConvertOpenAIResponsesRequestToClaude transforms an OpenAI Responses API request
-// into a Claude Messages API request using only gjson/sjson for JSON handling.
-// It supports:
-//   - instructions, input[].role==system and input[].role==developer -> separate
-//     top-level system blocks, in source order
-//   - input[].type==message with input_text/output_text -> user/assistant messages
+// ConvertOpenAIResponsesRequestToClaude 将一个 OpenAI Responses API 请求
+// 转换为 Claude Messages API 请求，仅使用 gjson/sjson 处理 JSON。
+// 它支持：
+//   - instructions、input[].role==system 和 input[].role==developer -> 独立的
+//     顶层 system 块，按源顺序排列
+//   - input[].type==message 且带 input_text/output_text -> user/assistant 消息
 //   - function_call/custom_tool_call -> assistant tool_use
 //   - function_call_output/custom_tool_call_output -> user tool_result
-//   - top-level tools and input[].additional_tools -> Claude tools[].input_schema
+//   - 顶层 tools 和 input[].additional_tools -> Claude tools[].input_schema
 //   - max_output_tokens -> max_tokens
-//   - stream passthrough via parameter
+//   - 通过参数进行流式直通
 func ConvertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte, stream bool) ([]byte, error) {
 	return convertOpenAIResponsesRequestToClaude(modelName, inputRawJSON, stream, false, ClientToolSearchEnabled())
 
 }
 
-// ConvertOpenAIResponsesRequestToClaudeWithCompat preserves reasoning items
-// whose encrypted content is empty for configured compatibility endpoints.
+// ConvertOpenAIResponsesRequestToClaudeWithCompat 为已配置的兼容端点
+// 保留加密内容为空的 reasoning 条目。
 func ConvertOpenAIResponsesRequestToClaudeWithCompat(modelName string, inputRawJSON []byte, stream bool) ([]byte, error) {
 	return convertOpenAIResponsesRequestToClaude(modelName, inputRawJSON, stream, true, ClientToolSearchEnabled())
 }
 
-// ConvertOpenAIResponsesRequestEnvelopeToClaude translates with the
-// upstream.claude.tool-search value pinned in ctx, if any.
+// ConvertOpenAIResponsesRequestEnvelopeToClaude 使用 ctx 中固定的
+// upstream.claude.tool-search 值（若有）进行转换。
 func ConvertOpenAIResponsesRequestEnvelopeToClaude(ctx context.Context, req sdktranslator.RequestEnvelope) sdktranslator.RequestEnvelope {
 	req.Body, req.Err = convertOpenAIResponsesRequestToClaude(req.Model, req.Body, req.Stream, false, ClientToolSearchEnabledFor(ctx))
 	return req
 }
 
-// ConvertOpenAIResponsesRequestToClaudeWithCompatContext is
-// ConvertOpenAIResponsesRequestToClaudeWithCompat with the
-// upstream.claude.tool-search value pinned in ctx, if any.
+// ConvertOpenAIResponsesRequestToClaudeWithCompatContext 是
+// 带 ctx 中固定的 upstream.claude.tool-search 值（若有）的
+// upstream.claude.tool-search 值（若有）进行转换。
 func ConvertOpenAIResponsesRequestToClaudeWithCompatContext(ctx context.Context, modelName string, inputRawJSON []byte, stream bool) ([]byte, error) {
 	return convertOpenAIResponsesRequestToClaude(modelName, inputRawJSON, stream, true, ClientToolSearchEnabledFor(ctx))
 }
 
-// toolSearch carries upstream.claude.tool-search for the whole translation so
-// a config reload cannot mix the two behaviors within one request.
+// toolSearch 在整次转换中携带 upstream.claude.tool-search，以便
+// 配置重载不会在单个请求内混用两种行为。
 func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte, stream, preserveEmptyThinkingBlocks, toolSearch bool) ([]byte, error) {
 	rawJSON := normalizeCodexAgentMessages(inputRawJSON)
 	var drops common.UserTurnDrops
 
 	userID := common.DeriveClaudeUserID(rawJSON)
 
-	// Base Claude message payload
+	// 基础 Claude 消息载荷
 	out := []byte(`{"model":"","max_tokens":32000,"messages":[],"metadata":{}}`)
 	out, _ = sjson.SetBytes(out, "metadata.user_id", userID)
 	out, _ = sjson.SetBytes(out, "max_tokens", defaultClaudeResponsesMaxTokensForModel(modelName))
 
 	root := gjson.ParseBytes(rawJSON)
 
-	// Convert OpenAI Responses reasoning.effort to Claude thinking config.
+	// 将 OpenAI Responses 的 reasoning.effort 转换为 Claude thinking 配置。
 	if v := root.Get("reasoning.effort"); v.Exists() {
 		effort := strings.ToLower(strings.TrimSpace(v.String()))
 		if effort != "" {
@@ -83,9 +83,9 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 			supportsAdaptive := mi != nil && mi.Thinking != nil && len(mi.Thinking.Levels) > 0
 			supportsMax := supportsAdaptive && thinking.HasLevel(mi.Thinking.Levels, string(thinking.LevelMax))
 
-			// Claude 4.6 supports adaptive thinking with output_config.effort.
-			// MapToClaudeEffort normalizes levels (e.g. minimal→low, xhigh→high) to avoid
-			// validation errors since validate treats same-provider unsupported levels as errors.
+			// Claude 4.6 通过 output_config.effort 支持自适应 thinking。
+			// MapToClaudeEffort 会规范化级别（例如 minimal→low、xhigh→high）以避免
+			// 校验错误，因为 validate 会将同供应商不支持的级别视为错误。
 			if supportsAdaptive {
 				switch effort {
 				case "none":
@@ -105,7 +105,7 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 					out, _ = sjson.SetBytes(out, "output_config.effort", effort)
 				}
 			} else {
-				// Legacy/manual thinking (budget_tokens).
+				// 旧式/手动 thinking（budget_tokens）。
 				budget, ok := thinking.ConvertLevelToBudget(effort)
 				if ok {
 					switch budget {
@@ -124,10 +124,10 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 		}
 	}
 
-	// Model
+	// 模型
 	out, _ = sjson.SetBytes(out, "model", modelName)
 
-	// Max tokens
+	// 最大令牌数
 	if mot := root.Get("max_output_tokens"); mot.Exists() && mot.Type != gjson.Null {
 		val := mot.Int()
 		if info := registry.LookupModelInfo(modelName, "claude"); info != nil && info.MaxCompletionTokens > 0 && val > int64(info.MaxCompletionTokens) {
@@ -136,7 +136,7 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 		out, _ = sjson.SetBytes(out, "max_tokens", val)
 	}
 
-	// Stream
+	// 流式
 	out, _ = sjson.SetBytes(out, "stream", stream)
 
 	// Service Tier -> Speed
@@ -144,12 +144,12 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 		out, _ = sjson.SetBytes(out, "speed", "fast")
 	}
 
-	// System-level inputs become canonical top-level Claude system blocks in
-	// source order: instructions first, then every input item whose role is
-	// system or developer. Each source block stays a separate Claude block and
-	// keeps operator authority; the Claude executor decides the final placement
-	// (mid-conversation role=system messages, or system reminders on legacy
-	// models), so this layer must not merge, trim or downgrade them to user text.
+	// 系统级输入会按源顺序成为规范的顶层 Claude system 块：
+	// 先是 instructions，然后是每个 role 为 system 或 developer 的
+	// input 条目。每个源块保持为独立的 Claude 块并
+	// 保留操作者权威；最终放置位置由 Claude 执行器决定
+	// （对话中途的 role=system 消息，或旧式模型上的 system reminder），
+	// 因此本层不得合并、裁剪或将它们降级为用户文本。
 	messageCapacity := root.Get("input.#").Int()
 	if messageCapacity == 0 && root.Get("input").Type == gjson.String {
 		messageCapacity = 1
@@ -192,7 +192,7 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 					return true
 				})
 			}
-			// Item-level cache_control applies to the last block this item produced.
+			// 条目级 cache_control 作用于该条目生成的最后一个块。
 			if item.Get("cache_control").Exists() && len(systemBlocks) > startIdx {
 				lastIdx := len(systemBlocks) - 1
 				if !gjson.GetBytes(systemBlocks[lastIdx], "cache_control").Exists() {
@@ -213,11 +213,11 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 
 	names := buildClaudeToolNames(root, toolSearch)
 	winners := responsesToolWinners(root, toolSearch)
-	// Native tool search declares discovered tools as deferred and replays
-	// search results as tool_reference blocks, which keeps the cached prefix.
+	// 原生工具搜索将发现的工具声明为 deferred，并把
+	// 搜索结果作为 tool_reference 块重放，从而保持缓存前缀。
 	nativeToolSearch := responsesClientToolSearchWins(responsesToolDescriptors(root, toolSearch))
 
-	// input array processing
+	// input 数组处理
 	var pendingRole string
 	var pendingParts [][]byte
 	var pendingToolUseParts [][]byte
@@ -288,8 +288,8 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 		}
 		pendingRole = "assistant"
 
-		// Client tool calls normally stay at the end of an assistant message, but
-		// a later reasoning item makes them a real separator between thinking blocks.
+		// 客户端工具调用通常位于 assistant 消息的末尾，但
+		// 后续的 reasoning 条目会使它们成为 thinking 块之间真正的分隔符。
 		if len(pendingToolUseParts) > 0 {
 			pendingParts = append(pendingParts, pendingToolUseParts...)
 			pendingToolUseParts = nil
@@ -332,7 +332,7 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 	unmappedItemTypes := map[string]int{}
 
 	for _, item := range inputItems {
-		// System-level items already became top-level system blocks.
+		// 系统级条目已转换为顶层 system 块。
 		if isResponsesSystemLevelRole(item.Get("role").String()) {
 			continue
 		}
@@ -342,7 +342,7 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 		}
 		switch typ {
 		case "message":
-			// Determine role and construct Claude-compatible content parts.
+			// 确定 role 并构造 Claude 兼容的内容部分。
 			var role string
 			var partsJSON [][]byte
 			var droppedPartType string
@@ -365,7 +365,7 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 							role = "assistant"
 						}
 					case "refusal":
-						// Claude has no refusal block; the text keeps the turn intact.
+						// Claude 没有 refusal 块；文本可保持该轮对话完整。
 						if t := part.Get("refusal"); t.Exists() && t.String() != "" {
 							contentPart := []byte(`{"type":"text","text":""}`)
 							contentPart, _ = sjson.SetBytes(contentPart, "text", t.String())
@@ -435,7 +435,7 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 							droppedPartType = ptype
 						}
 					case "input_audio":
-						// Claude has no audio block, so the part cannot be sent.
+						// Claude 没有 audio 块，因此该部分无法发送。
 						if droppedPartType == "" {
 							droppedPartType = ptype
 						}
@@ -448,7 +448,7 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 				partsJSON = append(partsJSON, contentPart)
 			}
 
-			// Fallback to given role if content types not decisive
+			// 若内容类型无法确定，则回退到给定的 role
 			if role == "" {
 				r := item.Get("role").String()
 				switch r {
@@ -475,8 +475,8 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 			}
 
 		case "web_search_call":
-			// Rebuild the Claude server-side search pair so the replayed turn
-			// still shows the search and its hits.
+			// 重建 Claude 服务端搜索对，使重放的那一轮
+			// 仍能显示搜索及其命中结果。
 			if blocks := convertResponsesWebSearchCallToClaudeBlocks(item); len(blocks) > 0 {
 				appendParts("assistant", blocks...)
 			}
@@ -485,8 +485,8 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 			appendReasoning(convertResponsesReasoningToClaudeThinking(item, preserveEmptyThinkingBlocks))
 
 		case "function_call", "custom_tool_call":
-			// Map to assistant tool_use. Freeform custom input is wrapped in an
-			// object because Claude tool_use input must be a JSON object.
+			// 映射为 assistant tool_use。自由形式的 custom 输入会被包裹为
+			// 对象，因为 Claude tool_use 的 input 必须是 JSON 对象。
 			rawCallID := common.ExtractResponsesCallID(item)
 			callID := rawCallID
 			if callID == "" {
@@ -498,7 +498,7 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 			}
 			name := item.Get("name").String()
 			if namespaceName := strings.TrimSpace(item.Get("namespace").String()); namespaceName != "" {
-				// Rebuild the qualified name emitted by the previous Responses turn.
+				// 重建上一轮 Responses 输出的限定名。
 				name = qualifyResponsesNamespaceToolName(namespaceName, name)
 			}
 			isCustomToolCall := typ == "custom_tool_call"
@@ -521,7 +521,7 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 			appendToolUse(toolUse)
 
 		case "function_call_output", "custom_tool_call_output":
-			// Map to user tool_result
+			// 映射为 user tool_result
 			rawID := common.ExtractResponsesCallID(item)
 			if rawID != "" {
 				if _, exists := emittedToolResults[rawID]; exists {
@@ -536,12 +536,12 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 				}
 			}
 			output := outputItem.Get("output")
-			// Standalone outputs (no call_id, or one that never paired with a
-			// function_call in this input, e.g. the create_thread delegation seed)
-			// have no tool_use to attach to. Claude rejects orphan tool_result
-			// blocks, so surface them as plain user text instead. Pairing is
-			// decided on the raw id so two distinct ids that sanitize to the
-			// same Claude id are not mistaken for the same call.
+			// 独立输出（没有 call_id，或从未与此输入中的
+			// function_call 配对的输出，例如 create_thread 委托种子）
+			// 没有可挂接的 tool_use。Claude 会拒绝孤立的 tool_result
+			// 块，因此改为将它们作为普通用户文本呈现。配对判定
+			// 基于原始 id，以免两个不同 id 清洗后变为
+			// 同一个 Claude id 时被误认为同一次调用。
 			if _, paired := emittedRawToolUses[rawID]; rawID == "" || !paired {
 				appendParts("user", convertResponsesStandaloneToolOutputToClaudeText(output)...)
 				continue
@@ -549,9 +549,9 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 			callID := util.SanitizeClaudeToolID(rawID)
 			toolResult := []byte(`{"type":"tool_result","tool_use_id":"","content":""}`)
 			toolResult, _ = sjson.SetBytes(toolResult, "tool_use_id", callID)
-			// Responses reports an unfinished tool output as status
-			// "incomplete"; Claude's only in-band equivalent is is_error
-			// on tool_result, so carry the signal over instead of dropping it.
+			// Responses 将未完成的工具输出报告为状态
+			// "incomplete"；Claude 唯一带内的等价物是 tool_result 上的
+			// is_error，因此传递该信号而不是将其丢弃。
 			if strings.EqualFold(strings.TrimSpace(outputItem.Get("status").String()), "incomplete") {
 				toolResult, _ = sjson.SetBytes(toolResult, "is_error", true)
 			}
@@ -596,13 +596,13 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 			appendParts("user", toolResult)
 
 		default:
-			// Reachability guard: Claude only ever receives the item types this
-			// switch handles. A new one means the client gained a capability
-			// whose Claude counterpart still has to be decided, so make the gap
-			// visible instead of dropping the turn content in silence.
+			// 可达性防护：Claude 只会收到本 switch 处理的条目类型。
+			// 出现新类型意味着客户端获得了某项能力，
+			// 而其 Claude 对应实现仍待确定，因此要让这一缺口
+			// 可见，而不是静默丢弃该轮内容。
 			if typ := item.Get("type").String(); typ != "" && typ != "additional_tools" {
-				// additional_tools is consumed later when building tools[], so it
-				// is not dropped turn content and must not warn.
+				// additional_tools 会在稍后构建 tools[] 时被消费，因此它
+				// 不属于被丢弃的轮次内容，不得告警。
 				unmappedItemTypes[typ]++
 			}
 		}
@@ -615,9 +615,9 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 	if !preserveEmptyThinkingBlocks {
 		messageBlocks = stripTrailingClaudeThinkingBlocks(messageBlocks)
 	}
-	// Answer dangling tool_use blocks before the prefill check below so an
-	// interrupted turn ends with a synthesized user tool_result instead of a
-	// rejected assistant prefill on models that disallow it.
+	// 在下方的 prefill 检查之前补齐悬空的 tool_use 块，使
+	// 被中断的轮次以合成的 user tool_result 结尾，而不是在
+	// 不允许 assistant prefill 的模型上被拒绝。
 	messageBlocks = repairClaudeToolPairing(messageBlocks)
 	if !preserveEmptyThinkingBlocks {
 		messageBlocks = dropUnsupportedClaudeAssistantPrefill(modelName, messageBlocks)
@@ -625,8 +625,8 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 	if problems := claudeMessageInvariantProblems(messageBlocks); len(problems) > 0 {
 		log.Warnf("responses->claude: message invariants violated after repair (model=%s): %s", modelName, strings.Join(problems, "; "))
 	}
-	// Preserve a minimal conversational turn for system-only inputs or when messages became empty
-	// so downstream validation still sees a Claude-shaped request.
+	// 对于仅含 system 的输入或消息变为空的情况，保留一个最小的对话轮次，
+	// 使下游校验仍能看到 Claude 形态的请求。
 	if len(messageBlocks) == 0 && (len(systemBlocks) > 0 || hadMessages) {
 		messageBlocks = append(messageBlocks, []byte(`{"role":"user","content":[{"type":"text","text":""}]}`))
 	}
@@ -638,12 +638,12 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 	includedToolNames := map[string]struct{}{}
 	toolNameMap := map[string]string{}
 
-	// Responses Lite puts tool definitions in input[].additional_tools. Select
-	// one winner for each final name, while keeping the original order for the
-	// tools that survive conversion.
+	// Responses Lite 将工具定义放在 input[].additional_tools 中。为每个
+	// 最终名称选择一个胜出者，同时为在转换中保留的
+	// 工具维持原始顺序。
 	var toolItems [][]byte
-	// The deferred anchor goes between declared and discovered tools, so each
-	// discovery only appends to tools[].
+	// deferred 锚点位于已声明工具与已发现工具之间，因此每次
+	// 发现只会追加到 tools[]。
 	anchorIndex := -1
 	for _, descriptor := range responsesToolDescriptors(root, toolSearch) {
 		winner, ok := winners[descriptor.name]
@@ -659,7 +659,7 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 			if anchorIndex < 0 {
 				anchorIndex = len(toolItems)
 			}
-			// Anthropic rejects cache_control on deferred tools.
+			// Anthropic 会拒绝 deferred 工具上的 cache_control。
 			tJSON, _ = sjson.DeleteBytes(tJSON, "cache_control")
 			tJSON, _ = sjson.SetBytes(tJSON, "defer_loading", true)
 		}
@@ -683,7 +683,7 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 		out, _ = sjson.SetRawBytes(out, "tools", common.JoinRawArray(toolItems))
 	}
 
-	// Map tool_choice similar to Chat Completions translator (optional in docs, safe to handle)
+	// 与 Chat Completions 转换器类似地映射 tool_choice（文档中为可选，处理起来是安全的）
 	if toolChoice := root.Get("tool_choice"); toolChoice.Exists() {
 		switch toolChoice.Type {
 		case gjson.String:
@@ -691,7 +691,7 @@ func convertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 			case "auto":
 				out, _ = sjson.SetRawBytes(out, "tool_choice", []byte(`{"type":"auto"}`))
 			case "none":
-				// Leave unset; implies no tools
+				// 保持未设置；意味着无工具
 			case "required":
 				if len(includedToolNames) > 0 {
 					out, _ = sjson.SetRawBytes(out, "tool_choice", []byte(`{"type":"any"}`))
@@ -744,18 +744,18 @@ func defaultClaudeResponsesMaxTokensForModel(modelName string) int {
 	if info == nil || info.MaxCompletionTokens <= 0 {
 		return maxTokens
 	}
-	// Fable keeps its conservative omitted-field ceiling. Every other registered
-	// model uses its output limit, including when that limit is above the
-	// historical 32000 default.
+	// Fable 保持其保守的省略字段上限。其他所有已注册
+	// 模型都使用其输出上限，即使该上限高于
+	// 历史上的 32000 默认值。
 	if strings.Contains(normalized, "fable") && info.MaxCompletionTokens >= maxTokens {
 		return maxTokens
 	}
 	return info.MaxCompletionTokens
 }
 
-// isResponsesSystemLevelRole reports whether an input item carries system-level
-// authority. The Responses API ranks developer and system instructions above
-// user content, so both map to Claude's system slot rather than a user turn.
+// isResponsesSystemLevelRole 报告某个输入条目是否携带系统级
+// 权威。Responses API 将 developer 和 system 指令排在
+// 用户内容之上，因此两者都映射到 Claude 的 system 槽位而非用户轮次。
 func isResponsesSystemLevelRole(role string) bool {
 	switch strings.ToLower(strings.TrimSpace(role)) {
 	case "system", "developer":
@@ -765,9 +765,9 @@ func isResponsesSystemLevelRole(role string) bool {
 	}
 }
 
-// dropUnsupportedClaudeAssistantPrefill removes a trailing assistant message for
-// Claude model families that reject assistant message prefill (e.g., Fable,
-// Opus 5, Sonnet 4.6).
+// dropUnsupportedClaudeAssistantPrefill 为拒绝 assistant 消息 prefill 的
+// Claude 模型家族（例如 Fable、
+// Opus 5、Sonnet 4.6）移除末尾的 assistant 消息。
 func dropUnsupportedClaudeAssistantPrefill(modelName string, messages [][]byte) [][]byte {
 	if !claudeModelRejectsAssistantPrefill(modelName) || len(messages) == 0 {
 		return messages
@@ -779,10 +779,10 @@ func dropUnsupportedClaudeAssistantPrefill(modelName string, messages [][]byte) 
 	return messages[:len(messages)-1]
 }
 
-// stripTrailingClaudeThinkingBlocks removes trailing thinking and
-// redacted_thinking blocks from the final assistant message. Anthropic rejects
-// requests whose final assistant content block is thinking. If no content
-// blocks remain after stripping, the assistant message itself is dropped.
+// stripTrailingClaudeThinkingBlocks 从最后的 assistant 消息中移除末尾的
+// thinking 和 redacted_thinking 块。Anthropic 会拒绝
+// 最后一个 assistant 内容块为 thinking 的请求。若剥离后不再
+// 剩余内容块，则 assistant 消息本身也会被丢弃。
 func stripTrailingClaudeThinkingBlocks(messages [][]byte) [][]byte {
 	if len(messages) == 0 {
 		return messages
@@ -831,11 +831,11 @@ func stripTrailingClaudeThinkingBlocks(messages [][]byte) [][]byte {
 	return messages
 }
 
-// claudeModelRejectsAssistantPrefill reports whether a Claude model family
-// disallows trailing assistant prefill in its conversation history.
+// claudeModelRejectsAssistantPrefill 报告某个 Claude 模型家族
+// 是否不允许其对话历史中出现末尾 assistant prefill。
 func claudeModelRejectsAssistantPrefill(modelName string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(modelName))
-	// Provider namespaces are not part of the model family.
+	// 供应商命名空间不属于模型家族的一部分。
 	if index := strings.LastIndexByte(normalized, '/'); index >= 0 {
 		normalized = normalized[index+1:]
 	}
@@ -848,7 +848,7 @@ func claudeModelRejectsAssistantPrefill(modelName string) bool {
 		return false
 	}
 	parseVersion := func(token string) int {
-		// Eight-digit snapshot dates must never be treated as versions.
+		// 八位数的快照日期绝不能被视为版本号。
 		if token == "" || len(token) >= 8 {
 			return -1
 		}
@@ -870,15 +870,15 @@ func claudeModelRejectsAssistantPrefill(modelName string) bool {
 	return tokens[0] == "sonnet" && major == 4 && len(tokens) > 2 && parseVersion(tokens[2]) >= 6
 }
 
-// responsesSystemUnsupportedBlock represents a system-level content part that
-// Claude cannot carry. Anthropic accepts text only in the top-level system field
-// ("system.<i>.type: Input should be 'text'") and text, tool_addition and
-// tool_removal in a role=system message, so images, files and unknown part types
-// have no lossless mapping. The part is preserved as a typed marker instead of
-// being dropped: silently discarding operator instructions is worse than a
-// rejected request, and the marker lets the Claude executor fail the request with
-// the offending type named. The original payload is not copied because the
-// request can never succeed.
+// responsesSystemUnsupportedBlock 表示 Claude 无法承载的系统级
+// 内容部分。Anthropic 仅在顶层 system 字段接受文本
+// （"system.<i>.type: Input should be 'text'"），并在 role=system 消息中
+// 接受 text、tool_addition 和 tool_removal，因此图像、文件和未知部分类型
+// 没有无损映射。该部分会被保留为带类型的标记，而不是
+// 被丢弃：静默丢弃操作者指令比拒绝请求更糟，
+// 而该标记让 Claude 执行器能够以指出问题类型的方式使请求失败。
+// 原始载荷不会被复制，因为该
+// 请求永远不可能成功。
 func responsesSystemUnsupportedBlock(part gjson.Result) []byte {
 	partType := strings.TrimSpace(part.Get("type").String())
 	if partType == "" {
@@ -889,15 +889,15 @@ func responsesSystemUnsupportedBlock(part gjson.Result) []byte {
 	return block
 }
 
-// convertResponsesReasoningToClaudeThinking rebuilds one Claude thinking block
-// from a Responses reasoning item so a replayed conversation keeps its chain of
-// thought. Anthropic requires a signature on every thinking block and rejects an
-// absent or empty one, so an item whose encrypted_content is missing or belongs
-// to another provider is dropped rather than replayed as an unsigned block.
-// Compatibility mode explicitly keeps the original opaque value as the
-// signature for upstreams that use a provider-specific signature format.
-// Anthropic does not verify the text against the signature, which is what makes
-// the summarized text safe to restore alongside it.
+// convertResponsesReasoningToClaudeThinking 从 Responses reasoning 条目
+// 重建一个 Claude thinking 块，使重放的对话保留其
+// 思维链。Anthropic 要求每个 thinking 块都有签名，并会拒绝
+// 缺失或为空的签名，因此 encrypted_content 缺失或属于
+// 另一供应商的条目会被丢弃，而不会作为无签名块重放。
+// 兼容模式会显式保留原始不透明值作为
+// 签名，用于采用供应商特定签名格式的上游。
+// Anthropic 不会用签名校验文本，这正是
+// 摘要文本可安全地随之恢复的原因。
 func convertResponsesReasoningToClaudeThinking(item gjson.Result, preserveEmptyThinkingBlocks ...bool) []byte {
 	encrypted := item.Get("encrypted_content").String()
 	preserveEmpty := len(preserveEmptyThinkingBlocks) > 0 && preserveEmptyThinkingBlocks[0]
@@ -925,8 +925,8 @@ func convertResponsesReasoningToClaudeThinking(item gjson.Result, preserveEmptyT
 	return thinkingPart
 }
 
-// responsesRedactedThinkingData reports whether encrypted_content carries an
-// Anthropic redacted_thinking payload and returns that payload.
+// responsesRedactedThinkingData 报告 encrypted_content 是否携带
+// Anthropic redacted_thinking 载荷，并返回该载荷。
 func responsesRedactedThinkingData(encryptedContent string) (string, bool) {
 	trimmed := strings.TrimSpace(encryptedContent)
 	if !strings.HasPrefix(trimmed, ClaudeResponsesRedactedThinkingPrefix) {
@@ -935,12 +935,12 @@ func responsesRedactedThinkingData(encryptedContent string) (string, bool) {
 	return strings.TrimSpace(strings.TrimPrefix(trimmed, ClaudeResponsesRedactedThinkingPrefix)), true
 }
 
-// responsesReasoningText collects the reasoning text of a Responses item. OpenAI
-// splits it across summary[] parts of type summary_text and content[] parts of
-// type reasoning_text. Claude only ever produces summaries, but callers echo the
-// item back through whichever array their SDK models, so both are read. content[]
-// is only consulted when summary[] carried nothing, otherwise a client that
-// mirrors the text into both arrays would replay it twice.
+// responsesReasoningText 收集 Responses 条目的 reasoning 文本。OpenAI
+// 将其拆分到类型为 summary_text 的 summary[] 部分和类型为
+// reasoning_text 的 content[] 部分中。Claude 只会产生摘要，但调用方
+// 会通过其 SDK 建模的任一数组回传该条目，因此两者都会被读取。content[]
+// 仅在 summary[] 未携带任何内容时才被查阅，否则将文本
+// 同时镜像到两个数组的客户端会将其重放两次。
 func responsesReasoningText(item gjson.Result) string {
 	if text := responsesReasoningPartsText(item.Get("summary")); text != "" {
 		return text
@@ -964,12 +964,12 @@ func responsesReasoningPartsText(parts gjson.Result) string {
 	return builder.String()
 }
 
-// claudeThinkingSeparatorForToolUse returns the most recent thinking block when
-// the buffered assistant content ends with a server tool result, so the
-// tool-use run that follows keeps a thinking block of its own. Upstreams that
-// enforce Anthropic's thinking replay rules reject a tool_use glued directly
-// onto a web_search_tool_result, while native Claude output always carries a
-// fresh thinking block before the continued segment.
+// claudeThinkingSeparatorForToolUse 在缓冲的 assistant 内容以服务端
+// 工具结果结尾时返回最近的 thinking 块，使随后的
+// tool-use 序列拥有自己的 thinking 块。强制执行 Anthropic
+// thinking 重放规则的上游会拒绝直接粘接在
+// web_search_tool_result 上的 tool_use，而原生 Claude 输出在
+// 续接片段前总是携带一个新的 thinking 块。
 func claudeThinkingSeparatorForToolUse(parts [][]byte) []byte {
 	if len(parts) == 0 {
 		return nil
@@ -1022,10 +1022,10 @@ func applyResponsesToolResultContent(toolResult []byte, output gjson.Result) []b
 	return toolResult
 }
 
-// claudeMessageInvariantProblems reports shapes Anthropic rejects. It only
-// describes; repairClaudeToolPairing already fixes the cases it knows about,
-// so anything reported here is a new history shape worth investigating from
-// the proxy log instead of from an upstream 400.
+// claudeMessageInvariantProblems 报告 Anthropic 会拒绝的形态。它只
+// 做描述；repairClaudeToolPairing 已修复其已知的情况，
+// 因此这里报告的任何内容都是新的历史形态，值得从
+// 代理日志而非上游 400 中排查。
 func claudeMessageInvariantProblems(messages [][]byte) []string {
 	var problems []string
 	if len(messages) > 0 && gjson.GetBytes(messages[0], "role").String() != "user" {
@@ -1094,15 +1094,15 @@ func claudeMessageInvariantProblems(messages [][]byte) []string {
 	return problems
 }
 
-// repairClaudeToolPairing enforces the Anthropic invariant that every
-// assistant tool_use is answered by a tool_result at the start of the very
-// next user message, and that every tool_result references a tool_use in the
-// immediately preceding assistant message. Histories break it in practice
-// when a session dies while a tool runs (tool_use with no output), when
-// standalone context is injected ahead of a real tool output (text before
-// tool_result), or when a delayed output lands after an intervening
-// assistant message. Missing results are synthesized as errors and orphan
-// results fold into plain text so the model can carry on.
+// repairClaudeToolPairing 强制执行 Anthropic 的不变量：每个
+// assistant tool_use 都由紧邻的下一条 user 消息开头的 tool_result
+// 应答，且每个 tool_result 都引用紧邻的上一条
+// assistant 消息中的 tool_use。实践中历史会被破坏，
+// 例如会话在工具运行期间终止（有 tool_use 无输出）、
+// 在真实工具输出之前注入了独立上下文（tool_result 之前有文本），
+// 或延迟输出落在中间插入的 assistant 消息之后。
+// 缺失的结果会被合成为错误，孤立的
+// 结果会折叠为纯文本，以便模型继续。
 func repairClaudeToolPairing(messages [][]byte) [][]byte {
 	if len(messages) == 0 {
 		return messages
@@ -1115,9 +1115,9 @@ func repairClaudeToolPairing(messages [][]byte) [][]byte {
 		content := gjson.GetBytes(msg, "content")
 
 		if role == "user" {
-			// Fold tool_result blocks that do not answer a tool_use in the
-			// immediately preceding assistant message into plain text, and move
-			// the real ones ahead of any other content.
+			// 将不响应紧邻的上一条 assistant 消息中 tool_use 的
+			// tool_result 块折叠为纯文本，并把
+			// 真正的 tool_result 移到其他内容之前。
 			rebuilt, changed := normalizeClaudeToolResultMessage(msg, prevToolUseIDs)
 			if changed {
 				msg = rebuilt
@@ -1171,8 +1171,8 @@ func repairClaudeToolPairing(messages [][]byte) [][]byte {
 			}
 
 			if hasNextUser {
-				// Prepend the missing results so tool_result blocks still lead
-				// the existing user message.
+				// 前置缺失的结果，使 tool_result 块仍然位于
+				// 现有 user 消息的开头。
 				next := messages[i+1]
 				nextContent := gjson.GetBytes(next, "content")
 				parts := synthesized
@@ -1199,10 +1199,10 @@ func repairClaudeToolPairing(messages [][]byte) [][]byte {
 	return out
 }
 
-// normalizeClaudeToolResultMessage rebuilds a user message so tool_result
-// blocks lead the content and any tool_result that does not answer a tool_use
-// in the immediately preceding assistant message folds into plain text.
-// answeredIDs lists the ids allowed to stay tool_result blocks.
+// normalizeClaudeToolResultMessage 重建 user 消息，使 tool_result
+// 块位于内容开头，且任何不响应紧邻的上一条 assistant 消息中
+// tool_use 的 tool_result 折叠为纯文本。
+// answeredIDs 列出允许保持为 tool_result 块的 id。
 func normalizeClaudeToolResultMessage(msg []byte, answeredIDs map[string]struct{}) ([]byte, bool) {
 	content := gjson.GetBytes(msg, "content")
 	if !content.IsArray() {
@@ -1220,9 +1220,9 @@ func normalizeClaudeToolResultMessage(msg []byte, answeredIDs map[string]struct{
 				if textParts := toolResultTextParts(block); len(textParts) > 0 {
 					otherParts = append(otherParts, textParts...)
 				} else {
-					// An empty orphan result folds to nothing, so keep an
-					// explicit marker instead of producing an empty user
-					// message that Anthropic also rejects.
+					// 空的孤立结果折叠后为空，因此保留一个
+					// 显式标记，而不是产生一个 Anthropic
+					// 也会拒绝的空 user 消息。
 					otherParts = append(otherParts, []byte(`{"type":"text","text":"Tool result was empty."}`))
 				}
 				return true
@@ -1248,11 +1248,11 @@ func normalizeClaudeToolResultMessage(msg []byte, answeredIDs map[string]struct{
 	return userMsg, true
 }
 
-// toolResultTextParts folds an orphan tool_result block into plain text parts
-// so it can ride along as ordinary user content. Empty text parts are
-// filtered out; when nothing visible remains it returns nil so the caller
-// can substitute a marker instead of emitting empty text blocks that
-// Anthropic rejects.
+// toolResultTextParts 将孤立的 tool_result 块折叠为纯文本部分，
+// 使其可作为普通用户内容随行。空的文本部分会被
+// 过滤掉；当不再有任何可见内容时它返回 nil，以便调用方
+// 替换为一个标记，而不是输出 Anthropic 会拒绝的
+// 空文本块。
 func toolResultTextParts(block gjson.Result) [][]byte {
 	content := block.Get("content")
 	if content.IsArray() {
@@ -1282,15 +1282,15 @@ func toolResultTextParts(block gjson.Result) [][]byte {
 	return [][]byte{part}
 }
 
-// convertResponsesStandaloneToolOutputToClaudeText renders a tool output that
-// has no matching tool_use as ordinary user content blocks.
+// convertResponsesStandaloneToolOutputToClaudeText 将没有匹配 tool_use
+// 的工具输出渲染为普通用户内容块。
 func convertResponsesStandaloneToolOutputToClaudeText(output gjson.Result) [][]byte {
 	if output.Exists() && output.IsArray() {
 		var partsJSON [][]byte
 		output.ForEach(func(_, part gjson.Result) bool {
 			if partJSON := convertResponsesContentPartToClaude(part); len(partJSON) > 0 {
-				// Drop empty text parts so a mixed array never emits blocks
-				// Anthropic rejects; images and documents always count.
+				// 丢弃空的文本部分，使混合数组永远不会输出
+				// Anthropic 会拒绝的块；图像和文档始终计入。
 				if !contentPartHasVisibleContent(partJSON) {
 					return true
 				}
@@ -1304,10 +1304,10 @@ func convertResponsesStandaloneToolOutputToClaudeText(output gjson.Result) [][]b
 	}
 	text := output.String()
 	if output.IsArray() || strings.TrimSpace(text) == "" {
-		// An empty standalone output still needs a block so the user message
-		// it joins never degenerates to an empty content array. The IsArray
-		// guard keeps the raw array dump from leaking in as literal text when
-		// every converted part was empty.
+		// 空的独立输出仍需要一个块，使其加入的 user 消息
+		// 永远不会退化为空的 content 数组。IsArray
+		// 防护可避免把所有转换后的部分都为空时的原始
+		// 数组转储泄漏为字面文本。
 		return [][]byte{[]byte(`{"type":"text","text":"Tool result was empty."}`)}
 	}
 	contentPart := []byte(`{"type":"text","text":""}`)
@@ -1315,14 +1315,14 @@ func convertResponsesStandaloneToolOutputToClaudeText(output gjson.Result) [][]b
 	return [][]byte{contentPart}
 }
 
-// contentPartHasVisibleContent reports whether a converted Claude content
-// block carries user-visible payload (non-empty text, image, or document).
+// contentPartHasVisibleContent 报告转换后的 Claude 内容块
+// 是否携带用户可见的载荷（非空文本、图像或文档）。
 func contentPartHasVisibleContent(part []byte) bool {
 	switch gjson.GetBytes(part, "type").String() {
 	case "text":
 		return strings.TrimSpace(gjson.GetBytes(part, "text").String()) != ""
 	default:
-		// Non-text blocks (image, document, ...) always carry content.
+		// 非文本块（image、document 等）始终携带内容。
 		return true
 	}
 }
@@ -1417,13 +1417,13 @@ func convertResponsesToolDescriptorToClaude(descriptor responsesToolDescriptor, 
 	}
 }
 
-// responsesDiscoveredToolPriority ranks tools loaded by a tool_search_output
-// after every declared tool, so they append to tools[] in discovery order.
+// responsesDiscoveredToolPriority 将通过 tool_search_output 加载的工具
+// 排在所有已声明工具之后，使其按发现顺序追加到 tools[]。
 const responsesDiscoveredToolPriority = 2
 
 type responsesToolSource struct {
 	tools    gjson.Result
-	priority int // Top-level tools use 0, additional_tools 1, tool_search_output results 2.
+	priority int // 顶层 tools 为 0，additional_tools 为 1，tool_search_output 结果为 2。
 }
 
 func responsesToolSources(root gjson.Result, toolSearch bool) []responsesToolSource {
@@ -1463,8 +1463,8 @@ type responsesToolDescriptor struct {
 	sourcePriority int
 	direct         bool
 	order          int
-	// clientSearch marks the Codex client tool_search declaration, which only
-	// exists while upstream.claude.tool-search is on.
+	// clientSearch 标记 Codex 客户端 tool_search 声明，它仅在
+	// upstream.claude.tool-search 开启时存在。
 	clientSearch bool
 }
 
@@ -1476,8 +1476,8 @@ func responsesToolDescriptors(root gjson.Result, toolSearch bool) []responsesToo
 	if !responsesClientToolSearchWins(descriptors) {
 		return descriptors
 	}
-	// With client tool search, declared defer_loading tools stay hidden until
-	// a tool_search_output in history loads them.
+	// 启用客户端工具搜索时，已声明的 defer_loading 工具会保持隐藏，
+	// 直到历史中的 tool_search_output 加载它们。
 	kept := descriptors[:0]
 	for _, descriptor := range descriptors {
 		if descriptor.sourcePriority != responsesDiscoveredToolPriority && descriptor.tool.Get("defer_loading").Bool() {
@@ -1489,9 +1489,9 @@ func responsesToolDescriptors(root gjson.Result, toolSearch bool) []responsesToo
 	return kept
 }
 
-// responsesClientToolSearchWins reports whether the client tool_search
-// declaration owns the tool_search name. A same-named function that wins
-// instead leaves no search tool, so deferred tools must stay declared.
+// responsesClientToolSearchWins 报告客户端 tool_search
+// 声明是否拥有 tool_search 名称。若同名函数胜出，
+// 则不会留下搜索工具，因此 deferred 工具必须保持声明状态。
 func responsesClientToolSearchWins(descriptors []responsesToolDescriptor) bool {
 	var winner *responsesToolDescriptor
 	for i := range descriptors {
@@ -1550,13 +1550,13 @@ func appendResponsesToolDescriptors(descriptors []responsesToolDescriptor, tools
 			appendNamespaceChildren(tool)
 		case responsesToolSearchType:
 			if !toolSearch {
-				// Without tool search support a declaration is a generic tool,
-				// as it was before tool_search was translated.
+				// 不支持工具搜索时，声明就是一个通用工具，
+				// 与翻译 tool_search 之前一样。
 				appendDescriptor(tool, strings.TrimSpace(tool.Get("name").String()), "", "", toolType, true)
 				return true
 			}
-			// Hosted search cannot run on Claude, and the raw declaration must
-			// never reach Claude, so only client search is kept.
+			// 托管搜索无法在 Claude 上运行，且原始声明绝不能
+			// 到达 Claude，因此只保留客户端搜索。
 			if isResponsesClientToolSearch(tool) {
 				appendDescriptor(tool, responsesToolSearchType, "", "", responsesToolSearchType, true)
 				descriptors[len(descriptors)-1].clientSearch = true
@@ -1582,8 +1582,8 @@ func appendResponsesToolDescriptors(descriptors []responsesToolDescriptor, tools
 }
 
 func responsesToolDescriptorPrecedes(left, right responsesToolDescriptor) bool {
-	// Keep top-level tools ahead of additional_tools, then let direct
-	// declarations win over namespace children within the same source class.
+	// 保持顶层 tools 位于 additional_tools 之前，然后在同一来源类别内
+	// 让直接声明优先于命名空间子项。
 	if left.sourcePriority != right.sourcePriority {
 		return left.sourcePriority < right.sourcePriority
 	}
@@ -1609,8 +1609,8 @@ func responsesToolNameMap(root gjson.Result, acceptedToolNames map[string]struct
 	descriptors := responsesToolDescriptors(root, toolSearch)
 	winners := responsesToolWinners(root, toolSearch)
 
-	// Direct tool names are canonical aliases and must win over namespace
-	// child aliases, regardless of declaration order.
+	// 直接工具名是规范别名，必须优先于命名空间
+	// 子别名，无论声明顺序如何。
 	for _, descriptor := range descriptors {
 		winner, ok := winners[descriptor.name]
 		if !ok || winner.order != descriptor.order || !descriptor.direct {
@@ -1622,8 +1622,8 @@ func responsesToolNameMap(root gjson.Result, acceptedToolNames map[string]struct
 		toolNameMap[descriptor.name] = descriptor.name
 	}
 
-	// Namespace aliases fill only names that are not already owned by a
-	// winning direct function/custom tool.
+	// 命名空间别名只填充尚未被胜出的直接
+	// function/custom 工具占用的名称。
 	for _, descriptor := range descriptors {
 		winner, ok := winners[descriptor.name]
 		if !ok || winner.order != descriptor.order || descriptor.direct || descriptor.childName == "" {
@@ -1872,10 +1872,10 @@ func isUnsupportedOpenAIBuiltinToolType(toolType string) bool {
 	}
 }
 
-// normalizeCodexAgentMessages rewrites Codex multi-agent v2 "agent_message"
-// input items into plain user "message" items so the Claude translator does
-// not drop the delegated task text. Encrypted content parts are surfaced as
-// input_text, mirroring the multi-agent v2 optimizer used for other upstreams.
+// normalizeCodexAgentMessages 将 Codex multi-agent v2 的 "agent_message"
+// 输入条目重写为普通的 user "message" 条目，使 Claude 转换器
+// 不会丢弃被委托的任务文本。加密内容部分会以
+// input_text 呈现，与其他上游使用的 multi-agent v2 优化器一致。
 func normalizeCodexAgentMessages(payload []byte) []byte {
 	input := gjson.GetBytes(payload, "input")
 	if !input.IsArray() {

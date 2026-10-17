@@ -26,17 +26,17 @@ Example input:
 +new
 *** End Patch`
 
-// IsCustomTool reports whether the declaration is the custom apply_patch tool.
+// IsCustomTool 报告该声明是否为自定义 apply_patch 工具。
 func IsCustomTool(tool gjson.Result) bool {
 	return tool.Get("type").String() == "custom" && strings.TrimSpace(tool.Get("name").String()) == "apply_patch"
 }
 
-// Parameters returns an independent copy of the patch input schema.
+// Parameters 返回补丁输入 schema 的独立副本。
 func Parameters() []byte {
 	return []byte(parametersJSON)
 }
 
-// Description explains the JSON wrapper and preserves the original patch grammar.
+// Description 说明 JSON 包装方式，并保留原始补丁语法。
 func Description(tool gjson.Result) string {
 	original := strings.ReplaceAll(tool.Get("description").String(), "This is a FREEFORM tool, so do not wrap the patch in JSON.", "")
 	var description strings.Builder
@@ -56,7 +56,7 @@ func Description(tool gjson.Result) string {
 	return description.String()
 }
 
-// WrapInput encodes the complete patch text as function arguments.
+// WrapInput 将完整补丁文本编码为函数参数。
 func WrapInput(input string) string {
 	body, _ := json.Marshal(struct {
 		Input string `json:"input"`
@@ -64,7 +64,7 @@ func WrapInput(input string) string {
 	return string(body)
 }
 
-// UnwrapInput accepts only a JSON object containing one string field named input.
+// UnwrapInput 只接受包含一个名为 input 的字符串字段的 JSON 对象。
 func UnwrapInput(arguments string) (string, error) {
 	decoder := json.NewDecoder(strings.NewReader(arguments))
 	token, errToken := decoder.Token()
@@ -110,7 +110,7 @@ func UnwrapInput(arguments string) (string, error) {
 	return input, nil
 }
 
-// EscapeInputFragment encodes patch text for use inside a JSON string without quotes.
+// EscapeInputFragment 编码补丁文本，以便在不带引号的情况下用于 JSON 字符串内部。
 func EscapeInputFragment(fragment string) string {
 	encoded, _ := json.Marshal(fragment)
 	return string(encoded[1 : len(encoded)-1])

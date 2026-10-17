@@ -11,7 +11,7 @@ import (
 	internallogging "github.com/xnuyoah/XRouter/v8/internal/logging"
 )
 
-// persistFailureStore always fails Save to simulate an unwritable auth file.
+// persistFailureStore 总是让 Save 失败，以模拟不可写的认证文件。
 type persistFailureStore struct{}
 
 func (s *persistFailureStore) List(context.Context) ([]*Auth, error) { return nil, nil }
@@ -22,8 +22,8 @@ func (s *persistFailureStore) Save(context.Context, *Auth) (string, error) {
 
 func (s *persistFailureStore) Delete(context.Context, string) error { return nil }
 
-// assertWarnEntry verifies that a warn entry exists matching needle, authID, provider, and errText,
-// and verifies that formatting with internal/logging.LogFormatter preserves auth ID, provider, and error.
+// assertWarnEntry 验证存在匹配 needle、authID、provider 和 errText 的 warn 日志条目，
+// 并验证使用 internal/logging.LogFormatter 格式化后仍保留认证 ID、供应商和错误。
 func assertWarnEntry(t *testing.T, hook *logtest.Hook, needle, authID, provider, errText string) {
 	t.Helper()
 	var matched *log.Entry
@@ -76,8 +76,8 @@ func assertWarnEntry(t *testing.T, hook *logtest.Hook, needle, authID, provider,
 	}
 }
 
-// A persist failure after registering an auth must surface at warn level:
-// the credential may exist only in memory while the disk copy is stale.
+// 注册认证之后的持久化失败必须以 warn 级别浮现：
+// 该凭据可能只存在于内存中，而磁盘上的副本已经过期。
 func TestRegisterPersistFailureLogsWarn(t *testing.T) {
 	hook := setupTestLoggerHook(t)
 	m := NewManager(&persistFailureStore{}, nil, nil)
@@ -98,7 +98,7 @@ func TestRegisterPersistFailureLogsWarn(t *testing.T) {
 	assertWarnEntry(t, hook, "failed to persist registered auth", "auth-register-persist-1", "claude", "permission denied")
 }
 
-// A persist failure after an update must surface at warn level.
+// 更新之后的持久化失败必须以 warn 级别浮现。
 func TestUpdatePersistFailureLogsWarn(t *testing.T) {
 	hook := setupTestLoggerHook(t)
 	m := NewManager(&persistFailureStore{}, nil, nil)
@@ -120,9 +120,9 @@ func TestUpdatePersistFailureLogsWarn(t *testing.T) {
 	assertWarnEntry(t, hook, "failed to persist updated auth", "auth-update-persist-1", "claude", "permission denied")
 }
 
-// The issue scenario: a token refresh succeeds in memory but the store rejects
-// the write. The refresh itself must keep succeeding, and the lost persistence
-// must be visible at warn level (previously silent for non-meta providers).
+// 该 issue 的场景：令牌刷新在内存中成功，但存储
+// 拒绝了写入。刷新本身必须继续成功，而丢失的持久化
+// 必须在 warn 级别可见（此前对非 meta 供应商是静默的）。
 func TestRefreshPersistFailureLogsWarn(t *testing.T) {
 	hook := setupTestLoggerHook(t)
 	m := NewManager(&persistFailureStore{}, nil, nil)
@@ -149,8 +149,8 @@ func TestRefreshPersistFailureLogsWarn(t *testing.T) {
 	assertWarnEntry(t, hook, "failed to persist updated auth", "auth-refresh-persist-1", "claude", "permission denied")
 }
 
-// Meta mint persist failures propagate as errors and must be logged at warn
-// level (previously debug only, invisible at the default log level).
+// Meta 铸造的持久化失败会作为错误传播，并且必须以 warn
+// 级别记录（此前仅 debug，在默认日志级别下不可见）。
 func TestMetaRefreshPersistFailureLogsWarn(t *testing.T) {
 	hook := setupTestLoggerHook(t)
 	m := NewManager(&persistFailureStore{}, nil, nil)

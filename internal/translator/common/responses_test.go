@@ -151,11 +151,11 @@ func TestNormalizeResponsesToolCallOutputs(t *testing.T) {
 			t.Fatalf("expected 4 items, got %d", len(normalized))
 		}
 
-		// First output had no ID, but call_a is reserved by second output, so first output gets call_b
+		// 第一个输出没有 ID，但 call_a 已被第二个输出预留，因此第一个输出获得 call_b
 		if got := normalized[2].Get("call_id").String(); got != "call_b" {
 			t.Fatalf("normalized[2].call_id = %q, want call_b", got)
 		}
-		// Second output had explicit tool_call_id call_a, so its call_id is set to call_a
+		// 第二个输出带有显式的 tool_call_id call_a，因此其 call_id 被设为 call_a
 		if got := normalized[3].Get("call_id").String(); got != "call_a" {
 			t.Fatalf("normalized[3].call_id = %q, want call_a", got)
 		}
@@ -175,12 +175,12 @@ func TestNormalizeResponsesToolCallOutputs(t *testing.T) {
 			t.Fatalf("expected 5 items, got %d", len(normalized))
 		}
 
-		// First output (index 2) had no ID, but call_a is reserved across the intervening message by index 4,
-		// so index 2 must get call_b
+		// 第一个输出（索引 2）没有 ID，但 call_a 已被中间的索引 4 消息预留，
+		// 因此索引 2 必须获得 call_b
 		if got := normalized[2].Get("call_id").String(); got != "call_b" {
 			t.Fatalf("normalized[2].call_id = %q, want call_b", got)
 		}
-		// Last output (index 4) has explicit call_a
+		// 最后一个输出（索引 4）带有显式的 call_a
 		if got := normalized[4].Get("call_id").String(); got != "call_a" {
 			t.Fatalf("normalized[4].call_id = %q, want call_a", got)
 		}

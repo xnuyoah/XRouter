@@ -9,20 +9,20 @@ import (
 )
 
 const (
-	// MaxGrokEncryptedContentLen is a transport safety cap for opaque replay blobs.
+	// MaxGrokEncryptedContentLen 是不透明重放 blob 的传输安全上限。
 	MaxGrokEncryptedContentLen = 8 * 1024 * 1024
-	// MinGrokEncryptedContentDecodedLen is a deliberately loose floor, and the
-	// headroom has already proven necessary. An earlier corpus of 207 samples put
-	// the shortest native payload at exactly 50 bytes, with several samples piled
-	// on that value, which read like a protocol floor; a later 215-sample capture
-	// from grok-4.5 and grok-composer-2.5-fast reached 43 and 48 bytes and moved
-	// it. Both corpora agree there is no structure to anchor on, so the observed
-	// minimum is a sampling artifact that keeps sliding, and sitting on it would
-	// silently reject a future shorter payload as lost reasoning context. Keep the
-	// floor low and let the entropy check do the real filtering.
+	// MinGrokEncryptedContentDecodedLen 是一个刻意放宽的下限，而这份
+	// 余量已被证明是必要的。早期一份 207 个样本的语料把
+	// 最短的原生载荷定在恰好 50 字节，且有多个样本堆在
+	// 该值上，看起来像协议下限；后来一次 215 个样本的采集
+	// 来自 grok-4.5 和 grok-composer-2.5-fast，达到 43 和 48 字节，把
+	// 它推低了。两份语料都认同没有可供锚定的结构，因此观测到的
+	// 最小值只是一种会不断滑动的采样假象，若死守它
+	// 会静默拒收未来更短的载荷，从而丢失推理上下文。把
+	// 下限保持得低一些，让熵检查来做真正的过滤。
 	MinGrokEncryptedContentDecodedLen = 32
-	// MinGrokEncryptedContentEntropyRatio rejects obvious non-ciphertext payloads.
-	// Native samples are >= 0.892 against the sample-size entropy ceiling.
+	// MinGrokEncryptedContentEntropyRatio 用于拒绝明显的非密文载荷。
+	// 原生样本相对样本规模熵上限的值 >= 0.892。
 	MinGrokEncryptedContentEntropyRatio = 0.85
 )
 
@@ -31,17 +31,17 @@ type GrokEncryptedContentInfo struct {
 	DecodedLen int
 }
 
-// InspectGrokEncryptedContent validates the transport shape of xAI/Grok
-// reasoning or compaction encrypted_content. This does not prove decryptability.
+// InspectGrokEncryptedContent 校验 xAI/Grok 的推理或压缩 encrypted_content
+// 的传输形态。这并不证明其可解密性。
 //
-// This is NOT a provider classifier and must not be used as one. Unlike Claude
-// and GPT, xAI emits no self-describing envelope: observed payloads are
-// indistinguishable from uniform random bytes (no magic prefix, no version byte,
-// no fixed suffix, and decoded lengths spread evenly modulo the AES block size).
-// Every high-entropy unpadded standard-base64 blob therefore satisfies the checks
-// below. Callers must establish provenance before asking this question, either
-// from an explicit provider cache prefix or from a confirmed xAI target model,
-// and treat the result as a replay-safety check rather than an identification.
+// 这并非供应商分类器，也不得当作分类器使用。与 Claude
+// 和 GPT 不同，xAI 不输出自描述的信封：观测到的载荷
+// 与均匀随机字节无法区分（没有魔数前缀、没有版本字节、
+// 没有固定后缀，且解码长度在 AES 块大小取模后均匀分布）。
+// 因此每个高熵的无填充标准 base64 blob 都会满足下面的检查。
+// 调用方必须先确定来源，再提出此问题，来源
+// 或是显式的供应商缓存前缀，或是已确认的 xAI 目标模型，
+// 并且要把结果当作重放安全检查，而非身份识别。
 func InspectGrokEncryptedContent(raw string) (*GrokEncryptedContentInfo, error) {
 	sig := strings.TrimSpace(raw)
 	if sig == "" {
@@ -62,14 +62,14 @@ func InspectGrokEncryptedContent(raw string) (*GrokEncryptedContentInfo, error) 
 	if _, _, ok := SplitSignatureProviderPrefix(sig); ok {
 		return nil, fmt.Errorf("invalid Grok encrypted_content: carries another provider's cache prefix")
 	}
-	// Foreign-envelope rejection only has to run for the narrow set of base64
-	// first characters a self-describing envelope can produce. Native xAI
-	// ciphertext is uniformly distributed, so this skips the whole chain for
-	// roughly 92% of real traffic without decoding anything. Every branch below
-	// stays exhaustive for the candidates that do reach it: Claude CAIS in
-	// particular is high-entropy standard base64 that drops its padding whenever
-	// the decoded length is a multiple of 3, so the padding gate above does not
-	// exclude it on its own.
+	// 拒绝外来信封只需针对自描述信封可能产生的
+	// 那一小撮 base64 首字符运行。原生 xAI
+	// 密文是均匀分布的，因此这能对
+	// 约 92% 的真实流量在不解码任何内容的情况下跳过整条链路。下面的每个分支
+	// 对确实到达它的候选项都保持穷尽：尤其是 Claude CAIS
+	// 是高熵标准 base64，只要解码长度是 3 的倍数就会丢掉填充，
+	// 因此上面的填充门控并不能单独
+	// 排除它。
 	if maybeSelfDescribingSignatureEnvelope(sig) {
 		if strings.HasPrefix(sig, "gAAAA") {
 			return nil, fmt.Errorf("Grok encrypted_content looks like GPT/Codex reasoning signature")
@@ -81,12 +81,12 @@ func InspectGrokEncryptedContent(raw string) (*GrokEncryptedContentInfo, error) 
 			return nil, fmt.Errorf("Grok encrypted_content looks like Claude CAIS thinking signature")
 		}
 	}
-	// Kimi emits no envelope either, so the pre-filter above cannot narrow it and
-	// this check has to run unconditionally. Length is the only separator the two
-	// families have: Kimi is fixed at two code-path constants while xAI payload
-	// length tracks reasoning volume continuously at 1-byte granularity. Neither
-	// observed Kimi length appears anywhere in 1027 catalogued signatures or 215
-	// native Grok samples, so rejecting them here costs no real Grok traffic.
+	// Kimi 也不输出信封，因此上面的预过滤无法收窄它，
+	// 此检查必须无条件运行。长度是这两个族类唯一的
+	// 区分点：Kimi 固定为两个代码路径常量，而 xAI 载荷
+	// 长度以 1 字节的粒度连续跟踪推理量。观测到的两个
+	// Kimi 长度都没有出现在 1027 个编目签名或 215 个
+	// 原生 Grok 样本中，因此在这里拒绝它们不会损失真实的 Grok 流量。
 	if IsValidKimiThinkingSignature(sig) {
 		return nil, fmt.Errorf("Grok encrypted_content has a Kimi thinking signature length")
 	}
@@ -115,14 +115,14 @@ func decodeGrokEncryptedContent(sig string) ([]byte, error) {
 	return decoded, nil
 }
 
-// grokEncryptedContentCharSet is the unpadded standard base64 alphabet.
+// grokEncryptedContentCharSet 是无填充的标准 base64 字母表。
 var grokEncryptedContentCharSet = base64AlphabetSet("+/")
 
-// firstInvalidGrokEncryptedContentChar scans bytes against a lookup table rather
-// than ranging over runes. Every legal character is ASCII, so rune iteration only
-// adds cost, and the table removes the branch mispredictions that dominated this
-// scan on multi-kilobyte payloads. The offending rune is decoded once, for the
-// error message, so multi-byte input is still reported accurately.
+// firstInvalidGrokEncryptedContentChar 用查找表扫描字节，
+// 而不是遍历 rune。每个合法字符都是 ASCII，因此遍历 rune 只
+// 会增加开销，而查找表消除了在多 KB 载荷上主导此
+// 扫描的分支预测失败。出错的 rune 只解码一次，用于
+// 错误消息，因此多字节输入仍能被准确报告。
 func firstInvalidGrokEncryptedContentChar(sig string) (int, rune, bool) {
 	for index := 0; index < len(sig); index++ {
 		if !grokEncryptedContentCharSet[sig[index]] {

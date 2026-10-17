@@ -1,4 +1,4 @@
-// Package signaturetest provides synthetic envelopes for signature regression tests.
+// Package signaturetest 为签名回归测试提供合成信封。
 package signaturetest
 
 import (
@@ -7,8 +7,8 @@ import (
 	"google.golang.org/protobuf/encoding/protowire"
 )
 
-// AntigravityCAQS builds a double-base64 Google Claude thinking envelope.
-// All opaque fields are generated zeros, not captured or replayable state.
+// AntigravityCAQS 构建双重 base64 的 Google Claude thinking 信封。
+// 所有不透明字段都是生成的零值，并非捕获而来、可重放的状态。
 func AntigravityCAQS() string {
 	appendVarint := func(dst []byte, field protowire.Number, value uint64) []byte {
 		return protowire.AppendVarint(protowire.AppendTag(dst, field, protowire.VarintType), value)

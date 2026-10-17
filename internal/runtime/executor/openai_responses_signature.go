@@ -62,20 +62,20 @@ func sanitizeOpenAIResponsesReasoningEncryptedContentWithOptions(ctx context.Con
 		provider = "openai responses upstream"
 	}
 
-	// Codex backend rejects store=true and does not persist items when store=false.
-	// A reasoning item that still carries an id without usable encrypted_content is
-	// treated as a store lookup and returns:
+	// Codex 后端拒绝 store=true，且在 store=false 时不持久化条目。
+	// 仍携带 id 但没有可用 encrypted_content 的 reasoning 条目
+	// 会被当作一次存储查找并返回：
 	//   Item with id '...' not found. Items are not persisted when `store` is set to false.
-	// Strip those orphan ids unless the request explicitly opts into store=true.
+	// 除非请求显式选用 store=true，否则剥离这些孤立 id。
 	stripOrphanReasoningIDs := !gjson.GetBytes(body, "store").Bool()
 
 	items := inputResult.Array()
 
-	// rebuilt accumulates the edited "input" array as JSON array bytes. It
-	// stays nil while no item needs editing so the common case (nothing to
-	// sanitize) does no allocation or rebuilding. Edits are applied directly
-	// to each item's own raw JSON rather than re-parsing the whole body,
-	// keeping the cost proportional to the item being edited.
+	// rebuilt 以 JSON 数组字节累积被编辑的 "input" 数组。当没有任何
+	// 条目需要编辑时它保持为 nil，因此常见情形（无需
+	// 净化）不会产生分配或重建。编辑直接应用到
+	// 每个条目自身的原始 JSON，而不是重新解析整个 body，
+	// 使开销与被编辑的条目成正比。
 	var rebuilt []byte
 	itemsWritten := 0
 	keep := func(raw string) {
@@ -92,8 +92,8 @@ func sanitizeOpenAIResponsesReasoningEncryptedContentWithOptions(ctx context.Con
 		if rebuilt != nil {
 			return
 		}
-		// First item that needs editing: start the buffer and backfill
-		// it with the raw JSON of every preceding item.
+		// 首个需要编辑的条目：启动缓冲区并用
+		// 每个前置条目的原始 JSON 回填它。
 		rebuilt = make([]byte, 0, len(inputResult.Raw))
 		rebuilt = append(rebuilt, '[')
 		for i := range index {
@@ -116,11 +116,11 @@ func sanitizeOpenAIResponsesReasoningEncryptedContentWithOptions(ctx context.Con
 		nextItem := item.Raw
 		changed := false
 
-		// Official Codex schema sets maxItems: 0 on reasoning.content. Third-party
-		// channels replay cleartext thinking there; promote it into summary when
-		// summary is empty, then force content to [].
-		// When isCompat is true, third-party Responses models (such as DeepSeek)
-		// require original reasoning_text inside reasoning.content to be replayed.
+		// 官方 Codex schema 将 reasoning.content 的 maxItems 设为 0。第三方
+		// 渠道会在其中重放明文 thinking；当 summary 为空时将其提升到
+		// summary，然后强制 content 为 []。
+		// 当 isCompat 为 true 时，第三方 Responses 模型（例如 DeepSeek）
+		// 要求重放 reasoning.content 内的原始 reasoning_text。
 		content := item.Get("content")
 		if !isCompat && content.IsArray() && len(content.Array()) > 0 {
 			if openaiResponsesReasoningSummaryIsEmpty(item.Get("summary")) {

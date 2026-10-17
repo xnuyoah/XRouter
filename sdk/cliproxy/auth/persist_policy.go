@@ -6,9 +6,9 @@ type skipPersistContextKey struct{}
 type deferAPIKeyModelAliasRebuildContextKey struct{}
 type authCreationIntentContextKey struct{}
 
-// WithAuthCreationIntent returns a derived context that allows a token store to
-// create a missing disabled credential. It is intended only for the immediate
-// persistence performed by login and credential migration flows.
+// WithAuthCreationIntent 返回一个派生上下文，允许令牌存储
+// 创建缺失的已禁用凭据。它仅用于登录和凭据迁移流程
+// 所执行的即时持久化。
 func WithAuthCreationIntent(ctx context.Context) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -16,8 +16,8 @@ func WithAuthCreationIntent(ctx context.Context) context.Context {
 	return context.WithValue(ctx, authCreationIntentContextKey{}, true)
 }
 
-// HasAuthCreationIntent reports whether the current save is part of a login or
-// credential migration flow that may intentionally create a disabled record.
+// HasAuthCreationIntent 报告当前保存是否属于登录或凭据迁移流程，
+// 这类流程可能有意创建已禁用记录。
 func HasAuthCreationIntent(ctx context.Context) bool {
 	if ctx == nil {
 		return false
@@ -27,9 +27,9 @@ func HasAuthCreationIntent(ctx context.Context) bool {
 	return ok && enabled
 }
 
-// WithSkipPersist returns a derived context that disables persistence for Manager Update/Register calls.
-// It is intended for code paths that are reacting to file watcher events, where the file on disk is
-// already the source of truth and persisting again would create a write-back loop.
+// WithSkipPersist 返回一个派生上下文，对 Manager 的 Update/Register 调用禁用持久化。
+// 它适用于响应文件监听器事件的代码路径，此时磁盘上的文件
+// 已是唯一事实来源，再次持久化会造成回写循环。
 func WithSkipPersist(ctx context.Context) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -37,8 +37,8 @@ func WithSkipPersist(ctx context.Context) context.Context {
 	return context.WithValue(ctx, skipPersistContextKey{}, true)
 }
 
-// WithoutSkipPersist returns a derived context that re-enables persistence even
-// when the parent context was marked with WithSkipPersist.
+// WithoutSkipPersist 返回一个派生上下文，即使父上下文被
+// WithSkipPersist 标记过，也重新启用持久化。
 func WithoutSkipPersist(ctx context.Context) context.Context {
 	if ctx == nil {
 		return context.Background()
@@ -58,8 +58,8 @@ func shouldSkipPersist(ctx context.Context) bool {
 	return ok && enabled
 }
 
-// WithDeferredAPIKeyModelAliasRebuild returns a derived context that defers API-key model alias table rebuilds.
-// Callers that use this for a batch of Register/Update/Remove operations must call RefreshAPIKeyModelAlias once.
+// WithDeferredAPIKeyModelAliasRebuild 返回一个派生上下文，推迟 API-key 模型别名表的重建。
+// 对一批 Register/Update/Remove 操作使用它的调用方必须调用一次 RefreshAPIKeyModelAlias。
 func WithDeferredAPIKeyModelAliasRebuild(ctx context.Context) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
