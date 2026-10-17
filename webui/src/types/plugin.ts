@@ -52,6 +52,17 @@ export interface PluginListResponse {
   pluginsEnabled: boolean;
   pluginsDir: string;
   plugins: PluginListEntry[];
+  environment: PluginEnvironment | null;
+}
+
+export interface PluginEnvironment {
+  goos: string;
+  goarch: string;
+  inContainer: boolean;
+  cgoPluginSupport: boolean;
+  platformDir: string;
+  platformMatchedFiles: number;
+  skippedPlatformFiles: number;
 }
 
 export interface PluginDeleteResult {
@@ -60,66 +71,5 @@ export interface PluginDeleteResult {
   path: string;
   fileDeleted: boolean;
   configuredRemoved: boolean;
-  restartRequired: boolean;
-}
-
-export interface PluginStoreEntry {
-  storeId: string;
-  sourceId: string;
-  sourceName: string;
-  sourceUrl: string;
-  id: string;
-  name: string;
-  description: string;
-  author: string;
-  version: string;
-  repository: string;
-  installType: string;
-  authRequired: boolean;
-  authConfigured: boolean;
-  platforms: PluginStorePlatform[];
-  logo: string;
-  homepage: string;
-  license: string;
-  tags: string[];
-  installed: boolean;
-  installedVersion: string;
-  path: string;
-  configured: boolean;
-  registered: boolean;
-  enabled: boolean;
-  effectiveEnabled: boolean;
-  updateAvailable: boolean;
-}
-
-export interface PluginStorePlatform {
-  goos: string;
-  goarch: string;
-}
-
-export interface PluginStoreSourceError {
-  sourceId: string;
-  sourceName: string;
-  sourceUrl: string;
-  message: string;
-}
-
-export interface PluginStoreResponse {
-  pluginsEnabled: boolean;
-  pluginsDir: string;
-  sourceErrors: PluginStoreSourceError[];
-  plugins: PluginStoreEntry[];
-}
-
-export interface PluginStoreInstallResult {
-  status: string;
-  sourceId: string;
-  sourceName: string;
-  sourceUrl: string;
-  id: string;
-  version: string;
-  installType: string;
-  path: string;
-  pluginsEnabled: boolean;
   restartRequired: boolean;
 }

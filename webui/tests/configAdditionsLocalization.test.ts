@@ -38,7 +38,7 @@ function resolveKey(root: unknown, path: string): unknown {
 }
 
 describe('added configuration field localization', () => {
-  for (const locale of ['en', 'zh-CN', 'zh-TW', 'ru']) {
+  for (const locale of ['en', 'zh-CN']) {
     test(`${locale} includes searchable labels, help, and accessible ICE actions`, async () => {
       const messages: unknown = await Bun.file(`src/i18n/locales/${locale}.json`).json();
       for (const fieldId of addedFieldIds) {

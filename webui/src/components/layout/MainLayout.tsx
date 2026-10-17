@@ -8,28 +8,19 @@ import {
   useMemo,
   useRef,
   useState,
-  type MouseEvent as ReactMouseEvent,
-  type SyntheticEvent,
 } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { PageTransition } from '@/components/common/PageTransition';
 import { MainRoutes } from '@/router/MainRoutes';
-import { authFilesApi, pluginsApi } from '@/services/api';
+import { pluginsApi } from '@/services/api';
 import {
-  IconSidebarAuthFiles,
   IconSidebarConfig,
   IconSidebarDashboard,
   IconSidebarLogs,
-  IconSidebarOauth,
   IconSidebarPlugins,
-  IconSidebarProviders,
-  IconSidebarQuickStart,
-  IconSidebarQuota,
   IconSidebarSearch,
-  IconSidebarStore,
-  IconSidebarSystem,
   IconChevronDown,
 } from '@/components/ui/icons';
 import { INLINE_LOGO } from '@/assets/logoInline';
@@ -40,33 +31,23 @@ import {
   useNotificationStore,
   useThemeStore,
 } from '@/stores';
-import { AUTH_FILES_CHANGED_EVENT } from '@/features/authFiles/authFilesEvents';
 import {
   collectPluginResourceEntries,
   PLUGIN_RESOURCES_REFRESH_EVENT,
   resolvePluginAssetURL,
   type PluginResourceEntry,
 } from '@/features/plugins/pluginResources';
-import { APIKEY_FUN_DISPLAY_NAME, hasApiKeyFunConfig } from '@/features/providers/sponsor';
 import { triggerHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { LANGUAGE_LABEL_KEYS, LANGUAGE_ORDER } from '@/utils/constants';
 import { isSupportedLanguage } from '@/utils/language';
-import { getSidebarShortcutLabel, isSidebarToggleShortcut } from '@/utils/sidebarShortcut';
 import type { Theme } from '@/types';
 
 const sidebarIcons: Record<string, ReactNode> = {
-  dashboard: <IconSidebarDashboard size={18} />,
-  quickStart: <IconSidebarQuickStart size={18} />,
-  aiProviders: <IconSidebarProviders size={18} />,
-  authFiles: <IconSidebarAuthFiles size={18} />,
-  oauth: <IconSidebarOauth size={18} />,
-  quota: <IconSidebarQuota size={18} />,
-  webSearch: <IconSidebarSearch size={18} />,
-  plugins: <IconSidebarPlugins size={18} />,
-  pluginStore: <IconSidebarStore size={18} />,
-  config: <IconSidebarConfig size={18} />,
-  logs: <IconSidebarLogs size={18} />,
-  system: <IconSidebarSystem size={18} />,
+  dashboard: <IconSidebarDashboard size={17} />,
+  webSearch: <IconSidebarSearch size={17} />,
+  plugins: <IconSidebarPlugins size={17} />,
+  config: <IconSidebarConfig size={17} />,
+  logs: <IconSidebarLogs size={17} />,
 };
 
 interface SidebarNavLinkItem {
@@ -92,9 +73,6 @@ interface SidebarNavDrawerItem {
 
 type SidebarNavItem = SidebarNavLinkItem | SidebarNavDrawerItem;
 
-const NAV_TOOLTIP_ID = 'sidebar-nav-tooltip';
-const NAV_TOOLTIP_VIEWPORT_MARGIN = 8;
-
 interface SidebarNavGroup {
   id: string;
   labelKey: string;
@@ -107,7 +85,7 @@ const flattenNavItems = (items: SidebarNavItem[]): SidebarNavLinkItem[] =>
 /** 点击菜单外或按下 Escape 时关闭弹出菜单 */
 function useMenuDismiss(
   open: boolean,
-  menuRef: RefObject<HTMLDivElement | null>,
+  menuRef: RefObject<HTMLElement | null>,
   onClose: () => void
 ) {
   useEffect(() => {
@@ -144,11 +122,11 @@ function PluginSidebarIcon({ src }: { src: string }) {
   return showImage ? (
     <img src={src} alt="" onError={() => setFailed(true)} />
   ) : (
-    <IconSidebarPlugins size={18} />
+    <IconSidebarPlugins size={17} />
   );
 }
 
-// Header action icons - smaller size for header buttons
+// Topbar action icons
 const headerIconProps: SVGProps<SVGSVGElement> = {
   width: 16,
   height: 16,
@@ -182,14 +160,10 @@ const headerIcons = {
       <path d="m6 6 12 12" />
     </svg>
   ),
-  chevronLeft: (
+  search: (
     <svg {...headerIconProps}>
-      <path d="m14 18-6-6 6-6" />
-    </svg>
-  ),
-  chevronRight: (
-    <svg {...headerIconProps}>
-      <path d="m10 6 6 6-6 6" />
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.35-4.35" />
     </svg>
   ),
   language: (
@@ -217,37 +191,6 @@ const headerIcons = {
       <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" />
     </svg>
   ),
-  whiteTheme: (
-    <svg {...headerIconProps}>
-      <circle cx="12" cy="12" r="7" />
-      <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
-    </svg>
-  ),
-  autoTheme: (
-    <svg {...headerIconProps}>
-      <defs>
-        <clipPath id="mainLayoutAutoThemeSunLeftHalf">
-          <rect x="0" y="0" width="12" height="24" />
-        </clipPath>
-      </defs>
-      <circle cx="12" cy="12" r="4" />
-      <circle
-        cx="12"
-        cy="12"
-        r="4"
-        clipPath="url(#mainLayoutAutoThemeSunLeftHalf)"
-        fill="currentColor"
-      />
-      <path d="M12 2v2" />
-      <path d="M12 20v2" />
-      <path d="M4.93 4.93l1.41 1.41" />
-      <path d="M17.66 17.66l1.41 1.41" />
-      <path d="M2 12h2" />
-      <path d="M20 12h2" />
-      <path d="M6.34 17.66l-1.41 1.41" />
-      <path d="M19.07 4.93l-1.41 1.41" />
-    </svg>
-  ),
   logout: (
     <svg {...headerIconProps}>
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -257,61 +200,17 @@ const headerIcons = {
   ),
 };
 
-const THEME_CARDS: Array<{
-  key: Theme;
-  labelKey: string;
-  colors: { bg: string; card: string; border: string; text: string; textMuted: string };
-}> = [
-  {
-    key: 'auto',
-    labelKey: 'theme.auto',
-    colors: {
-      bg: 'linear-gradient(135deg, #ffffff 0 50%, #111111 50% 100%)',
-      card: 'linear-gradient(135deg, #ffffff 0 50%, #1a1a1a 50% 100%)',
-      border: '#bdbdbd',
-      text: '#2d2a26',
-      textMuted: 'linear-gradient(135deg, #c9c9c9 0 50%, #5a5a5a 50% 100%)',
-    },
-  },
-  {
-    key: 'white',
-    labelKey: 'theme.white',
-    colors: {
-      bg: '#ffffff',
-      card: '#ffffff',
-      border: '#e5e5e5',
-      text: '#2d2a26',
-      textMuted: '#a29c95',
-    },
-  },
-  {
-    key: 'light',
-    labelKey: 'theme.light',
-    colors: {
-      bg: '#faf9f5',
-      card: '#f0eee8',
-      border: '#e3e1db',
-      text: '#2d2a26',
-      textMuted: '#a29c95',
-    },
-  },
-  {
-    key: 'dark',
-    labelKey: 'theme.dark',
-    colors: {
-      bg: '#151412',
-      card: '#1d1b18',
-      border: '#3a3530',
-      text: '#f6f4f1',
-      textMuted: '#9c958d',
-    },
-  },
+/** 主题切换菜单项：浅色 / 深色（「跟随系统」「纯白」档已移除） */
+const THEME_OPTIONS: Array<{ key: Theme; labelKey: string }> = [
+  { key: 'light', labelKey: 'theme.light' },
+  { key: 'dark', labelKey: 'theme.dark' },
 ];
 
 export function MainLayout() {
   const { t } = useTranslation();
   const { showNotification } = useNotificationStore();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const logout = useAuthStore((state) => state.logout);
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
@@ -320,7 +219,6 @@ export function MainLayout() {
 
   const fetchConfig = useConfigStore((state) => state.fetchConfig);
   const clearCache = useConfigStore((state) => state.clearCache);
-  const config = useConfigStore((state) => state.config);
 
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
@@ -328,91 +226,31 @@ export function MainLayout() {
   const setLanguage = useLanguageStore((state) => state.setLanguage);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [authFilesCount, setAuthFilesCount] = useState<number | null>(null);
-  const [railTooltip, setRailTooltip] = useState<{
-    targetID: string;
-    label: string;
-    meta?: string;
-    anchorTop: number;
-    top: number;
-  } | null>(null);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [pluginResources, setPluginResources] = useState<PluginResourceEntry[]>([]);
   const [expandedPluginResourceIDs, setExpandedPluginResourceIDs] = useState<Set<string>>(
     () => new Set()
   );
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const authFilesCountRequestRef = useRef(0);
-  const railTooltipRef = useRef<HTMLDivElement | null>(null);
-  const focusedRailItemRef = useRef<HTMLElement | null>(null);
   const languageMenuRef = useRef<HTMLDivElement | null>(null);
   const themeMenuRef = useRef<HTMLDivElement | null>(null);
-  const headerRef = useRef<HTMLElement | null>(null);
+  const searchMenuRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  const fullBrandName = 'XRouter Management Center';
-  const abbrBrandName = t('title.abbr');
+  const brandName = 'XRouter';
   const isLogsPage = location.pathname.startsWith('/logs');
   const isPluginResourcePage = location.pathname.startsWith('/plugin-pages');
-  const showSidebarLabels = !sidebarCollapsed || sidebarOpen;
 
-  // Keep floating header height available to sticky mobile elements and overlays.
+  // Keep header height available to sticky mobile elements and overlays.
   useLayoutEffect(() => {
-    const updateHeaderHeight = () => {
-      const height = headerRef.current?.offsetHeight;
-      if (height) {
-        document.documentElement.style.setProperty('--header-height', `${height}px`);
-      }
-    };
-
-    updateHeaderHeight();
-
-    const resizeObserver =
-      typeof ResizeObserver !== 'undefined' && headerRef.current
-        ? new ResizeObserver(updateHeaderHeight)
-        : null;
-    if (resizeObserver && headerRef.current) {
-      resizeObserver.observe(headerRef.current);
-    }
-
-    window.addEventListener('resize', updateHeaderHeight);
-
+    document.documentElement.style.setProperty('--header-height', '72px');
     return () => {
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-      window.removeEventListener('resize', updateHeaderHeight);
+      document.documentElement.style.removeProperty('--header-height');
     };
   }, []);
-
-  useLayoutEffect(() => {
-    if (!railTooltip) return;
-
-    const updateRailTooltipPosition = () => {
-      const tooltip = railTooltipRef.current;
-      if (!tooltip) return;
-
-      const halfHeight = tooltip.offsetHeight / 2;
-      const minTop = NAV_TOOLTIP_VIEWPORT_MARGIN + halfHeight;
-      const maxTop = Math.max(
-        minTop,
-        window.innerHeight - NAV_TOOLTIP_VIEWPORT_MARGIN - halfHeight
-      );
-      const top = Math.min(maxTop, Math.max(minTop, railTooltip.anchorTop));
-
-      setRailTooltip((current) => {
-        if (!current || current.targetID !== railTooltip.targetID || current.top === top) {
-          return current;
-        }
-        return { ...current, top };
-      });
-    };
-
-    updateRailTooltipPosition();
-    window.addEventListener('resize', updateRailTooltipPosition);
-    return () => window.removeEventListener('resize', updateRailTooltipPosition);
-  }, [railTooltip]);
 
   // Keep the content center available to bottom overlays that align with the main area.
   useLayoutEffect(() => {
@@ -500,39 +338,18 @@ export function MainLayout() {
     }
   }, [connectionStatus, supportsPlugin]);
 
-  const loadAuthFilesCount = useCallback(async () => {
-    const requestID = ++authFilesCountRequestRef.current;
-    if (connectionStatus !== 'connected') {
-      setAuthFilesCount(null);
-      return;
-    }
-
-    try {
-      const response = await authFilesApi.list();
-      if (requestID !== authFilesCountRequestRef.current) return;
-      setAuthFilesCount(Array.isArray(response?.files) ? response.files.length : null);
-    } catch {
-      if (requestID !== authFilesCountRequestRef.current) return;
-      setAuthFilesCount(null);
-    }
-  }, [connectionStatus]);
-
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void loadPluginResources();
-      void loadAuthFilesCount();
     }, 0);
 
     window.addEventListener(PLUGIN_RESOURCES_REFRESH_EVENT, loadPluginResources);
-    window.addEventListener(AUTH_FILES_CHANGED_EVENT, loadAuthFilesCount);
 
     return () => {
-      authFilesCountRequestRef.current += 1;
       window.clearTimeout(timer);
       window.removeEventListener(PLUGIN_RESOURCES_REFRESH_EVENT, loadPluginResources);
-      window.removeEventListener(AUTH_FILES_CHANGED_EVENT, loadAuthFilesCount);
     };
-  }, [apiBase, loadPluginResources, loadAuthFilesCount]);
+  }, [apiBase, loadPluginResources]);
 
   const pluginResourceGroups = pluginResources.reduce<
     Array<{ pluginID: string; pluginTitle: string; entries: PluginResourceEntry[] }>
@@ -585,15 +402,6 @@ export function MainLayout() {
       })
     : [];
 
-  const isApiKeyFunConfigured = hasApiKeyFunConfig(config);
-  const quickStartNavItem: SidebarNavLinkItem = {
-    path: '/quick-start',
-    label: isApiKeyFunConfigured ? APIKEY_FUN_DISPLAY_NAME : undefined,
-    labelKey: isApiKeyFunConfigured ? undefined : 'nav.quick_start',
-    metaKey: 'nav_meta.quick_start',
-    icon: sidebarIcons.quickStart,
-  };
-
   const navGroups: SidebarNavGroup[] = [
     {
       id: 'operate',
@@ -605,49 +413,12 @@ export function MainLayout() {
           metaKey: 'nav_meta.dashboard',
           icon: sidebarIcons.dashboard,
         },
-        ...(!isApiKeyFunConfigured ? [quickStartNavItem] : []),
-      ],
-    },
-    {
-      id: 'gateway',
-      labelKey: 'nav_groups.gateway',
-      items: [
-        {
-          path: '/ai-providers',
-          labelKey: 'nav.ai_providers',
-          metaKey: 'nav_meta.ai_providers',
-          icon: sidebarIcons.aiProviders,
-        },
-        {
-          path: '/auth-files',
-          labelKey: 'nav.auth_files',
-          metaKey: 'nav_meta.auth_files',
-          badge: authFilesCount ?? undefined,
-          badgeLabel:
-            typeof authFilesCount === 'number'
-              ? t('sidebar.auth_files_count', { count: authFilesCount })
-              : undefined,
-          icon: sidebarIcons.authFiles,
-        },
-        {
-          path: '/oauth',
-          labelKey: 'nav.oauth',
-          metaKey: 'nav_meta.oauth',
-          icon: sidebarIcons.oauth,
-        },
-        ...(isApiKeyFunConfigured ? [quickStartNavItem] : []),
       ],
     },
     {
       id: 'observe',
       labelKey: 'nav_groups.observe',
       items: [
-        {
-          path: '/quota',
-          labelKey: 'nav.quota_management',
-          metaKey: 'nav_meta.quota_management',
-          icon: sidebarIcons.quota,
-        },
         {
           path: '/web-search',
           labelKey: 'nav.web_search',
@@ -672,28 +443,6 @@ export function MainLayout() {
           metaKey: 'nav_meta.config_management',
           icon: sidebarIcons.config,
         },
-        ...(supportsPlugin
-          ? [
-              {
-                path: '/plugins',
-                labelKey: 'nav.plugins',
-                metaKey: 'nav_meta.plugins',
-                icon: sidebarIcons.plugins,
-              },
-              {
-                path: '/plugin-store',
-                labelKey: 'nav.plugin_store',
-                metaKey: 'nav_meta.plugin_store',
-                icon: sidebarIcons.pluginStore,
-              },
-            ]
-          : []),
-        {
-          path: '/system',
-          labelKey: 'nav.system_info',
-          metaKey: 'nav_meta.system_info',
-          icon: sidebarIcons.system,
-        },
       ],
     },
     ...(pluginPageNavItems.length > 0
@@ -713,16 +462,6 @@ export function MainLayout() {
       pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
     const normalizedPath = trimmedPath === '/dashboard' ? '/' : trimmedPath;
 
-    const authFilesIndex = navOrder.indexOf('/auth-files');
-    if (authFilesIndex !== -1) {
-      if (normalizedPath === '/auth-files') return authFilesIndex;
-      if (normalizedPath.startsWith('/auth-files/')) {
-        if (normalizedPath.startsWith('/auth-files/oauth-excluded')) return authFilesIndex + 0.1;
-        if (normalizedPath.startsWith('/auth-files/oauth-model-alias')) return authFilesIndex + 0.2;
-        return authFilesIndex + 0.05;
-      }
-    }
-
     const exactIndex = navOrder.indexOf(normalizedPath);
     if (exactIndex !== -1) return exactIndex;
     const nestedIndex = navOrder.findIndex(
@@ -731,27 +470,13 @@ export function MainLayout() {
     return nestedIndex === -1 ? null : nestedIndex;
   };
 
-  const getTransitionVariant = useCallback((fromPathname: string, toPathname: string) => {
-    const normalize = (pathname: string) => {
-      const trimmed =
-        pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-      return trimmed === '/dashboard' ? '/' : trimmed;
-    };
-
-    const from = normalize(fromPathname);
-    const to = normalize(toPathname);
-    const isAuthFiles = (pathname: string) =>
-      pathname === '/auth-files' || pathname.startsWith('/auth-files/');
-    if (isAuthFiles(from) && isAuthFiles(to)) return 'ios';
-    return 'vertical';
-  }, []);
+  const getTransitionVariant = useCallback(() => 'vertical', []);
 
   const handleRefreshAll = async () => {
     clearCache();
     const results = await Promise.allSettled([
       fetchConfig(true),
       loadPluginResources(),
-      loadAuthFilesCount(),
       triggerHeaderRefresh(),
     ]);
     const rejected = results.find((result) => result.status === 'rejected');
@@ -780,46 +505,50 @@ export function MainLayout() {
     });
   }, []);
 
-  const showRailTooltip = useCallback(
-    (event: SyntheticEvent<HTMLElement>, targetID: string, label: string, meta?: string) => {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const anchorTop = rect.top + rect.height / 2;
-      setRailTooltip({ targetID, label, meta, anchorTop, top: anchorTop });
-    },
-    []
+  // 全局搜索：⌘K / Ctrl+K 聚焦，Escape 关闭；纯客户端过滤导航条目。
+  const searchCandidates = useMemo(
+    () =>
+      navItems.map((item) => ({
+        path: item.path,
+        label: item.label ?? (item.labelKey ? t(item.labelKey) : ''),
+        meta: item.meta ?? (item.metaKey ? t(item.metaKey) : ''),
+      })),
+    // navItems 每次渲染都是新建数组，这里依赖 t 与导航内容本身即可。
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- navItems is rebuilt every render; key on the translated strings instead.
+    [t, pluginPageNavItems, supportsPlugin]
   );
-  const hideRailTooltip = useCallback(() => setRailTooltip(null), []);
-  const handleRailTooltipMouseEnter = useCallback(
-    (event: ReactMouseEvent<HTMLElement>, targetID: string, label: string, meta?: string) => {
-      const focusedItem = focusedRailItemRef.current;
-      if (focusedItem && focusedItem !== event.currentTarget) return;
-      showRailTooltip(event, targetID, label, meta);
-    },
-    [showRailTooltip]
-  );
-  const handleRailTooltipMouseLeave = useCallback(() => {
-    if (!focusedRailItemRef.current) hideRailTooltip();
-  }, [hideRailTooltip]);
-  const handleRailTooltipFocus = useCallback(
-    (event: SyntheticEvent<HTMLElement>, targetID: string, label: string, meta?: string) => {
-      focusedRailItemRef.current = event.currentTarget;
-      showRailTooltip(event, targetID, label, meta);
-    },
-    [showRailTooltip]
-  );
-  const handleRailTooltipBlur = useCallback(
-    (event: SyntheticEvent<HTMLElement>, targetID: string, label: string, meta?: string) => {
-      if (focusedRailItemRef.current === event.currentTarget) {
-        focusedRailItemRef.current = null;
+  const searchResults = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+    if (!normalized) return searchCandidates;
+    return searchCandidates.filter(
+      (item) =>
+        item.label.toLowerCase().includes(normalized) ||
+        item.meta.toLowerCase().includes(normalized) ||
+        item.path.toLowerCase().includes(normalized)
+    );
+  }, [searchCandidates, searchQuery]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setSearchOpen(true);
       }
-      if (event.currentTarget.matches(':hover')) {
-        showRailTooltip(event, targetID, label, meta);
-      } else {
-        hideRailTooltip();
-      }
-    },
-    [hideRailTooltip, showRailTooltip]
-  );
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (searchOpen) {
+      setSearchQuery('');
+      searchInputRef.current?.focus();
+    }
+  }, [searchOpen]);
+
+  const closeSearch = useCallback(() => setSearchOpen(false), []);
+  useMenuDismiss(searchOpen, searchMenuRef, closeSearch);
 
   const isMac = useMemo(() => {
     if (typeof navigator === 'undefined') return false;
@@ -830,21 +559,7 @@ export function MainLayout() {
       '';
     return /(Mac|iPhone|iPod|iPad)/i.test(platform);
   }, []);
-
-  const shortcutText = getSidebarShortcutLabel(isMac);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (isSidebarToggleShortcut(event)) {
-        event.preventDefault();
-        hideRailTooltip();
-        setSidebarCollapsed((prev) => !prev);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hideRailTooltip]);
+  const searchShortcut = isMac ? '⌘K' : 'Ctrl K';
 
   const renderNavBadge = (badge?: number, badgeLabel?: string) =>
     typeof badge === 'number' ? (
@@ -860,53 +575,20 @@ export function MainLayout() {
 
   const renderNavLink = (item: SidebarNavLinkItem, className = 'nav-item') => {
     const itemLabel = item.label ?? (item.labelKey ? t(item.labelKey) : '');
-    const itemMeta = item.meta ?? (item.metaKey ? t(item.metaKey) : '');
-    const accessibleLabel = item.badgeLabel ? `${itemLabel}, ${item.badgeLabel}` : itemLabel;
 
     return (
       <NavLink
         key={item.path}
         to={item.path}
         className={({ isActive }) => `${className} ${isActive ? 'active' : ''}`}
-        onClick={() => {
-          focusedRailItemRef.current = null;
-          setSidebarOpen(false);
-          hideRailTooltip();
-        }}
-        aria-label={showSidebarLabels ? undefined : accessibleLabel}
-        aria-describedby={
-          !showSidebarLabels && itemMeta && railTooltip?.targetID === item.path
-            ? NAV_TOOLTIP_ID
-            : undefined
-        }
-        onMouseEnter={
-          showSidebarLabels
-            ? undefined
-            : (event) => handleRailTooltipMouseEnter(event, item.path, itemLabel, itemMeta)
-        }
-        onMouseLeave={showSidebarLabels ? undefined : handleRailTooltipMouseLeave}
-        onFocus={
-          showSidebarLabels
-            ? undefined
-            : (event) => handleRailTooltipFocus(event, item.path, itemLabel, itemMeta)
-        }
-        onBlur={
-          showSidebarLabels
-            ? undefined
-            : (event) => handleRailTooltipBlur(event, item.path, itemLabel, itemMeta)
-        }
+        onClick={() => setSidebarOpen(false)}
+        aria-label={item.badgeLabel ? `${itemLabel}, ${item.badgeLabel}` : undefined}
       >
         <span className="nav-icon">{item.icon}</span>
-        {showSidebarLabels ? (
-          <>
-            <span className="nav-text">
-              <span className="nav-label">{itemLabel}</span>
-            </span>
-            {renderNavBadge(item.badge, item.badgeLabel)}
-          </>
-        ) : (
-          renderNavBadge(item.badge)
-        )}
+        <span className="nav-text">
+          <span className="nav-label">{itemLabel}</span>
+        </span>
+        {renderNavBadge(item.badge, item.badgeLabel)}
       </NavLink>
     );
   };
@@ -927,41 +609,15 @@ export function MainLayout() {
             isOpen ? 'open' : ''
           }`}
           onClick={() => togglePluginResourceDrawer(item.id)}
-          aria-label={showSidebarLabels ? undefined : item.label}
-          aria-describedby={
-            !showSidebarLabels && item.meta && railTooltip?.targetID === item.id
-              ? NAV_TOOLTIP_ID
-              : undefined
-          }
           aria-expanded={isOpen}
-          onMouseEnter={
-            showSidebarLabels
-              ? undefined
-              : (event) => handleRailTooltipMouseEnter(event, item.id, item.label, item.meta)
-          }
-          onMouseLeave={showSidebarLabels ? undefined : handleRailTooltipMouseLeave}
-          onFocus={
-            showSidebarLabels
-              ? undefined
-              : (event) => handleRailTooltipFocus(event, item.id, item.label, item.meta)
-          }
-          onBlur={
-            showSidebarLabels
-              ? undefined
-              : (event) => handleRailTooltipBlur(event, item.id, item.label, item.meta)
-          }
         >
           <span className="nav-icon">{item.icon}</span>
-          {showSidebarLabels && (
-            <>
-              <span className="nav-text">
-                <span className="nav-label">{item.label}</span>
-              </span>
-              <span className="nav-drawer-caret" aria-hidden="true">
-                <IconChevronDown size={14} />
-              </span>
-            </>
-          )}
+          <span className="nav-text">
+            <span className="nav-label">{item.label}</span>
+          </span>
+          <span className="nav-drawer-caret" aria-hidden="true">
+            <IconChevronDown size={14} />
+          </span>
         </button>
         {isOpen ? (
           <div className="nav-sub-list">
@@ -976,62 +632,92 @@ export function MainLayout() {
     ? t('sidebar.toggle_collapse', { defaultValue: 'Close navigation' })
     : t('sidebar.toggle_expand', { defaultValue: 'Open navigation' });
 
-  const sidebarToggleLabel = sidebarCollapsed ? t('sidebar.expand') : t('sidebar.collapse');
+  // 顶栏面包屑：当前页面名（复用 nav i18n key）
+  const activeNavItem = navItems.find((item) => {
+    const normalized = location.pathname === '/dashboard' ? '/' : location.pathname;
+    if (item.path === '/') return normalized === '/';
+    return normalized === item.path || normalized.startsWith(`${item.path}/`);
+  });
+  const currentPageLabel = activeNavItem
+    ? (activeNavItem.label ?? (activeNavItem.labelKey ? t(activeNavItem.labelKey) : ''))
+    : '';
 
   return (
-    <div
-      className={`app-shell ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''} ${
-        isPluginResourcePage ? 'plugin-resource-shell' : ''
-      }`}
-    >
-      <div className="top-gradient-blur" aria-hidden="true" />
-
-      <header className="main-header" ref={headerRef}>
+    <div className={`app-shell ${isPluginResourcePage ? 'plugin-resource-shell' : ''}`}>
+      <header className="topbar">
         <button
           type="button"
-          className="sidebar-toggle-floating"
-          onClick={() => {
-            hideRailTooltip();
-            setSidebarCollapsed((prev) => !prev);
-          }}
-          onMouseEnter={(event) =>
-            handleRailTooltipMouseEnter(event, 'sidebar-toggle', sidebarToggleLabel, shortcutText)
-          }
-          onMouseLeave={handleRailTooltipMouseLeave}
-          onFocus={(event) =>
-            handleRailTooltipFocus(event, 'sidebar-toggle', sidebarToggleLabel, shortcutText)
-          }
-          onBlur={(event) =>
-            handleRailTooltipBlur(event, 'sidebar-toggle', sidebarToggleLabel, shortcutText)
-          }
-          aria-label={`${sidebarToggleLabel} (${shortcutText})`}
-          aria-describedby={railTooltip?.targetID === 'sidebar-toggle' ? NAV_TOOLTIP_ID : undefined}
+          className="icon-btn mobile-menu"
+          onClick={() => setSidebarOpen((prev) => !prev)}
+          aria-label={mobileSidebarToggleLabel}
+          title={mobileSidebarToggleLabel}
         >
-          {sidebarCollapsed ? headerIcons.chevronRight : headerIcons.chevronLeft}
+          {sidebarOpen ? headerIcons.close : headerIcons.menu}
         </button>
 
-        <div className="mobile-sidebar-actions">
-          <Button
-            className="mobile-menu-btn"
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen((prev) => !prev)}
-            title={mobileSidebarToggleLabel}
-            aria-label={mobileSidebarToggleLabel}
-          >
-            {sidebarOpen ? headerIcons.close : headerIcons.menu}
-          </Button>
-        </div>
+        <nav className="breadcrumbs" aria-label={t('common.close', { defaultValue: '' }) || 'Breadcrumb'}>
+          <span className="workspace-name">{brandName}</span>
+          <span className="slash" aria-hidden="true">
+            /
+          </span>
+          {currentPageLabel ? <strong>{currentPageLabel}</strong> : null}
+        </nav>
 
-        <div className="header-actions floating-actions">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRefreshAll}
-            title={t('header.refresh_all')}
-          >
-            {headerIcons.refresh}
-          </Button>
+        <div className="topbar-right">
+          <div className={`global-search ${searchOpen ? 'open' : ''}`} ref={searchMenuRef}>
+            <button
+              type="button"
+              className="global-search-trigger"
+              onClick={() => setSearchOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={searchOpen}
+            >
+              {headerIcons.search}
+              <span>{t('header.search_placeholder', { defaultValue: '搜索页面…' })}</span>
+              <kbd>{searchShortcut}</kbd>
+            </button>
+            {searchOpen && (
+              <div className="global-search-popover" role="dialog" aria-label={t('header.search_placeholder', { defaultValue: '搜索页面…' })}>
+                <div className="global-search-input-row">
+                  {headerIcons.search}
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder={t('header.search_placeholder', { defaultValue: '搜索页面…' })}
+                  />
+                </div>
+                <div className="global-search-results">
+                  {searchResults.length === 0 ? (
+                    <div className="global-search-empty">
+                      {t('header.search_empty', { defaultValue: '没有匹配的页面' })}
+                    </div>
+                  ) : (
+                    searchResults.map((result) => (
+                      <button
+                        key={result.path}
+                        type="button"
+                        className="global-search-result"
+                        onClick={() => {
+                          setSearchOpen(false);
+                          if (result.path !== location.pathname) {
+                            navigate(result.path);
+                          }
+                        }}
+                      >
+                        <span className="global-search-result-label">{result.label}</span>
+                        {result.meta ? (
+                          <span className="global-search-result-meta">{result.meta}</span>
+                        ) : null}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className={`language-menu ${languageMenuOpen ? 'open' : ''}`} ref={languageMenuRef}>
             <Button
               variant="ghost"
@@ -1066,6 +752,7 @@ export function MainLayout() {
               </div>
             )}
           </div>
+
           <div className={`theme-menu ${themeMenuOpen ? 'open' : ''}`} ref={themeMenuRef}>
             <Button
               variant="ghost"
@@ -1076,13 +763,7 @@ export function MainLayout() {
               aria-haspopup="menu"
               aria-expanded={themeMenuOpen}
             >
-              {theme === 'auto'
-                ? headerIcons.autoTheme
-                : theme === 'dark'
-                  ? headerIcons.moon
-                  : theme === 'white'
-                    ? headerIcons.whiteTheme
-                    : headerIcons.sun}
+              {theme === 'dark' ? headerIcons.moon : headerIcons.sun}
             </Button>
             {themeMenuOpen && (
               <div
@@ -1090,55 +771,28 @@ export function MainLayout() {
                 role="menu"
                 aria-label={t('theme.switch')}
               >
-                {THEME_CARDS.map((tc) => (
+                {THEME_OPTIONS.map((option) => (
                   <button
-                    key={tc.key}
+                    key={option.key}
                     type="button"
-                    className={`theme-card ${theme === tc.key ? 'active' : ''}`}
-                    onClick={() => handleThemeSelect(tc.key)}
+                    className={`theme-option ${theme === option.key ? 'active' : ''}`}
+                    onClick={() => handleThemeSelect(option.key)}
                     role="menuitemradio"
-                    aria-checked={theme === tc.key}
+                    aria-checked={theme === option.key}
                   >
-                    <div
-                      className="theme-card-preview"
-                      style={{
-                        background: tc.colors.bg,
-                        border: `1px solid ${tc.colors.border}`,
-                      }}
-                    >
-                      <div
-                        className="theme-card-header"
-                        style={{
-                          background: tc.colors.card,
-                          borderBottom: `1px solid ${tc.colors.border}`,
-                        }}
-                      />
-                      <div className="theme-card-body">
-                        <div
-                          className="theme-card-sidebar"
-                          style={{
-                            background: tc.colors.card,
-                            borderRight: `1px solid ${tc.colors.border}`,
-                          }}
-                        />
-                        <div className="theme-card-content" style={{ background: tc.colors.bg }}>
-                          <div
-                            className="theme-card-line"
-                            style={{ background: tc.colors.textMuted }}
-                          />
-                          <div
-                            className="theme-card-line short"
-                            style={{ background: tc.colors.textMuted }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <span className="theme-card-label">{t(tc.labelKey)}</span>
+                    <span className="theme-option-icon">
+                      {option.key === 'dark' ? headerIcons.moon : headerIcons.sun}
+                    </span>
+                    <span>{t(option.labelKey)}</span>
                   </button>
                 ))}
               </div>
             )}
           </div>
+
+          <Button variant="ghost" size="sm" onClick={handleRefreshAll} title={t('header.refresh_all')}>
+            {headerIcons.refresh}
+          </Button>
           <Button variant="ghost" size="sm" onClick={logout} title={t('header.logout')}>
             {headerIcons.logout}
           </Button>
@@ -1148,56 +802,38 @@ export function MainLayout() {
       <div className="main-body">
         <button
           type="button"
-          className={`sidebar-backdrop ${sidebarOpen ? 'visible' : ''}`}
+          className={`nav-backdrop ${sidebarOpen ? 'visible' : ''}`}
           onClick={() => setSidebarOpen(false)}
           aria-label={t('common.close')}
           aria-hidden={!sidebarOpen}
           tabIndex={sidebarOpen ? 0 : -1}
         />
 
-        <aside
-          className={`sidebar ${sidebarOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`}
-        >
-          <div className="sidebar-header">
-            <div className="sidebar-brand" title={fullBrandName}>
-              <img src={INLINE_LOGO} alt="XRouter logo" className="sidebar-brand-logo" />
-              {showSidebarLabels && (
-                <span className="sidebar-brand-text">
-                  <span className="sidebar-brand-title">{abbrBrandName}</span>
-                  <span className="sidebar-brand-subtitle">{t('sidebar.subtitle')}</span>
-                </span>
-              )}
-            </div>
+        <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+          <div className="brand">
+            <span className="brand-mark">
+              <img src={INLINE_LOGO} alt="XRouter logo" />
+            </span>
+            <span className="brand-text">
+              <span className="brand-title">{brandName}</span>
+              <span className="brand-subtitle">{t('sidebar.subtitle')}</span>
+            </span>
           </div>
 
-          <div className="nav-section">
-            {navGroups.map((group, idx) => (
-              <div className="nav-group" key={group.id}>
-                {showSidebarLabels ? (
+          <div className="nav-scroll">
+            <p className="nav-workspace-label">
+              {t('nav_groups.workspace', { defaultValue: '工作空间' })}
+            </p>
+            <nav className="nav" aria-label={t('sidebar.subtitle')}>
+              {navGroups.map((group) => (
+                <div className="nav-group" key={group.id}>
                   <div className="nav-group-label">{t(group.labelKey)}</div>
-                ) : (
-                  idx > 0 && <div className="nav-group-divider" aria-hidden="true" />
-                )}
-                {group.items.map((item) => renderNavItem(item))}
-              </div>
-            ))}
+                  {group.items.map((item) => renderNavItem(item))}
+                </div>
+              ))}
+            </nav>
           </div>
         </aside>
-
-        {railTooltip && (
-          <div
-            ref={railTooltipRef}
-            id={NAV_TOOLTIP_ID}
-            className="nav-tooltip"
-            role="tooltip"
-            style={{ top: railTooltip.top }}
-          >
-            <span className="nav-tooltip-label" aria-hidden="true">
-              {railTooltip.label}
-            </span>
-            {railTooltip.meta ? <span className="nav-tooltip-meta">{railTooltip.meta}</span> : null}
-          </div>
-        )}
 
         <div
           className={`content${isLogsPage ? ' content-logs' : ''}${

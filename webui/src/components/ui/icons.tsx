@@ -444,80 +444,19 @@ export function IconSidebarDashboard({ size = 20, ...props }: IconProps) {
   );
 }
 
-export function IconSidebarQuickStart({ size = 20, ...props }: IconProps) {
-  return (
-    <svg {...baseSvgProps} width={size} height={size} {...props}>
-      <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
-    </svg>
-  );
-}
-
 export const IconSidebarConfig = IconSlidersHorizontal;
 
 export const IconSidebarPlugins = IconPlug;
 
-export function IconSidebarStore({ size = 20, ...props }: IconProps) {
-  return (
-    <svg {...baseSvgProps} width={size} height={size} {...props}>
-      <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" />
-      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-      <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" />
-      <path d="M2 7h20" />
-      <path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7" />
-    </svg>
-  );
-}
-
-export const IconSidebarProviders = IconNetwork;
-
-export function IconSidebarAuthFiles({ size = 20, ...props }: IconProps) {
-  return (
-    <svg {...baseSvgProps} width={size} height={size} {...props}>
-      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-
-export function IconSidebarOauth({ size = 20, ...props }: IconProps) {
-  return (
-    <svg {...baseSvgProps} width={size} height={size} {...props}>
-      <path d="M2 21a8 8 0 0 1 13.292-6" />
-      <circle cx="10" cy="8" r="5" />
-      <path d="m16 19 2 2 4-4" />
-    </svg>
-  );
-}
-
-export function IconSidebarQuota({ size = 20, ...props }: IconProps) {
-  return (
-    <svg {...baseSvgProps} width={size} height={size} {...props}>
-      <path d="m12 14 4-4" />
-      <path d="M3.34 19a10 10 0 1 1 17.32 0" />
-    </svg>
-  );
-}
-
 export const IconSidebarLogs = IconScrollText;
 
-// 搜索渠道：放大镜叠加节点，表示“按渠道分发搜索请求”。
+// web 工具：放大镜叠加节点，表示“按渠道分发搜索请求”。
 export function IconSidebarSearch({ size = 20, ...props }: IconProps) {
   return (
     <svg {...baseSvgProps} width={size} height={size} {...props}>
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-3.5-3.5" />
       <path d="M8 11h6" />
-    </svg>
-  );
-}
-
-export function IconSidebarSystem({ size = 20, ...props }: IconProps) {
-  return (
-    <svg {...baseSvgProps} width={size} height={size} {...props}>
-      <rect width="20" height="8" x="2" y="2" rx="2" />
-      <rect width="20" height="8" x="2" y="14" rx="2" />
-      <line x1="6" x2="6.01" y1="6" y2="6" />
-      <line x1="6" x2="6.01" y1="18" y2="18" />
     </svg>
   );
 }

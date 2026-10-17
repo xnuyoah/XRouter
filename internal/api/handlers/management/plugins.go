@@ -19,9 +19,10 @@ import (
 )
 
 type pluginListResponse struct {
-	PluginsEnabled bool              `json:"plugins_enabled"`
-	PluginsDir     string            `json:"plugins_dir"`
-	Plugins        []pluginListEntry `json:"plugins"`
+	PluginsEnabled bool                    `json:"plugins_enabled"`
+	PluginsDir     string                  `json:"plugins_dir"`
+	Plugins        []pluginListEntry       `json:"plugins"`
+	Environment    *pluginhost.Environment `json:"environment,omitempty"`
 }
 
 type pluginListEntry struct {
@@ -67,9 +68,11 @@ type pluginMenuInfo struct {
 // ListPlugins 返回已发现、已配置和已注册的插件条目。
 func (h *Handler) ListPlugins(c *gin.Context) {
 	if h == nil || h.cfg == nil {
+		environment := pluginhost.InspectEnvironment("plugins")
 		c.JSON(http.StatusOK, pluginListResponse{
-			PluginsDir: "plugins",
-			Plugins:    []pluginListEntry{},
+			PluginsDir:  "plugins",
+			Plugins:     []pluginListEntry{},
+			Environment: &environment,
 		})
 		return
 	}
@@ -90,6 +93,7 @@ func (h *Handler) ListPlugins(c *gin.Context) {
 		return
 	}
 	pluginsDir = resolvedPluginsDir
+	environment := pluginhost.InspectEnvironment(pluginsDir)
 	entries := make(map[string]pluginListEntry)
 	files, errDiscover := pluginhost.DiscoverPluginFiles(pluginsDir, pluginStoreDesiredVersions(configs))
 	if errDiscover != nil {
@@ -157,6 +161,7 @@ func (h *Handler) ListPlugins(c *gin.Context) {
 		PluginsEnabled: pluginsEnabled,
 		PluginsDir:     htmlsanitize.String(pluginsDir),
 		Plugins:        out,
+		Environment:    &environment,
 	})
 }
 

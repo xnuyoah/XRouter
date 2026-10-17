@@ -1,12 +1,16 @@
 /**
- * 搜索渠道页：把 tavily / exa / anysearch / firecrawl / tinyfish 的渠道与账号池
- * 集中到一个页面里，分为五个标签页。
+ * Web tools page: centralizes tavily / exa / anysearch / firecrawl / tinyfish
+ * channels and their account pools into three tabs.
  *
- * 行为契约：
- * - 渠道与账号的唯一事实来源是 config.yaml 的 web-search 段；新增/删除账号会写回配置；
- * - 测活是同步接口，点一次拿一次结果，不做后台轮询；
- * - 渠道状态检测是异步的：检测进行中按 2s 轮询，空闲时 60s 轮询；
- * - 面板只展示接入方式（/gateway 与 /mcp），不代替客户端调用。
+ * Behavior contract:
+ * - Channels and accounts are owned by the web-search section of config.yaml;
+ *   adding or removing accounts writes back through the management API.
+ * - Probing is a synchronous endpoint: one call returns one result set, no
+ *   background polling is triggered by it.
+ * - Channel status checks are asynchronous: while a check runs the page polls
+ *   every 2s, otherwise every 60s.
+ * - The access tab only documents the /gateway and /mcp endpoints; it never
+ *   proxies client calls itself.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -59,7 +63,7 @@ function formatLatency(value: number | undefined): string {
   return `${value} ms`;
 }
 
-/** 账号额度明细：Firecrawl 的负数额度按原值展示（红色标注）。 */
+/** Account quota breakdown; negative Firecrawl balances render in red. */
 function quotaText(account: WebSearchAccount, t: (key: string) => string): string {
   const balances = account.quota?.balances ?? [];
   if (balances.length === 0) return t('webSearch.quotaUnknown');
@@ -117,9 +121,9 @@ export function WebSearchPage() {
     void loadAll();
   }, [loadAll]);
 
-  // 渠道接入页需要调用日志，按需加载一次。
+  // The access tab needs recent request entries; load them on demand.
   useEffect(() => {
-    if (tab !== 'access' && tab !== 'overview') return;
+    if (tab !== 'access') return;
     let cancelled = false;
     void webSearchApi
       .listRequests({ limit: 20 })
@@ -134,7 +138,7 @@ export function WebSearchPage() {
     };
   }, [tab]);
 
-  // 渠道状态轮询：检测进行中更快，空闲时更慢。
+  // Status polling: fast while a check is running, slow when idle.
   useEffect(() => {
     const interval = statusPollInterval(statusRunning);
     pollRef.current = window.setInterval(() => {
@@ -264,7 +268,7 @@ export function WebSearchPage() {
     <span className={`${styles.pill} ${styles[tone]}`}>{label}</span>
   );
 
-  /** 测活结果面板：概览、账号池与测活三个标签页共用。 */
+  /** Probe result panel shared by the overview and account tabs. */
   const renderProbeSummary = (titleKey: string) => {
     if (!probeResult) return null;
     return (
@@ -307,6 +311,57 @@ export function WebSearchPage() {
     );
   };
 
+  /** One channel card: identity, live health metrics and the 90-day strip. */
+  const renderChannelCard = (channel: WebSearchChannel) => {
+    const component = status?.channels.find((item) => item.channel === channel.id);
+    const meta = CHANNEL_STATUS_META[component?.status ?? 'unknown'];
+    return (
+      <div key={channel.id} className={styles.channelCard}>
+        <div className={styles.channelHead}>
+          <strong>{channel.name}</strong>
+          <span className={`${styles.pill} ${styles[meta.tone]}`}>
+            {meta.symbol} {t(meta.labelKey)}
+          </span>
+        </div>
+        <dl className={styles.kv}>
+          <dt>{t('webSearch.columns.accounts')}</dt>
+          <dd>
+            {channel.accounts} / {channel.available} {t('webSearch.accountStatus.available')}
+          </dd>
+          <dt>{t('webSearch.columns.proxy')}</dt>
+          <dd>
+            {channel.proxy_ready ? t('webSearch.proxyReady') : t('webSearch.proxyMissing')}
+          </dd>
+          {component && (
+            <>
+              <dt>{t('webSearch.status.successRate')}</dt>
+              <dd>
+                {(component.success_rate * 100).toFixed(1)}% ({component.successes}/
+                {component.sample_count}) · {t('webSearch.status.latency')}{' '}
+                {formatLatency(component.latency_ms)}
+              </dd>
+              <dt>{t('webSearch.columns.gateway')}</dt>
+              <dd className={styles.mono}>{gatewayExample(channel.id)}</dd>
+            </>
+          )}
+        </dl>
+        {component && component.history.length > 0 && (
+          <div className={styles.history} aria-label={t('webSearch.status.history')}>
+            {component.history.slice(-HISTORY_STRIP_DAYS).map((point) => (
+              <span
+                key={point.date}
+                title={`${point.date} · ${t(CHANNEL_STATUS_META[point.status].labelKey)} (${
+                  point.samples
+                })`}
+                className={`${styles.historyDay} ${styles[CHANNEL_STATUS_META[point.status].tone]}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderOverview = () => (
     <div className={styles.stack}>
       <div className={styles.metrics}>
@@ -342,6 +397,13 @@ export function WebSearchPage() {
                 : t('webSearch.overview.proxyMissing')}
               {' · '}
               {t('webSearch.overview.lastCheck')}: {formatTime(status.checked_at)}
+              {status.check_running && (
+                <>
+                  {' · '}
+                  {status.completed_checks}/{status.total_checks}
+                </>
+              )}
+              {status.check_error ? ` · ${status.check_error}` : ''}
             </div>
           </div>
           <div className={styles.bannerActions}>
@@ -361,6 +423,7 @@ export function WebSearchPage() {
       <div className={styles.panel}>
         <div className={styles.panelHead}>
           <strong>{t('webSearch.overview.channels')}</strong>
+          <span className={styles.muted}>{t('webSearch.status.note')}</span>
         </div>
         {channels.length === 0 ? (
           <EmptyState
@@ -369,40 +432,7 @@ export function WebSearchPage() {
           />
         ) : (
           <div className={styles.channelGrid}>
-            {channels.map((channel) => {
-              const component = status?.channels.find((item) => item.channel === channel.id);
-              const meta = CHANNEL_STATUS_META[component?.status ?? 'unknown'];
-              return (
-                <div key={channel.id} className={styles.channelCard}>
-                  <div className={styles.channelHead}>
-                    <strong>{channel.name}</strong>
-                    <span className={`${styles.pill} ${styles[meta.tone]}`}>
-                      {meta.symbol} {t(meta.labelKey)}
-                    </span>
-                  </div>
-                  <dl className={styles.kv}>
-                    <dt>{t('webSearch.columns.accounts')}</dt>
-                    <dd>
-                      {channel.accounts} / {channel.available} {t('webSearch.accountStatus.available')}
-                    </dd>
-                    <dt>{t('webSearch.columns.status')}</dt>
-                    <dd>
-                      {channel.enabled
-                        ? t('webSearch.channelEnabled')
-                        : t('webSearch.channelDisabled')}
-                    </dd>
-                    <dt>{t('webSearch.columns.proxy')}</dt>
-                    <dd>
-                      {channel.proxy_ready
-                        ? t('webSearch.proxyReady')
-                        : t('webSearch.proxyMissing')}
-                    </dd>
-                    <dt>{t('webSearch.columns.gateway')}</dt>
-                    <dd className={styles.mono}>{gatewayExample(channel.id)}</dd>
-                  </dl>
-                </div>
-              );
-            })}
+            {channels.map((channel) => renderChannelCard(channel))}
           </div>
         )}
       </div>
@@ -426,14 +456,27 @@ export function WebSearchPage() {
             </button>
           ))}
         </div>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => void probeAll(undefined, visibleAccounts.map((item) => item.account_id))}
-          disabled={busy || visibleAccounts.length === 0}
-        >
-          {t('webSearch.actions.probeAll')}
-        </Button>
+        <div className={styles.rowActions}>
+          {channels.map((channel) => (
+            <Button
+              key={channel.id}
+              size="sm"
+              variant="ghost"
+              onClick={() => void probeAll(channel.id)}
+              disabled={busy}
+            >
+              {channel.name}
+            </Button>
+          ))}
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => void probeAll(undefined, visibleAccounts.map((item) => item.account_id))}
+            disabled={busy || visibleAccounts.length === 0}
+          >
+            {t('webSearch.actions.probeAll')}
+          </Button>
+        </div>
       </div>
 
       {renderProbeSummary('webSearch.probes.lastSummary')}
@@ -587,110 +630,6 @@ export function WebSearchPage() {
     </div>
   );
 
-  const renderProbes = () => (
-    <div className={styles.stack}>
-      <div className={styles.panel}>
-        <div className={styles.panelHead}>
-          <strong>{t('webSearch.probes.title')}</strong>
-          <span className={styles.muted}>{t('webSearch.probes.hint')}</span>
-        </div>
-        <div className={styles.rowActions}>
-          <Button onClick={() => void probeAll()} loading={busy}>
-            {t('webSearch.actions.probeAll')}
-          </Button>
-          {channels.map((channel) => (
-            <Button
-              key={channel.id}
-              size="sm"
-              variant="secondary"
-              onClick={() => void probeAll(channel.id)}
-              disabled={busy}
-            >
-              {channel.name}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {probeResult ? (
-        renderProbeSummary('webSearch.probes.result')
-      ) : (
-        <EmptyState
-          title={t('webSearch.empty.noProbe')}
-          description={t('webSearch.empty.noProbeDesc')}
-        />
-      )}
-    </div>
-  );
-
-  const renderStatus = () => {
-    if (!status) return null;
-    const overall = CHANNEL_STATUS_META[status.overall_status];
-    return (
-      <div className={styles.stack}>
-        <div className={styles.panel}>
-          <div className={styles.panelHead}>
-            <strong>{t('webSearch.status.title')}</strong>
-            <div className={styles.rowActions}>
-              <Button size="sm" variant="secondary" onClick={() => void checkStatus()} disabled={busy}>
-                {t('webSearch.actions.checkStatus')}
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => void refreshQuota()} disabled={busy}>
-                {t('webSearch.actions.refreshQuota')}
-              </Button>
-            </div>
-          </div>
-          <div className={`${styles.banner} ${styles[overall.tone]}`}>
-            <span className={styles.bannerSymbol}>{overall.symbol}</span>
-            <div>
-              <strong>{t(overall.labelKey)}</strong>
-              <div className={styles.muted}>{t('webSearch.status.note')}</div>
-            </div>
-            {status.check_running && (
-              <span className={styles.muted}>
-                {status.completed_checks}/{status.total_checks}
-              </span>
-            )}
-          </div>
-          {status.check_error && <div className={styles.error}>{status.check_error}</div>}
-        </div>
-
-        {status.channels.map((component) => {
-          const meta = CHANNEL_STATUS_META[component.status];
-          return (
-            <div key={component.channel} className={styles.panel}>
-              <div className={styles.panelHead}>
-                <strong>{component.name}</strong>
-                <span className={`${styles.pill} ${styles[meta.tone]}`}>
-                  {meta.symbol} {t(meta.labelKey)}
-                </span>
-              </div>
-              <div className={styles.muted}>
-                {t('webSearch.status.successRate')}: {(component.success_rate * 100).toFixed(1)}% (
-                {component.successes}/{component.sample_count}) · {t('webSearch.status.latency')}:{' '}
-                {formatLatency(component.latency_ms)} ·{' '}
-                {component.proxy_used ? t('webSearch.status.proxyUsed') : t('webSearch.status.noProxy')}
-                {component.http_status ? ` · HTTP ${component.http_status}` : ''}
-              </div>
-              {component.message && <div className={styles.muted}>{component.message}</div>}
-              <div className={styles.history} aria-label={t('webSearch.status.history')}>
-                {component.history.slice(-HISTORY_STRIP_DAYS).map((point) => (
-                  <span
-                    key={point.date}
-                    title={`${point.date} · ${t(CHANNEL_STATUS_META[point.status].labelKey)} (${
-                      point.samples
-                    })`}
-                    className={`${styles.historyDay} ${styles[CHANNEL_STATUS_META[point.status].tone]}`}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
   const renderAccess = () => (
     <div className={styles.stack}>
       <div className={styles.panel}>
@@ -725,13 +664,13 @@ export function WebSearchPage() {
         <div className={styles.panelHead}>
           <strong>{t('webSearch.access.examples')}</strong>
         </div>
-        <pre className={styles.code}>{`# 使用 access.api-keys 中的客户端密钥
+        <pre className={styles.code}>{`# Use a client key from access.api-keys
 curl -s http://127.0.0.1:11016/gateway/tavily/search \\
   -H "Authorization: Bearer $XROUTER_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"query":"golang","max_results":3}'
 
-# MCP 客户端（Streamable HTTP）
+# MCP client (Streamable HTTP)
 {
   "mcpServers": {
     "xrouter-tavily": {
@@ -818,8 +757,6 @@ curl -s http://127.0.0.1:11016/gateway/tavily/search \\
         <>
           {tab === 'overview' && renderOverview()}
           {tab === 'accounts' && renderAccounts()}
-          {tab === 'probes' && renderProbes()}
-          {tab === 'status' && renderStatus()}
           {tab === 'access' && renderAccess()}
         </>
       )}

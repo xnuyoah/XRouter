@@ -8,8 +8,6 @@
 const ENC_PREFIX = 'enc::v1::';
 const SECRET_SALT = 'xrouter-webui::secure-storage';
 
-let cachedKeyBytes: Uint8Array | null = null;
-
 function encodeText(text: string): Uint8Array {
   const encoder = new TextEncoder();
   return encoder.encode(text);
@@ -20,19 +18,18 @@ function decodeText(bytes: Uint8Array): string {
   return decoder.decode(bytes);
 }
 
-function getKeyBytes(): Uint8Array {
-  if (cachedKeyBytes) return cachedKeyBytes;
-
+function getKeyBytes(salt: string = SECRET_SALT): Uint8Array {
+  if (!salt) {
+    salt = SECRET_SALT;
+  }
   try {
     const host = window.location.host;
     const ua = navigator.userAgent;
-    cachedKeyBytes = encodeText(`${SECRET_SALT}|${host}|${ua}`);
+    return encodeText(`${salt}|${host}|${ua}`);
   } catch (error) {
     console.warn('Obfuscation fallback to simple key:', error);
-    cachedKeyBytes = encodeText(SECRET_SALT);
+    return encodeText(salt);
   }
-
-  return cachedKeyBytes;
 }
 
 function xorBytes(data: Uint8Array, keyBytes: Uint8Array): Uint8Array {
@@ -63,11 +60,11 @@ function fromBase64(base64: string): Uint8Array {
 /**
  * 加密数据
  */
-export function obfuscateData(value: string): string {
+export function obfuscateData(value: string, salt?: string): string {
   if (!value) return value;
 
   try {
-    const keyBytes = getKeyBytes();
+    const keyBytes = getKeyBytes(salt);
     const encrypted = xorBytes(encodeText(value), keyBytes);
     return `${ENC_PREFIX}${toBase64(encrypted)}`;
   } catch (error) {
@@ -79,7 +76,7 @@ export function obfuscateData(value: string): string {
 /**
  * 解密数据
  */
-export function deobfuscateData(payload: string): string {
+export function deobfuscateData(payload: string, salt?: string): string {
   if (!payload || !payload.startsWith(ENC_PREFIX)) {
     return payload;
   }
@@ -87,7 +84,7 @@ export function deobfuscateData(payload: string): string {
   try {
     const encodedBody = payload.slice(ENC_PREFIX.length);
     const encrypted = fromBase64(encodedBody);
-    const decrypted = xorBytes(encrypted, getKeyBytes());
+    const decrypted = xorBytes(encrypted, getKeyBytes(salt));
     return decodeText(decrypted);
   } catch (error) {
     console.warn('Deobfuscation failed, return as-is:', error);

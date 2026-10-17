@@ -337,6 +337,74 @@
   color: var(--text-tertiary);
 }
 
+.badgeDanger {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  background: rgba($error-color, 0.1);
+  border: 1px solid rgba($error-color, 0.2);
+  color: $error-color;
+}
+
+// ─── Environment Card ───────────────────────────────────
+
+.envCard {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-lg;
+  background: var(--bg-primary);
+}
+
+.envGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md $spacing-lg;
+}
+
+.envItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.envLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.envValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.envPath {
+  font-family: $font-mono;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
+}
+
+.envHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
 // ─── Row Actions ────────────────────────────────────────
 
 .rowActions {

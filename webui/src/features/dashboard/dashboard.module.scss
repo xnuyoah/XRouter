@@ -147,8 +147,7 @@
   margin-top: $spacing-xs;
 }
 
-.primaryAction,
-.ghostAction {
+.primaryAction {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -201,26 +200,6 @@
     @media (hover: hover) and (pointer: fine) {
       &:hover {
         transform: none;
-      }
-    }
-  }
-}
-
-/* 次要动作降为安静的文字链接：不抬升，箭头代它点头 */
-.ghostAction {
-  padding-left: $spacing-xs;
-  padding-right: $spacing-xs;
-  border: none;
-  color: var(--text-secondary);
-  background: transparent;
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      color: var(--text-primary);
-      background: transparent;
-
-      .linkArrow {
-        transform: translateX(3px);
       }
     }
   }

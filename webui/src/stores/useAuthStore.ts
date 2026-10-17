@@ -12,8 +12,28 @@ import { apiClient } from '@/services/api/client';
 import { LegacyBackendError, probeLegacyBackend } from '@/services/api/legacyBackendProbe';
 import { useConfigStore } from './useConfigStore';
 import { useModelsStore } from './useModelsStore';
-import { useQuotaStore } from './useQuotaStore';
 import { detectApiBaseFromLocation, normalizeApiBase } from '@/utils/connection';
+import { obfuscateData } from '@/utils/encryption';
+
+// 插件页面（如扩展提供的 dashboard iframe）与主面板同源共享 localStorage。
+// 它们读取 cli-proxy-auth 时使用旧版盐 cli-proxy-api-webui，与主面板当前
+// 使用的盐不同；登录成功后额外写一份插件兼容的凭据，扩展页即可免密加载。
+const PLUGIN_COMPAT_SALT = 'cli-proxy-api-webui::secure-storage';
+
+const writePluginCompatAuth = (apiBase: string, managementKey: string, remember: boolean) => {
+  try {
+    if (remember && managementKey) {
+      localStorage.setItem(
+        STORAGE_KEY_AUTH,
+        obfuscateData(JSON.stringify({ apiBase, managementKey }), PLUGIN_COMPAT_SALT)
+      );
+    } else {
+      localStorage.removeItem(STORAGE_KEY_AUTH);
+    }
+  } catch {
+    // 插件免密是尽力而为的增强，写失败不影响主流程。
+  }
+};
 
 interface AuthStoreState extends AuthState {
   connectionStatus: ConnectionStatus;
@@ -105,7 +125,6 @@ export const useAuthStore = create<AuthStoreState>()(
           });
           useConfigStore.getState().clearCache();
           useModelsStore.getState().clearCache();
-          useQuotaStore.getState().clearQuotaCache();
 
           // 配置 API 客户端
           apiClient.setConfig({
@@ -142,6 +161,7 @@ export const useAuthStore = create<AuthStoreState>()(
           } else {
             localStorage.removeItem('isLoggedIn');
           }
+          writePluginCompatAuth(apiBase, managementKey, rememberPassword);
         } catch (error: unknown) {
           set({ connectionStatus: 'error' });
           throw error;
@@ -154,7 +174,6 @@ export const useAuthStore = create<AuthStoreState>()(
         apiClient.setConfig({ apiBase: '', managementKey: '' });
         useConfigStore.getState().clearCache();
         useModelsStore.getState().clearCache();
-        useQuotaStore.getState().clearQuotaCache();
         set({
           isAuthenticated: false,
           apiBase: '',
@@ -165,6 +184,7 @@ export const useAuthStore = create<AuthStoreState>()(
           connectionStatus: 'disconnected',
         });
         localStorage.removeItem('isLoggedIn');
+        writePluginCompatAuth('', '', false);
       },
 
       // 检查认证状态

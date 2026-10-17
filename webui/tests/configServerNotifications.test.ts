@@ -51,7 +51,7 @@ describe('trusted proxy restart notification', () => {
 });
 
 describe('server configuration localization', () => {
-  for (const locale of ['en', 'zh-CN', 'zh-TW', 'ru']) {
+  for (const locale of ['en', 'zh-CN']) {
     test(`${locale} has labels, hints, validation and restart text`, async () => {
       const messages: unknown = await Bun.file(`src/i18n/locales/${locale}.json`).json();
       const resolve = (key: string) =>

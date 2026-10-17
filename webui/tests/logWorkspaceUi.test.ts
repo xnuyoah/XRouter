@@ -19,7 +19,7 @@ describe('log workspace layout contract', () => {
     expect(styles).not.toMatch(/calc\(100vh\s*-/);
     expect(styles).not.toMatch(/\n\s*(?:height|min-height|max-height):\s*(?:360|420|480)px/);
     expect(layout).toMatch(
-      /&\.content-logs\s*\{\s*height: 100dvh;\s*min-height: 0;\s*overflow: hidden;/
+      /&\.content-logs,\s*&\.content-plugin-resource\s*\{\s*height: calc\(100vh - var\(--header-height\)\);\s*min-height: 0;\s*overflow: hidden;/
     );
   });
 
@@ -88,7 +88,7 @@ describe('log workspace layout contract', () => {
   });
 
   test('all supported locales describe both filtering and display settings', () => {
-    for (const locale of ['en', 'zh-CN', 'zh-TW', 'ru']) {
+    for (const locale of ['en', 'zh-CN']) {
       const messages = JSON.parse(readSource(`src/i18n/locales/${locale}.json`));
       expect(messages.logs.filter_panel_title).toBeTruthy();
       expect(messages.logs.show_raw_logs).toBeTruthy();

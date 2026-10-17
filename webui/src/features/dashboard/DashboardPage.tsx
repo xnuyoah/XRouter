@@ -1,14 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  IconBot,
-  IconFileText,
-  IconSidebarConfig,
-  IconSidebarLogs,
-  IconSidebarQuota,
-  IconSidebarSystem,
-} from '@/components/ui/icons';
+import { IconSidebarConfig, IconSidebarLogs } from '@/components/ui/icons';
 import { useAuthStore } from '@/stores';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { formatCompactNumber, formatDateValue, formatPercent } from '@/utils/format';
@@ -184,40 +177,16 @@ export function DashboardPage() {
 
   const ctaCards = [
     {
-      to: '/ai-providers',
-      icon: <IconBot size={20} />,
-      title: t('nav.ai_providers'),
-      description: t('dashboard.cta_providers_desc'),
-    },
-    {
-      to: '/auth-files',
-      icon: <IconFileText size={20} />,
-      title: t('nav.auth_files'),
-      description: t('dashboard.cta_auth_files_desc'),
-    },
-    {
       to: '/config',
       icon: <IconSidebarConfig size={20} />,
       title: t('nav.config_management'),
       description: t('dashboard.cta_config_desc'),
     },
     {
-      to: '/quota',
-      icon: <IconSidebarQuota size={20} />,
-      title: t('nav.quota_management'),
-      description: t('dashboard.cta_quota_desc'),
-    },
-    {
       to: '/logs',
       icon: <IconSidebarLogs size={20} />,
       title: t('nav.logs'),
       description: t('dashboard.cta_logs_desc'),
-    },
-    {
-      to: '/system',
-      icon: <IconSidebarSystem size={20} />,
-      title: t('nav.system_info'),
-      description: t('dashboard.cta_system_desc'),
     },
   ];
 
@@ -244,10 +213,7 @@ export function DashboardPage() {
             {heroMetaLine}
           </p>
           <div className={styles.heroActions} data-reveal>
-            <Link to="/ai-providers" className={styles.primaryAction}>
-              {t('dashboard.cta_manage_providers')}
-            </Link>
-            <Link to="/logs" className={styles.ghostAction}>
+            <Link to="/logs" className={styles.primaryAction}>
               {t('dashboard.cta_inspect_logs')}{' '}
               <span className={styles.linkArrow} aria-hidden="true">
                 →
@@ -470,12 +436,6 @@ export function DashboardPage() {
                   ))}
                 </ul>
               </div>
-              <Link to="/auth-files" className={styles.panelLink}>
-                {t('dashboard.health_link')}{' '}
-                <span className={styles.linkArrow} aria-hidden="true">
-                  →
-                </span>
-              </Link>
             </>
           )}
         </div>

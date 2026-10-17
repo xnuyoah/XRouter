@@ -1,24 +1,30 @@
 /**
- * 搜索渠道页样式。
+ * Web tools page styles.
  *
- * 只使用面板既有的主题变量（--bg-* / --text-* / --border-* 等），
- * 因此自动跟随浅色与深色主题。
+ * Reuses the panel's theme tokens (--bg-* / --text-* / --border-* CSS custom
+ * properties) so light and dark themes both follow automatically; spacing and
+ * radii come from the compile-time SCSS variables shared with other pages.
  */
+
+$page-max-width: 1280px;
 
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: $spacing-md;
+  width: 100%;
+  max-width: $page-max-width;
+  margin: 0 auto;
 }
 
 .header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--spacing-md);
+  gap: $spacing-md;
 
   h1 {
-    margin: 0 0 var(--spacing-xs);
+    margin: 0 0 $spacing-xs;
     font-size: 20px;
     color: var(--text-primary);
   }
@@ -39,20 +45,22 @@
 .tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-xs);
+  gap: $spacing-xs;
   border-bottom: 1px solid var(--border-color);
-  padding-bottom: var(--spacing-xs);
+  padding-bottom: $spacing-xs;
 }
 
 .tab {
-  padding: 6px 12px;
+  padding: 6px 14px;
   border: 1px solid transparent;
-  border-radius: var(--radius-full);
+  border-radius: $radius-full;
   background: transparent;
   color: var(--text-secondary);
   font-size: 13px;
   cursor: pointer;
-  transition: background-color $transition-fast;
+  transition:
+    background-color $transition-fast,
+    color $transition-fast;
 
   &:hover {
     background: var(--bg-tertiary);
@@ -70,14 +78,14 @@
 .stack {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: $spacing-md;
 }
 
 .panel {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
+  gap: $spacing-sm;
+  padding: $spacing-lg $spacing-lg;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: $radius-lg;
@@ -87,7 +95,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--spacing-sm);
+  gap: $spacing-sm;
 
   strong {
     color: var(--text-primary);
@@ -96,15 +104,16 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--spacing-sm);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
+  justify-content: start;
+  gap: $spacing-sm;
 }
 
 .metric {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: var(--spacing-md);
+  gap: 6px;
+  padding: $spacing-md $spacing-lg;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: $radius-lg;
@@ -117,14 +126,15 @@
 
 .metricValue {
   font-size: 22px;
+  line-height: 1.1;
   color: var(--text-primary);
 }
 
 .banner {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
   border: 1px solid var(--border-color);
   border-radius: $radius-lg;
   background: var(--bg-primary);
@@ -138,21 +148,21 @@
 .bannerActions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-xs);
+  gap: $spacing-xs;
   margin-left: auto;
 }
 
 .channelGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--spacing-sm);
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: $spacing-sm;
 }
 
 .channelCard {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-md);
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: $radius-md;
@@ -162,13 +172,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-sm);
+  gap: $spacing-sm;
 }
 
 .kv {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 2px var(--spacing-sm);
+  gap: 4px $spacing-md;
   margin: 0;
   font-size: 12px;
 
@@ -187,7 +197,7 @@
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  border-radius: var(--radius-full);
+  border-radius: $radius-full;
   font-size: 11px;
   white-space: nowrap;
   border: 1px solid transparent;
@@ -227,24 +237,25 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-sm);
+  gap: $spacing-sm;
   flex-wrap: wrap;
 }
 
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-xs);
+  gap: $spacing-xs;
 }
 
 .filterButton {
   padding: 4px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-full);
+  border-radius: $radius-full;
   background: var(--bg-primary);
   color: var(--text-secondary);
   font-size: 12px;
   cursor: pointer;
+  transition: background-color $transition-fast;
 
   &:hover {
     background: var(--bg-tertiary);
@@ -287,14 +298,14 @@
 .rowActions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-xs);
+  gap: $spacing-xs;
   align-items: center;
 }
 
 .formRow {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--spacing-sm);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: $spacing-sm;
   align-items: end;
 
   label {
@@ -307,10 +318,10 @@
 
   input,
   select {
-    padding: 6px 8px;
+    padding: 7px 10px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: $radius-sm;
+    border-radius: $radius-md;
     color: var(--text-primary);
     font-size: 12px;
   }
@@ -332,7 +343,8 @@
   display: flex;
   gap: 1px;
   overflow: hidden;
-  padding-top: var(--spacing-xs);
+  border-radius: 2px;
+  padding-top: $spacing-xs;
 }
 
 .historyDay {
@@ -345,7 +357,7 @@
 
 .code {
   margin: 0;
-  padding: var(--spacing-md);
+  padding: $spacing-md;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: $radius-md;
@@ -357,10 +369,16 @@
 }
 
 .error {
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: $spacing-sm $spacing-md;
   background: var(--warning-bg);
   border: 1px solid var(--warning-border);
   border-radius: $radius-md;
   color: var(--warning-text);
   font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .page {
+    max-width: none;
+  }
 }

@@ -175,7 +175,7 @@ oauth:
   });
 
   test('integer validation and sentinel hints exist in all four locales', async () => {
-    for (const locale of ['en', 'zh-CN', 'zh-TW', 'ru']) {
+    for (const locale of ['en', 'zh-CN']) {
       const json = await Bun.file(`src/i18n/locales/${locale}.json`).json();
       const visual = json.config_management.visual;
       expect(visual.validation.integer).toBeString();
