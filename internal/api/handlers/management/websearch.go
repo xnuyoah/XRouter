@@ -1,6 +1,7 @@
 package management
 
 import (
+	"context"
 	"net/http"
 	"sort"
 	"strconv"
@@ -223,7 +224,8 @@ func (h *Handler) PostWebSearchStatusCheck(c *gin.Context) {
 	if service == nil {
 		return
 	}
-	if errStart := service.StartStatusCheck(c.Request.Context()); errStart != nil {
+	// 检测在响应返回后仍要继续执行，因此必须脱离请求 context（请求结束即被取消）。
+	if errStart := service.StartStatusCheck(context.WithoutCancel(c.Request.Context())); errStart != nil {
 		if _, busy := errStart.(corewebsearch.BusyError); busy {
 			c.JSON(http.StatusConflict, gin.H{"error": "check_running", "message": errStart.Error()})
 			return

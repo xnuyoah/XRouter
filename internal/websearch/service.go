@@ -50,6 +50,7 @@ func NewService(cfg *config.Config, configFilePath, stateDir string) (*Service, 
 	}
 	service.status = NewStatusService(store, service.prober, cfg.WebSearchEffectiveHistoryDays())
 	service.mcp = NewMCPMirror(store)
+	service.applyProbeSettings(cfg)
 	// 成功调用后顺带刷新额度：与透传网关共用同一套探测实现。
 	service.executor.SetQuotaProbe(func(ctx context.Context, channel Channel, account Account, proxyURL string) {
 		if _, errProbe := service.prober.ProbeAccount(ctx, channel, account, proxyURL); errProbe != nil {
@@ -141,11 +142,23 @@ func (s *Service) UpdateConfig(cfg *config.Config) error {
 	s.view = view
 	s.mu.Unlock()
 
+	// 探测超时与并发同样跟随配置热重载。
+	s.applyProbeSettings(cfg)
+
 	// 配置变更后工具清单缓存可能失效。
 	for _, channel := range AllChannels() {
 		s.mcp.InvalidateToolCache(channel)
 	}
 	return nil
+}
+
+// applyProbeSettings 把配置里的探测超时与并发应用到探测器与状态服务。
+func (s *Service) applyProbeSettings(cfg *config.Config) {
+	if s == nil || cfg == nil {
+		return
+	}
+	s.prober.SetTimeout(time.Duration(cfg.WebSearchEffectiveProbeTimeoutSeconds()) * time.Second)
+	s.status.SetConcurrency(cfg.WebSearchEffectiveProbeConcurrency())
 }
 
 // Enabled 报告搜索渠道子系统是否启用。
@@ -215,7 +228,7 @@ func (s *Service) Execute(req Request) (Result, error) {
 }
 
 // HandleMCP 处理一次客户端 MCP 请求。
-func (s *Service) HandleMCP(channelRaw string, body []byte) ([]byte, error) {
+func (s *Service) HandleMCP(ctx context.Context, channelRaw string, body []byte) ([]byte, error) {
 	cfg, errCfg := s.ChannelConfigByName(channelRaw)
 	if errCfg != nil {
 		return nil, errCfg
@@ -227,7 +240,7 @@ func (s *Service) HandleMCP(channelRaw string, body []byte) ([]byte, error) {
 			StatusCode: http.StatusNotFound,
 		}
 	}
-	return s.mcp.Handle(cfg, body), nil
+	return s.mcp.Handle(ctx, cfg, body), nil
 }
 
 // ProbeRequest 是测活请求的筛选条件。

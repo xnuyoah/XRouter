@@ -3,6 +3,7 @@ package websearch
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -135,7 +136,7 @@ func upstreamTarget(channel Channel, key string) (string, map[string]string) {
 //
 // 第二个返回值总为 nil：MCP 协议要求把错误放在 JSON-RPC 响应里，
 // 而不是依赖 HTTP 传输层错误码。
-func (m *MCPMirror) Handle(cfg ChannelConfig, body []byte) []byte {
+func (m *MCPMirror) Handle(ctx context.Context, cfg ChannelConfig, body []byte) []byte {
 	var request rpcRequest
 	if errUnmarshal := json.Unmarshal(body, &request); errUnmarshal != nil {
 		return rpcErrorPayload(nil, mcpCodeParseError, "请求不是合法的 JSON-RPC 消息")
@@ -160,20 +161,20 @@ func (m *MCPMirror) Handle(cfg ChannelConfig, body []byte) []byte {
 	case "ping":
 		return mcpResult(request.ID, map[string]any{})
 	case "tools/list":
-		tools, errTools := m.tools(cfg)
+		tools, errTools := m.tools(ctx, cfg)
 		if errTools != nil {
 			return mcpErrorPayload(request.ID, errTools)
 		}
 		return mcpResult(request.ID, map[string]any{"tools": tools})
 	case "tools/call":
-		return m.callTool(cfg, request)
+		return m.callTool(ctx, cfg, request)
 	default:
 		return rpcErrorPayload(request.ID, mcpCodeMethodNotFound, "不支持的方法: "+request.Method)
 	}
 }
 
 // callTool 把工具调用转成一次上游 MCP tools/call。
-func (m *MCPMirror) callTool(cfg ChannelConfig, request rpcRequest) []byte {
+func (m *MCPMirror) callTool(ctx context.Context, cfg ChannelConfig, request rpcRequest) []byte {
 	var params struct {
 		Name      string         `json:"name"`
 		Arguments map[string]any `json:"arguments"`
@@ -182,7 +183,7 @@ func (m *MCPMirror) callTool(cfg ChannelConfig, request rpcRequest) []byte {
 		return rpcErrorPayload(request.ID, mcpCodeInvalidParams, "tools/call 缺少工具名")
 	}
 
-	tools, errTools := m.tools(cfg)
+	tools, errTools := m.tools(ctx, cfg)
 	if errTools != nil {
 		return mcpErrorPayload(request.ID, errTools)
 	}
@@ -206,7 +207,7 @@ func (m *MCPMirror) callTool(cfg ChannelConfig, request rpcRequest) []byte {
 		return rpcErrorPayload(request.ID, mcpCodeInvalidParams, "工具参数无法序列化")
 	}
 
-	rawResult, errCall := m.callUpstream(cfg, "tools/call", callParams)
+	rawResult, errCall := m.callUpstream(ctx, cfg, "tools/call", callParams)
 	if errCall != nil {
 		return mcpErrorPayload(request.ID, errCall)
 	}
@@ -222,7 +223,7 @@ func (m *MCPMirror) callTool(cfg ChannelConfig, request rpcRequest) []byte {
 }
 
 // tools 返回渠道工具清单（带缓存）。
-func (m *MCPMirror) tools(cfg ChannelConfig) ([]map[string]any, error) {
+func (m *MCPMirror) tools(ctx context.Context, cfg ChannelConfig) ([]map[string]any, error) {
 	m.cacheMu.Lock()
 	if cached, ok := m.toolCache[cfg.Channel]; ok && m.now().Sub(cached.fetchedAt) < mcpToolCacheTTL {
 		tools := cached.tools
@@ -231,7 +232,7 @@ func (m *MCPMirror) tools(cfg ChannelConfig) ([]map[string]any, error) {
 	}
 	m.cacheMu.Unlock()
 
-	tools, errFetch := m.fetchTools(cfg)
+	tools, errFetch := m.fetchTools(ctx, cfg)
 	if errFetch != nil {
 		return nil, errFetch
 	}
@@ -249,7 +250,7 @@ func (m *MCPMirror) InvalidateToolCache(channel Channel) {
 }
 
 // fetchTools 分页读取上游工具清单，直到没有游标。
-func (m *MCPMirror) fetchTools(cfg ChannelConfig) ([]map[string]any, error) {
+func (m *MCPMirror) fetchTools(ctx context.Context, cfg ChannelConfig) ([]map[string]any, error) {
 	var cursor string
 	collected := make([]map[string]any, 0, 16)
 	for page := 0; page < mcpListToolsPageCap; page++ {
@@ -261,7 +262,7 @@ func (m *MCPMirror) fetchTools(cfg ChannelConfig) ([]map[string]any, error) {
 		if errMarshal != nil {
 			return nil, fmt.Errorf("序列化分页参数失败: %w", errMarshal)
 		}
-		response, errCall := m.callUpstream(cfg, "tools/list", rawParams)
+		response, errCall := m.callUpstream(ctx, cfg, "tools/list", rawParams)
 		if errCall != nil {
 			return nil, errCall
 		}
@@ -282,7 +283,7 @@ func (m *MCPMirror) fetchTools(cfg ChannelConfig) ([]map[string]any, error) {
 }
 
 // callUpstream 调用一次上游 MCP 方法并返回 result 原文，失败时自动换号。
-func (m *MCPMirror) callUpstream(cfg ChannelConfig, method string, params json.RawMessage) (json.RawMessage, error) {
+func (m *MCPMirror) callUpstream(ctx context.Context, cfg ChannelConfig, method string, params json.RawMessage) (json.RawMessage, error) {
 	accounts := m.orderedAccounts(cfg)
 	if len(accounts) == 0 {
 		return nil, &GatewayError{
@@ -303,7 +304,7 @@ func (m *MCPMirror) callUpstream(cfg ChannelConfig, method string, params json.R
 
 	var lastErr error
 	for _, account := range accounts[:attemptLimit] {
-		result, errCall := m.callUpstreamWithAccount(client, cfg, account, method, params)
+		result, errCall := m.callUpstreamWithAccount(ctx, client, cfg, account, method, params)
 		if errCall == nil {
 			if errTouch := m.store.TouchUsed(cfg.Channel, account.ID, account.Fingerprint(), m.now()); errTouch != nil {
 				logWarnf("记录账号使用时间失败 channel=%s account=%s: %v", cfg.Channel, account.ID, errTouch)
@@ -347,7 +348,7 @@ func (m *MCPMirror) orderedAccounts(cfg ChannelConfig) []Account {
 }
 
 // callUpstreamWithAccount 用指定账号调用一次上游 MCP 方法。
-func (m *MCPMirror) callUpstreamWithAccount(client *http.Client, cfg ChannelConfig, account Account, method string, params json.RawMessage) (json.RawMessage, error) {
+func (m *MCPMirror) callUpstreamWithAccount(ctx context.Context, client *http.Client, cfg ChannelConfig, account Account, method string, params json.RawMessage) (json.RawMessage, error) {
 	target, headers := upstreamTarget(cfg.Channel, account.APIKey)
 	requestBody, errMarshal := json.Marshal(rpcRequest{
 		JSONRPC: "2.0",
@@ -359,7 +360,7 @@ func (m *MCPMirror) callUpstreamWithAccount(client *http.Client, cfg ChannelConf
 		return nil, fmt.Errorf("序列化上游 MCP 请求失败: %w", errMarshal)
 	}
 
-	httpReq, errNew := http.NewRequest(http.MethodPost, target, bytes.NewReader(requestBody))
+	httpReq, errNew := http.NewRequestWithContext(ctx, http.MethodPost, target, bytes.NewReader(requestBody))
 	if errNew != nil {
 		return nil, fmt.Errorf("构造上游 MCP 请求失败: %w", errNew)
 	}
