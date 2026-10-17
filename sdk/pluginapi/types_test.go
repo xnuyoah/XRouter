@@ -499,7 +499,7 @@ func TestSchedulerPickResponseUnmarshalJSONCompatibility(t *testing.T) {
 }
 
 func TestSchedulerPickResponseUnmarshalJSONOverwritesExistingFields(t *testing.T) {
-	// Verify that explicit false or empty string in incoming JSON correctly overwrites pre-existing true/non-empty values.
+	// 验证传入 JSON 中显式的 false 或空字符串能正确覆盖原有的 true/非空值。
 	resp := SchedulerPickResponse{
 		AuthID:          "old-auth",
 		DelegateBuiltin: "old-delegate",
@@ -533,7 +533,7 @@ func TestSchedulerPickResponseUnmarshalJSONOverwritesExistingFields(t *testing.T
 		t.Fatalf("RejectReason = %q, want empty", resp.RejectReason)
 	}
 
-	// Verify that omitting fields in incoming JSON leaves existing fields intact.
+	// 验证传入 JSON 中省略字段时现有字段保持不变。
 	resp2 := SchedulerPickResponse{
 		AuthID:  "keep-auth",
 		Handled: true,
@@ -859,7 +859,7 @@ func TestUsageRecordRequestIDAndTraceID(t *testing.T) {
 }
 
 func TestQuotaPayloadJSON(t *testing.T) {
-	// Test camelCase input
+	// 测试 camelCase 输入
 	camelJSON := []byte(`{
 		"subscription": {"plan":"Pro","tierName":"Tier 1","tierId":"t-1"},
 		"summary": [
@@ -897,7 +897,7 @@ func TestQuotaPayloadJSON(t *testing.T) {
 		t.Fatalf("unexpected camel bucket: %+v", respCamel.Groups[0].Buckets)
 	}
 
-	// Test snake_case input
+	// 测试 snake_case 输入
 	snakeJSON := []byte(`{
 		"subscription": {"plan":"Free","tier_name":"Tier Free","tier_id":"t-free"},
 		"server_time_offset_ms": 200,
@@ -930,7 +930,7 @@ func TestQuotaPayloadJSON(t *testing.T) {
 }
 
 func TestQuotaBucketZeroRemainingFractionPreserved(t *testing.T) {
-	// remainingFraction is 0 (exhausted), while remaining_fraction has a fallback value
+	// remainingFraction 为 0（已耗尽），而 remaining_fraction 有回退值
 	rawJSON := []byte(`{"remainingFraction":0,"remaining_fraction":0.8}`)
 	var bucket QuotaBucket
 	if err := json.Unmarshal(rawJSON, &bucket); err != nil {

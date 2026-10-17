@@ -19,12 +19,12 @@ type openAICompatibilityRegistrationCache struct {
 	byIndex map[int]*openAICompatibilityRegistrationEntry
 }
 
-// pluginHostHasAuthProvider is overridable in tests to avoid loading real plugins.
+// pluginHostHasAuthProvider 可在测试中覆盖，以避免加载真实插件。
 var pluginHostHasAuthProvider = func(host *pluginhost.Host, provider string) bool {
 	return host != nil && host.HasAuthProvider(provider)
 }
 
-// pluginHostHasAuthModelProvider only checks declarations, never model discovery.
+// pluginHostHasAuthModelProvider 只检查声明，从不做模型发现。
 var pluginHostHasAuthModelProvider = func(host *pluginhost.Host, provider string) bool {
 	return host != nil && host.HasAuthModelProvider(provider)
 }
@@ -193,8 +193,8 @@ func (s *Service) registerAvailableExecutors(ctx context.Context, opts executorR
 	if ctx.Err() != nil {
 		return
 	}
-	// Keep all Service-owned executor registration paths here so native, Home,
-	// auth-derived, and plugin executors stay in the same binding order.
+	// 将所有由 Service 拥有的执行器注册路径集中于此，使原生、Home、
+	// 由 auth 派生的以及插件执行器保持一致的绑定顺序。
 	if opts.includeBaseline {
 		s.registerExecutorsForAuths(baselineExecutorAuths(), opts.forceReplaceAuths)
 	}
@@ -241,9 +241,9 @@ func (s *Service) registerExecutorForAuth(a *coreauth.Auth, forceReplace bool) {
 	s.cfgMu.RLock()
 	cfg := s.cfg
 	s.cfgMu.RUnlock()
-	// Skip disabled auth entries when (re)binding executors.
-	// Disabled auths can linger during config reloads (e.g., removed OpenAI-compat entries)
-	// and must not override active provider executors.
+	// 在（重新）绑定执行器时跳过已禁用的 auth 条目。
+	// 已禁用的 auth 可能在配置重载期间残留（例如被移除的 OpenAI 兼容条目），
+	// 且不得覆盖活跃的供应商执行器。
 	if a.Disabled {
 		return
 	}
@@ -277,16 +277,16 @@ func (s *Service) registerExecutorForAuth(a *coreauth.Auth, forceReplace bool) {
 			s.unregisterOpenAICompatExecutor(providerKey)
 			return
 		}
-		// Keep native OpenAI-compat inference for base_url routing, but delegate
-		// OAuth refresh to the plugin AuthProvider when one is registered.
+		// 保留原生 OpenAI 兼容推理用于 base_url 路由，但在注册了插件
+		// AuthProvider 时，将 OAuth 刷新委托给它。
 		s.registerOpenAICompatProviderExecutor(providerKey, a, cfg, forceReplace, true)
 	}
 }
 
-// registerOpenAICompatProviderExecutor binds a native OpenAI-compat executor, optionally
-// wrapping it so plugin AuthProvider refresh remains available.
-// When respectNonOwned is true, an existing non-owned executor is preserved unless it is a
-// bare OpenAI-compat executor that should be upgraded to the plugin-refresh wrapper.
+// registerOpenAICompatProviderExecutor 绑定原生 OpenAI 兼容执行器，并可选地
+// 对其进行包装，以保留插件 AuthProvider 刷新能力。
+// 当 respectNonOwned 为 true 时，会保留已存在的非自有执行器，除非它是一个
+// 应当升级为插件刷新包装的裸 OpenAI 兼容执行器。
 func (s *Service) registerOpenAICompatProviderExecutor(providerKey string, auth *coreauth.Auth, cfg *config.Config, forceReplace bool, respectNonOwned bool) {
 	if s == nil || s.coreManager == nil {
 		return
@@ -360,7 +360,7 @@ func shouldKeepExistingOpenAICompatExecutor(s *Service, existing, next coreauth.
 		return true
 	}
 	if !respectNonOwned {
-		// Historical openai-compatibility path only short-circuits bare native executors.
+		// 历史遗留的 openai-compatibility 路径只对裸原生执行器短路。
 		return existingBare
 	}
 	if s != nil && s.pluginHost != nil && s.pluginHost.OwnsExecutor(existing) {
@@ -384,10 +384,10 @@ func (s *Service) registerResolvedModelsForAuth(a *coreauth.Auth, providerKey st
 	s.registerResolvedModelsForAuthFenced(a, newModelRegistrationFence(a), providerKey, models)
 }
 
-// registerResolvedModelsForAuthFenced publishes models only if fence still
-// matches the manager's current auth snapshot and the registry epoch has not
-// advanced since the registration began. A superseded registration must not
-// overwrite or remove a newer one.
+// registerResolvedModelsForAuthFenced 仅在 fence 仍与
+// 管理器的当前 auth 快照匹配、且注册表 epoch 自注册开始以来
+// 未推进时才发布模型。已失效的注册不得
+// 覆盖或移除更新的注册。
 func (s *Service) registerResolvedModelsForAuthFenced(a *coreauth.Auth, fence modelRegistrationFence, providerKey string, models []*ModelInfo) {
 	if a == nil || a.ID == "" {
 		return
@@ -421,9 +421,9 @@ func (s *Service) registerResolvedModelsForAuthFenced(a *coreauth.Auth, fence mo
 	fence.publishModels(manager, a.ID, providerKey, normalizedModels)
 }
 
-// unregisterModelsForAuthFenced removes a client's models only if fence
-// still matches the manager's current auth snapshot and the registry epoch
-// has not advanced since the registration began.
+// unregisterModelsForAuthFenced 仅在 fence 仍与
+// 管理器的当前 auth 快照匹配、且注册表 epoch 自注册开始以来
+// 未推进时，才移除某个客户端的模型。
 func (s *Service) unregisterModelsForAuthFenced(a *coreauth.Auth, fence modelRegistrationFence) {
 	if a == nil || a.ID == "" {
 		return
@@ -527,9 +527,9 @@ func (s *Service) tryRegisterPluginModelsForAuthWithConfigFenced(ctx context.Con
 			activeAuth = updated.Clone()
 			pluginAuthCommitted = true
 		} else {
-			// The plugin computation's starting identity was superseded
-			// before its auth update could commit. Its models belong to
-			// that old identity and must not be laundered into the new one.
+			// 插件计算的起始身份在其 auth 更新提交之前
+			// 就被取代了。它的模型属于该旧身份，
+			// 不得被洗白进新身份中。
 			return true
 		}
 	}
@@ -559,11 +559,11 @@ func (s *Service) tryRegisterPluginModelsForAuthWithConfigFenced(ctx context.Con
 	models = applyOAuthModelAliasForAuth(cfg, providerKey, activeAuthKind, activeAuth.Attributes, models)
 	publicationFence := fence
 	if pluginAuthCommitted {
-		// A plugin-returned auth update is a deliberate identity transition,
-		// committed conditionally against the starting identity above.
-		// Refresh only the auth inputs after that commit; retain the
-		// starting registry epoch so an intervening newer publication
-		// cannot be adopted and overwritten by this older computation.
+		// 插件返回的 auth 更新是一次有意为之的身份转换，
+		// 并且是以上述起始身份为条件提交的。
+		// 提交后只刷新 auth 输入；保留
+		// 起始注册表 epoch，这样期间出现的较新发布
+		// 就不会被这个较旧的计算采用并覆盖。
 		publicationFence = fence.withAuth(activeAuth)
 	}
 	if len(models) > 0 {

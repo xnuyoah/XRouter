@@ -49,20 +49,20 @@ func (s *Server) acceptMuxConnections(listener net.Listener, httpListener *muxLi
 			continue
 		}
 
-		// Dispatch each connection to a goroutine so that slow/idle clients
-		// cannot block the accept loop. Previously, TLS handshake and
-		// reader.Peek(1) were performed inline; an idle TCP connection that
-		// never sent bytes would block Peek indefinitely, preventing all
-		// subsequent connections from being accepted (issue #3267).
+		// 将每个连接分派到单独的 goroutine，这样缓慢/空闲的客户端
+		// 就不会阻塞 accept 循环。此前，TLS 握手和
+		// reader.Peek(1) 是内联执行的；一个从不发送字节的空闲 TCP 连接
+		// 会让 Peek 无限期阻塞，导致所有后续连接
+		// 都无法被接受（issue #3267）。
 		go s.routeMuxConnection(conn, httpListener)
 	}
 }
 
-// routeMuxConnection performs per-connection protocol detection and routing.
+// routeMuxConnection 执行逐连接的协议检测与路由。
 func (s *Server) routeMuxConnection(conn net.Conn, httpListener *muxListener) {
-	// Set a read deadline so that idle connections that never send bytes do not
-	// leak goroutines and file descriptors. The deadline is cleared once the
-	// connection is successfully routed to its handler.
+	// 设置读取截止时间，使从不发送字节的空闲连接不会
+	// 泄漏 goroutine 和文件描述符。一旦连接被成功路由到
+	// 其处理器，该截止时间就会被清除。
 	const muxSniffDeadline = 10 * time.Second
 	_ = conn.SetReadDeadline(time.Now().Add(muxSniffDeadline))
 

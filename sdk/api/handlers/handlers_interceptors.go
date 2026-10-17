@@ -17,7 +17,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-// PluginInterceptorHost applies plugin interceptors around handler execution.
+// PluginInterceptorHost 在处理器执行前后应用插件拦截器。
 type PluginInterceptorHost interface {
 	InterceptRequestBeforeAuth(context.Context, pluginapi.RequestInterceptRequest) pluginapi.RequestInterceptResponse
 	InterceptRequestAfterAuth(context.Context, pluginapi.RequestInterceptRequest) pluginapi.RequestInterceptResponse
@@ -36,15 +36,15 @@ type streamInterceptorDetector interface {
 	HasStreamInterceptors() bool
 }
 
-// streamChunkRequestBodyPolicy reports whether payload stream-chunk interceptors
-// still require OriginalRequest/RequestBody (legacy schema_version < 3).
+// streamChunkRequestBodyPolicy 报告载荷流式分块拦截器是否
+// 仍需要 OriginalRequest/RequestBody（旧版 schema_version < 3）。
 type streamChunkRequestBodyPolicy interface {
 	StreamChunkPayloadIncludesRequestBody() bool
 }
 
-// streamChunkPayloadIncludesRequestBody returns true when at least one active
-// stream interceptor needs per-chunk request bodies. Evaluated per call so
-// mid-stream plugin reloads stay correct. Unknown hosts default to true.
+// streamChunkPayloadIncludesRequestBody 在至少一个活跃的流拦截器
+// 需要每分块请求体时返回 true。每次调用都会评估，
+// 因此流中途的插件重载仍然正确。未知 host 默认为 true。
 func streamChunkPayloadIncludesRequestBody(host PluginInterceptorHost) bool {
 	if host == nil {
 		return false
@@ -55,15 +55,15 @@ func streamChunkPayloadIncludesRequestBody(host PluginInterceptorHost) bool {
 	return true
 }
 
-// streamChunkHistoryPolicy reports whether payload stream-chunk interceptors
-// still require HistoryChunks (legacy schema_version < 5).
+// streamChunkHistoryPolicy 报告载荷流式分块拦截器是否
+// 仍需要 HistoryChunks（旧版 schema_version < 5）。
 type streamChunkHistoryPolicy interface {
 	StreamChunkPayloadIncludesHistory() bool
 }
 
-// streamChunkPayloadIncludesHistory returns true when at least one active
-// stream interceptor needs per-chunk history chunks. Evaluated per call so
-// mid-stream plugin reloads stay correct. Unknown hosts default to true.
+// streamChunkPayloadIncludesHistory 在至少一个活跃的流拦截器
+// 需要每分块历史分块时返回 true。每次调用都会评估，
+// 因此流中途的插件重载仍然正确。未知 host 默认为 true。
 func streamChunkPayloadIncludesHistory(host PluginInterceptorHost) bool {
 	if host == nil {
 		return false
@@ -629,11 +629,11 @@ func (h *BaseAPIHandler) applyResponseInterceptors(ctx context.Context, requestI
 	return body, responseHeaders
 }
 
-// ModelDetailIDContextKey requests selection from the final, plugin-filtered catalog.
+// ModelDetailIDContextKey 请求从最终经过插件过滤的目录中进行选择。
 const ModelDetailIDContextKey = "cliproxy.model_detail_id"
 
-// WriteModelListResponse serializes the model-list payload, applies plugin response interceptors
-// if a plugin host is configured, and writes the resulting headers and body to the Gin context.
+// WriteModelListResponse 序列化模型列表载荷，应用插件响应拦截器
+// （若配置了插件 host），并将得到的 header 与 body 写入 Gin 上下文。
 func (h *BaseAPIHandler) WriteModelListResponse(c *gin.Context, sourceFormat string, payload any) {
 	if c == nil {
 		return

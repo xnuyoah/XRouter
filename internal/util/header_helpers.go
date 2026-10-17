@@ -10,8 +10,8 @@ import (
 
 type sessionIDContextKey struct{}
 
-// WithSessionID returns a new context annotated with the internal session ID.
-// Passing an empty sessionID explicitly clears/overrides any previous session ID in parent contexts.
+// WithSessionID 返回一个注入了内部会话 ID 的新 context。
+// 传入空 sessionID 会显式清除/覆盖父 context 中的任何先前会话 ID。
 func WithSessionID(ctx context.Context, sessionID string) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -19,7 +19,7 @@ func WithSessionID(ctx context.Context, sessionID string) context.Context {
 	return context.WithValue(ctx, sessionIDContextKey{}, strings.TrimSpace(sessionID))
 }
 
-// SessionIDFromContext retrieves the internal session ID from the context if present.
+// SessionIDFromContext 从 context 中获取内部会话 ID（如果存在）。
 func SessionIDFromContext(ctx context.Context) string {
 	if ctx == nil {
 		return ""
@@ -30,8 +30,8 @@ func SessionIDFromContext(ctx context.Context) string {
 	return ""
 }
 
-// HasExplicitSessionID returns true if ctx explicitly carries a session ID annotation
-// (including an explicit empty string used to clear it).
+// HasExplicitSessionID 在 ctx 显式携带会话 ID 注解时返回 true
+// （包括用于清除它的显式空字符串）。
 func HasExplicitSessionID(ctx context.Context) bool {
 	if ctx == nil {
 		return false
@@ -40,17 +40,17 @@ func HasExplicitSessionID(ctx context.Context) bool {
 	return ok
 }
 
-// SessionIDResolver is a pluggable resolver for extracting the internal session ID.
+// SessionIDResolver 是用于提取内部会话 ID 的可插拔解析器。
 var SessionIDResolver func(ctx context.Context, clientHeaders http.Header) string
 
-// ApplyCustomHeadersFromAttrs applies user-defined headers stored in the provided attributes map.
-// Custom headers override built-in defaults when conflicts occur.
-// If clientHeaders is provided (or if the request context carries a Gin context), any custom header
-// whose value starts with "$" (e.g. "$ABC" or "$X-Claude-Code-Session-Id") is dynamically
-// resolved from the client's request headers. If the client did not provide that header,
-// the custom header is omitted from the outgoing request.
-// The magic variable $CPA-SESSION-ID expands to the internal session identifier used for
-// session-affinity (regardless of whether session-affinity is enabled).
+// ApplyCustomHeadersFromAttrs 应用存储在所提供属性映射中的用户自定义请求头。
+// 发生冲突时，自定义请求头会覆盖内置默认值。
+// 如果提供了 clientHeaders（或请求 context 携带 Gin context），那么任何
+// 值以 "$" 开头的自定义请求头（例如 "$ABC" 或 "$X-Claude-Code-Session-Id"）都会从
+// 客户端的请求头中动态解析。如果客户端未提供该请求头，
+// 则该自定义请求头会从发出的请求中省略。
+// 魔法变量 $CPA-SESSION-ID 会展开为用于
+// 会话亲和性的内部会话标识符（无论是否启用了会话亲和性）。
 func ApplyCustomHeadersFromAttrs(r *http.Request, attrs map[string]string, clientHeaders ...http.Header) {
 	if r == nil {
 		return
@@ -202,11 +202,11 @@ func applyCustomHeaders(r *http.Request, headers map[string]string) {
 		if k == "" || v == "" {
 			continue
 		}
-		// net/http reads Host from req.Host (not req.Header) when writing
-		// a real request, so we must mirror it there. Some callers pass
-		// synthetic requests (e.g. &http.Request{Header: ...}) and only
-		// consume r.Header afterwards, so keep the value in the header
-		// map too.
+		// net/http 在写出真实请求时从 req.Host（而非 req.Header）读取
+		// Host，因此我们必须在两处保持一致。部分调用方传入
+		// 合成请求（例如 &http.Request{Header: ...}）随后只
+		// 消费 r.Header，因此也要把该值保留在请求头
+		// 映射中。
 		if http.CanonicalHeaderKey(k) == "Host" {
 			r.Host = v
 		}

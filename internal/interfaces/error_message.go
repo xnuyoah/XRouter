@@ -1,29 +1,29 @@
-// Package interfaces defines the core interfaces and shared structures for the XRouter server.
-// These interfaces provide a common contract for different components of the application,
-// such as AI service clients, API handlers, and data models.
+// Package interfaces 定义 XRouter 服务器的核心接口与共享结构。
+// 这些接口为应用的不同组件（如 AI 服务客户端、API 处理器和数据模型）
+// 提供统一契约。
 package interfaces
 
 import "net/http"
 
-// ErrorMessage encapsulates an error with an associated HTTP status code.
-// This structure is used to provide detailed error information including
-// both the HTTP status and the underlying error.
+// ErrorMessage 封装错误及其关联的 HTTP 状态码。
+// 该结构用于提供详细的错误信息，包含
+// HTTP 状态与底层错误。
 type ErrorMessage struct {
-	// StatusCode is the HTTP status code returned by the API.
+	// StatusCode 是 API 返回的 HTTP 状态码。
 	StatusCode int
 
-	// Error is the underlying error that occurred.
+	// Error 是发生的底层错误。
 	Error error
 
-	// Addon contains upstream headers that may be passed through when enabled.
+	// Addon 包含启用后可透传的上游头。
 	Addon http.Header
 
-	// DirectResponse reports that Body and Headers were explicitly supplied by a trusted in-process component.
+	// DirectResponse 表示 Body 和 Headers 由受信任的进程内组件显式提供。
 	DirectResponse bool
 
-	// Body contains a preformatted downstream response when DirectResponse is true.
+	// 当 DirectResponse 为 true 时，Body 包含预先格式化好的下游响应。
 	Body []byte
 
-	// Headers contains downstream response headers when DirectResponse is true.
+	// 当 DirectResponse 为 true 时，Headers 包含下游响应头。
 	Headers http.Header
 }

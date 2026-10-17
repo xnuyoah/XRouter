@@ -7,7 +7,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
-// NewFileTokenClientProvider returns the default token-backed client loader.
+// NewFileTokenClientProvider 返回默认的、基于令牌的客户端加载器。
 func NewFileTokenClientProvider() TokenClientProvider {
 	return &fileTokenClientProvider{}
 }
@@ -15,13 +15,13 @@ func NewFileTokenClientProvider() TokenClientProvider {
 type fileTokenClientProvider struct{}
 
 func (p *fileTokenClientProvider) Load(ctx context.Context, cfg *config.Config) (*TokenClientResult, error) {
-	// Stateless executors handle tokens
+	// 无状态执行器负责处理令牌
 	_ = ctx
 	_ = cfg
 	return &TokenClientResult{SuccessfulAuthed: 0}, nil
 }
 
-// NewAPIKeyClientProvider returns the default API key client loader that reuses existing logic.
+// NewAPIKeyClientProvider 返回默认的 API key 客户端加载器，其复用现有逻辑。
 func NewAPIKeyClientProvider() APIKeyClientProvider {
 	return &apiKeyClientProvider{}
 }

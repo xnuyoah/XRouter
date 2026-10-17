@@ -86,12 +86,12 @@ func TestOAuthRequestScopedErrors_AppliesToOAuthAuth(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 
-	// Action: stop should terminate immediately and not try auth2
+	// 动作：stop 应立即终止且不尝试 auth2
 	if execCount != 1 {
 		t.Fatalf("expected execCount = 1 (stopped), got %d", execCount)
 	}
 
-	// Action: stop without cooldown should leave auth1 active
+	// 动作：无冷却的 stop 应使 auth1 保持活动
 	auth1State, ok := m.GetByID("auth-kimi-oauth")
 	if !ok || auth1State.Status != StatusActive || auth1State.Unavailable {
 		t.Fatalf("expected auth1 to remain active, got status=%v unavailable=%v", auth1State.Status, auth1State.Unavailable)
@@ -118,7 +118,7 @@ func TestOAuthRequestScopedErrors_DoesNotApplyToAPIKey(t *testing.T) {
 	m := NewManager(nil, nil, nil)
 	m.SetConfig(cfg)
 
-	// API key auth must not use oauth-request-scoped-errors
+	// API key auth 不得使用 oauth-request-scoped-errors
 	auth1 := &Auth{
 		ID:         "auth-kimi-apikey",
 		Provider:   "kimi",
@@ -174,7 +174,7 @@ func TestOAuthRequestScopedErrors_DoesNotApplyToAPIKey(t *testing.T) {
 		t.Fatalf("unexpected payload: %s", string(resp.Payload))
 	}
 
-	// Should not have stopped at auth1; fell back to auth2 because OAuth rule was skipped for API key
+	// 本不应在 auth1 处停止；因 API key 跳过了 OAuth 规则而回退到 auth2
 	if execCount != 2 {
 		t.Fatalf("expected execCount = 2 (rotated because OAuth rule skipped for API key), got %d", execCount)
 	}

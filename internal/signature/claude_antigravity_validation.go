@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-// InspectAntigravityClaudeCAQSSignature validates the double-base64 CAQS
-// envelope observed on Antigravity Claude 5.5. This is structural validation,
-// not proof of cryptographic validity or cross-account replay compatibility.
-// Only two encoding layers are supported; arbitrary recursive wrapping is not.
+// InspectAntigravityClaudeCAQSSignature 校验在 Antigravity Claude 5.5 上
+// 观察到的双重 base64 CAQS 信封。这是结构校验，
+// 并不证明密码学有效性或跨账号重放兼容性。
+// 仅支持两层编码；不支持任意递归包装。
 func InspectAntigravityClaudeCAQSSignature(rawSignature string) (*ClaudeCAISSignatureInfo, error) {
 	sig := stripClaudeSignaturePrefix(rawSignature)
 	if len(sig) == 0 || len(sig) > MaxClaudeThinkingSignatureLen {
@@ -34,8 +34,8 @@ func InspectAntigravityClaudeCAQSSignature(rawSignature string) (*ClaudeCAISSign
 	if errInspect != nil {
 		return nil, fmt.Errorf("invalid Antigravity CAQS payload: %w", errInspect)
 	}
-	// Scope this new replay shape to the observed Google thinking channel.
-	// Other versions/channels require their own capture and replay verification.
+	// 将这种新的重放形态限定在观察到的 Google thinking 通道。
+	// 其他版本/通道需要各自的抓取与重放验证。
 	if info.EnvelopeVersion != 4 || info.ChannelID != 18 ||
 		info.Infrastructure == nil || *info.Infrastructure != 2 ||
 		info.BlockKind != "thinking" || !info.SignatureInContainer {

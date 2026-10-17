@@ -52,7 +52,7 @@ func TestAlignOpenAIToolCallMessages(t *testing.T) {
 			t.Fatalf("expected 7 messages, got %d", len(got))
 		}
 
-		// Expected order:
+		// 预期顺序：
 		// 0: user "start"
 		// 1: assistant tool_calls
 		// 2: tool call_b
@@ -84,7 +84,7 @@ func TestAlignOpenAIToolCallMessages(t *testing.T) {
 	})
 
 	t.Run("leaves incomplete tool calls untouched", func(t *testing.T) {
-		// Assistant calls call_1 and call_2, but only call_1 has a result
+		// Assistant 调用了 call_1 和 call_2，但只有 call_1 有结果
 		messages := [][]byte{
 			[]byte(`{"role":"assistant","tool_calls":[{"id":"call_1"},{"id":"call_2"}]}`),
 			[]byte(`{"role":"user","content":"middle"}`),
@@ -127,7 +127,7 @@ func TestAlignOpenAIToolCallMessages(t *testing.T) {
 	})
 
 	t.Run("leaves assistant with mixed empty ID untouched", func(t *testing.T) {
-		// Assistant calls one empty ID and one valid call_a
+		// Assistant 调用了一个空 ID 和一个有效的 call_a
 		messages := [][]byte{
 			[]byte(`{"role":"assistant","tool_calls":[{"id":""},{"id":"call_a"}]}`),
 			[]byte(`{"role":"user","content":"reminder"}`),

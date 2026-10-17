@@ -1,4 +1,4 @@
-// Package githubauth provides shared GitHub API credentials.
+// Package githubauth 提供共享的 GitHub API 凭据。
 package githubauth
 
 import (
@@ -10,13 +10,13 @@ import (
 
 var configuredToken atomic.Pointer[string]
 
-// SetToken replaces the global configured token, including clearing it on reload.
+// SetToken 替换全局配置的令牌，包括在重载时清空它。
 func SetToken(token string) {
 	token = strings.TrimSpace(token)
 	configuredToken.Store(&token)
 }
 
-// ResolveToken prefers the server configuration, then the legacy environment settings.
+// ResolveToken 优先使用服务器配置，其次使用旧版环境设置。
 func ResolveToken() string {
 	if token := configuredToken.Load(); token != nil && *token != "" {
 		return *token
@@ -33,7 +33,7 @@ func ResolveToken() string {
 	return strings.TrimSpace(os.Getenv("GITSTORE_GIT_TOKEN"))
 }
 
-// TokenForURL never exposes the shared credential outside the HTTPS GitHub API.
+// TokenForURL 绝不会在 HTTPS GitHub API 之外暴露共享凭据。
 func TokenForURL(rawURL string) string {
 	u, err := url.Parse(rawURL)
 	if err != nil || !strings.EqualFold(u.Scheme, "https") || !strings.EqualFold(u.Hostname(), "api.github.com") || u.User != nil || (u.Port() != "" && u.Port() != "443") {

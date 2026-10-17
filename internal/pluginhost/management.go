@@ -36,7 +36,7 @@ type resourceRouteRecord struct {
 	route    pluginapi.ResourceRoute
 }
 
-// RegisterManagementRoutes rebuilds the plugin-owned Management API and resource route tables.
+// RegisterManagementRoutes 重建插件拥有的 Management API 与资源路由表。
 func (h *Host) RegisterManagementRoutes(ctx context.Context, reserved map[string]struct{}) {
 	if h == nil {
 		return
@@ -229,7 +229,7 @@ func managementRouteKey(method, path string) string {
 	return strings.ToUpper(strings.TrimSpace(method)) + " " + strings.TrimSpace(path)
 }
 
-// ServeManagementHTTP dispatches an authenticated Management API request to a plugin route.
+// ServeManagementHTTP 将已认证的 Management API 请求分发给某个插件路由。
 func (h *Host) ServeManagementHTTP(w http.ResponseWriter, r *http.Request) bool {
 	if h == nil || w == nil || r == nil || r.URL == nil {
 		return false
@@ -293,7 +293,7 @@ func (h *Host) ServeManagementHTTP(w http.ResponseWriter, r *http.Request) bool 
 	return true
 }
 
-// ServeResourceHTTP dispatches an unauthenticated browser-navigable resource request to a plugin route.
+// ServeResourceHTTP 将无需认证、可由浏览器访问的资源请求分发给某个插件路由。
 func (h *Host) ServeResourceHTTP(w http.ResponseWriter, r *http.Request) bool {
 	if h == nil || w == nil || r == nil || r.URL == nil {
 		return false

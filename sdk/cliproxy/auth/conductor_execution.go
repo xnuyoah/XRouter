@@ -109,7 +109,7 @@ func preferredExecutionAttemptError(fallback, upstream error) error {
 		if errors.As(upstream, &previousRound) && previousRound != nil && previousRound.cause != nil {
 			upstream = previousRound.cause
 		}
-		// Keep the current Home round marker because it owns authoritative retry timing.
+		// 保留当前的 Home 轮次标记，因为它掌握权威的重试时机。
 		preferred := *exhausted
 		preferred.cause = upstream
 		return markUpstreamExecutionAttempt(&preferred)
@@ -117,8 +117,8 @@ func preferredExecutionAttemptError(fallback, upstream error) error {
 	return markUpstreamExecutionAttempt(upstream)
 }
 
-// Execute performs a non-streaming execution using the configured selector and executor.
-// It supports multiple providers for the same model and round-robins the starting provider per model.
+// Execute 使用已配置的选择器和执行器执行一次非流式执行。
+// 它支持同一模型对应多个供应商，并按模型轮换起始供应商。
 func (m *Manager) Execute(ctx context.Context, providers []string, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 	ctx = cliproxyexecutor.WithRequestProxyURL(ctx, opts.ProxyURL)
 	req, opts = cliproxysession.Enrich(req, opts)
@@ -171,7 +171,7 @@ func (m *Manager) Execute(ctx context.Context, providers []string, req cliproxye
 	return cliproxyexecutor.Response{}, &Error{Code: "auth_not_found", Message: "no auth available"}
 }
 
-// It supports multiple providers for the same model and round-robins the starting provider per model.
+// 它支持同一模型对应多个供应商，并按模型轮换起始供应商。
 func (m *Manager) ExecuteCount(ctx context.Context, providers []string, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 	ctx = cliproxyexecutor.WithRequestProxyURL(ctx, opts.ProxyURL)
 	req, opts = cliproxysession.Enrich(req, opts)
@@ -223,8 +223,8 @@ func (m *Manager) ExecuteCount(ctx context.Context, providers []string, req clip
 	return cliproxyexecutor.Response{}, &Error{Code: "auth_not_found", Message: "no auth available"}
 }
 
-// ExecuteStream performs a streaming execution using the configured selector and executor.
-// It supports multiple providers for the same model and round-robins the starting provider per model.
+// ExecuteStream 使用已配置的选择器和执行器执行一次流式执行。
+// 它支持同一模型对应多个供应商，并按模型轮换起始供应商。
 func (m *Manager) ExecuteStream(ctx context.Context, providers []string, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (*cliproxyexecutor.StreamResult, error) {
 	ctx = cliproxyexecutor.WithRequestProxyURL(ctx, opts.ProxyURL)
 	req, opts = cliproxysession.Enrich(req, opts)
@@ -826,10 +826,10 @@ func (m *Manager) executeCountMixedOnce(ctx context.Context, providers []string,
 				}
 				action, okAction := matchRequestScopedErrorAction(auth, errExec, m.runtimeConfigSnapshot())
 				applyRequestScopedActionToResult(action, okAction, &result)
-				// Some Anthropic-compatible upstreams do not implement the
-				// count_tokens route and return a generic endpoint 404. Record
-				// the failure for hooks and metrics without suspending a model
-				// that remains usable through the messages endpoint.
+				// 一些 Anthropic 兼容的上游没有实现
+				// count_tokens 路由，会返回一个通用的端点 404。记录
+				// 该失败以供钩子和指标使用，但不暂停一个
+				// 仍可通过 messages 端点使用的模型。
 				if isCountTokensEndpointNotFoundError(errExec, execReq.Model) && (result.Error == nil || result.Error.Code != ErrorCodeForceCooldown) {
 					m.recordAvailabilityNeutralResult(execCtx, result)
 				} else {
@@ -981,10 +981,10 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 			homeSameAuthRetryPending = false
 		}
 		if selection != nil {
-			// A legacy Home may ignore excluded_auth_ids and return the same
-			// credential again. Reject credentials explicitly excluded from this
-			// round while retaining the explicit same-auth retry path, which
-			// intentionally leaves the credential out of homeExcludedAuthIDs.
+			// 旧版 Home 可能忽略 excluded_auth_ids 并再次返回同一个
+			// 凭据。拒绝本轮明确排除的凭据，
+			// 同时保留显式的同认证重试路径，它
+			// 会有意让该凭据不出现在 homeExcludedAuthIDs 中。
 			if _, alreadyTried := tried[auth.ID]; alreadyTried {
 				if _, excluded := homeExcludedAuthIDs[auth.ID]; excluded {
 					if errEnd := m.endHomeSelectionBeforeRedispatch(ctx, selection, "repeated_excluded_auth"); errEnd != nil {
@@ -997,9 +997,9 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 				} else {
 					homeSameAuthRetries[auth.ID]++
 					if homeSameAuthRetries[auth.ID] > 1 {
-						// A fresh Home selection may retry the same auth once for
-						// connection lifecycle or authorization recovery. Repeated
-						// failures must still rotate away from this credential.
+						// 新的 Home 选择可能会为连接生命周期或
+						// 授权恢复对同一认证重试一次。反复的
+						// 失败仍必须轮换到其他凭据。
 						homeExcludedAuthIDs[auth.ID] = struct{}{}
 						if errEnd := m.endHomeSelectionBeforeRedispatch(ctx, selection, "repeated_same_auth"); errEnd != nil {
 							return nil, errEnd
@@ -1035,11 +1035,11 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 			execCtx = context.WithValue(execCtx, roundTripperContextKey{}, rt)
 			execCtx = context.WithValue(execCtx, "cliproxy.roundtripper", rt)
 		}
-		// Enrich before auth preparation so prepare-stage usage records observe the client request.
+		// 在认证准备之前完成增强，这样准备阶段的用量记录能观察到客户端请求。
 		execCtx = contextWithRequestedModelAlias(execCtx, opts, routeModel)
 		execCtx = newUpstreamAttemptContext(execCtx)
 		models, pooled, aliasResult, routing := m.executionModelCandidatesWithAlias(auth, routeModel)
-		// Home owns dispatched credential availability; only local selections need state filtering.
+		// Home 掌握被调度凭据的可用性；只有本地选择需要做状态过滤。
 		if selection == nil {
 			models = m.filterExecutionModels(auth, routeModel, models, pooled)
 		}
@@ -1218,8 +1218,8 @@ func shouldExcludeHomeAuthAfterStreamError(ctx context.Context, _ *Auth, err err
 	if err == nil || isConnectionLifecycleError(err) {
 		return false
 	}
-	// A 426 during a downstream websocket attempt is a transport fallback
-	// signal and may retry the same credential once.
+	// 在下游 websocket 尝试期间出现 426 是传输回退
+	// 信号，可以对同一凭据重试一次。
 	if cliproxyexecutor.DownstreamWebsocket(ctx) && statusCodeFromError(err) == http.StatusUpgradeRequired {
 		return false
 	}
@@ -1450,7 +1450,7 @@ type requestAuthPrepareLock struct {
 	mu sync.Mutex
 }
 
-// prepareHomeRequestAuth prepares a dispatch auth without reading or updating local auth state.
+// prepareHomeRequestAuth 准备一个调度认证，不读取也不更新本地 auth 状态。
 func (m *Manager) prepareHomeRequestAuth(ctx context.Context, executor ProviderExecutor, selection *HomeDispatchSelection) (*Auth, error) {
 	if selection == nil {
 		return nil, nil
@@ -1513,8 +1513,8 @@ func (m *Manager) prepareRequestAuth(ctx context.Context, executor ProviderExecu
 	return m.PrepareRequestAuth(ctx, preparer, auth)
 }
 
-// PrepareRequestAuth prepares a registered credential using the same serialization
-// and lifecycle checks as normal request execution. Management tools use this path too.
+// PrepareRequestAuth 使用与常规请求执行相同的序列化
+// 和生命周期检查来准备一个已注册的凭据。管理工具也使用此路径。
 func (m *Manager) PrepareRequestAuth(ctx context.Context, preparer RequestAuthPreparer, auth *Auth) (*Auth, error) {
 	if m == nil || preparer == nil || auth == nil || !preparer.ShouldPrepareRequestAuth(auth) {
 		return auth, nil
@@ -1527,7 +1527,7 @@ func (m *Manager) PrepareRequestAuth(ctx context.Context, preparer RequestAuthPr
 
 	var prepareMu *sync.Mutex
 	if strings.EqualFold(strings.TrimSpace(auth.Provider), "meta") {
-		// Meta also mints on 401 recovery. Serialize both paths per credential.
+		// Meta 在 401 恢复时也会铸造。按凭据把两条路径串行化。
 		lockValue, _ := m.refreshLocks.LoadOrStore(id, &authRefreshLock{})
 		prepareMu = &lockValue.(*authRefreshLock).mu
 	} else {
@@ -1748,10 +1748,10 @@ func (m *Manager) executorFor(provider string) ProviderExecutor {
 	return exec
 }
 
-// roundTripperContextKey is an unexported context key type to avoid collisions.
+// roundTripperContextKey 是一个未导出的上下文键类型，用于避免冲突。
 type roundTripperContextKey struct{}
 
-// roundTripperFor retrieves an HTTP RoundTripper for the given auth if a provider is registered.
+// roundTripperFor 在注册了相应供应商时取回给定 auth 的 HTTP RoundTripper。
 func (m *Manager) roundTripperFor(auth *Auth) http.RoundTripper {
 	m.mu.RLock()
 	p := m.rtProvider
@@ -1762,13 +1762,13 @@ func (m *Manager) roundTripperFor(auth *Auth) http.RoundTripper {
 	return p.RoundTripperFor(auth)
 }
 
-// RoundTripperProvider defines a minimal provider of per-auth HTTP transports.
+// RoundTripperProvider 定义了按 auth 提供 HTTP 传输的最小接口。
 type RoundTripperProvider interface {
 	RoundTripperFor(auth *Auth) http.RoundTripper
 }
 
-// RequestPreparer is an optional interface that provider executors can implement
-// to mutate outbound HTTP requests with provider credentials.
+// RequestPreparer 是一个可选接口，供应商执行器可实现它
+// 以用供应商凭据修改出站 HTTP 请求。
 type RequestPreparer interface {
 	PrepareRequest(req *http.Request, auth *Auth) error
 }
@@ -1797,7 +1797,7 @@ func executorKeyFromAuth(auth *Auth) string {
 	return strings.ToLower(strings.TrimSpace(auth.Provider))
 }
 
-// logEntryWithRequestID returns a logrus entry with request_id field if available in context.
+// logEntryWithRequestID 返回一个 logrus 条目，若上下文中有 request_id 字段则附带它。
 func logEntryWithRequestID(ctx context.Context) *log.Entry {
 	if ctx == nil {
 		return log.NewEntry(log.StandardLogger())
@@ -1834,13 +1834,13 @@ func formatOauthIdentity(auth *Auth, provider string, accountInfo string) string
 	if auth == nil {
 		return ""
 	}
-	// Prefer the auth's provider when available.
+	// 可用时优先使用 auth 的供应商。
 	providerName := strings.TrimSpace(auth.Provider)
 	if providerName == "" {
 		providerName = strings.TrimSpace(provider)
 	}
-	// Only log the basename to avoid leaking host paths.
-	// FileName may be unset for some auth backends; fall back to ID.
+	// 只记录 basename 以避免泄露主机路径。
+	// 某些 auth 后端可能未设置 FileName；回退到 ID。
 	authFile := strings.TrimSpace(auth.FileName)
 	if authFile == "" {
 		authFile = strings.TrimSpace(auth.ID)
@@ -1951,9 +1951,9 @@ func warnLogUpstreamFailure(ctx context.Context, entry *log.Entry, provider, mod
 	entry.Warnf("upstream execution failed: provider=%s model=%s auth=%s duration=%s err=%s", provider, model, authIdent, duration, errSummary)
 }
 
-// InjectCredentials delegates per-provider HTTP request preparation when supported.
-// If the registered executor for the auth provider implements RequestPreparer,
-// it will be invoked to modify the request (e.g., add headers).
+// InjectCredentials 在受支持时委托给按供应商的 HTTP 请求准备。
+// 如果该 auth 供应商注册的执行器实现了 RequestPreparer，
+// 就会调用它来修改请求（例如添加请求头）。
 func (m *Manager) InjectCredentials(req *http.Request, authID string) error {
 	if req == nil || authID == "" {
 		return nil
@@ -1974,7 +1974,7 @@ func (m *Manager) InjectCredentials(req *http.Request, authID string) error {
 	return nil
 }
 
-// PrepareHttpRequest injects provider credentials into the supplied HTTP request.
+// PrepareHttpRequest 把供应商凭据注入所提供的 HTTP 请求。
 func (m *Manager) PrepareHttpRequest(ctx context.Context, auth *Auth, req *http.Request) error {
 	if m == nil {
 		return &Error{Code: "provider_not_found", Message: "manager is nil"}
@@ -2003,7 +2003,7 @@ func (m *Manager) PrepareHttpRequest(ctx context.Context, auth *Auth, req *http.
 	return preparer.PrepareRequest(req, auth)
 }
 
-// NewHttpRequest constructs a new HTTP request and injects provider credentials into it.
+// NewHttpRequest 构造一个新的 HTTP 请求并向其中注入供应商凭据。
 func (m *Manager) NewHttpRequest(ctx context.Context, auth *Auth, method, targetURL string, body []byte, headers http.Header) (*http.Request, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -2029,7 +2029,7 @@ func (m *Manager) NewHttpRequest(ctx context.Context, auth *Auth, method, target
 	return httpReq, nil
 }
 
-// HttpRequest injects provider credentials into the supplied HTTP request and executes it.
+// HttpRequest 把供应商凭据注入所提供的 HTTP 请求并执行它。
 func (m *Manager) HttpRequest(ctx context.Context, auth *Auth, req *http.Request) (*http.Response, error) {
 	if m == nil {
 		return nil, &Error{Code: "provider_not_found", Message: "manager is nil"}

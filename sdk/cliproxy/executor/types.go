@@ -8,140 +8,140 @@ import (
 	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
-// RequestedModelMetadataKey stores the client-requested model name in Options.Metadata.
+// RequestedModelMetadataKey 在 Options.Metadata 中存储客户端请求的模型名称。
 const RequestedModelMetadataKey = "requested_model"
 
-// RequestPathMetadataKey stores the inbound HTTP request path (e.g. "/v1/images/generations") in Options.Metadata.
-// It is optional and may be absent for non-HTTP executions.
+// RequestPathMetadataKey 在 Options.Metadata 中存储入站 HTTP 请求路径（例如 "/v1/images/generations"）。
+// 该键是可选的，对于非 HTTP 执行可能不存在。
 const RequestPathMetadataKey = "request_path"
 
-// DisallowFreeAuthMetadataKey instructs auth selection to skip known free-tier credentials.
+// DisallowFreeAuthMetadataKey 指示 auth 选择跳过已知的免费层凭据。
 const DisallowFreeAuthMetadataKey = "disallow_free_auth"
 
-// AuthSelectionModelMetadataKey overrides the model used only for auth selection.
+// AuthSelectionModelMetadataKey 覆盖仅用于 auth 选择的模型。
 const AuthSelectionModelMetadataKey = "auth_selection_model"
 
-// ReasoningEffortMetadataKey stores the client-requested reasoning effort for usage logs.
+// ReasoningEffortMetadataKey 为用量日志存储客户端请求的推理强度。
 const ReasoningEffortMetadataKey = "reasoning_effort"
 
-// ServiceTierMetadataKey stores the client-requested service tier for usage logs.
+// ServiceTierMetadataKey 为用量日志存储客户端请求的服务层级。
 const ServiceTierMetadataKey = "service_tier"
 
-// GenerateMetadataKey stores whether the client requested actual generation for usage logs.
-// Missing or true means generation is enabled; only an explicit false disables generation.
+// GenerateMetadataKey 为用量日志存储客户端是否请求了实际生成。
+// 缺失或为 true 表示生成已启用；只有显式的 false 才会禁用生成。
 const GenerateMetadataKey = "generate"
 
 const (
-	// PinnedAuthMetadataKey locks execution to a specific auth ID.
+	// PinnedAuthMetadataKey 将执行锁定到特定的 auth ID。
 	PinnedAuthMetadataKey = "pinned_auth_id"
-	// SelectedAuthMetadataKey stores the auth ID selected by the scheduler.
+	// SelectedAuthMetadataKey 存储调度器选中的 auth ID。
 	SelectedAuthMetadataKey = "selected_auth_id"
-	// SelectedAuthCallbackMetadataKey carries an optional callback invoked with the selected auth ID.
+	// SelectedAuthCallbackMetadataKey 携带一个可选的、以选中 auth ID 为参数调用的回调。
 	SelectedAuthCallbackMetadataKey = "selected_auth_callback"
-	// SelectedAuthIndexMetadataKey stores the stable index of the auth selected by the scheduler.
+	// SelectedAuthIndexMetadataKey 存储调度器选中的 auth 的稳定索引。
 	SelectedAuthIndexMetadataKey = "selected_auth_index"
-	// SelectedAuthIndexCallbackMetadataKey carries an optional callback invoked with the selected auth index.
+	// SelectedAuthIndexCallbackMetadataKey 携带一个可选的、以选中 auth 索引为参数调用的回调。
 	SelectedAuthIndexCallbackMetadataKey = "selected_auth_index_callback"
-	// ExecutionSessionMetadataKey identifies a long-lived downstream execution session.
+	// ExecutionSessionMetadataKey 标识一个长期存活的下游执行会话。
 	ExecutionSessionMetadataKey = "execution_session_id"
-	// DerivedSessionIDMetadataKey stores a stable session identity inferred from request context.
-	// It may be used to derive a provider session identity.
+	// DerivedSessionIDMetadataKey 存储从请求上下文推断出的稳定会话标识。
+	// 它可用于推导供应商会话标识。
 	DerivedSessionIDMetadataKey = "derived_session_id"
-	// LCPAffinitySessionIDMetadataKey stores an LCP-only routing identity. Executors
-	// must not use it as a provider conversation or execution-session identity. The
-	// current phase also keeps it out of SessionTree topology until downstream wiring exists.
+	// LCPAffinitySessionIDMetadataKey 存储仅 LCP 使用的路由标识。执行器
+	// 不得将其用作供应商对话或执行会话标识。当前
+	// 阶段还将其排除在 SessionTree 拓扑之外，直到下游接线就绪。
 	LCPAffinitySessionIDMetadataKey = "lcp_affinity_session_id"
-	// CanonicalSessionIDMetadataKey stores the single unified session identity reconciled
-	// across explicit harness headers, body fields, execution sessions, LCP inference,
-	// and fallback context derivation for unified debugging and cross-subsystem tracing.
+	// CanonicalSessionIDMetadataKey 存储统一的会话标识，它由显式 harness 头、
+	// 请求体字段、执行会话、LCP 推断以及回退上下文推导
+	// 协调得出，用于统一调试和跨子系统追踪。
 	CanonicalSessionIDMetadataKey = "canonical_session_id"
-	// ParentSessionIDMetadataKey stores the parent session identity for hierarchical sessions and forks.
-	// For top-level Merkle LCP forks, it represents the deterministic Merkle prefix hash at the divergence point.
+	// ParentSessionIDMetadataKey 存储分层会话和分叉的父会话标识。
+	// 对于顶层 Merkle LCP 分叉，它表示分叉点处确定性的 Merkle 前缀哈希。
 	ParentSessionIDMetadataKey = "parent_session_id"
-	// IsForkMetadataKey indicates whether the request represents a conversational branch or fork.
+	// IsForkMetadataKey 表示该请求是否代表一个对话分支或分叉。
 	IsForkMetadataKey = "is_fork"
-	// IsCompactionMetadataKey indicates whether the request represents a context compaction continuation.
+	// IsCompactionMetadataKey 表示该请求是否代表上下文压缩的延续。
 	IsCompactionMetadataKey = "is_compaction"
-	// NodeKindMetadataKey indicates the session DAG topology kind ("compaction", "fork", or "trunk").
+	// NodeKindMetadataKey 表示会话 DAG 拓扑类型（"compaction"、"fork" 或 "trunk"）。
 	NodeKindMetadataKey = "node_kind"
-	// LCPTailFingerprintsMetadataKey stores the actual trailing turn fingerprints for context compaction matching.
+	// LCPTailFingerprintsMetadataKey 存储用于上下文压缩匹配的实际尾部轮次指纹。
 	LCPTailFingerprintsMetadataKey = "lcp_tail_fingerprints"
-	// LCPEnvironmentDigestMetadataKey stores the environment digest across all system and developer instructions.
+	// LCPEnvironmentDigestMetadataKey 存储所有 system 和 developer 指令的环境摘要。
 	LCPEnvironmentDigestMetadataKey = "lcp_environment_digest"
-	// LCPAccessGenerationMetadataKey stores the monotonic access generation when an LCP entry was touched or bound.
+	// LCPAccessGenerationMetadataKey 存储 LCP 条目被触碰或绑定时的单调访问代数。
 	LCPAccessGenerationMetadataKey = "lcp_access_generation"
-	// LCPFingerprintMetadataKey stores bounded request-scoped turn fingerprints so
-	// SessionAffinitySelector.OnResult can avoid reparsing the original payload.
+	// LCPFingerprintMetadataKey 存储有界的请求级轮次指纹，
+	// 以便 SessionAffinitySelector.OnResult 无需重新解析原始载荷。
 	LCPFingerprintMetadataKey = "lcp_fingerprints"
-	// LCPMinPrefixLengthMetadataKey stores the minimum eligible prefix boundary for
-	// the bounded LCP fingerprint sequence.
+	// LCPMinPrefixLengthMetadataKey 存储有界 LCP 指纹序列的
+	// 最小合格前缀边界。
 	LCPMinPrefixLengthMetadataKey = "lcp_min_prefix_length"
-	// CallerScopeMetadataKey isolates inferred session identities between downstream callers.
+	// CallerScopeMetadataKey 在下游调用方之间隔离推断出的会话标识。
 	CallerScopeMetadataKey = "caller_scope"
-	// SessionAffinityProviderMetadataKey carries the affinity selection namespace
-	// (provider string, e.g. the literal "mixed" pool key) used by SessionAffinitySelector.Pick,
-	// so OnResult keys the session cache identically to how selection read it.
+	// SessionAffinityProviderMetadataKey 携带 SessionAffinitySelector.Pick 使用的
+	// 亲和选择命名空间（供应商字符串，例如字面量 "mixed" 池键），
+	// 以便 OnResult 以与选择时读取相同的方式为会话缓存建立键。
 	SessionAffinityProviderMetadataKey = "session_affinity_provider"
-	// SessionAffinityModelMetadataKey carries the model used during session affinity selection.
+	// SessionAffinityModelMetadataKey 携带会话亲和选择期间使用的模型。
 	SessionAffinityModelMetadataKey = "session_affinity_model"
 )
 
-// Request encapsulates the translated payload that will be sent to a provider executor.
+// Request 封装将被发送给供应商执行器的转换后载荷。
 type Request struct {
-	// Model is the upstream model identifier after translation.
+	// Model 是转换后的上游模型标识符。
 	Model string
-	// Payload is the provider specific JSON payload.
+	// Payload 是供应商特定的 JSON 载荷。
 	Payload []byte
-	// Format represents the provider payload schema.
+	// Format 表示供应商载荷的结构。
 	Format sdktranslator.Format
-	// Metadata carries optional provider specific execution hints.
+	// Metadata 携带可选的供应商特定执行提示。
 	Metadata map[string]any
 }
 
-// RequestAfterAuthInterceptor rewrites a request after credential selection and before executor translation.
+// RequestAfterAuthInterceptor 在凭据选择之后、执行器转换之前重写请求。
 type RequestAfterAuthInterceptor func(context.Context, RequestAfterAuthInterceptRequest) RequestAfterAuthInterceptResponse
 
-// RequestAfterAuthInterceptRequest describes a selected-auth request before executor translation.
+// RequestAfterAuthInterceptRequest 描述执行器转换之前、已选定 auth 的请求。
 type RequestAfterAuthInterceptRequest struct {
-	// SourceFormat is the original client protocol format.
+	// SourceFormat 是原始客户端协议格式。
 	SourceFormat sdktranslator.Format
-	// ToFormat is the selected upstream protocol format.
+	// ToFormat 是选定的上游协议格式。
 	ToFormat sdktranslator.Format
-	// Model is the selected upstream model for this attempt.
+	// Model 是本次尝试选定的上游模型。
 	Model string
-	// RequestedModel is the client-requested model before alias/model-pool rewriting.
+	// RequestedModel 是别名/模型池重写之前客户端请求的模型。
 	RequestedModel string
-	// Stream reports whether the request expects streaming output.
+	// Stream 表示该请求是否期望流式输出。
 	Stream bool
-	// Headers contains the current upstream request headers.
+	// Headers 包含当前的上游请求头。
 	Headers http.Header
-	// Body contains the current request payload. Treat it as read-only; modifications must be returned in RequestAfterAuthInterceptResponse.Body.
+	// Body 包含当前请求载荷。请将其视为只读；修改必须通过 RequestAfterAuthInterceptResponse.Body 返回。
 	Body []byte
-	// Metadata is a best-effort cloned context snapshot. Treat it as read-only and JSON-like.
+	// Metadata 是尽力克隆的上下文快照。请将其视为只读且类似 JSON 的数据。
 	Metadata map[string]any
 }
 
-// RequestAfterAuthInterceptResponse returns selected-auth request modifications.
+// RequestAfterAuthInterceptResponse 返回对已选定 auth 请求的修改。
 type RequestAfterAuthInterceptResponse struct {
-	// Path optionally overrides the inbound request path in Options.Metadata[RequestPathMetadataKey].
+	// Path 可选地覆盖 Options.Metadata[RequestPathMetadataKey] 中的入站请求路径。
 	Path string
-	// Headers replaces matching current request headers and preserves headers not mentioned here.
+	// Headers 替换匹配的当前请求头，并保留此处未提及的请求头。
 	Headers http.Header
-	// Body replaces the current request body only when non-empty.
+	// Body 仅在其非空时替换当前请求体。
 	Body []byte
-	// ClearHeaders explicitly removes current request headers before Headers is applied.
+	// ClearHeaders 在应用 Headers 之前显式移除当前的请求头。
 	ClearHeaders []string
-	// Terminate prevents the selected executor from receiving the request.
+	// Terminate 阻止选定的执行器接收该请求。
 	Terminate bool
-	// StatusCode is the downstream HTTP status used when Terminate is true.
+	// StatusCode 是 Terminate 为 true 时使用的下游 HTTP 状态码。
 	StatusCode int
-	// ResponseHeaders contains downstream response headers used when Terminate is true.
+	// ResponseHeaders 包含 Terminate 为 true 时使用的下游响应头。
 	ResponseHeaders http.Header
-	// ResponseBody contains the downstream response body used when Terminate is true.
+	// ResponseBody 包含 Terminate 为 true 时使用的下游响应体。
 	ResponseBody []byte
 }
 
-// RequestTerminatedError carries a plugin-defined downstream response without executing upstream.
+// RequestTerminatedError 携带插件定义的下游响应，且不执行上游请求。
 type RequestTerminatedError struct {
 	HTTPStatus int
 	Header     http.Header
@@ -152,7 +152,7 @@ func (e *RequestTerminatedError) Error() string {
 	return "request terminated by plugin"
 }
 
-// StatusCode returns the plugin-defined downstream HTTP status.
+// StatusCode 返回插件定义的下游 HTTP 状态码。
 func (e *RequestTerminatedError) StatusCode() int {
 	if e == nil {
 		return 0
@@ -160,7 +160,7 @@ func (e *RequestTerminatedError) StatusCode() int {
 	return e.HTTPStatus
 }
 
-// ResponseHeaders returns a copy of the plugin-defined downstream headers.
+// ResponseHeaders 返回插件定义的下游响应头的副本。
 func (e *RequestTerminatedError) ResponseHeaders() http.Header {
 	if e == nil {
 		return nil
@@ -168,7 +168,7 @@ func (e *RequestTerminatedError) ResponseHeaders() http.Header {
 	return e.Header.Clone()
 }
 
-// ResponseBody returns a copy of the plugin-defined downstream body.
+// ResponseBody 返回插件定义的下游响应体的副本。
 func (e *RequestTerminatedError) ResponseBody() []byte {
 	if e == nil {
 		return nil
@@ -176,7 +176,7 @@ func (e *RequestTerminatedError) ResponseBody() []byte {
 	return append([]byte(nil), e.Body...)
 }
 
-// WebSocketResponseEvent describes an upstream WebSocket response event received during execution.
+// WebSocketResponseEvent 描述执行期间接收到的上游 WebSocket 响应事件。
 type WebSocketResponseEvent struct {
 	RequestID      string
 	TraceID        string
@@ -192,43 +192,43 @@ type WebSocketResponseEvent struct {
 	Metadata       map[string]any
 }
 
-// WebSocketResponseObserver receives upstream WebSocket response events during execution.
+// WebSocketResponseObserver 在执行期间接收上游 WebSocket 响应事件。
 type WebSocketResponseObserver func(context.Context, WebSocketResponseEvent)
 
-// Options controls execution behavior for both streaming and non-streaming calls.
+// Options 控制流式和非流式调用的执行行为。
 type Options struct {
-	// Stream toggles streaming mode.
+	// Stream 切换流式模式。
 	Stream bool
-	// Alt carries optional alternate format hint (e.g. SSE JSON key).
+	// Alt 携带可选的备用格式提示（例如 SSE JSON 键）。
 	Alt string
-	// Headers are forwarded to the provider request builder.
+	// Headers 会被转发给供应商请求构建器。
 	Headers http.Header
-	// Query contains optional query string parameters.
+	// Query 包含可选的查询字符串参数。
 	Query url.Values
-	// OriginalRequest preserves the inbound request bytes prior to translation.
+	// OriginalRequest 保留转换之前的入站请求字节。
 	OriginalRequest []byte
-	// SourceFormat identifies the inbound schema.
+	// SourceFormat 标识入站结构。
 	SourceFormat sdktranslator.Format
-	// ResponseFormat identifies the downstream response schema.
-	// Empty means responses should use SourceFormat for backward compatibility.
+	// ResponseFormat 标识下游响应结构。
+	// 为空表示响应应使用 SourceFormat，以保持向后兼容。
 	ResponseFormat sdktranslator.Format
-	// Metadata carries extra execution hints shared across selection and executors.
+	// Metadata 携带在选择与执行器之间共享的额外执行提示。
 	Metadata map[string]any
-	// RequestAfterAuthInterceptor runs after credential selection and before executor translation.
+	// RequestAfterAuthInterceptor 在凭据选择之后、执行器转换之前运行。
 	RequestAfterAuthInterceptor RequestAfterAuthInterceptor
-	// WebSocketResponseObserver receives upstream WebSocket response events during execution.
+	// WebSocketResponseObserver 在执行期间接收上游 WebSocket 响应事件。
 	WebSocketResponseObserver WebSocketResponseObserver
-	// ExecutionLifecycle owns Home-dispatched execution resources. Executors must not add it to request metadata.
+	// ExecutionLifecycle 拥有 Home 调度的执行资源。执行器不得将其加入请求元数据。
 	ExecutionLifecycle ExecutionLifecycle
-	// ProxyURL overrides the credential and global proxy for this execution only.
-	// Credential refresh and token exchange must ignore it.
+	// ProxyURL 仅为此执行覆盖凭据代理和全局代理。
+	// 凭据刷新和令牌交换必须忽略它。
 	ProxyURL string
-	// KeepTopLevelEffort tells SIWC request-body rules to keep the resolved
-	// top-level reasoning.effort when configuration_update items are collapsed.
+	// KeepTopLevelEffort 告知 SIWC 请求体规则在 configuration_update
+	// 条目被折叠时保留已解析的顶层 reasoning.effort。
 	KeepTopLevelEffort bool
 }
 
-// EnsureMetadata initializes and returns Metadata, ensuring it is non-nil.
+// EnsureMetadata 初始化并返回 Metadata，确保其非 nil。
 func (o *Options) EnsureMetadata() map[string]any {
 	if o.Metadata == nil {
 		o.Metadata = make(map[string]any)
@@ -236,7 +236,7 @@ func (o *Options) EnsureMetadata() map[string]any {
 	return o.Metadata
 }
 
-// ResponseFormatOrSource returns the response target format for an execution.
+// ResponseFormatOrSource 返回某次执行的响应目标格式。
 func ResponseFormatOrSource(opts Options) sdktranslator.Format {
 	if opts.ResponseFormat != "" {
 		return opts.ResponseFormat
@@ -244,44 +244,44 @@ func ResponseFormatOrSource(opts Options) sdktranslator.Format {
 	return opts.SourceFormat
 }
 
-// Response wraps either a full provider response or metadata for streaming flows.
+// Response 封装完整的供应商响应，或流式流程的元数据。
 type Response struct {
-	// Payload is the provider response in the executor format.
+	// Payload 是执行器格式的供应商响应。
 	Payload []byte
-	// Metadata exposes optional structured data for translators.
+	// Metadata 为转换器暴露可选的结构化数据。
 	Metadata map[string]any
-	// Headers carries upstream HTTP response headers for passthrough to clients.
+	// Headers 携带要透传给客户端的上游 HTTP 响应头。
 	Headers http.Header
 }
 
-// StreamChunk represents a single streaming payload unit emitted by provider executors.
+// StreamChunk 表示供应商执行器发出的单个流式载荷单元。
 type StreamChunk struct {
-	// Payload is the raw provider chunk payload.
+	// Payload 是原始的供应商分块载荷。
 	Payload []byte
-	// Err reports any terminal error encountered while producing chunks.
+	// Err 报告生成分块时遇到的任何终止性错误。
 	Err error
 }
 
-// StreamResult wraps the streaming response, providing both the chunk channel
-// and the upstream HTTP response headers captured before streaming begins.
+// StreamResult 封装流式响应，同时提供分块通道
+// 以及流式开始之前捕获的上游 HTTP 响应头。
 type StreamResult struct {
-	// Headers carries upstream HTTP response headers from the initial connection.
+	// Headers 携带来自初始连接的上游 HTTP 响应头。
 	Headers http.Header
-	// Chunks is the channel of streaming payload units.
+	// Chunks 是流式载荷单元的通道。
 	Chunks <-chan StreamChunk
 }
 
-// StatusError represents an error that carries an HTTP-like status code.
-// Provider executors should implement this when possible to enable
-// better auth state updates on failures (e.g., 401/402/429).
+// StatusError 表示携带类 HTTP 状态码的错误。
+// 供应商执行器在可能时应实现该接口，以便在失败时
+// 更好地更新 auth 状态（例如 401/402/429）。
 type StatusError interface {
 	error
 	StatusCode() int
 }
 
-// RequestScopedError identifies a failure tied to the current request rather
-// than the selected credential. Auth managers should not retry these errors
-// across credentials or change credential availability because of them.
+// RequestScopedError 标识与当前请求而非所选凭据相关的失败。
+// Auth 管理器不应跨凭据重试这些错误，
+// 也不应因它们改变凭据可用性。
 type RequestScopedError interface {
 	error
 	IsRequestScoped() bool

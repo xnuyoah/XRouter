@@ -79,7 +79,7 @@ func registerRPCPlugin(ctx context.Context, host *Host, id string, client plugin
 	adapter := &rpcPluginAdapter{id: id, host: host, client: client, instance: pluginCallbackInstance(client)}
 	schemaVersion := resp.SchemaVersion
 	if schemaVersion == 0 {
-		// Missing schema_version is treated as the original contract.
+		// 缺失 schema_version 时按最初契约处理。
 		schemaVersion = 1
 	}
 	plugin := pluginapi.Plugin{
@@ -327,7 +327,7 @@ func sanitizePluginMetadataValue(value any) (any, bool) {
 		}
 		return out, true
 	default:
-		// RPC metadata crosses a JSON envelope, so unsupported Go values are normalized to JSON-compatible shapes.
+		// RPC 元数据会跨越 JSON 信封，因此不受支持的 Go 值会被规范化为 JSON 兼容形态。
 		raw, errMarshal := json.Marshal(value)
 		if errMarshal != nil {
 			return nil, false

@@ -100,7 +100,7 @@ func TestManager_Update_PreservesModelStates(t *testing.T) {
 func TestManager_Update_DisabledExistingDoesNotInheritModelStates(t *testing.T) {
 	m := NewManager(nil, nil, nil)
 
-	// Register a disabled auth with existing ModelStates.
+	// 注册一个带现有 ModelStates 的禁用认证。
 	if _, err := m.Register(context.Background(), &Auth{
 		ID:       "auth-disabled",
 		Provider: "claude",
@@ -115,7 +115,7 @@ func TestManager_Update_DisabledExistingDoesNotInheritModelStates(t *testing.T) 
 		t.Fatalf("register auth: %v", err)
 	}
 
-	// Update with empty ModelStates — should NOT inherit stale states.
+	// 使用空 ModelStates 更新——不应继承陈旧的 state。
 	if _, err := m.Update(context.Background(), &Auth{
 		ID:       "auth-disabled",
 		Provider: "claude",
@@ -137,7 +137,7 @@ func TestManager_Update_DisabledExistingDoesNotInheritModelStates(t *testing.T) 
 func TestManager_Update_ActiveToDisabledDoesNotInheritModelStates(t *testing.T) {
 	m := NewManager(nil, nil, nil)
 
-	// Register an active auth with ModelStates (simulates existing live auth).
+	// 注册一个带 ModelStates 的活跃认证（模拟现存的在线认证）。
 	if _, err := m.Register(context.Background(), &Auth{
 		ID:       "auth-a2d",
 		Provider: "claude",
@@ -151,8 +151,8 @@ func TestManager_Update_ActiveToDisabledDoesNotInheritModelStates(t *testing.T) 
 		t.Fatalf("register auth: %v", err)
 	}
 
-	// File watcher deletes config → synthesizes Disabled=true auth → Update.
-	// Even though existing is active, incoming auth is disabled → skip inheritance.
+	// 文件监听器删除配置 → 合成 Disabled=true 的认证 → Update。
+	// 即使现有认证是活跃的，传入的认证是禁用的 → 跳过继承。
 	if _, err := m.Update(context.Background(), &Auth{
 		ID:       "auth-a2d",
 		Provider: "claude",
@@ -174,7 +174,7 @@ func TestManager_Update_ActiveToDisabledDoesNotInheritModelStates(t *testing.T) 
 func TestManager_Update_DisabledToActiveDoesNotInheritStaleModelStates(t *testing.T) {
 	m := NewManager(nil, nil, nil)
 
-	// Register a disabled auth with stale ModelStates.
+	// 注册一个带陈旧 ModelStates 的禁用认证。
 	if _, err := m.Register(context.Background(), &Auth{
 		ID:       "auth-d2a",
 		Provider: "claude",
@@ -189,7 +189,7 @@ func TestManager_Update_DisabledToActiveDoesNotInheritStaleModelStates(t *testin
 		t.Fatalf("register auth: %v", err)
 	}
 
-	// Re-enable: incoming auth is active, existing is disabled → skip inheritance.
+	// 重新启用：传入认证是活跃的，现有认证是禁用的 → 跳过继承。
 	if _, err := m.Update(context.Background(), &Auth{
 		ID:       "auth-d2a",
 		Provider: "claude",
@@ -213,7 +213,7 @@ func TestManager_Update_ActiveInheritsModelStates(t *testing.T) {
 	model := "active-model"
 	backoffLevel := 3
 
-	// Register an active auth with ModelStates.
+	// 注册一个带 ModelStates 的活跃认证。
 	if _, err := m.Register(context.Background(), &Auth{
 		ID:       "auth-active",
 		Provider: "claude",
@@ -227,7 +227,7 @@ func TestManager_Update_ActiveInheritsModelStates(t *testing.T) {
 		t.Fatalf("register auth: %v", err)
 	}
 
-	// Update with empty ModelStates — both sides active → SHOULD inherit.
+	// 使用空 ModelStates 更新——两侧都是活跃的 → 应当继承。
 	if _, err := m.Update(context.Background(), &Auth{
 		ID:       "auth-active",
 		Provider: "claude",

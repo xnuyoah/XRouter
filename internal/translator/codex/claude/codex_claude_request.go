@@ -1,8 +1,8 @@
-// Package claude provides request translation functionality for Claude Code API compatibility.
-// It handles parsing and transforming Claude Code API requests into the internal client format,
-// extracting model information, system instructions, message contents, and tool declarations.
-// The package also performs JSON data cleaning and transformation to ensure compatibility
-// between Claude Code API format and the internal client's expected format.
+// Package claude 提供用于 Claude Code API 兼容性的请求转换功能。
+// 它负责解析 Claude Code API 请求并将其转换为内部客户端格式，
+// 提取模型信息、系统指令、消息内容和工具声明。
+// 该包还执行 JSON 数据的清理和转换，以确保
+// Claude Code API 格式与内部客户端所期望的格式之间的兼容性。
 package claude
 
 import (
@@ -22,32 +22,32 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
-// ConvertClaudeRequestToCodex parses and transforms a Claude Code API request into the internal client format.
-// It extracts the model name, system instruction, message contents, and tool declarations
-// from the raw JSON request and returns them in the format expected by the internal client.
-// The function performs the following transformations:
-// 1. Sets up a template with the model name and empty instructions field
-// 2. Processes system messages and converts them to developer input content
-// 3. Transforms message contents (text, image, document, tool_use, tool_result) to appropriate formats
-// 4. Converts tools declarations to the expected format
-// 5. Adds additional configuration parameters for the Codex API
-// 6. Maps Claude thinking configuration to Codex reasoning settings
-// 7. Maps Claude output_config format to Codex text format
+// ConvertClaudeRequestToCodex 解析 Claude Code API 请求并将其转换为内部客户端格式。
+// 它从原始 JSON 请求中提取模型名称、系统指令、消息内容和工具声明，
+// 并以内部客户端所期望的格式返回它们。
+// 该函数执行以下转换：
+// 1. 使用模型名称和空 instructions 字段设置模板
+// 2. 处理系统消息并将其转换为 developer 输入内容
+// 3. 将消息内容（text、image、document、tool_use、tool_result）转换为相应格式
+// 4. 将 tools 声明转换为期望的格式
+// 5. 为 Codex API 添加额外的配置参数
+// 6. 将 Claude 的 thinking 配置映射为 Codex 的 reasoning 设置
+// 7. 将 Claude 的 output_config 格式映射为 Codex 的 text 格式
 //
-// Parameters:
-//   - modelName: The name of the model to use for the request
-//   - rawJSON: The raw JSON request data from the Claude Code API
-//   - stream: A boolean indicating if the request is for a streaming response (unused in current implementation)
+// 参数：
+//   - modelName: 用于请求的模型名称
+//   - rawJSON: 来自 Claude Code API 的原始 JSON 请求数据
+//   - stream: 布尔值，表示请求是否为流式响应（当前实现中未使用）
 //
-// Returns:
-//   - []byte: The transformed request data in internal client format
+// 返回：
+//   - []byte: 内部客户端格式的转换后请求数据
 func ConvertClaudeRequestToCodex(modelName string, inputRawJSON []byte, stream bool) ([]byte, error) {
 	return convertClaudeRequestToCodex(modelName, inputRawJSON, stream, false)
 
 }
 
-// ConvertClaudeRequestToCodexWithCompat preserves assistant thinking blocks with
-// empty or unknown-format signatures for configured compatibility endpoints.
+// ConvertClaudeRequestToCodexWithCompat 为已配置的兼容端点保留带有
+// 空签名或未知格式签名的 assistant 思考块。
 func ConvertClaudeRequestToCodexWithCompat(modelName string, inputRawJSON []byte, stream bool) ([]byte, error) {
 	return convertClaudeRequestToCodex(modelName, inputRawJSON, stream, true)
 }
@@ -63,7 +63,7 @@ func convertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool, 
 	template, _ = sjson.SetBytes(template, "model", modelName)
 	inputItems := translatorcommon.NewRawArrayItems(rootResult.Get("messages.#").Int())
 
-	// Process system messages and convert them to input content format.
+	// 处理系统消息并将其转换为 input 内容格式。
 	systemsResult := rootResult.Get("system")
 	if systemsResult.Exists() {
 		contentItems := make([][]byte, 0, 2)
@@ -97,7 +97,7 @@ func convertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool, 
 		}
 	}
 
-	// Process messages and transform their contents to appropriate formats.
+	// 处理消息并将其内容转换为相应格式。
 	messagesResult := rootResult.Get("messages")
 	if messagesResult.IsArray() {
 		messageResults := messagesResult.Array()
@@ -126,8 +126,8 @@ func convertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool, 
 			}
 			pendingToolUseIDs = nil
 			contentItems := make([][]byte, 0, 4)
-			// Counts only what this turn itself sends, not system reminders flushed beside it.
-			// Empty text is forwarded but does not count: it can hide an emptied attachment.
+			// 只统计本回合自身发送的内容，不包括随它一起冲刷的系统提醒。
+			// 空文本会被转发但不计入：它可能掩盖已被清空的附件。
 			turnSendable := 0
 			bufferedSendable := 0
 
@@ -329,7 +329,7 @@ func convertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool, 
 		}
 	}
 
-	// Convert tools declarations to the expected format for the Codex API.
+	// 将 tools 声明转换为 Codex API 期望的格式。
 	toolsResult := rootResult.Get("tools")
 	hasWebSearchTool := false
 	var toolItems [][]byte
@@ -340,7 +340,7 @@ func convertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool, 
 		toolItems = make([][]byte, 0, len(toolResults))
 		for i := 0; i < len(toolResults); i++ {
 			toolResult := toolResults[i]
-			// Special handling: map Claude web search tool to Codex web_search
+			// 特殊处理：将 Claude web search 工具映射到 Codex web_search
 			if isClaudeWebSearchToolType(toolResult.Get("type").String()) {
 				hasWebSearchTool = true
 				toolItems = append(toolItems, convertClaudeWebSearchToolToCodex(toolResult))
@@ -350,7 +350,7 @@ func convertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool, 
 			if toolResult.Get("type").Type != gjson.String || toolResult.Get("type").String() != "function" {
 				tool, _ = sjson.SetBytes(tool, "type", "function")
 			}
-			// Apply shortened name if needed
+			// 如有需要，应用缩短后的名称
 			if v := toolResult.Get("name"); v.Exists() {
 				originalName := v.String()
 				name := originalName
@@ -376,16 +376,16 @@ func convertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool, 
 		}
 	}
 
-	// Default to parallel tool calls unless tool_choice explicitly disables them.
+	// 默认启用并行工具调用，除非 tool_choice 显式禁用它们。
 	parallelToolCalls := true
 	if disableParallelToolUse := rootResult.Get("tool_choice.disable_parallel_tool_use"); disableParallelToolUse.Exists() {
 		parallelToolCalls = !disableParallelToolUse.Bool()
 	}
 
-	// Add additional configuration parameters for the Codex API.
+	// 为 Codex API 添加额外的配置参数。
 	template, _ = sjson.SetBytes(template, "parallel_tool_calls", parallelToolCalls)
 
-	// Convert thinking.budget_tokens to reasoning.effort.
+	// 将 thinking.budget_tokens 转换为 reasoning.effort。
 	reasoningEffort := "medium"
 	if thinkingConfig := rootResult.Get("thinking"); thinkingConfig.Exists() && thinkingConfig.IsObject() {
 		switch thinkingConfig.Get("type").String() {
@@ -397,8 +397,8 @@ func convertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool, 
 				}
 			}
 		case "adaptive", "auto":
-			// Adaptive thinking can carry an explicit effort in output_config.effort (Claude 4.6).
-			// Pass through directly; ApplyThinking handles clamping to target model's levels.
+			// 自适应思考可以在 output_config.effort 中携带显式强度（Claude 4.6）。
+			// 直接透传；ApplyThinking 会处理对目标模型级别的钳制。
 			effort := ""
 			if v := rootResult.Get("output_config.effort"); v.Exists() && v.Type == gjson.String {
 				effort = strings.ToLower(strings.TrimSpace(v.String()))
@@ -415,9 +415,9 @@ func convertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool, 
 		}
 	}
 	template, _ = sjson.SetBytes(template, "reasoning.effort", reasoningEffort)
-	// OpenAI documents reasoning summaries as explicit opt-in output. Leave
-	// reasoning.summary to the source request's canonical summary intent instead
-	// of coupling it to reasoning effort.
+	// OpenAI 将推理摘要记录为显式选择性启用的输出。将
+	// reasoning.summary 交给源请求的规范摘要意图处理，
+	// 而不是将其与 reasoning effort 绑定。
 	serviceTier := normalizeCodexServiceTier(rootResult.Get("service_tier"))
 	if speed := rootResult.Get("speed"); speed.Type == gjson.String && speed.String() == "fast" {
 		serviceTier = "priority"
@@ -433,7 +433,7 @@ func convertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool, 
 	}
 	template, _ = sjson.SetBytes(template, "include", includeFields)
 
-	// Map Claude output_config.format to Codex Responses text.format.
+	// 将 Claude 的 output_config.format 映射到 Codex Responses 的 text.format。
 	if format := rootResult.Get("output_config.format"); format.IsObject() && format.Get("type").String() == "json_schema" && format.Get("schema").IsObject() {
 		name := "xrouter_structured_output"
 		if n := format.Get("name").String(); n != "" {
@@ -443,9 +443,9 @@ func convertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool, 
 		if s := format.Get("strict"); s.Exists() && s.Type == gjson.False {
 			strict = false
 		}
-		// OpenAI strict mode requires every declared property to be listed
-		// in required. Downgrade instead of emitting an unsatisfiable
-		// strict schema that strict backends reject with HTTP 400.
+		// OpenAI 严格模式要求在 required 中列出每个声明的属性。
+		// 降级处理，而不是发出会让严格后端以 HTTP 400
+		// 拒绝的无法满足的严格 schema。
 		if strict && codexSchemaMissesRequired(format.Get("schema")) {
 			strict = false
 		}
@@ -482,8 +482,8 @@ func normalizeCodexServiceTier(result gjson.Result) string {
 	}
 }
 
-// shortenCodexCallIDIfNeeded keeps Claude tool IDs within the OpenAI Responses
-// API call_id limit while preserving a stable, low-collision mapping.
+// shortenCodexCallIDIfNeeded 使 Claude 工具 ID 保持在 OpenAI Responses
+// API 的 call_id 限制内，同时保留稳定、低冲突的映射。
 func shortenCodexCallIDIfNeeded(id string) string {
 	const limit = 64
 	if len(id) <= limit {
@@ -574,7 +574,7 @@ func convertClaudeWebSearchToolToCodex(tool gjson.Result) []byte {
 	return out
 }
 
-// shortenNameIfNeeded applies a simple shortening rule for a single name.
+// shortenNameIfNeeded 对单个名称应用简单的缩短规则。
 func shortenNameIfNeeded(name string) string {
 	const limit = 64
 	if len(name) <= limit {
@@ -593,7 +593,7 @@ func shortenNameIfNeeded(name string) string {
 	return name[:limit]
 }
 
-// buildShortNameMap ensures uniqueness of shortened names within a request.
+// buildShortNameMap 确保一次请求内缩短后的名称唯一。
 func buildShortNameMap(names []string) map[string]string {
 	const limit = 64
 	used := map[string]struct{}{}
@@ -647,7 +647,7 @@ func buildShortNameMap(names []string) map[string]string {
 	return m
 }
 
-// buildReverseMapFromClaudeOriginalToShort builds original->short map, used to map tool_use names to short.
+// buildReverseMapFromClaudeOriginalToShort 构建原始->缩短名称映射，用于将 tool_use 名称映射为缩短名称。
 func buildReverseMapFromClaudeOriginalToShort(original []byte) map[string]string {
 	tools := gjson.GetBytes(original, "tools")
 	m := map[string]string{}
@@ -668,9 +668,9 @@ func buildReverseMapFromClaudeOriginalToShort(original []byte) map[string]string
 	return m
 }
 
-// normalizeToolParameters ensures object schemas contain at least an empty properties map,
-// strips dialect keywords ($schema, $id), and drops regex patterns containing unsupported
-// Unicode property escapes (\p{...} / \P{...}) that cause upstream schema validation failures.
+// normalizeToolParameters 确保对象 schema 至少包含一个空 properties map，
+// 移除方言关键字（$schema、$id），并删除包含不受支持的
+// Unicode 属性转义（\p{...} / \P{...}）的正则模式，这些模式会导致上游 schema 校验失败。
 func normalizeToolParameters(raw string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" || raw == "null" || !gjson.Valid(raw) {
@@ -729,7 +729,7 @@ func stripDialectKeywordsFromSchema(v any) {
 			delete(schema, "pattern")
 		}
 
-		// Inspect regex keys under patternProperties
+		// 检查 patternProperties 下的正则键
 		if patternProps, ok := schema["patternProperties"].(map[string]any); ok {
 			for patternKey, subSchema := range patternProps {
 				if util.HasUnsupportedUnicodePropertyEscape(patternKey) {
@@ -770,17 +770,17 @@ func stripDialectKeywordsFromSchema(v any) {
 	}
 }
 
-// codexSchemaMapKeywords and codexSchemaValueKeywords reference the unified JSON Schema keywords
-// declared in internal/util.
+// codexSchemaMapKeywords 和 codexSchemaValueKeywords 引用在
+// internal/util 中声明的统一 JSON Schema 关键字。
 var (
 	codexSchemaMapKeywords   = util.SchemaMapKeywords
 	codexSchemaValueKeywords = util.SchemaValueKeywords
 )
 
-// codexSchemaMissesRequired reports whether a JSON Schema has any declared
-// property missing from its sibling required list (recursively). OpenAI
-// strict mode rejects such schemas with HTTP 400, so callers downgrade
-// text.format.strict instead of emitting an unsatisfiable schema.
+// codexSchemaMissesRequired 报告 JSON Schema 是否存在已声明
+// 但未出现在同级 required 列表中的属性（递归）。OpenAI
+// 严格模式会以 HTTP 400 拒绝此类 schema，因此调用方会降级
+// text.format.strict，而不是发出无法满足的 schema。
 func codexSchemaMissesRequired(schema gjson.Result) bool {
 	if !schema.IsObject() {
 		if schema.IsArray() {
@@ -838,11 +838,11 @@ func codexSchemaMissesRequired(schema gjson.Result) bool {
 	return false
 }
 
-// claudeDocumentDataURL turns an inline PDF into a Codex input_file URL. Anything
-// else, a file id included, is not representable and is reported by the caller.
-// claudeImageInputPart maps a Claude image source onto a Responses input_image
-// part. Base64 bytes become a data URL, an http(s) url passes through and a file
-// id is carried as file_id. It reports false for a source with none of them.
+// claudeDocumentDataURL 将内联 PDF 转换为 Codex 的 input_file URL。其他任何内容，
+// 包括 file id，都无法表示，并由调用方报告。
+// claudeImageInputPart 将 Claude 的 image 来源映射为 Responses 的 input_image
+// 部分。Base64 字节变为 data URL，http(s) url 直接透传，file
+// id 作为 file_id 携带。对于都不满足的来源，它返回 false。
 func claudeImageInputPart(source gjson.Result) ([]byte, bool) {
 	if !source.Exists() {
 		return nil, false

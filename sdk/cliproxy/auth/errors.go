@@ -9,40 +9,40 @@ import (
 	"time"
 )
 
-// ErrorCodeRequestScoped identifies failures tied to the current request rather
-// than the selected credential.
+// ErrorCodeRequestScoped 标识与当前请求相关、
+// 而非与所选凭据相关的失败。
 const ErrorCodeRequestScoped = "request_scoped"
 
 const requestScopedErrorCode = ErrorCodeRequestScoped
 
-// ErrorCodeConnectionLifecycle marks transport/session lifecycle failures that
-// must skip credential cooldown without being treated as request-scoped faults.
+// ErrorCodeConnectionLifecycle 标记传输/会话生命周期失败，这些失败必须跳过
+// 凭据冷却，同时不被视为请求范围内的故障。
 const ErrorCodeConnectionLifecycle = "connection_lifecycle"
 
 const connectionLifecycleErrorCode = ErrorCodeConnectionLifecycle
 
-// ErrorCodeTransientTransport marks pre-HTTP dial/TLS/DNS/reset failures that
-// must skip credential cooldown and remain eligible for request-retry rounds.
+// ErrorCodeTransientTransport 标记 HTTP 之前的 dial/TLS/DNS/reset 失败，
+// 这些失败必须跳过凭据冷却，并保持可参与请求重试轮次。
 const ErrorCodeTransientTransport = "transient_transport"
 
 const transientTransportErrorCode = ErrorCodeTransientTransport
 
-// ErrorCodeForceCooldown marks failures that must enforce credential cooldown.
+// ErrorCodeForceCooldown 标记必须强制执行凭据冷却的失败。
 const ErrorCodeForceCooldown = "force_cooldown"
 
-// Error describes an authentication related failure in a provider agnostic format.
+// Error 以供应商无关的格式描述与认证相关的失败。
 type Error struct {
-	// Code is a short machine readable identifier.
+	// Code 是简短的机器可读标识符。
 	Code string `json:"code,omitempty"`
-	// Message is a human readable description of the failure.
+	// Message 是失败的人类可读描述。
 	Message string `json:"message"`
-	// Retryable indicates whether a retry might fix the issue automatically.
+	// Retryable 表示重试是否可能自动修复该问题。
 	Retryable bool `json:"retryable"`
-	// HTTPStatus optionally records an HTTP-like status code for the error.
+	// HTTPStatus 可选地记录该错误的类 HTTP 状态码。
 	HTTPStatus int `json:"http_status,omitempty"`
 }
 
-// IsTerminalAuthError checks if err or any error in its chain represents a permanent upstream auth failure.
+// IsTerminalAuthError 检查 err 或其错误链中的任何错误是否表示永久性的上游认证失败。
 func IsTerminalAuthError(err error) bool {
 	if err == nil {
 		return false
@@ -65,7 +65,7 @@ func (e *terminalAuthError) IsTerminalAuth() bool {
 	return true
 }
 
-// NewTerminalAuthError wraps an *Error and cause as a terminal upstream authentication failure.
+// NewTerminalAuthError 将 *Error 与 cause 包装为终止性的上游认证失败。
 func NewTerminalAuthError(err *Error, cause error) error {
 	if err == nil {
 		return nil
@@ -77,7 +77,7 @@ func NewTerminalAuthError(err *Error, cause error) error {
 	return &terminalAuthError{errorWithCause: &errorWithCause{base: err, cause: cause}}
 }
 
-// Error implements the error interface.
+// Error 实现 error 接口。
 func (e *Error) Error() string {
 	if e == nil {
 		return ""
@@ -88,7 +88,7 @@ func (e *Error) Error() string {
 	return e.Code + ": " + e.Message
 }
 
-// StatusCode implements optional status accessor for manager decision making.
+// StatusCode 为管理器决策实现可选的状态访问器。
 func (e *Error) StatusCode() int {
 	if e == nil {
 		return 0
@@ -96,13 +96,13 @@ func (e *Error) StatusCode() int {
 	return e.HTTPStatus
 }
 
-// IsRequestScoped reports whether the failure is tied to the current request
-// rather than the selected credential.
+// IsRequestScoped 报告该失败是否与当前请求相关，
+// 而非与所选凭据相关。
 func (e *Error) IsRequestScoped() bool {
 	return e != nil && e.Code == ErrorCodeRequestScoped
 }
 
-// MarkRequestScoped marks the error as request-scoped in place and returns it.
+// MarkRequestScoped 就地将该错误标记为请求范围，并返回它。
 func (e *Error) MarkRequestScoped() *Error {
 	if e != nil {
 		e.Code = ErrorCodeRequestScoped
@@ -110,8 +110,8 @@ func (e *Error) MarkRequestScoped() *Error {
 	return e
 }
 
-// NewRequestScopedError creates an Error explicitly flagged as request-scoped so
-// that credential cooldown is skipped.
+// NewRequestScopedError 创建一个显式标记为请求范围的 Error，
+// 以便跳过凭据冷却。
 func NewRequestScopedError(message string, httpStatus int) *Error {
 	return &Error{
 		Code:       ErrorCodeRequestScoped,
@@ -202,7 +202,7 @@ func (e *errorWithCause) MarshalJSON() ([]byte, error) {
 	return json.Marshal(e.base)
 }
 
-// Keep Error's public four-field layout unchanged for downstream unkeyed literals.
+// 保持 Error 的公开四字段布局不变，以兼容下游的无键字面量。
 type authUnavailableError struct {
 	cause      error
 	base       *Error
@@ -307,7 +307,7 @@ func (e *authUnavailableError) MarshalJSON() ([]byte, error) {
 	return json.Marshal(e.base)
 }
 
-// WithAuthError retains the trusted deadline when the handler enriches context.
+// WithAuthError 在处理器补充上下文时保留受信任的截止时间。
 func (e *authUnavailableError) WithAuthError(cause *Error) error {
 	if e == nil {
 		return cause
@@ -319,7 +319,7 @@ func (e *authUnavailableError) WithAuthError(cause *Error) error {
 	}
 }
 
-// Headers exposes only the locally computed recovery hint, never upstream headers.
+// Headers 只暴露本地计算出的恢复提示，绝不暴露上游响应头。
 func (e *authUnavailableError) Headers() http.Header {
 	if e == nil {
 		return nil
@@ -327,7 +327,7 @@ func (e *authUnavailableError) Headers() http.Header {
 	return safeRetryAfterHeader(e.retryAfter)
 }
 
-// WithCause wraps an *Error with an underlying cause without changing the Error struct layout.
+// WithCause 用一个底层 cause 包装 *Error，而不改变 Error 结构体的布局。
 func WithCause(err *Error, cause error) error {
 	if err == nil {
 		return nil

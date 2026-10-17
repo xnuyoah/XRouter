@@ -70,8 +70,8 @@ func TestApplySummaryConfig(t *testing.T) {
 		{name: "chat enabled invents no effort", format: "openai", config: SummaryConfig{Mode: SummaryEnabled}, path: "reasoning_effort", want: ""},
 		{name: "chat enabled preserves active effort", format: "openai", body: `{"reasoning_effort":"high"}`, config: SummaryConfig{Mode: SummaryEnabled}, path: "reasoning_effort", want: "high"},
 		{name: "chat enabled preserves disabled effort", format: "openai", body: `{"reasoning_effort":"none"}`, config: SummaryConfig{Mode: SummaryEnabled}, path: "reasoning_effort", want: "none"},
-		// Chat cannot express "reason but hide", so disabling must not fall back to
-		// reasoning_effort:"none", which would disable reasoning altogether.
+		// Chat 无法表达「推理但隐藏」，因此禁用时不得回退到
+		// reasoning_effort:"none"，那会彻底禁用推理。
 		{name: "chat disabled preserves requested effort", format: "openai", body: `{"reasoning_effort":"high"}`, config: SummaryConfig{Mode: SummaryDisabled}, path: "reasoning_effort", want: "high"},
 		{name: "chat disabled sets openrouter exclude when present", format: "openai", body: `{"reasoning":{"effort":"high","exclude":false}}`, config: SummaryConfig{Mode: SummaryDisabled}, path: "reasoning.exclude", want: "true"},
 		{name: "chat enabled clears openrouter exclude when present", format: "openai", body: `{"reasoning":{"effort":"high","exclude":true}}`, config: SummaryConfig{Mode: SummaryEnabled}, path: "reasoning.exclude", want: "false"},
@@ -134,8 +134,8 @@ func TestApplySummaryConfig_OpenAIChatProviderDialects(t *testing.T) {
 	}
 }
 
-// Anthropic requires thinking.type, and rejects display on a disabled block, so
-// display must never be written unless thinking is already active.
+// Anthropic 要求 thinking.type，并拒绝在已禁用的块上出现 display，因此
+// 除非 thinking 已处于活动状态，否则绝不能写入 display。
 func TestApplySummaryConfig_ResponsesNormalizesDeprecatedGenerateSummary(t *testing.T) {
 	out := ApplySummaryConfig([]byte(`{"reasoning":{"generate_summary":"detailed"}}`), "openai-response", SummaryConfig{Mode: SummaryEnabled, Detail: "detailed"})
 	if got := gjson.GetBytes(out, "reasoning.summary").String(); got != "detailed" {

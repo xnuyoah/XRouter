@@ -40,7 +40,7 @@ func (r credentialQuotaRequest) resolveAuthIndex() string {
 	return ""
 }
 
-// GetQuotaProviders returns the list of registered quota providers.
+// GetQuotaProviders 返回已注册的额度供应商列表。
 func (h *Handler) GetQuotaProviders(c *gin.Context) {
 	if h == nil {
 		c.JSON(http.StatusOK, gin.H{"providers": []any{}})
@@ -56,7 +56,7 @@ func (h *Handler) GetQuotaProviders(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"providers": host.QuotaProviders(c.Request.Context())})
 }
 
-// FetchCredentialQuota retrieves normalized quota for a credential via its quota provider or declarative probe.
+// FetchCredentialQuota 通过凭据的额度供应商或声明式探测获取其规范化额度。
 func (h *Handler) FetchCredentialQuota(c *gin.Context) {
 	var body credentialQuotaRequest
 	if errBind := c.ShouldBindJSON(&body); errBind != nil {
@@ -112,7 +112,7 @@ func (h *Handler) FetchCredentialQuota(c *gin.Context) {
 		}
 	}
 
-	// Fallback to declarative quota probe if configured in metadata
+	// 若元数据中配置了声明式额度探测，则回退到它
 	if auth.Metadata != nil {
 		if rawProbe, okProbe := auth.Metadata["quota_probe"]; okProbe && rawProbe != nil {
 			if probeMap, okMap := rawProbe.(map[string]any); okMap {
@@ -132,7 +132,7 @@ func (h *Handler) FetchCredentialQuota(c *gin.Context) {
 	c.JSON(http.StatusNotImplemented, gin.H{"error": "no quota provider available for credential"})
 }
 
-// ResetCredentialQuota resets quota or usage for a credential.
+// ResetCredentialQuota 重置凭据的额度或用量。
 func (h *Handler) ResetCredentialQuota(c *gin.Context) {
 	var body credentialQuotaRequest
 	if errBind := c.ShouldBindJSON(&body); errBind != nil {
@@ -234,7 +234,7 @@ func (h *Handler) ResetCredentialQuota(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// GetPluginQuota handles GET /v0/management/plugins/:id/quota?auth_index=...
+// GetPluginQuota 处理 GET /v0/management/plugins/:id/quota?auth_index=...
 func (h *Handler) GetPluginQuota(c *gin.Context) {
 	pluginID := strings.TrimSpace(c.Param("id"))
 	authIndex := strings.TrimSpace(c.Query("auth_index"))
@@ -248,7 +248,7 @@ func (h *Handler) GetPluginQuota(c *gin.Context) {
 	h.fetchQuotaForPlugin(c, pluginID, authIndex)
 }
 
-// FetchPluginQuota handles POST /v0/management/plugins/:id/quota
+// FetchPluginQuota 处理 POST /v0/management/plugins/:id/quota
 func (h *Handler) FetchPluginQuota(c *gin.Context) {
 	pluginID := strings.TrimSpace(c.Param("id"))
 	var body credentialQuotaRequest
@@ -298,7 +298,7 @@ func (h *Handler) fetchQuotaForPlugin(c *gin.Context, pluginID, authIndex string
 	c.JSON(http.StatusOK, quotaResp)
 }
 
-// ResetPluginQuota handles DELETE /v0/management/plugins/:id/quota and POST /v0/management/plugins/:id/quota/reset
+// ResetPluginQuota 处理 DELETE /v0/management/plugins/:id/quota 和 POST /v0/management/plugins/:id/quota/reset
 func (h *Handler) ResetPluginQuota(c *gin.Context) {
 	pluginID := strings.TrimSpace(c.Param("id"))
 	authIndex := strings.TrimSpace(c.Query("auth_index"))
@@ -491,14 +491,14 @@ func (h *Handler) executeQuotaProbe(c *gin.Context, auth *coreauth.Auth, probe m
 	if errRaw := json.Unmarshal(respBytes, &rawQuota); errRaw == nil {
 		for key := range rawQuota {
 			if strings.EqualFold(key, "summary") {
-				delete(rawQuota, key) // Optional plugin data must not invalidate core quota fields.
+				delete(rawQuota, key) // 可选的插件数据不得使核心额度字段失效。
 			}
 		}
 		if coreQuotaJSON, errMarshal := json.Marshal(rawQuota); errMarshal == nil {
 			var quotaResp pluginapi.QuotaFetchResponse
 			if errJSON := json.Unmarshal(coreQuotaJSON, &quotaResp); errJSON == nil {
 				hasPlan := quotaResp.Subscription != nil && strings.TrimSpace(quotaResp.Subscription.Plan) != ""
-				// Filter groups to retain only buckets with an actual valid numeric remaining fraction in raw JSON
+				// 过滤分组，仅保留原始 JSON 中具有实际有效数值剩余比例的分桶
 				filteredGroups := make([]pluginapi.QuotaGroup, 0, len(quotaResp.Groups))
 				groupsRes := gjson.GetBytes(respBytes, "groups")
 				if groupsRes.IsArray() {

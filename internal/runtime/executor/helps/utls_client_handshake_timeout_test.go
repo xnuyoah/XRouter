@@ -20,11 +20,11 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// silentTLSListener accepts one TCP connection, drains the TLS ClientHello,
-// and never sends anything back, reproducing the silent-upstream shape from
-// Issue #6615. The returned channel closes once the client side has closed
-// the connection (the drain observes EOF), which also proves the failed
-// socket was released.
+// silentTLSListener 接受一个 TCP 连接，读取并丢弃 TLS ClientHello，
+// 然后永远不返回任何内容，复现 Issue #6615 中
+// 静默上游的形态。返回的通道在客户端一侧关闭连接后
+// 关闭（读取端观察到 EOF），这同时证明失败的
+// socket 已被释放。
 func silentTLSListener(t *testing.T) (addr string, drained <-chan struct{}) {
 	t.Helper()
 	listener, errListen := net.Listen("tcp", "127.0.0.1:0")
@@ -44,8 +44,8 @@ func silentTLSListener(t *testing.T) (addr string, drained <-chan struct{}) {
 			return
 		}
 		defer func() {
-			// The client may already have reset this intentionally stalled
-			// connection, so its close outcome is not part of the assertion.
+			// 客户端可能已经重置了这个被有意挂起的
+			// 连接，因此其关闭结果不属于断言内容。
 			_ = conn.Close()
 		}()
 		_, _ = io.Copy(io.Discard, conn)
@@ -53,11 +53,11 @@ func silentTLSListener(t *testing.T) (addr string, drained <-chan struct{}) {
 	return listener.Addr().String(), done
 }
 
-// TestClaudeCodeTLSHandshakeTimeoutBoundsSilentPeer reproduces Issue #6615
-// through the real Claude Code transport: the peer completes the TCP
-// connection but never answers the TLS ClientHello. With the opt-in
-// handshake timeout configured, connection establishment must fail with a
-// deadline error inside a bounded interval so retry logic can proceed.
+// TestClaudeCodeTLSHandshakeTimeoutBoundsSilentPeer
+// 通过真实的 Claude Code 传输复现 Issue #6615：
+// 对端完成 TCP 连接但从不回应 TLS ClientHello。
+// 在配置了选择性启用的握手超时后，连接建立必须在
+// 有界的时间区间内以 deadline 错误失败，以便重试逻辑能够继续。
 func TestClaudeCodeTLSHandshakeTimeoutBoundsSilentPeer(t *testing.T) {
 	addr, drained := silentTLSListener(t)
 
@@ -95,10 +95,10 @@ func TestClaudeCodeTLSHandshakeTimeoutBoundsSilentPeer(t *testing.T) {
 	}
 }
 
-// TestClaudeCodeTLSHandshakeTimeoutZeroKeepsUnboundedWait verifies the
-// default (timeout 0) preserves the pre-existing behavior: with the bound
-// disabled, a silent peer keeps the handshake pending and only caller
-// context cancellation ends the wait.
+// TestClaudeCodeTLSHandshakeTimeoutZeroKeepsUnboundedWait 验证
+// 默认值（timeout 0）保持原有行为：在禁用该上限时，
+// 静默对端会让握手一直保持挂起，只有调用方的
+// 上下文取消才会结束等待。
 func TestClaudeCodeTLSHandshakeTimeoutZeroKeepsUnboundedWait(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
 	t.Cleanup(func() {
@@ -122,8 +122,8 @@ func TestClaudeCodeTLSHandshakeTimeoutZeroKeepsUnboundedWait(t *testing.T) {
 		dialDone <- errDial
 	}()
 
-	// Consume the full ClientHello record so the handshake is known to be
-	// in flight and blocked reading the peer's answer.
+	// 读取完整的 ClientHello 记录，从而确认握手
+	// 正在进行并阻塞在读取对端的应答上。
 	header := make([]byte, 5)
 	if _, errRead := io.ReadFull(serverConn, header); errRead != nil {
 		t.Fatalf("read ClientHello record header: %v", errRead)
@@ -150,10 +150,10 @@ func TestClaudeCodeTLSHandshakeTimeoutZeroKeepsUnboundedWait(t *testing.T) {
 	}
 }
 
-// TestUtlsRoundTripperHandshakeTimeoutBoundsSilentPeer covers the Chrome
-// fingerprint path (ChatGPT) with the same silent-peer shape: when the
-// caller configured the bound, createConnection must also fail in a
-// bounded interval instead of waiting forever.
+// TestUtlsRoundTripperHandshakeTimeoutBoundsSilentPeer 覆盖 Chrome
+// 指纹路径（ChatGPT）下的相同静默对端形态：当
+// 调用方配置了该上限时，createConnection 也必须在
+// 有界区间内失败，而不是无限等待。
 func TestUtlsRoundTripperHandshakeTimeoutBoundsSilentPeer(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
 	t.Cleanup(func() {
@@ -200,10 +200,10 @@ func TestUtlsRoundTripperHandshakeTimeoutBoundsSilentPeer(t *testing.T) {
 	}
 }
 
-// TestUtlsRoundTripperWithoutHandshakeBoundWaitsForCaller mirrors the
-// zero/disabled behavior on the Chrome path: without the ctx carrier the
-// handshake keeps waiting and only caller cancellation ends it, exactly
-// like TestUtlsRoundTripperHandshakeUsesRequestContext.
+// TestUtlsRoundTripperWithoutHandshakeBoundWaitsForCaller 对应 Chrome 路径上
+// 的零值/禁用行为：在没有 ctx 载体的情况下，
+// 握手会持续等待，只有调用方取消才会结束它，与
+// TestUtlsRoundTripperHandshakeUsesRequestContext 完全一致。
 func TestUtlsRoundTripperWithoutHandshakeBoundWaitsForCaller(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
 	t.Cleanup(func() {
@@ -231,10 +231,10 @@ func TestUtlsRoundTripperWithoutHandshakeBoundWaitsForCaller(t *testing.T) {
 		connectionDone <- errConnect
 	}()
 
-	// The handshake must still be in flight here; only the explicit cancel
-	// below may end it. There is no deterministic "handshake started"
-	// signal on this path, so this check is intentionally one-sided: it
-	// fails only if the handshake already terminated on its own.
+	// 此时握手必须仍在进行中；只有下面显式的 cancel
+	// 才能结束它。该路径上不存在确定性的「握手已开始」
+	// 信号，因此这个检查有意只做单侧判断：它
+	// 仅在握手已自行终止时失败。
 	select {
 	case errConnect := <-connectionDone:
 		t.Fatalf("createConnection returned before caller cancellation: %v", errConnect)
@@ -252,8 +252,8 @@ func TestUtlsRoundTripperWithoutHandshakeBoundWaitsForCaller(t *testing.T) {
 	}
 }
 
-// deadlineRecordingConn records connection deadlines so the successful
-// handshake test can prove no establishment deadline remains installed.
+// deadlineRecordingConn 记录连接 deadline，使成功的
+// 握手测试能够证明没有残留的建立超时被安装。
 type deadlineRecordingConn struct {
 	net.Conn
 	deadlines chan time.Time
@@ -274,16 +274,16 @@ func (c *deadlineRecordingConn) SetWriteDeadline(deadline time.Time) error {
 	return c.Conn.SetWriteDeadline(deadline)
 }
 
-// TestClaudeCodeTLSHandshakeTimeoutPreservesSuccessfulConnection exercises
-// a real successful Claude uTLS handshake over net.Pipe inside synctest.
-// synctest advances its fake clock only when every goroutine is durably
-// blocked, so the one-second response delay below proves timers beyond the
-// 100ms handshake bound fire before the established connection is used; no
-// test wall-clock time is consumed by that delay.
+// TestClaudeCodeTLSHandshakeTimeoutPreservesSuccessfulConnection 在 synctest 中
+// 通过 net.Pipe 演练一次真实成功的 Claude uTLS 握手。
+// synctest 仅在每个 goroutine 都持久阻塞时才推进其虚拟时钟，
+// 因此下面一秒的响应延迟证明了超出 100ms 握手上限的定时器
+// 在已建立的连接被使用之前触发；该延迟不消耗任何
+// 测试的墙上时钟时间。
 func TestClaudeCodeTLSHandshakeTimeoutPreservesSuccessfulConnection(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		// synctest starts at its own fake epoch, so mint the certificate
-		// against that clock rather than the host wall clock.
+		// synctest 从自己的虚拟纪元开始，因此要基于
+		// 该时钟而非宿主墙上时钟来签发证书。
 		certificate := newResumptionTestCertificateAt(t, time.Now())
 		roots := x509.NewCertPool()
 		roots.AddCert(certificate.Leaf)
@@ -329,18 +329,18 @@ func TestClaudeCodeTLSHandshakeTimeoutPreservesSuccessfulConnection(t *testing.T
 				serverDone <- fmt.Errorf("server read request: %w", errRead)
 				return
 			}
-			// Fake time advances to this timer while all goroutines block,
-			// placing response delivery well beyond the handshake bound.
+			// 在所有 goroutine 阻塞时，虚拟时间推进到这个定时器，
+			// 使响应投递远晚于握手上限。
 			time.Sleep(time.Second)
 			response := "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}"
 			if _, errWrite := io.WriteString(server, response); errWrite != nil {
 				serverDone <- fmt.Errorf("server write response: %w", errWrite)
 				return
 			}
-			// net.Pipe has no half-close: a TLS close_notify write blocks until
-			// the peer reads again, but this test stops after Content-Length bytes.
-			// Response delivery is the behavior under test, so report completion
-			// once those bytes are written and let cleanup close the raw pipe.
+			// net.Pipe 不支持半关闭：TLS close_notify 写入会阻塞，
+			// 直到对端再次读取，但本测试在 Content-Length 个字节后即停止。
+			// 响应投递才是被测行为，因此在那些字节写入后即报告完成，
+			// 并让清理逻辑关闭原始管道。
 			serverDone <- nil
 		}()
 
@@ -355,10 +355,10 @@ func TestClaudeCodeTLSHandshakeTimeoutPreservesSuccessfulConnection(t *testing.T
 			t.Fatal("successful TLS handshake did not complete")
 		}
 		defer func() {
-			// Close the raw pipe from the other end first. Otherwise uTLS can
-			// spend its own five-second alert timeout trying to write close_notify
-			// to a net.Pipe peer that has intentionally stopped reading after the
-			// complete HTTP response.
+			// 先从另一端关闭原始管道。否则 uTLS 可能
+			// 耗费自身五秒的告警超时，试图向一个
+			// 在完整 HTTP 响应之后有意停止读取的
+			// net.Pipe 对端写入 close_notify。
 			if errClose := serverConn.Close(); errClose != nil && !errors.Is(errClose, net.ErrClosed) && !errors.Is(errClose, io.ErrClosedPipe) {
 				t.Errorf("close server connection before client: %v", errClose)
 			}
@@ -404,12 +404,12 @@ func TestClaudeCodeTLSHandshakeTimeoutPreservesSuccessfulConnection(t *testing.T
 	})
 }
 
-// TestNewUtlsHTTPClientStampsConfiguredHandshakeBound verifies the config
-// wiring end to end at the client seam: when
-// requests.tls-handshake-timeout-seconds is positive, every request
-// issued by the client carries the bound so the uTLS dial paths can read
-// it; when it is 0 (or no config is given), requests stay unstamped and
-// behavior is unchanged.
+// TestNewUtlsHTTPClientStampsConfiguredHandshakeBound 在客户端接缝处
+// 端到端验证配置接线：当
+// requests.tls-handshake-timeout-seconds 为正时，客户端发出的每个请求
+// 都携带该上限，使 uTLS 拨号路径可以读取它；
+// 当它为 0（或未提供配置）时，请求保持不携带该标记，
+// 行为不变。
 func TestNewUtlsHTTPClientStampsConfiguredHandshakeBound(t *testing.T) {
 	capture := func(seen *time.Duration) http.RoundTripper {
 		return utlsClientRoundTripFunc(func(req *http.Request) (*http.Response, error) {

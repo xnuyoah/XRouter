@@ -10,10 +10,10 @@ import (
 	translatorcommon "github.com/xnuyoah/XRouter/v8/internal/translator/common"
 )
 
-// responsesToolDeclaration is one Responses tool declaration paired with the
-// Chat Completions function name it produces. Namespace children carry both
-// their declared name and the owning namespace, so reverse translation can
-// restore the split identity.
+// responsesToolDeclaration 是一条 Responses 工具声明，以及它产生的
+// Chat Completions 函数名。命名空间的子项同时携带
+// 其声明的名称和所属命名空间，因此反向转换可以
+// 还原被拆分后的身份。
 type responsesToolDeclaration struct {
 	tool      gjson.Result
 	chatName  string
@@ -23,17 +23,17 @@ type responsesToolDeclaration struct {
 	shell     bool
 }
 
-// walkResponsesToolDeclarations visits the tool declarations of a Responses
-// request in one canonical order: the top-level "tools" field first, then
-// Codex Desktop (Responses Lite) "additional_tools" input items, namespace
-// children in declaration order. Declarations that produce no Chat Completions
-// tool are skipped. Visiting stops early once visit returns false.
+// walkResponsesToolDeclarations 以唯一的规范顺序遍历 Responses 请求的
+// 工具声明：先是顶层的 "tools" 字段，然后是
+// Codex Desktop（Responses Lite）的 "additional_tools" 输入项，最后是命名空间的
+// 子项（按声明顺序）。不产生任何 Chat Completions
+// 工具声明的条目会被跳过。一旦 visit 返回 false，遍历提前结束。
 //
-// The emitted chatName is namespace-qualified, capped to the Chat Completions
-// function-name limit, and disambiguated when two distinct declarations flatten
-// onto the same name. Request conversion, reverse name resolution and freeform
-// tool classification all traverse through here, so they cannot disagree about
-// which declaration backs a given Chat Completions tool name.
+// 生成的 chatName 带有命名空间限定、被截断到 Chat Completions
+// 函数名长度上限，并且在两条不同的声明展平为
+// 同一名称时会做消歧。请求转换、反向名称解析以及自由形式
+// 工具分类都经由这里遍历，因此它们不会对
+// 某个 Chat Completions 工具名由哪条声明支撑产生分歧。
 func walkResponsesToolDeclarations(root gjson.Result, visit func(responsesToolDeclaration) bool) {
 	var declarations []responsesToolDeclaration
 	emit := func(tool gjson.Result, namespaceName string) {
@@ -96,7 +96,7 @@ func walkResponsesToolDeclarations(root gjson.Result, visit func(responsesToolDe
 		})
 	}
 
-	// Reserve user identities before assigning the synthetic shell name.
+	// 在分配合成的 shell 名称之前先保留用户身份。
 	reserved := make(map[string]bool)
 	for _, d := range declarations {
 		if !d.shell {
@@ -126,33 +126,33 @@ func walkResponsesToolDeclarations(root gjson.Result, visit func(responsesToolDe
 	}
 }
 
-// disambiguateResponsesChatToolNames rewrites flattened names in place when
-// distinct declarations collapse onto the same capped Chat Completions name.
-// Identity is the pre-cap qualified name: declarations that qualified to the
-// same name before the cap (one tool delivered through both "tools" and
-// "additional_tools", or a flat tool colliding with a namespace child) are
-// the same upstream tool and keep the shared first-wins name, while distinct
-// names that only collide through truncation get "_1"-style suffixes so the
-// deduplication downstream never silently drops a real tool.
+// disambiguateResponsesChatToolNames 会在不同的声明坍缩到同一个被截断的
+// Chat Completions 名称时，就地重写展平后的名称。
+// 身份是截断前的限定名：在截断前限定为
+// 同一名称的声明（同一个工具同时通过 "tools" 和
+// "additional_tools" 下发，或者某个平铺工具与命名空间子项冲突）属于
+// 同一个上游工具，会保留共享的先到先得名称；而仅因截断
+// 才冲突的不同名称会获得 "_1" 风格的后缀，以免下游的
+// 去重静默丢弃一个真实的工具。
 //
-// Qualified names that fit the cap unchanged are claimed before any
-// truncation alias is assigned (equal raw names are one identity, so those
-// claims cannot conflict). Local names that fit the cap are reserved the
-// same way: a replayed call or tool_choice that omits the namespace carries
-// the local name, and local-name recovery resolves it to the declaration,
-// so a capped alias occupying that name would win the earlier
-// exact-emitted-alias match and attribute those calls to the wrong tool. A
-// long declaration whose capped tail lands on any reserved name therefore
-// takes the suffix itself. Suffixed variants stay within the name cap, and
-// every variant is claimed in the same pass so a later declaration cannot
-// resurrect a collision.
+// 截断后仍保持不变的限定名会在分配任何截断别名之前被占用
+// （相等的原始名称属于同一身份，因此这些
+// 占用不会冲突）。符合长度上限的本地名称也以
+// 同样的方式保留：重放的调用或省略命名空间的 tool_choice 会携带
+// 本地名称，而本地名称还原会把它解析到对应声明，
+// 因此占用该名称的截断别名会在更早的
+// 精确已生成别名匹配中获胜，从而把这些调用归到错误的工具上。因此，
+// 截断后尾部落在任何已保留名称上的长声明会自己
+// 取后缀。带后缀的变体仍在名称长度上限之内，
+// 且每个变体都在同一次处理中被占用，因此后续声明无法
+// 复活冲突。
 //
-// A local name carried by more than one distinct identity is ambiguous: no
-// namespace-less call naming it can be resolved, so the name is burned
-// instead of being awarded to whichever declaration came first. Burning
-// matters even when the name is also a declaration's capped alias — that
-// alias would be emitted verbatim, win the exact-emitted-alias match, and
-// silently route the other namespace's calls to the first declaration.
+// 由多个不同身份携带的本地名称是有歧义的：任何命名它的
+// 无命名空间调用都无法解析，因此该名称会被烧掉，
+// 而不是判给最先出现的声明。即使该名称
+// 同时是某条声明的截断别名，烧掉也很重要——那个
+// 别名会被逐字生成、赢得精确已生成别名匹配，
+// 并把另一个命名空间的调用静默路由到第一条声明。
 func disambiguateResponsesChatToolNames(declarations []responsesToolDeclaration) {
 	claimed := make(map[string]string, len(declarations))
 	claim := func(candidate, identity string) bool {
@@ -165,8 +165,8 @@ func disambiguateResponsesChatToolNames(declarations []responsesToolDeclaration)
 	}
 	longDeclarations := make([]int, 0)
 	identities := make([]string, len(declarations))
-	// localName → the single identity that declares it, or "" once a second,
-	// distinct identity shows the name is ambiguous.
+	// localName → 唯一声明它的身份，或者在第二个
+	// 不同身份表明该名称有歧义后变为 ""。
 	localOwners := make(map[string]string)
 	ambiguousLocalNames := make(map[string]struct{})
 	for i := range declarations {
@@ -188,8 +188,8 @@ func disambiguateResponsesChatToolNames(declarations []responsesToolDeclaration)
 		}
 	}
 	for local, ownerLocal := range localOwners {
-		// Reserving under any identity keeps the name out of every later
-		// truncation alias; ambiguous names additionally never get emitted.
+		// 在任何身份下保留该名称都能让它避开之后所有的
+		// 截断别名；此外，有歧义的名称永远不会被生成。
 		claim(local, ownerLocal)
 		if ownerLocal == "" {
 			ambiguousLocalNames[local] = struct{}{}
@@ -218,23 +218,23 @@ func disambiguateResponsesChatToolNames(declarations []responsesToolDeclaration)
 	}
 }
 
-// mergeResponsesRequestChatTools converts every tool declaration in a Responses
-// request into Chat Completions form, merging the top-level "tools" field with
-// Codex Desktop (Responses Lite) "additional_tools" input items.
+// mergeResponsesRequestChatTools 把 Responses 请求中的每条工具声明
+// 转换为 Chat Completions 形式，并将顶层的 "tools" 字段与
+// Codex Desktop（Responses Lite）的 "additional_tools" 输入项合并。
 //
-// Codex clients may deliver the same tool through both channels, and namespace
-// qualification can collapse distinct declarations onto one Chat Completions
-// name, so entries are deduplicated by function name. The first occurrence
-// wins, which keeps the top-level "tools" definition authoritative over the
-// "additional_tools" copy. Chat Completions requires tool names to be unique;
-// strict upstreams reject the whole request otherwise.
+// Codex 客户端可能通过两个渠道下发同一个工具，而命名空间
+// 限定可能使不同的声明坍缩到一个 Chat Completions
+// 名称上，因此条目按函数名去重。首次出现者
+// 胜出，从而让顶层 "tools" 定义优先于
+// "additional_tools" 中的副本。Chat Completions 要求工具名唯一；
+// 否则严格的上游会拒绝整个请求。
 func mergeResponsesRequestChatTools(root gjson.Result) [][]byte {
 	return newResponsesToolIndex(root).chatTools()
 }
 
-// convertResponsesCustomToolToOpenAIChat maps a Responses freeform ("custom")
-// tool onto a Chat Completions function tool with a single freeform "input"
-// string, mirroring the function-based shape Codex uses for apply_patch.
+// convertResponsesCustomToolToOpenAIChat 把 Responses 的自由形式（"custom"）
+// 工具映射为带单个自由形式 "input" 字符串的 Chat Completions function
+// 工具，与 Codex 为 apply_patch 使用的基于函数的形态一致。
 func convertResponsesCustomToolToOpenAIChat(tool gjson.Result, overrideName string) ([]byte, bool) {
 	name := strings.TrimSpace(overrideName)
 	if name == "" {
@@ -255,7 +255,7 @@ func convertResponsesCustomToolToOpenAIChat(tool gjson.Result, overrideName stri
 	return chatTool, true
 }
 
-// isApplyPatch resolves only the original winning custom declaration.
+// isApplyPatch 只解析最初胜出的 custom 声明。
 func (idx *responsesToolIndex) isApplyPatch(name string) bool {
 	d, ok := idx.byChat[name]
 	return ok && d.custom && applypatch.IsCustomTool(d.tool)
@@ -310,9 +310,9 @@ func responsesToolParameters(tool gjson.Result) gjson.Result {
 	return gjson.Result{}
 }
 
-// responsesToolOutputText flattens a tool output value that may be a plain
-// string or an array of content parts ({"type":"input_text","text":...}) into
-// a single text payload for a Chat Completions tool message.
+// responsesToolOutputText 把工具输出值（可能是普通字符串，
+// 也可能是内容分块的数组（{"type":"input_text","text":...}））展平为
+// 用于 Chat Completions 工具消息的单个文本载荷。
 func responsesToolOutputText(output gjson.Result) string {
 	if output.Type == gjson.String {
 		return output.String()
@@ -337,15 +337,15 @@ func responsesToolOutputText(output gjson.Result) string {
 	return ""
 }
 
-// responsesCustomToolNames collects the Chat Completions names of the freeform
-// ("custom") tools that survive the merge, so response translation only unwraps
-// freeform arguments for calls whose winning declaration really was freeform.
+// responsesCustomToolNames 收集在合并后保留下来的自由形式
+// （"custom"）工具的 Chat Completions 名称，这样响应转换只会
+// 为胜出声明确实是自由形式的调用解包自由形式参数。
 //
-// Declaration types may differ across the two delivery channels: a top-level
-// function and an "additional_tools" custom tool can flatten to the same name.
-// Classification therefore follows the same first-wins rule as the merge —
-// a discarded custom declaration must not turn a surviving ordinary function
-// into a custom_tool_call.
+// 两条下发渠道中的声明类型可能不同：一个顶层
+// 函数和一个 "additional_tools" custom 工具可能展平为同一名称。
+// 因此分类遵循与合并相同的先到先得规则——
+// 被丢弃的 custom 声明绝不能把保留下来的普通函数
+// 变成 custom_tool_call。
 func responsesCustomToolNames(requestRawJSON []byte) map[string]struct{} {
 	return newResponsesToolIndex(gjson.ParseBytes(requestRawJSON)).custom
 }
@@ -354,9 +354,9 @@ func responsesSingleCustomToolName(requestRawJSON []byte) (string, bool) {
 	return newResponsesToolIndex(gjson.ParseBytes(requestRawJSON)).singleCustomName()
 }
 
-// unwrapCustomToolInput extracts the freeform input from the {"input": "..."}
-// function-call arguments produced for a converted custom tool; it falls back
-// to the raw arguments when the wrapper is absent.
+// unwrapCustomToolInput 从为转换后的 custom 工具生成的
+// {"input": "..."} 函数调用参数中提取自由形式输入；当包装不存在时
+// 回退到原始参数。
 func unwrapCustomToolInput(arguments string) string {
 	if v := gjson.Get(arguments, "input"); v.Exists() {
 		if v.Type == gjson.String {
@@ -367,18 +367,18 @@ func unwrapCustomToolInput(arguments string) string {
 	return arguments
 }
 
-// responsesChatToolNameLimit is the Chat Completions function name limit enforced
-// by strict upstreams (e.g. z-ai/glm). Responses namespace tools routinely
-// flatten to names longer than this.
+// responsesChatToolNameLimit 是严格上游（例如 z-ai/glm）强制执行的
+// Chat Completions 函数名长度上限。Responses 命名空间工具
+// 展平后的名称经常超过该上限。
 const responsesChatToolNameLimit = 64
 
 func qualifyResponsesNamespaceToolName(namespaceName, childName string) string {
 	return capResponsesChatToolName(rawResponsesNamespaceQualifiedName(namespaceName, childName))
 }
 
-// rawResponsesNamespaceQualifiedName is qualifyResponsesNamespaceToolName
-// without the length cap, so disambiguation can tell a genuine name apart
-// from a truncation-induced collision.
+// rawResponsesNamespaceQualifiedName 是不带长度上限的
+// qualifyResponsesNamespaceToolName，这样消歧可以区分
+// 真实名称与截断导致的冲突。
 func rawResponsesNamespaceQualifiedName(namespaceName, childName string) string {
 	childName = strings.TrimSpace(childName)
 	if childName == "" || namespaceName == "" || strings.HasPrefix(childName, "mcp__") {
@@ -393,16 +393,16 @@ func rawResponsesNamespaceQualifiedName(namespaceName, childName string) string 
 	return namespaceName + "__" + childName
 }
 
-// capResponsesChatToolName truncates a flattened Responses tool name to the
-// Chat Completions limit while keeping the tail, which carries the most
-// identifying part of the name (the tool's local name). Namespace-qualified
-// names share a long "mcp__<server>" prefix, so keeping the tail preserves more
-// usable signal than keeping the head. Truncation can leave a partial "_"/"-"
-// run at the start; leading separators are stripped because some strict
-// upstreams reject names that do not begin with an alphanumeric character.
-// This is a pure function of the input name, so every path that derives a
-// chat function name (declarations, replayed calls, tool_choice, reverse
-// resolution) stays consistent with every other.
+// capResponsesChatToolName 把展平后的 Responses 工具名截断到
+// Chat Completions 的长度上限，同时保留尾部，因为尾部
+// 携带名称中最具识别性的部分（工具的本地名称）。带命名空间限定的
+// 名称共享很长的 "mcp__<server>" 前缀，因此保留尾部比保留头部
+// 能保留更多可用信号。截断可能在开头留下不完整的 "_"/"-"
+// 片段；开头的分隔符会被剥除，因为某些严格上游
+// 会拒绝不以字母数字字符开头的名称。
+// 这是输入名称的纯函数，因此每一条派生 chat 函数名的路径
+// （声明、重放的调用、tool_choice、反向
+// 解析）都彼此保持一致。
 func capResponsesChatToolName(name string) string {
 	if len(name) <= responsesChatToolNameLimit {
 		return name
@@ -414,47 +414,47 @@ func capResponsesChatToolName(name string) string {
 	return truncated
 }
 
-// resolveResponsesQualifiedToolIdentity maps an emitted Chat Completions
-// function name back to the Responses declaration that produced it.
+// resolveResponsesQualifiedToolIdentity 把生成的 Chat Completions
+// 函数名映射回产生它的 Responses 声明。
 //
-// Declarations are walked in the same order mergeResponsesRequestChatTools
-// uses, and the first one producing the name wins, so reverse translation
-// reports the identity of the declaration that actually survived the merge. A
-// flat top-level tool named "editor__apply_patch" therefore stays flat even
-// when a later namespace declares a child qualifying to the same name.
+// 声明按 mergeResponsesRequestChatTools 使用的同一顺序遍历，
+// 最先产生该名称的声明胜出，因此反向转换
+// 报告的是实际在合并后存活下来的声明的身份。因此名为
+// "editor__apply_patch" 的平铺顶层工具会保持平铺，即使
+// 之后的命名空间声明了一个限定后同名的子项。
 func resolveResponsesQualifiedToolIdentity(root gjson.Result, qualifiedName string) (name, namespace string, found bool) {
 	d, found := newResponsesToolIndex(root).byChat[qualifiedName]
 	return d.localName, d.namespace, found
 }
 
-// chatNameForResponsesNamespaceToolCall returns the Chat Completions name the
-// request's declarations assign to the (namespace, localName) identity of a
-// replayed or forced tool call. Declaration-derived names carry the same
-// 64-character cap and disambiguation as the outgoing tools array, so replayed
-// calls stay consistent with their declarations even when a collision renamed
-// the tool. Unknown identities fall back to plain namespace qualification.
+// chatNameForResponsesNamespaceToolCall 返回请求的声明为
+// 重放或强制工具调用的 (namespace, localName) 身份所分配的 Chat Completions
+// 名称。由声明派生的名称与发出的 tools 数组带有相同的
+// 64 字符上限和消歧处理，因此即使冲突重命名了工具，重放的
+// 调用仍与其声明保持一致。未知身份回退到
+// 普通的命名空间限定。
 func chatNameForResponsesNamespaceToolCall(requestRawJSON []byte, namespace, localName string) string {
 	return newResponsesToolIndex(gjson.ParseBytes(requestRawJSON)).namespaceName(namespace, localName)
 }
 
-// canonicalResponsesToolName resolves a name carried by a replayed call or
-// tool_choice that omits the namespace. Exact emitted names win, then the
-// declarations' uncapped qualified names are checked, then an omitted namespace
-// is restored only when the current request declares exactly one matching local
-// name. Qualified-name equality is direct provenance — the name can only have
-// been generated from that declaration — so it outranks local-name recovery,
-// which merely guesses at a namespace and can otherwise hijack a name that is
-// also another namespace's declared child. Ambiguous names remain unresolved
-// rather than being dispatched to another tool.
+// canonicalResponsesToolName 解析由省略命名空间的重放调用或
+// tool_choice 携带的名称。精确生成的名称优先，其次是
+// 检查声明未经截断的限定名，最后仅当当前请求恰好声明了一个
+// 匹配的本地名称时，才还原被省略的命名空间。限定名
+// 相等是直接溯源——该名称只可能由那条声明生成——因此
+// 它的优先级高于本地名称还原，后者只是猜测
+// 命名空间，并且可能劫持一个同时也是
+// 另一个命名空间已声明子项的名称。有歧义的名称
+// 保持未解析状态，而不是被派发到另一个工具。
 func canonicalResponsesToolName(requestRawJSON []byte, name string) string {
 	return newResponsesToolIndex(gjson.ParseBytes(requestRawJSON)).canonicalName(name)
 }
 
-// avoidResponsesDeclaredChatAliases keeps a fallback name (the blind cap of an
-// unresolved or ambiguous name) from colliding with any alias the request's
-// declarations actually emit. Dispatching such a call to a real declaration
-// would silently invoke the wrong tool; a distinct name keeps the identity
-// unresolved instead, which upstreams and clients can surface properly.
+// avoidResponsesDeclaredChatAliases 防止回退名称（未解析或
+// 有歧义名称的盲目截断结果）与请求声明实际生成的任何别名
+// 冲突。把这样的调用派发到一条真实声明会静默
+// 调用错误的工具；改用不同的名称可以让该身份保持
+// 未解析，从而让上游和客户端能够正确呈现。
 func avoidResponsesDeclaredChatAliases(root gjson.Result, candidate string) string {
 	return newResponsesToolIndex(root).avoidAlias(candidate)
 }

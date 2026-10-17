@@ -1,4 +1,4 @@
-// Package session derives stable conversation identities and extracts hierarchical session relationships.
+// Package session 推导稳定的会话标识，并提取分层的会话关系。
 package session
 
 import (
@@ -13,7 +13,7 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// SessionInfo encapsulates incoming request details needed for session affinity and upstream reporting.
+// SessionInfo 封装会话亲和性与上游上报所需的入站请求详情。
 type SessionInfo struct {
 	SessionID       string         `json:"session_id"`
 	ParentSessionID string         `json:"parent_session_id,omitempty"`
@@ -30,11 +30,11 @@ type SessionInfo struct {
 	Metadata        map[string]any `json:"metadata,omitempty"`
 }
 
-// SessionTreeInfo is an alias for SessionInfo for backward compatibility.
+// SessionTreeInfo 是 SessionInfo 的别名，用于向后兼容。
 type SessionTreeInfo = SessionInfo
 
-// sessionObject indexes top-level fields once so missing session keys do not
-// rescan large message arrays for every candidate path.
+// sessionObject 对顶层字段做一次性索引，使缺失的会话键
+// 不会为每个候选路径重复扫描庞大的 messages 数组。
 type sessionObject struct {
 	result     gjson.Result
 	fields     map[string]gjson.Result
@@ -79,12 +79,12 @@ func (object sessionObject) Get(path string) gjson.Result {
 	return value
 }
 
-// ExtractSessionInfo extracts session hierarchy and client identification from request attributes.
-// Priority matches selector.go:
+// ExtractSessionInfo 从请求属性中提取会话层级与客户端标识。
+// 优先级与 selector.go 一致：
 //  1. X-Claude-Code-Session-Id
-//  2. Claude Code metadata.user_id session
-//  3. Session-Id / Session_id (Codex and compatible clients)
-//  4. X-Http-Session-Id client headers
+//  2. Claude Code 的 metadata.user_id 会话
+//  3. Session-Id / Session_id（Codex 及兼容客户端）
+//  4. X-Http-Session-Id 客户端请求头
 //  5. X-Session-ID / X-Session-Affinity / X-Slot-Session-Id
 //  6. X-Conversation-Id / X-Thread-Id / X-Client-Request-Id
 //  7. Gemini cachedContent
@@ -92,7 +92,7 @@ func (object sessionObject) Get(path string) gjson.Result {
 //  9. session_id / sessionId
 //  10. prompt_cache_key (pck:), conversation.id (conv:), metadata.user_id (user:)
 //  11. conversation_id / chat_id
-//  12. execution_session_id metadata
+//  12. execution_session_id 元数据
 func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string]any) (SessionInfo, bool) {
 	var info SessionInfo
 	if metadata != nil {
@@ -115,25 +115,25 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 			reqRoot = newSessionObject(req)
 		}
 		for _, p := range []string{
-			// Standard session / thread parent keys
+			// 标准 session / thread 父键
 			"parent_session_id", "parentSessionId", "parentSessionID",
 			"parent_thread_id", "parentThreadId", "parentThreadID",
 			"forked_from_thread_id", "forked_from_id",
 			"parent_conversation_id", "parentConversationId", "parentConversationID",
-			// OpenCode / generic parent ID keys
+			// OpenCode / 通用父 ID 键
 			"parent_id", "parentId", "parentID",
-			// Roo Code / Cline task delegation keys
+			// Roo Code / Cline 任务委派键
 			"parent_task_id", "parentTaskId", "parentTaskID",
-			// OpenHands action tree keys
+			// OpenHands action 树键
 			"parent_action_id", "parentActionId", "parentActionID",
-			// Pi session keys
+			// Pi session 键
 			"parent_session", "parentSession",
-			// Hermes subagent keys
+			// Hermes 子代理键
 			"parent_subagent_id", "parentSubagentId",
-			// OpenClaw fork sources
+			// OpenClaw 分叉来源
 			"forkSource.sessionId", "fork_source.session_id",
 			"previousSessionId", "previous_session_id",
-			// Metadata nested keys
+			// 元数据嵌套键
 			"metadata.parent_session_id", "metadata.parentSessionId", "metadata.parentSessionID",
 			"metadata.parent_thread_id", "metadata.parentThreadId",
 			"metadata.forked_from_thread_id", "metadata.forked_from_id",
@@ -144,7 +144,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 			"metadata.parent_session", "metadata.parentSession",
 			"metadata.parent_agent_id", "metadata.parentAgentId",
 			"metadata.forkSource.sessionId", "metadata.previousSessionId",
-			// Extra body nested keys
+			// extra_body 嵌套键
 			"extra_body.parent_session_id", "extra_body.parentSessionId", "extra_body.parentSessionID",
 			"extra_body.parent_thread_id", "extra_body.parentThreadId",
 			"extra_body.forked_from_thread_id", "extra_body.forked_from_id",
@@ -170,7 +170,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 		}
 	}
 
-	// 1. Anthropic / Claude Code Headers
+	// 1. Anthropic / Claude Code 请求头
 	if sid := sessionHeaderValue(headers, "X-Claude-Code-Session-Id"); sid != "" {
 		info.ClientType = "claude"
 		agentID := sessionHeaderValue(headers, "X-Claude-Code-Agent-Id")
@@ -222,7 +222,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 		return finalizeSessionInfo(info)
 	}
 
-	// 2. Claude Code metadata.user_id in payload (outranks generic headers)
+	// 2. 载荷中的 Claude Code metadata.user_id（优先于通用请求头）
 	if len(payload) > 0 {
 		if sid, parentSID, agentID := ClaudeMetadataIdentities(payload); sid != "" {
 			info.ClientType = "claude"
@@ -281,7 +281,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 		}
 	}
 
-	// 3. OpenAI / Codex CLI Headers
+	// 3. OpenAI / Codex CLI 请求头
 	sid := sessionHeaderValue(headers, "Session-Id")
 	if sid == "" {
 		sid = sessionHeaderValue(headers, "Session_id")
@@ -374,7 +374,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 			subagentSignal = true
 		}
 
-		// 1. Fork detection
+		// 1. 分叉检测
 		if forkedFrom != "" {
 			forkSessionID := tid
 			if forkSessionID == "" {
@@ -391,7 +391,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 			return finalizeSessionInfo(info)
 		}
 
-		// 2. Subagent detection (Multi-Agent v2)
+		// 2. 子代理检测（Multi-Agent v2）
 		if subagentSignal || (tid != "" && sid != "" && tid != sid) || (parentThread != "" && parentThread != tid && parentThread != sid) {
 			childSessionID := tid
 			if childSessionID == "" {
@@ -426,7 +426,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 			return finalizeSessionInfo(info)
 		}
 
-		// 3. Normal interactive session
+		// 3. 普通交互式会话
 		sessionID := sid
 		if sessionID == "" {
 			sessionID = tid
@@ -446,7 +446,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 		return finalizeSessionInfo(info)
 	}
 
-	// 4. X-Http-Session-Id client headers
+	// 4. X-Http-Session-Id 客户端请求头
 	if sid := sessionHeaderValue(headers, "X-Http-Session-Id"); sid != "" {
 		info.ClientType = "agy"
 		info.SessionID = "agy:" + sid
@@ -472,7 +472,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 		return finalizeSessionInfo(info)
 	}
 
-	// 5. OpenCode / Pi Slot / Task / Generic Headers
+	// 5. OpenCode / Pi Slot / Task / 通用请求头
 	if sid := sessionHeaderValue(headers, "X-Session-ID"); sid != "" {
 		info.ClientType = "generic"
 		info.SessionID = "header:" + sid
@@ -643,9 +643,9 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 		return finalizeSessionInfo(info)
 	}
 
-	// 6. Payload inspection
+	// 6. 载荷检查
 	if len(payload) > 0 && root.Exists() {
-		// Gemini context caching
+		// Gemini 上下文缓存
 		for _, cachePath := range []string{"cachedContent", "cached_content"} {
 			cacheID := normalizedSessionCandidate(root.Get(cachePath).String())
 			if cacheID == "" && hasNestedReq {
@@ -664,7 +664,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 			}
 		}
 
-		// OpenAI thread in payload
+		// 载荷中的 OpenAI thread
 		for _, threadPath := range []string{"thread_id", "threadId", "metadata.thread_id"} {
 			tid := normalizedSessionCandidate(root.Get(threadPath).String())
 			if tid == "" && hasNestedReq {
@@ -690,7 +690,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 			}
 		}
 
-		// Generic session in payload
+		// 载荷中的通用会话
 		agentID := normalizedSessionCandidate(root.Get("metadata.agent_id").String())
 		if agentID == "" {
 			agentID = normalizedSessionCandidate(root.Get("metadata.subagent_id").String())
@@ -748,7 +748,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 			}
 		}
 
-		// Task / Action in payload (Roo Code, Cline, OpenHands)
+		// 载荷中的 Task / Action（Roo Code、Cline、OpenHands）
 		for _, path := range []string{
 			"task_id", "taskId", "taskID",
 			"action_id", "actionId", "actionID",
@@ -780,7 +780,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 			}
 		}
 
-		// Prompt cache key & Conversation object
+		// Prompt cache key 与 Conversation 对象
 		var conversationID string
 		conversation := root.Get("conversation")
 		if !conversation.Exists() && hasNestedReq {
@@ -826,7 +826,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 			return finalizeSessionInfo(info)
 		}
 
-		// Plain metadata.user_id
+		// 纯 metadata.user_id
 		userID := normalizedSessionCandidate(root.Get("metadata.user_id").String())
 		if userID == "" && hasNestedReq {
 			userID = normalizedSessionCandidate(reqRoot.Get("metadata.user_id").String())
@@ -838,7 +838,7 @@ func ExtractSessionInfo(headers http.Header, payload []byte, metadata map[string
 			return finalizeSessionInfo(info)
 		}
 
-		// Legacy conversation string paths
+		// 旧版 conversation 字符串路径
 		for _, convPath := range []string{"conversation_id", "conversationId", "chat_id", "chatId", "metadata.conversation_id", "extra_body.conversation_id"} {
 			cid := normalizedSessionCandidate(root.Get(convPath).String())
 			if cid == "" && hasNestedReq {
@@ -924,15 +924,15 @@ func isBodyForkCandidate(root, reqRoot sessionObject, hasNestedReq bool) bool {
 	return false
 }
 
-// BoundSessionIdentity bounds an identifier to <= 256 bytes safely,
-// preserving uniqueness via SHA256 and guarding against splitting multibyte UTF-8 characters.
+// BoundSessionIdentity 将标识符安全地限制在 <= 256 字节内，
+// 通过 SHA256 保持唯一性，并避免切断多字节 UTF-8 字符。
 func BoundSessionIdentity(id string) string {
 	if len(id) <= 256 {
 		return id
 	}
 	sum := sha256.Sum256([]byte(id))
-	hashHex := hex.EncodeToString(sum[:]) // 64 bytes
-	prefixLen := 255 - 1 - len(hashHex)   // 190 bytes
+	hashHex := hex.EncodeToString(sum[:]) // 64 字节
+	prefixLen := 255 - 1 - len(hashHex)   // 190 字节
 	if prefixLen > len(id) {
 		prefixLen = len(id)
 	}
@@ -957,14 +957,14 @@ func finalizeSessionInfo(info SessionInfo) (SessionInfo, bool) {
 	if info.ClientType == "" {
 		info.ClientType = "generic"
 	}
-	// Self-referential loop protection
+	// 自引用循环保护
 	if info.ParentSessionID == info.SessionID {
 		info.ParentSessionID = ""
 	}
 	return info, true
 }
 
-// ExtractTreeInfo is an alias for ExtractSessionInfo for backward compatibility.
+// ExtractTreeInfo 是 ExtractSessionInfo 的别名，用于向后兼容。
 func ExtractTreeInfo(headers http.Header, payload []byte, metadata map[string]any) (SessionInfo, bool) {
 	return ExtractSessionInfo(headers, payload, metadata)
 }

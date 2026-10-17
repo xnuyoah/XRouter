@@ -135,7 +135,7 @@ func TestExecutionAttemptsDoNotReuseQuotaResponseHeaders(t *testing.T) {
 }
 
 func TestSyncMetadataSessionToContext(t *testing.T) {
-	// 1. Canonical session from metadata overrides raw/pre-alias context session
+	// 1. 来自元数据的规范会话覆盖原始/别名前的上下文会话
 	ctxExplicit := internallogging.WithClientRequestMetadata(context.Background(), internallogging.ClientRequestMetadata{
 		SessionID: "raw-alias-sid",
 	})
@@ -147,7 +147,7 @@ func TestSyncMetadataSessionToContext(t *testing.T) {
 		t.Fatalf("sessionID = %q, want canonical-override", meta1.SessionID)
 	}
 
-	// 2. Syncs canonical and parent session from metadata
+	// 2. 从元数据同步规范会话和父会话
 	res2 := syncMetadataSessionToContext(context.Background(), map[string]any{
 		cliproxyexecutor.CanonicalSessionIDMetadataKey: "lcp:branch-123",
 		cliproxyexecutor.ParentSessionIDMetadataKey:    "lcp:trunk-000",
@@ -157,7 +157,7 @@ func TestSyncMetadataSessionToContext(t *testing.T) {
 		t.Fatalf("synced session = (%q, %q), want (lcp:branch-123, lcp:trunk-000)", meta2.SessionID, meta2.ParentSessionID)
 	}
 
-	// 3. Eliminates self-loop
+	// 3. 消除自环
 	res3 := syncMetadataSessionToContext(context.Background(), map[string]any{
 		cliproxyexecutor.CanonicalSessionIDMetadataKey: "same-loop",
 		cliproxyexecutor.ParentSessionIDMetadataKey:    "same-loop",
@@ -167,7 +167,7 @@ func TestSyncMetadataSessionToContext(t *testing.T) {
 		t.Fatalf("self-loop session = (%q, %q), want (same-loop, empty)", meta3.SessionID, meta3.ParentSessionID)
 	}
 
-	// 4. Clears stale parent when syncing a new root session without parent metadata
+	// 4. 在同步不带父元数据的新根会话时清除陈旧父会话
 	ctxWithStaleParent := internallogging.WithClientRequestMetadata(context.Background(), internallogging.ClientRequestMetadata{
 		SessionID:       "old-child",
 		ParentSessionID: "old-stale-parent",
@@ -180,7 +180,7 @@ func TestSyncMetadataSessionToContext(t *testing.T) {
 		t.Fatalf("stale parent not cleared: (%q, %q), want (new-root-session, empty)", meta4.SessionID, meta4.ParentSessionID)
 	}
 
-	// 5. Execution session key fallback with prefix
+	// 5. 带前缀的执行会话键回退
 	res5 := syncMetadataSessionToContext(context.Background(), map[string]any{
 		cliproxyexecutor.ExecutionSessionMetadataKey: "call-live-123",
 	})
@@ -189,7 +189,7 @@ func TestSyncMetadataSessionToContext(t *testing.T) {
 		t.Fatalf("execution session = %q, want execution:call-live-123", meta5.SessionID)
 	}
 
-	// 6. Derived session key fallback gets derived: prefix
+	// 6. 派生的会话键回退会得到 derived: 前缀
 	res6 := syncMetadataSessionToContext(context.Background(), map[string]any{
 		cliproxyexecutor.DerivedSessionIDMetadataKey: "ctx:v1:raw-hash",
 	})
@@ -198,7 +198,7 @@ func TestSyncMetadataSessionToContext(t *testing.T) {
 		t.Fatalf("derived session = %q, want derived:ctx:v1:raw-hash", meta6.SessionID)
 	}
 
-	// 7. Clears hierarchy completely when metadata has no canonical session
+	// 7. 当元数据没有规范会话时完全清除层级结构
 	ctxWithExistingSession := internallogging.WithClientRequestMetadata(context.Background(), internallogging.ClientRequestMetadata{
 		SessionID:       "old-stale-session",
 		ParentSessionID: "old-stale-parent",
@@ -244,7 +244,7 @@ func TestApplyRequestAfterAuthInterceptorSessionClearing(t *testing.T) {
 		t.Fatalf("parent session was not cleared from metadata after interceptor cleared headers")
 	}
 
-	// Context synced from cleared metadata also has empty session
+	// 从已清除的元数据同步而来的 context 其会话也为空
 	ctxWithSession := internallogging.WithClientRequestMetadata(context.Background(), internallogging.ClientRequestMetadata{
 		SessionID:       "session:initial-session",
 		ParentSessionID: "session:initial-parent",
@@ -262,7 +262,7 @@ func TestApplyRequestAfterAuthInterceptorSessionClearing(t *testing.T) {
 }
 
 func TestGhostParentElimination(t *testing.T) {
-	// Request has explicit root session (no parent), but options metadata carries a stale parent key
+	// 请求带有显式根会话（无父会话），但选项元数据携带了一个陈旧的父键
 	req := cliproxyexecutor.Request{}
 	opts := cliproxyexecutor.Options{
 		Headers: http.Header{
@@ -286,7 +286,7 @@ func TestApplyRequestAfterAuthInterceptorPreservesOriginalRequestSessionOnUnrela
 	bodyWithSession := []byte(`{"session_id":"important-session"}`)
 	req := cliproxyexecutor.Request{
 		Model:   "gpt-5.6-luna",
-		Payload: nil, // Translated or omitted payload
+		Payload: nil, // 已转换或省略的载荷
 	}
 	opts := cliproxyexecutor.Options{
 		OriginalRequest: bodyWithSession,

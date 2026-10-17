@@ -46,9 +46,9 @@ type issue6631Harness struct {
 	published      chan issue6631Values
 }
 
-// newIssue6631Harness wires the real Service, watcher reload, API server, and
-// management handler. The first reload that reaches the server is paused after
-// it read config.yaml, so a test can land a management save in between.
+// newIssue6631Harness 组装真实的 Service、监听器重载、API 服务器
+// 和管理处理器。第一个到达服务器的重载在读取 config.yaml 之后
+// 被暂停，以便测试可以在其间让一次管理端保存落地。
 func newIssue6631Harness(t *testing.T) *issue6631Harness {
 	t.Helper()
 	previousLevel := log.GetLevel()
@@ -146,7 +146,7 @@ func (h *issue6631Harness) put(path, value string) {
 	}
 }
 
-// awaitFirstReload waits until the reload for the first save has read config.yaml.
+// awaitFirstReload 等待直到针对第一次保存的重载已读取 config.yaml。
 func (h *issue6631Harness) awaitFirstReload() issue6631Values {
 	h.t.Helper()
 	select {
@@ -158,7 +158,7 @@ func (h *issue6631Harness) awaitFirstReload() issue6631Values {
 	return issue6631Values{}
 }
 
-// publishFirstReload lets the paused reload publish what it read and waits for it.
+// publishFirstReload 让被暂停的重载发布它所读取的内容，并等待其完成。
 func (h *issue6631Harness) publishFirstReload() {
 	h.t.Helper()
 	h.releaseFirst()
@@ -182,8 +182,8 @@ func (h *issue6631Harness) disk() issue6631Values {
 	return issue6631ValuesOf(cfg)
 }
 
-// waitForPublished waits until a post-save reload has published want to the server.
-// The timeout only guards against a reload that never comes.
+// waitForPublished 等待直到一次保存后的重载已把 want 发布到服务器。
+// 该超时只是用来防范永不出现的重载。
 func (h *issue6631Harness) waitForPublished(want issue6631Values) bool {
 	timeout := time.After(10 * time.Second)
 	for {
@@ -206,7 +206,7 @@ func TestManagementSequentialWritesSurviveStaleReload_Issue6631(t *testing.T) {
 		t.Fatalf("first reload read %+v, want the config saved by the first write", read)
 	}
 	h.put("request-retry", "5")
-	// The reload that read config.yaml before the second save publishes now.
+	// 在第二次保存之前读取了 config.yaml 的那次重载现在发布。
 	h.publishFirstReload()
 	h.put("max-retry-credentials", "7")
 

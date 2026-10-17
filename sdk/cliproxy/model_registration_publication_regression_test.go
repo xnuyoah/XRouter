@@ -54,9 +54,9 @@ func TestModelRegistrationRejectsSupersededPrefix(t *testing.T) {
 	}
 }
 
-// TestModelRegistrationIgnoresExecutionOnlyGenerationChange verifies that a
-// request result mutating Generation without changing model-registration
-// inputs does not invalidate an in-flight registration for the same inputs.
+// TestModelRegistrationIgnoresExecutionOnlyGenerationChange 验证：
+// 某个请求结果在未改变模型注册输入的情况下修改 Generation，
+// 不会使针对相同输入的在途注册失效。
 func TestModelRegistrationIgnoresExecutionOnlyGenerationChange(t *testing.T) {
 	cfg := &config.Config{SDKConfig: config.SDKConfig{ForceModelPrefix: true}, OpenAICompatibility: []config.OpenAICompatibility{{Name: "compat-synthetic", Models: []config.OpenAICompatibilityModel{{Name: "upstream-model", Alias: "alias"}}}}}
 	manager := coreauth.NewManager(nil, &coreauth.RoundRobinSelector{}, nil)
@@ -87,9 +87,9 @@ func TestModelRegistrationIgnoresExecutionOnlyGenerationChange(t *testing.T) {
 	}
 }
 
-// TestModelRegistrationDoesNotResurrectRemovedAuth verifies the removal arm
-// of the same publication invariant: a registration computed before its auth
-// was removed must not republish the client when it finishes afterwards.
+// TestModelRegistrationDoesNotResurrectRemovedAuth 验证同一发布不变量的
+// 移除分支：在其认证被移除之前计算出的注册，
+// 在其之后完成时不得重新发布客户端。
 func TestModelRegistrationDoesNotResurrectRemovedAuth(t *testing.T) {
 	cfg := &config.Config{SDKConfig: config.SDKConfig{ForceModelPrefix: true}, OpenAICompatibility: []config.OpenAICompatibility{{Name: "compat-synthetic", Models: []config.OpenAICompatibilityModel{{Name: "upstream-model", Alias: "alias"}}}}}
 	manager := coreauth.NewManager(nil, &coreauth.RoundRobinSelector{}, nil)
@@ -123,10 +123,10 @@ func TestModelRegistrationDoesNotResurrectRemovedAuth(t *testing.T) {
 	}
 }
 
-// TestModelRegistrationRejectsPreReregisterSnapshot verifies the
-// unregister/re-register identity arm of the same publication invariant: a
-// registration computed from the pre-removal identity must not overwrite the
-// models of the re-registered identity.
+// TestModelRegistrationRejectsPreReregisterSnapshot 验证同一发布不变量的
+// 注销/重新注册标识分支：基于移除前标识
+// 计算出的注册不得覆盖重新注册后标识
+// 的模型。
 func TestModelRegistrationRejectsPreReregisterSnapshot(t *testing.T) {
 	cfg := &config.Config{SDKConfig: config.SDKConfig{ForceModelPrefix: true}, OpenAICompatibility: []config.OpenAICompatibility{{Name: "compat-synthetic", Models: []config.OpenAICompatibilityModel{{Name: "upstream-model", Alias: "alias"}}}}}
 	manager := coreauth.NewManager(nil, &coreauth.RoundRobinSelector{}, nil)

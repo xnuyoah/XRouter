@@ -301,8 +301,8 @@ func (h *Host) RegisterModels(ctx context.Context, modelRegistry modelRegistry) 
 	h.commitModelClients(snap, modelRegistry, registrations, nextClients, nextProviders, nextModelRegistrations)
 }
 
-// HasAuthModelProvider reports whether an active plugin declares per-auth model
-// discovery for provider. It does not fetch models or refresh credentials.
+// HasAuthModelProvider 报告是否存在活跃插件为供应商声明了按 auth 的模型
+// 发现能力。它不会获取模型或刷新凭据。
 func (h *Host) HasAuthModelProvider(provider string) bool {
 	if h == nil {
 		return false

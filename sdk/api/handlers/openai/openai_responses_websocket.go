@@ -51,10 +51,10 @@ var responsesWebsocketUpgrader = websocket.Upgrader{
 	},
 }
 
-// writeWebsocketCloseForUpstreamError mirrors transport-level upstream close
-// codes to the downstream WebSocket client before the connection is torn down.
-// Without this the client only observes an abnormal closure (1006) and cannot
-// apply its own close-code based handling (e.g. falling back to SSE on 1009).
+// writeWebsocketCloseForUpstreamError 在连接被拆除前，把传输层级的
+// 上游关闭码映射给下游 WebSocket 客户端。
+// 否则客户端只能观察到异常关闭（1006），无法
+// 应用其基于关闭码的处理逻辑（例如在 1009 时回退到 SSE）。
 func writeWebsocketCloseForUpstreamError(conn *websocket.Conn, err error) (bool, error) {
 	if conn == nil {
 		return false, nil
@@ -114,9 +114,9 @@ func newResponsesWebsocketWriter(conn *websocket.Conn) *responsesWebsocketWriter
 	return &responsesWebsocketWriter{conn: conn}
 }
 
-// closeForUpstreamError sends a best-effort close frame without waiting behind
-// an active downstream data writer. If a data write already owns writeMu, the
-// connection is closed immediately so the blocked writer and session can exit.
+// closeForUpstreamError 尽力发送关闭帧，而不会排在一个
+// 活跃的下游数据写入者之后。若某个数据写入已持有 writeMu，
+// 则立即关闭连接，使被阻塞的写入者和会话能够退出。
 func (w *responsesWebsocketWriter) closeForUpstreamError(err error) (bool, error) {
 	if w == nil || w.conn == nil {
 		return false, nil
@@ -214,10 +214,10 @@ func (w *responsesWebsocketWriter) closeForUpstreamDisconnect(err error) {
 	}
 }
 
-// isWebsocketConnectionClosedError reports whether the error only means the
-// connection was already torn down. These are expected during shutdown races
-// (the proxy closes after sending a terminal frame, or the client hangs up mid
-// write) and must not be logged as proxy failures.
+// isWebsocketConnectionClosedError 报告该错误是否仅表示
+// 连接已被拆除。这类情况在关闭竞态中是预期内的
+// （代理在发送终止帧后关闭，或客户端在写入过程中挂断），
+// 不应记为代理故障。
 func isWebsocketConnectionClosedError(err error) bool {
 	if err == nil {
 		return false
@@ -236,7 +236,7 @@ func truncateWebsocketCloseReason(reason string, maxBytes int) string {
 		return reason
 	}
 
-	// Decode from the front so work and output stay bounded by maxBytes.
+	// 从前端开始解码，使工作量与输出都受 maxBytes 限制。
 	var truncated strings.Builder
 	truncated.Grow(min(len(reason), maxBytes))
 	remaining := maxBytes
@@ -262,10 +262,10 @@ func truncateWebsocketCloseReason(reason string, maxBytes int) string {
 	return truncated.String()
 }
 
-// ResponsesWebsocket handles websocket requests for /v1/responses.
-// It accepts `response.create` and `response.append` requests and streams
-// response events back as JSON websocket text messages. `response.interrupt`
-// is forwarded to the current Codex upstream socket without starting a new turn.
+// ResponsesWebsocket 处理 /v1/responses 的 websocket 请求。
+// 它接受 `response.create` 与 `response.append` 请求，并以 JSON websocket
+// 文本消息的形式流式返回 response 事件。`response.interrupt`
+// 会被转发到当前的 Codex 上游 socket，而不会开启新的回合。
 func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 	conn, err := responsesWebsocketUpgrader.Upgrade(c.Writer, c.Request, websocketUpgradeHeaders(c.Request))
 	if err != nil {
@@ -276,8 +276,8 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 	socketCtx, cancelSocket := context.WithCancelCause(c.Request.Context())
 	defer cancelSocket(nil)
 	c.Request = c.Request.WithContext(socketCtx)
-	// The reader owns the client socket so an in-flight interrupt is not stuck
-	// behind the response currently being forwarded.
+	// 读取方独占客户端 socket，使正在进行的 interrupt 不会
+	// 被当前正在转发的响应阻塞。
 	requestLogEnabled := false
 	if h != nil {
 		if cfg := h.CurrentConfig(); cfg != nil {
@@ -316,9 +316,9 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 							return
 						case disconnectErr := <-disconnectCh:
 							if provider == "codex" && codexDuplexStream.Load() {
-								// Only the selected credential's duplex stream owns closure:
-								// drain its acknowledgements and pending events in order.
-								// OAuth-only steering still leaves API keys in normal mode.
+								// 只有所选凭据的双工流才拥有关闭权：
+								// 按顺序排空其确认与待处理事件。
+								// 仅 OAuth 的引导仍会让 API key 处于普通模式。
 								return
 							}
 							writer.closeForUpstreamDisconnect(disconnectErr)
@@ -346,7 +346,7 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 		if errClose := conn.Close(); errClose != nil && !isWebsocketConnectionClosedError(errClose) {
 			log.Warnf("responses websocket: close connection error: %v", errClose)
 		}
-		// Finish control-frame diagnostics before snapshotting the timeline.
+		// 在快照时间线之前完成控制帧诊断。
 		<-inputDone
 		wsTimelineLog.SetContext(c)
 	}()
@@ -355,11 +355,11 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 	lastResponseOutput := []byte("[]")
 	var observedCompaction responsesWebsocketObservedCompactionState
 	lastResponseID := ""
-	// Remains pending until a generating request commits successfully.
+	// 在生成请求成功提交之前一直保持挂起。
 	pendingPrewarmID := ""
 	var lastResponsePendingToolCallIDs []string
 	pinnedAuthID := ""
-	// Preserve independent upstream auth affinity when a downstream session switches providers.
+	// 当下游会话切换供应商时，保留各自独立的上游 auth 亲和性。
 	pinnedAuthByProvider := make(map[string]responsesWebsocketPinnedAuthState)
 	passthroughModelName := ""
 	upstreamMode := responsesWebsocketUpstreamModeUnknown
@@ -368,8 +368,8 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 		if h == nil || h.AuthManager == nil {
 			return nil, false, false
 		}
-		// Prefer the current manager view so hot-reloaded transport eligibility is
-		// observed even when the execution session still holds an older auth snapshot.
+		// 优先使用管理器的当前视图，这样即使执行会话仍持有较旧的
+		// auth 快照，也能观察到热重载后的传输可用性。
 		if auth, ok := h.AuthManager.GetByID(authID); ok {
 			return auth, false, true
 		}
@@ -520,16 +520,16 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 				}
 				return
 			}
-			// A full response.create is already a self-contained reset and can safely
-			// establish a new upstream transport without another replay.
+			// 完整的 response.create 本身就是自包含的重置，可以安全地
+			// 建立新的上游传输而无需再次重放。
 		}
 		if explicitRequestModelName != "" && !useUpstreamWebsocketPassthrough {
 			passthroughModelName = ""
 		}
 
-		// A completed compaction response is direct evidence that the active target
-		// (whether a specific plugin executor, a specific auth on standard route, or a specific auth on provider route)
-		// supports compaction replay.
+		// 已完成的压缩响应是直接证据，表明当前活跃目标
+		//（无论是指定插件执行器、标准路由上的特定 auth，还是供应商路由上的特定 auth）
+		// 支持压缩重放。
 		observedCompactionReplayAuthID := ""
 		observedCompactionSupported := false
 		if observedCompaction.modelName != "" &&
@@ -543,8 +543,8 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 				providerRouteMatches := (observedCompaction.provider == currentProvider && observedCompaction.targetModel == currentTargetModel)
 				if providerRouteMatches && observedCompaction.authID != "" {
 					if currentProvider != "" {
-						// Provider route override: validate against the auth that observed compaction on this provider route.
-						// A leftover pinnedAuthID from an earlier unrouted turn must not veto the routed compaction auth.
+						// 供应商路由覆盖：针对在该供应商路由上观察到压缩的 auth 进行校验。
+						// 先前未路由回合遗留的 pinnedAuthID 不得否决已路由的压缩 auth。
 						if compactionAuth, _, ok := sessionAuthByIDWithSource(observedCompaction.authID); ok && compactionAuth != nil {
 							if compactionAuth.Status == coreauth.StatusActive {
 								observedCompactionSupported = true
@@ -552,7 +552,7 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 							}
 						}
 					} else {
-						// Standard auth route:
+						// 标准 auth 路由：
 						if pinnedAuthID != "" {
 							if pinnedAuthID == observedCompaction.authID {
 								observedCompactionSupported = true
@@ -603,7 +603,7 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 					Error:      fmt.Errorf("websocket request requires array field: input"),
 				}
 			} else {
-				// Mid-connection self-contained prewarm without previous_response_id is a new transcript root.
+				// 连接中途、不带 previous_response_id 的自包含预热是新的 transcript 根。
 				requestJSON, updatedLastRequest, errMsg = normalizeResponseCreateRequest(normalizeResponseTranscriptReplacement(payload, lastRequest))
 			}
 		} else if pendingPrewarmID != "" && gjson.GetBytes(payload, "type").String() == wsRequestTypeCreate {
@@ -614,7 +614,7 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 					Error:      fmt.Errorf("websocket request requires array field: input"),
 				}
 			} else {
-				// No parent reference means a self-contained replacement, not a delta.
+				// 没有父引用意味着是自包含的替换，而非增量。
 				requestJSON, updatedLastRequest, errMsg = normalizeResponseCreateRequest(normalizeResponseTranscriptReplacement(payload, lastRequest))
 			}
 		} else if nativeWebsocketPassthrough {
@@ -731,12 +731,12 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 		}
 		dataChan, _, errChan := h.ExecuteStreamWithAuthManager(cliCtx, h.HandlerType(), modelName, requestJSON, "")
 		if !selectedAuthObserved {
-			// Plugin/alternate routes bypass auth selection. Keep canonical HTTP-mode
-			// state instead of inheriting the previous pinned websocket mode.
+			// 插件/替代路由会绕过 auth 选择。应保持规范的 HTTP 模式
+			// 状态，而不是继承先前固定的 websocket 模式。
 			attemptedUpstreamMode = responsesWebsocketUpstreamModeHTTP
 		}
-		// A connection-scoped continuation cannot rotate credentials in place. Suppress
-		// credential errors and make the client replay the full turn on a new socket.
+		// 连接作用域的延续无法就地轮换凭据。需抑制
+		// 凭据错误，并让客户端在新 socket 上重放整个回合。
 		replayPinnedAuthFailure := func(errMsg *interfaces.ErrorMessage) bool {
 			return nativeWebsocketPassthrough && requestRequiresCurrentUpstreamWebsocket && pinnedAuthAttempted &&
 				shouldReplayResponsesWebsocketPinnedAuthFailure(errMsg)
@@ -763,8 +763,8 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 			switch {
 			case errors.Is(errForward, websocket.ErrCloseSent):
 			case isWebsocketConnectionClosedError(errForward):
-				// The client hung up while a downstream write was in flight. This is a
-				// normal shutdown race, not a proxy failure.
+				// 客户端在下游写入进行中挂断。这是
+				// 正常的关闭竞态，而非代理故障。
 				log.Debugf("responses websocket: client closed during forward id=%s error=%v", passthroughSessionID, errForward)
 			default:
 				log.Warnf("responses websocket: forward failed id=%s error=%v", passthroughSessionID, errForward)
@@ -891,7 +891,7 @@ func websocketUpgradeHeaders(req *http.Request) http.Header {
 		return headers
 	}
 
-	// Keep the same sticky turn-state across reconnects when provided by the client.
+	// 当客户端提供时，在重连之间保持相同的粘性 turn-state。
 	turnState := strings.TrimSpace(req.Header.Get(wsTurnStateHeader))
 	if turnState != "" {
 		headers.Set(wsTurnStateHeader, turnState)

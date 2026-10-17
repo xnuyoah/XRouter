@@ -471,7 +471,7 @@ func TestExecutorAdapterExecuteStreamTwoCompleteChunksWithoutNewline(t *testing.
 	host := newHostWithRecords(executorRecord)
 
 	streamChunks := make(chan pluginapi.ExecutorStreamChunk, 3)
-	// Two complete chunks without trailing \n
+	// 两个完整分块，不带结尾 \n
 	streamChunks <- pluginapi.ExecutorStreamChunk{Payload: []byte("data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}")}
 	streamChunks <- pluginapi.ExecutorStreamChunk{Payload: []byte("data: {\"choices\":[],\"usage\":{\"prompt_tokens\":11,\"completion_tokens\":22,\"total_tokens\":33}}")}
 	streamChunks <- pluginapi.ExecutorStreamChunk{Payload: []byte("data: [DONE]")}
@@ -524,7 +524,7 @@ func TestExecutorAdapterExecuteStreamSplitChunks(t *testing.T) {
 	host := newHostWithRecords(executorRecord)
 
 	streamChunks := make(chan pluginapi.ExecutorStreamChunk, 5)
-	// Split SSE frame across two chunks
+	// 将 SSE 帧拆分到两个分块中
 	streamChunks <- pluginapi.ExecutorStreamChunk{Payload: []byte("data: {\"choices\":[],\"usage\":{\"prompt_tok")}
 	streamChunks <- pluginapi.ExecutorStreamChunk{Payload: []byte("ens\":18,\"completion_tokens\":22,\"total_tokens\":40}}\n\n")}
 	streamChunks <- pluginapi.ExecutorStreamChunk{Payload: []byte("data: [DONE]\n\n")}
@@ -721,7 +721,7 @@ func TestExecutorAdapterExecuteStreamSplitAcrossBraceBoundary(t *testing.T) {
 	host := newHostWithRecords(executorRecord)
 
 	streamChunks := make(chan pluginapi.ExecutorStreamChunk, 3)
-	// Split exactly before opening brace of usage object
+	// 恰好在使用量对象的左花括号之前拆分
 	streamChunks <- pluginapi.ExecutorStreamChunk{Payload: []byte("data: {\"choices\":[],\"usage\":")}
 	streamChunks <- pluginapi.ExecutorStreamChunk{Payload: []byte("{\"prompt_tokens\":18,\"completion_tokens\":22,\"total_tokens\":40}}\n\n")}
 	streamChunks <- pluginapi.ExecutorStreamChunk{Payload: []byte("data: [DONE]\n\n")}
@@ -809,7 +809,7 @@ func TestExecutorAdapterExecuteStreamErrorChunkImmediatePublishWithoutClose(t *t
 		t.Fatalf("ExecuteStream returned unexpected error: %v", err)
 	}
 
-	// Send error chunk but do NOT close the channel
+	// 发送错误分块但不关闭 channel
 	go func() {
 		streamChunks <- pluginapi.ExecutorStreamChunk{Err: expectedErr}
 	}()
@@ -819,7 +819,7 @@ func TestExecutorAdapterExecuteStreamErrorChunkImmediatePublishWithoutClose(t *t
 		t.Fatalf("expected chunk error %v, got %v", expectedErr, chunk.Err)
 	}
 
-	// Verify that usage failure record was published immediately without channel close
+	// 校验用量失败记录在 channel 未关闭的情况下被立即发布
 	rec := plugin.waitRecord(t, 200*time.Millisecond)
 	if !rec.Failed {
 		t.Errorf("rec.Failed = false, want true")
@@ -862,7 +862,7 @@ func TestUsageAdapterRecoversSessionHierarchyFromContext(t *testing.T) {
 		ParentSessionID: "parent-ctx-1",
 	})
 
-	// 1. Record has empty session fields, should recover from context
+	// 1. Record 的会话字段为空，应从 context 恢复
 	adapter.HandleUsage(ctx, coreusage.Record{
 		Provider: "test-provider",
 		Model:    "test-model",
@@ -872,7 +872,7 @@ func TestUsageAdapterRecoversSessionHierarchyFromContext(t *testing.T) {
 		t.Fatalf("recovered session = (%q, %q), want (sess-ctx-1, parent-ctx-1)", rec.SessionID, rec.ParentSessionID)
 	}
 
-	// 2. Self-referential loop protection in context
+	// 2. context 中的自引用循环保护
 	ctxLoop := logging.WithClientRequestMetadata(context.Background(), logging.ClientRequestMetadata{
 		SessionID:       "loop-sess",
 		ParentSessionID: "loop-sess",
@@ -900,7 +900,7 @@ func TestUsageAdapterPropagatesNativeKeyAndAccessProvider(t *testing.T) {
 		pluginID: "usage-native-key",
 	}
 
-	// 1. Direct record propagation
+	// 1. 直接传播 record
 	adapter.HandleUsage(context.Background(), coreusage.Record{
 		Provider:       "test-provider",
 		Model:          "test-model",
@@ -916,7 +916,7 @@ func TestUsageAdapterPropagatesNativeKeyAndAccessProvider(t *testing.T) {
 		t.Fatalf("rec.AccessProvider = %q, want %q", rec.AccessProvider, "config-inline")
 	}
 
-	// 2. Fallback to context values when record fields are omitted
+	// 2. Record 字段被省略时回退到 context 值
 	ctx := coreusage.WithAPIKey(context.Background(), "sk-ctx-native")
 	ctx = coreusage.WithAccessProvider(ctx, "config-inline")
 	adapter.HandleUsage(ctx, coreusage.Record{

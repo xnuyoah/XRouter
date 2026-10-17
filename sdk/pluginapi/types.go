@@ -1,4 +1,4 @@
-// Package pluginapi defines host-side plugin capability schemas and adapters.
+// Package pluginapi 定义宿主侧的插件能力模式与适配器。
 package pluginapi
 
 import (
@@ -9,270 +9,270 @@ import (
 	"time"
 )
 
-// Plugin is the host-side representation produced from a dynamic plugin registration.
+// Plugin 是动态插件注册生成的宿主侧表示。
 type Plugin struct {
-	// Metadata identifies the plugin binary and its published source.
+	// Metadata 标识插件二进制及其发布的来源。
 	Metadata Metadata
-	// Capabilities declares the optional integration points implemented by the plugin.
+	// Capabilities 声明插件实现的可选集成点。
 	Capabilities Capabilities
-	// SchemaVersion is the plugin contract version negotiated at registration.
-	// Zero means unset (treated as legacy by the host).
+	// SchemaVersion 是注册时协商的插件契约版本。
+	// 零值表示未设置（宿主将其视为旧版）。
 	SchemaVersion uint32
 }
 
-// Metadata describes a plugin for registry, logging, and diagnostics.
+// Metadata 描述插件，用于注册表、日志和诊断。
 type Metadata struct {
-	// Name is the stable human-readable plugin name.
+	// Name 是稳定且人类可读的插件名称。
 	Name string
-	// Version is the plugin release version.
+	// Version 是插件发布版本。
 	Version string
-	// Author identifies the plugin author or organization.
+	// Author 标识插件作者或组织。
 	Author string
-	// GitHubRepository is the repository URL for plugin source and support.
+	// GitHubRepository 是插件源码与支持的仓库 URL。
 	GitHubRepository string
-	// Logo is a plugin-provided display asset reference for management clients.
+	// Logo 是插件提供的展示资源引用，供管理客户端使用。
 	Logo string
-	// ConfigFields describes plugin-owned configuration fields for management clients.
+	// ConfigFields 描述插件自有的配置字段，供管理客户端使用。
 	ConfigFields []ConfigField
 }
 
-// ConfigFieldType classifies plugin-owned configuration values for management clients.
+// ConfigFieldType 对插件自有的配置值进行分类，供管理客户端使用。
 type ConfigFieldType string
 
 const (
-	// ConfigFieldTypeString describes a string configuration value.
+	// ConfigFieldTypeString 描述字符串配置值。
 	ConfigFieldTypeString ConfigFieldType = "string"
-	// ConfigFieldTypeNumber describes a numeric configuration value.
+	// ConfigFieldTypeNumber 描述数值配置值。
 	ConfigFieldTypeNumber ConfigFieldType = "number"
-	// ConfigFieldTypeInteger describes an integer configuration value.
+	// ConfigFieldTypeInteger 描述整数配置值。
 	ConfigFieldTypeInteger ConfigFieldType = "integer"
-	// ConfigFieldTypeBoolean describes a boolean configuration value.
+	// ConfigFieldTypeBoolean 描述布尔配置值。
 	ConfigFieldTypeBoolean ConfigFieldType = "boolean"
-	// ConfigFieldTypeEnum describes a string value constrained to EnumValues.
+	// ConfigFieldTypeEnum 描述受 EnumValues 约束的字符串值。
 	ConfigFieldTypeEnum ConfigFieldType = "enum"
-	// ConfigFieldTypeArray describes an array configuration value.
+	// ConfigFieldTypeArray 描述数组配置值。
 	ConfigFieldTypeArray ConfigFieldType = "array"
-	// ConfigFieldTypeObject describes an object configuration value.
+	// ConfigFieldTypeObject 描述对象配置值。
 	ConfigFieldTypeObject ConfigFieldType = "object"
 )
 
-// ConfigField describes a plugin-owned configuration field for management clients.
+// ConfigField 描述插件自有的配置字段，供管理客户端使用。
 type ConfigField struct {
-	// Name is the configuration key under plugins.configs.<pluginID>.
+	// Name 是 plugins.configs.<pluginID> 下的配置键。
 	Name string
-	// Type classifies the field value for management clients.
+	// Type 对字段值进行分类，供管理客户端使用。
 	Type ConfigFieldType
-	// Default is the value used when the configuration key is omitted.
+	// Default 是配置键省略时使用的值。
 	Default any
-	// EnumValues lists allowed values when Type is ConfigFieldTypeEnum.
+	// EnumValues 列出当 Type 为 ConfigFieldTypeEnum 时允许的值。
 	EnumValues []string
-	// Description explains how the plugin uses the field.
+	// Description 说明插件如何使用该字段。
 	Description string
 }
 
-// Capabilities groups the optional host integration interfaces exposed by a plugin.
+// Capabilities 汇总插件暴露的可选宿主集成接口。
 type Capabilities struct {
-	// ModelRegistrar contributes development-time model metadata to the host registry.
+	// ModelRegistrar 向宿主注册表贡献开发期的模型元数据。
 	ModelRegistrar ModelRegistrar
-	// ModelProvider contributes provider-native static and per-auth model metadata.
+	// ModelProvider 贡献供应商原生的静态及按凭据区分的模型元数据。
 	ModelProvider ModelProvider
-	// AuthProvider lets the host parse, login, poll, and refresh plugin provider auths.
+	// AuthProvider 让宿主解析、登录、轮询并刷新插件供应商凭据。
 	AuthProvider AuthProvider
-	// FrontendAuthProvider authenticates frontend requests before proxy handling.
+	// FrontendAuthProvider 在代理处理之前对前端请求进行认证。
 	FrontendAuthProvider FrontendAuthProvider
-	// FrontendAuthProviderExclusive makes this frontend auth provider the only active request auth provider when selected.
+	// FrontendAuthProviderExclusive 使该前端认证供应商在被选中时成为唯一生效的请求认证供应商。
 	FrontendAuthProviderExclusive bool
-	// Scheduler chooses an auth candidate before the built-in scheduler runs.
+	// Scheduler 在内置调度器运行之前选择凭据候选。
 	Scheduler Scheduler
-	// SchedulerAcrossPriorities opts into receiving available candidates across all priority tiers
-	// in SchedulerPickRequest.Candidates. When false (default), Candidates only contains
-	// credentials from the highest available priority tier.
+	// SchedulerAcrossPriorities 选择接收跨所有优先级层级的可用候选，
+	// 位于 SchedulerPickRequest.Candidates 中。为 false（默认）时，Candidates 仅包含
+	// 最高可用优先级层级中的凭据。
 	SchedulerAcrossPriorities bool
-	// ModelRouter routes matching requests to a plugin executor, the router's own executor,
-	// or a built-in provider before model-to-provider resolution and auth selection.
+	// ModelRouter 在模型到供应商解析和凭据选择之前，将匹配的请求路由到插件执行器、路由自身的执行器
+	// 或内置供应商。
 	ModelRouter ModelRouter
-	// Executor sends requests to an upstream provider or local backend.
+	// Executor 向上游供应商或本地后端发送请求。
 	Executor ProviderExecutor
-	// ExecutorModelScope declares whether Executor serves static models, OAuth auth models, or both.
-	// Empty defaults to ExecutorModelScopeBoth for backward compatibility.
+	// ExecutorModelScope 声明 Executor 服务静态模型、OAuth 凭据模型还是两者。
+	// 为空时出于向后兼容默认使用 ExecutorModelScopeBoth。
 	ExecutorModelScope ExecutorModelScope
-	// ExecutorInputFormats lists request protocols accepted directly by Executor. Executors must declare at least one.
+	// ExecutorInputFormats 列出 Executor 可直接接受的请求协议。执行器必须至少声明一个。
 	ExecutorInputFormats []string
-	// ExecutorOutputFormats lists response protocols emitted directly by Executor. Executors must declare at least one.
+	// ExecutorOutputFormats 列出 Executor 可直接输出的响应协议。执行器必须至少声明一个。
 	ExecutorOutputFormats []string
-	// RequestTranslator converts canonical requests into provider-specific payloads.
+	// RequestTranslator 将规范请求转换为供应商特定的载荷。
 	RequestTranslator RequestTranslator
-	// RequestNormalizer converts provider-specific requests into canonical payloads.
+	// RequestNormalizer 将供应商特定的请求转换为规范载荷。
 	RequestNormalizer RequestNormalizer
-	// ResponseTranslator converts canonical responses into provider-specific payloads.
+	// ResponseTranslator 将规范响应转换为供应商特定的载荷。
 	ResponseTranslator ResponseTranslator
-	// ResponseBeforeTranslator normalizes upstream responses before native translation.
+	// ResponseBeforeTranslator 在原生转换之前规范化上游响应。
 	ResponseBeforeTranslator ResponseNormalizer
-	// ResponseAfterTranslator normalizes translated responses before delivery.
+	// ResponseAfterTranslator 在交付之前规范化已转换的响应。
 	ResponseAfterTranslator ResponseNormalizer
-	// RequestInterceptor rewrites execution requests before and after credential selection.
+	// RequestInterceptor 在凭据选择前后重写执行请求。
 	RequestInterceptor RequestInterceptor
-	// RequestLifecyclePlugin asynchronously receives one terminal event for each request that reached request interception.
+	// RequestLifecyclePlugin 为每个进入请求拦截的请求异步接收一个终态事件。
 	RequestLifecyclePlugin RequestLifecyclePlugin
-	// ResponseInterceptor rewrites successful non-streaming HTTP execution responses before downstream delivery.
+	// ResponseInterceptor 在下游交付之前重写成功的非流式 HTTP 执行响应。
 	ResponseInterceptor ResponseInterceptor
-	// StreamChunkInterceptor rewrites successful HTTP stream chunks before downstream delivery.
+	// StreamChunkInterceptor 在下游交付之前重写成功的 HTTP 流式分块。
 	StreamChunkInterceptor StreamChunkInterceptor
-	// WebSocketResponseObserver receives upstream WebSocket response events during execution.
+	// WebSocketResponseObserver 在执行期间接收上游 WebSocket 响应事件。
 	WebSocketResponseObserver WebSocketResponseObserver
-	// ThinkingApplier applies validated thinking configuration to provider payloads.
+	// ThinkingApplier 将已校验的思考配置应用到供应商载荷。
 	ThinkingApplier ThinkingApplier
-	// UsagePlugin receives completed usage records.
+	// UsagePlugin 接收已完成的用量记录。
 	UsagePlugin UsagePlugin
-	// CommandLinePlugin declares and handles plugin-owned command-line flags.
+	// CommandLinePlugin 声明并处理插件自有的命令行标志。
 	CommandLinePlugin CommandLinePlugin
-	// ManagementAPI declares plugin-owned diagnostic Management API and resource routes.
+	// ManagementAPI 声明插件自有的诊断管理 API 和资源路由。
 	ManagementAPI ManagementAPI
-	// QuotaProvider surfaces credential quota and billing information for management clients.
+	// QuotaProvider 向管理客户端暴露凭据额度与计费信息。
 	QuotaProvider QuotaProvider
 }
 
-// ExecutorModelScope declares which model-registration paths a plugin executor supports.
+// ExecutorModelScope 声明插件执行器支持哪些模型注册路径。
 type ExecutorModelScope string
 
 const (
-	// ExecutorModelScopeBoth means the executor supports static and OAuth auth-bound models.
+	// ExecutorModelScopeBoth 表示执行器同时支持静态模型和绑定 OAuth 凭据的模型。
 	ExecutorModelScopeBoth ExecutorModelScope = "both"
-	// ExecutorModelScopeStatic means the executor supports only non-OAuth static models.
+	// ExecutorModelScopeStatic 表示执行器仅支持非 OAuth 的静态模型。
 	ExecutorModelScopeStatic ExecutorModelScope = "static"
-	// ExecutorModelScopeOAuth means the executor supports only OAuth auth-bound models.
+	// ExecutorModelScopeOAuth 表示执行器仅支持绑定 OAuth 凭据的模型。
 	ExecutorModelScopeOAuth ExecutorModelScope = "oauth"
 )
 
-// ModelInfo describes a model contributed by a plugin.
+// ModelInfo 描述插件贡献的模型。
 type ModelInfo struct {
-	// ID is the stable model identifier used in API requests.
+	// ID 是 API 请求中使用的稳定模型标识符。
 	ID string
-	// Object is the API object type, usually "model".
+	// Object 是 API 对象类型，通常为 "model"。
 	Object string
-	// Created is the Unix timestamp when the model metadata was created.
+	// Created 是模型元数据创建时的 Unix 时间戳。
 	Created int64
-	// OwnedBy identifies the model owner or provider.
+	// OwnedBy 标识模型所有者或供应商。
 	OwnedBy string
-	// Type classifies the model capability family.
+	// Type 对模型能力族进行分类。
 	Type string
-	// DisplayName is the user-facing model name.
+	// DisplayName 是面向用户的模型名称。
 	DisplayName string
-	// Name is the provider-native model name.
+	// Name 是供应商原生的模型名称。
 	Name string
-	// Version identifies the model revision when available.
+	// Version 在可用时标识模型修订版本。
 	Version string
-	// Description is a short user-facing model summary.
+	// Description 是简短的面向用户的模型摘要。
 	Description string
-	// InputTokenLimit is the maximum accepted input token count.
+	// InputTokenLimit 是可接受的最大输入 token 数。
 	InputTokenLimit int64
-	// OutputTokenLimit is the maximum generated output token count.
+	// OutputTokenLimit 是最大生成的输出 token 数。
 	OutputTokenLimit int64
-	// SupportedGenerationMethods lists supported generation method names.
+	// SupportedGenerationMethods 列出支持的生成方法名称。
 	SupportedGenerationMethods []string
-	// ContextLength is the maximum combined context length.
+	// ContextLength 是最大合并上下文长度。
 	ContextLength int64
-	// MaxCompletionTokens is the maximum completion token count.
+	// MaxCompletionTokens 是最大补全 token 数。
 	MaxCompletionTokens int64
-	// SupportedParameters lists request parameters supported by the model.
+	// SupportedParameters 列出该模型支持的请求参数。
 	SupportedParameters []string
-	// SupportedInputModalities lists accepted input modality names.
+	// SupportedInputModalities 列出可接受的输入模态名称。
 	SupportedInputModalities []string
-	// SupportedOutputModalities lists produced output modality names.
+	// SupportedOutputModalities 列出产生的输出模态名称。
 	SupportedOutputModalities []string
-	// Thinking describes optional reasoning controls for the model.
+	// Thinking 描述该模型的可选推理控制。
 	Thinking *ThinkingSupport
-	// UserDefined reports whether the model was provided by user configuration.
+	// UserDefined 报告该模型是否由用户配置提供。
 	UserDefined bool
 }
 
-// ThinkingSupport describes supported reasoning budget controls.
+// ThinkingSupport 描述支持的推理预算控制。
 type ThinkingSupport struct {
-	// Min is the minimum accepted reasoning budget.
+	// Min 是可接受的最小推理预算。
 	Min int
-	// Max is the maximum accepted reasoning budget.
+	// Max 是可接受的最大推理预算。
 	Max int
-	// ZeroAllowed reports whether disabling reasoning is supported.
+	// ZeroAllowed 报告是否支持禁用推理。
 	ZeroAllowed bool
-	// DynamicAllowed reports whether automatic reasoning budget selection is supported.
+	// DynamicAllowed 报告是否支持自动选择推理预算。
 	DynamicAllowed bool
-	// Levels lists supported named reasoning levels.
+	// Levels 列出支持的具名推理等级。
 	Levels []string
 }
 
-// HostConfigSummary describes host configuration relevant to plugin providers.
+// HostConfigSummary 描述与插件供应商相关的宿主配置。
 type HostConfigSummary struct {
-	// AuthDir is the resolved directory containing provider auth material.
+	// AuthDir 是解析后包含供应商凭据材料的目录。
 	AuthDir string
-	// ProxyURL is the configured upstream proxy URL.
+	// ProxyURL 是配置的上游代理 URL。
 	ProxyURL string
-	// ForceModelPrefix reports whether model aliases should keep provider prefixes.
+	// ForceModelPrefix 报告模型别名是否应保留供应商前缀。
 	ForceModelPrefix bool
-	// OAuthModelAlias maps providers to configured model aliases.
+	// OAuthModelAlias 将供应商映射到已配置的模型别名。
 	OAuthModelAlias map[string][]ModelAlias
-	// ExcludedModels maps providers to model names hidden by host configuration.
+	// ExcludedModels 将供应商映射到被宿主配置隐藏的模型名称。
 	ExcludedModels map[string][]string
 }
 
-// ModelAlias describes one configured provider model alias.
+// ModelAlias 描述一个已配置的供应商模型别名。
 type ModelAlias struct {
-	// Name is the provider model name.
+	// Name 是供应商模型名称。
 	Name string
-	// Alias is the host-facing model alias.
+	// Alias 是面向宿主的模型别名。
 	Alias string
 }
 
-// AuthData describes a plugin provider auth record exchanged with the host.
+// AuthData 描述与宿主交换的插件供应商凭据记录。
 type AuthData struct {
-	// Provider is the provider key associated with the auth.
+	// Provider 是与该凭据关联的供应商键。
 	Provider string
-	// ID is the stable host auth identifier.
+	// ID 是稳定的宿主凭据标识符。
 	ID string
-	// FileName is the source or persisted auth file name.
+	// FileName 是来源或持久化的凭据文件名。
 	FileName string
-	// Label is the user-facing auth label.
+	// Label 是面向用户的凭据标签。
 	Label string
-	// Prefix is the configured model prefix for this auth.
+	// Prefix 是该凭据配置的模型前缀。
 	Prefix string
-	// ProxyURL is the auth-specific proxy URL when configured.
+	// ProxyURL 是配置时该凭据专用的代理 URL。
 	ProxyURL string
-	// Disabled reports whether the auth should be skipped.
+	// Disabled 报告该凭据是否应被跳过。
 	Disabled bool
-	// StorageJSON contains provider-owned persisted auth data.
+	// StorageJSON 包含供应商自有的持久化凭据数据。
 	StorageJSON []byte
-	// Metadata contains mutable host-managed auth metadata.
+	// Metadata 包含可变的宿主托管凭据元数据。
 	Metadata map[string]any
-	// Attributes contains immutable routing and provider attributes.
+	// Attributes 包含不可变的路由与供应商属性。
 	Attributes map[string]string
-	// NextRefreshAfter is the earliest time the host should refresh this auth.
+	// NextRefreshAfter 是宿主应刷新该凭据的最早时间。
 	NextRefreshAfter time.Time
 }
 
-// AuthParseRequest describes auth material offered to a plugin parser.
+// AuthParseRequest 描述提供给插件解析器的凭据材料。
 type AuthParseRequest struct {
-	// Provider is the provider key being parsed.
+	// Provider 是正在解析的供应商键。
 	Provider string
-	// Path is the source path of the auth material when available.
+	// Path 是凭据材料在可用时的来源路径。
 	Path string
-	// FileName is the auth file name.
+	// FileName 是凭据文件名。
 	FileName string
-	// RawJSON contains the raw auth file payload.
+	// RawJSON 包含原始凭据文件载荷。
 	RawJSON []byte
-	// Host contains relevant host configuration.
+	// Host 包含相关的宿主配置。
 	Host HostConfigSummary
 }
 
-// AuthParseResponse returns the parser decision and parsed auth data.
+// AuthParseResponse 返回解析器决策和已解析的凭据数据。
 type AuthParseResponse struct {
-	// Handled reports whether the plugin recognized the auth material.
+	// Handled 报告插件是否识别了该凭据材料。
 	Handled bool
-	// Auth is the parsed auth record when Handled is true.
+	// Auth 是 Handled 为 true 时解析出的凭据记录。
 	Auth AuthData
-	// Auths contains multiple parsed auth records when one auth material expands into several runtime auths.
+	// Auths 在一份凭据材料展开为多个运行时凭据时包含多个解析出的凭据记录。
 	Auths []AuthData
 }
 
-// AuthProvider parses, logs in, polls, and refreshes plugin provider auths.
+// AuthProvider 解析、登录、轮询并刷新插件供应商凭据。
 type AuthProvider interface {
 	Identifier() string
 	ParseAuth(context.Context, AuthParseRequest) (AuthParseResponse, error)
@@ -281,270 +281,270 @@ type AuthProvider interface {
 	RefreshAuth(context.Context, AuthRefreshRequest) (AuthRefreshResponse, error)
 }
 
-// AuthLoginStartRequest asks a plugin to start a provider login flow.
+// AuthLoginStartRequest 请求插件启动供应商登录流程。
 type AuthLoginStartRequest struct {
-	// Provider is the provider key for the login flow.
+	// Provider 是该登录流程的供应商键。
 	Provider string
-	// BaseURL is the host callback or login base URL.
+	// BaseURL 是宿主回调或登录基础 URL。
 	BaseURL string
-	// Host contains relevant host configuration.
+	// Host 包含相关的宿主配置。
 	Host HostConfigSummary
-	// HTTPClient executes upstream HTTP requests through host transport policy.
+	// HTTPClient 通过宿主传输策略执行上游 HTTP 请求。
 	HTTPClient HostHTTPClient `json:"-"`
-	// Metadata carries plugin-defined login context.
+	// Metadata 携带插件定义的登录上下文。
 	Metadata map[string]any
 }
 
-// AuthLoginStartResponse returns login flow state for polling.
+// AuthLoginStartResponse 返回用于轮询的登录流程状态。
 type AuthLoginStartResponse struct {
-	// Provider is the provider key for the login flow.
+	// Provider 是该登录流程的供应商键。
 	Provider string
-	// URL is the user-facing login URL.
+	// URL 是面向用户的登录 URL。
 	URL string
-	// State is the opaque plugin login state used for polling.
+	// State 是用于轮询的不透明插件登录状态。
 	State string
-	// ExpiresAt is the time when this login flow expires.
+	// ExpiresAt 是该登录流程过期的时间。
 	ExpiresAt time.Time
-	// Metadata carries plugin-defined polling context.
+	// Metadata 携带插件定义的轮询上下文。
 	Metadata map[string]any
 }
 
-// AuthLoginPollRequest asks a plugin to poll a provider login flow.
+// AuthLoginPollRequest 请求插件轮询供应商登录流程。
 type AuthLoginPollRequest struct {
-	// Provider is the provider key for the login flow.
+	// Provider 是该登录流程的供应商键。
 	Provider string
-	// State is the opaque plugin login state returned by StartLogin.
+	// State 是 StartLogin 返回的不透明插件登录状态。
 	State string
-	// Host contains relevant host configuration.
+	// Host 包含相关的宿主配置。
 	Host HostConfigSummary
-	// HTTPClient executes upstream HTTP requests through host transport policy.
+	// HTTPClient 通过宿主传输策略执行上游 HTTP 请求。
 	HTTPClient HostHTTPClient `json:"-"`
-	// Metadata carries plugin-defined polling context.
+	// Metadata 携带插件定义的轮询上下文。
 	Metadata map[string]any
 }
 
-// AuthLoginStatus describes the current provider login state.
+// AuthLoginStatus 描述当前供应商登录状态。
 type AuthLoginStatus string
 
 const (
-	// AuthLoginStatusPending means the login flow is still waiting.
+	// AuthLoginStatusPending 表示登录流程仍在等待。
 	AuthLoginStatusPending AuthLoginStatus = "pending"
-	// AuthLoginStatusSuccess means the login flow produced auth data.
+	// AuthLoginStatusSuccess 表示登录流程已产生凭据数据。
 	AuthLoginStatusSuccess AuthLoginStatus = "success"
-	// AuthLoginStatusError means the login flow failed.
+	// AuthLoginStatusError 表示登录流程失败。
 	AuthLoginStatusError AuthLoginStatus = "error"
 )
 
-// AuthLoginPollResponse returns the login poll status and auth data.
+// AuthLoginPollResponse 返回登录轮询状态和凭据数据。
 type AuthLoginPollResponse struct {
-	// Status is the current login flow state.
+	// Status 是当前登录流程状态。
 	Status AuthLoginStatus
-	// Message contains provider-facing login progress or error text.
+	// Message 包含面向供应商的登录进度或错误文本。
 	Message string
-	// Auth is the completed auth record when Status is success.
+	// Auth 是 Status 为 success 时已完成的凭据记录。
 	Auth AuthData
-	// Auths contains multiple completed auth records when one login flow expands into several runtime auths.
+	// Auths 在一个登录流程展开为多个运行时凭据时包含多个已完成的凭据记录。
 	Auths []AuthData
 }
 
-// AuthRefreshRequest asks a plugin to refresh provider auth data.
+// AuthRefreshRequest 请求插件刷新供应商凭据数据。
 type AuthRefreshRequest struct {
-	// AuthID identifies the auth record to refresh.
+	// AuthID 标识要刷新的凭据记录。
 	AuthID string
-	// AuthProvider identifies the credential provider.
+	// AuthProvider 标识凭据供应商。
 	AuthProvider string
-	// StorageJSON contains provider-owned persisted auth data.
+	// StorageJSON 包含供应商自有的持久化凭据数据。
 	StorageJSON []byte
-	// Metadata contains mutable host-managed auth metadata.
+	// Metadata 包含可变的宿主托管凭据元数据。
 	Metadata map[string]any
-	// Attributes contains immutable routing and provider attributes.
+	// Attributes 包含不可变的路由与供应商属性。
 	Attributes map[string]string
-	// Host contains relevant host configuration.
+	// Host 包含相关的宿主配置。
 	Host HostConfigSummary
-	// HTTPClient executes upstream HTTP requests through host transport policy.
+	// HTTPClient 通过宿主传输策略执行上游 HTTP 请求。
 	HTTPClient HostHTTPClient `json:"-"`
 }
 
-// AuthRefreshResponse returns refreshed provider auth data.
+// AuthRefreshResponse 返回已刷新的供应商凭据数据。
 type AuthRefreshResponse struct {
-	// Auth is the refreshed auth record.
+	// Auth 是刷新后的凭据记录。
 	Auth AuthData
-	// NextRefreshAfter is the earliest time the host should refresh again.
+	// NextRefreshAfter 是宿主应再次刷新的最早时间。
 	NextRefreshAfter time.Time
 }
 
-// ModelRegistrar registers plugin-provided models with the host.
+// ModelRegistrar 向宿主注册插件提供的模型。
 type ModelRegistrar interface {
 	RegisterModels(context.Context, ModelRegistrationRequest) (ModelRegistrationResponse, error)
 }
 
-// ModelRegistrationRequest carries host context for model registration.
+// ModelRegistrationRequest 携带模型注册的宿主上下文。
 type ModelRegistrationRequest struct {
-	// Plugin is the metadata of the plugin being registered.
+	// Plugin 是被注册插件的元数据。
 	Plugin Metadata
 }
 
-// ModelRegistrationResponse returns provider and model metadata to register.
+// ModelRegistrationResponse 返回要注册的供应商和模型元数据。
 type ModelRegistrationResponse struct {
-	// Provider is the provider key associated with the returned models.
+	// Provider 是与返回的模型关联的供应商键。
 	Provider string
-	// Models is the complete set of plugin-provided models.
+	// Models 是插件提供的完整模型集合。
 	Models []ModelInfo
 }
 
-// ModelProvider contributes provider-native static and per-auth model metadata.
+// ModelProvider 贡献供应商原生的静态及按凭据区分的模型元数据。
 type ModelProvider interface {
 	StaticModels(context.Context, StaticModelRequest) (ModelResponse, error)
 	ModelsForAuth(context.Context, AuthModelRequest) (ModelResponse, error)
 }
 
-// StaticModelRequest carries host context for provider static models.
+// StaticModelRequest 携带供应商静态模型的宿主上下文。
 type StaticModelRequest struct {
-	// Plugin is the metadata of the plugin being registered.
+	// Plugin 是被注册插件的元数据。
 	Plugin Metadata
-	// Host contains relevant host configuration.
+	// Host 包含相关的宿主配置。
 	Host HostConfigSummary
 }
 
-// AuthModelRequest carries auth context for provider model discovery.
+// AuthModelRequest 携带供应商模型发现的凭据上下文。
 type AuthModelRequest struct {
-	// Plugin is the metadata of the plugin being registered.
+	// Plugin 是被注册插件的元数据。
 	Plugin Metadata
-	// AuthID identifies the auth record used for discovery.
+	// AuthID 标识用于发现的凭据记录。
 	AuthID string
-	// AuthProvider identifies the credential provider.
+	// AuthProvider 标识凭据供应商。
 	AuthProvider string
-	// StorageJSON contains provider-owned persisted auth data.
+	// StorageJSON 包含供应商自有的持久化凭据数据。
 	StorageJSON []byte
-	// Metadata contains mutable host-managed auth metadata.
+	// Metadata 包含可变的宿主托管凭据元数据。
 	Metadata map[string]any
-	// Attributes contains immutable routing and provider attributes.
+	// Attributes 包含不可变的路由与供应商属性。
 	Attributes map[string]string
-	// Host contains relevant host configuration.
+	// Host 包含相关的宿主配置。
 	Host HostConfigSummary
-	// HTTPClient executes upstream HTTP requests through host transport policy.
+	// HTTPClient 通过宿主传输策略执行上游 HTTP 请求。
 	HTTPClient HostHTTPClient `json:"-"`
 }
 
-// ModelResponse returns provider and model metadata discovered by a plugin.
+// ModelResponse 返回插件发现的供应商和模型元数据。
 type ModelResponse struct {
-	// Provider is the provider key associated with the returned models.
+	// Provider 是与返回的模型关联的供应商键。
 	Provider string
-	// Models is the complete set of discovered provider models.
+	// Models 是发现的供应商模型的完整集合。
 	Models []ModelInfo
-	// AuthUpdate contains updated auth data from model discovery when needed.
+	// AuthUpdate 在需要时包含来自模型发现的更新凭据数据。
 	AuthUpdate AuthData
 }
 
-// FrontendAuthProvider authenticates frontend requests before proxy routing.
+// FrontendAuthProvider 在代理路由之前对前端请求进行认证。
 type FrontendAuthProvider interface {
 	Identifier() string
 	Authenticate(context.Context, FrontendAuthRequest) (FrontendAuthResponse, error)
 }
 
-// FrontendAuthRequest describes an inbound frontend authentication request.
+// FrontendAuthRequest 描述入站的前端认证请求。
 type FrontendAuthRequest struct {
-	// Method is the HTTP method.
+	// Method 是 HTTP 方法。
 	Method string
-	// Path is the request path.
+	// Path 是请求路径。
 	Path string
-	// Headers contains inbound request headers.
+	// Headers 包含入站请求头。
 	Headers http.Header
-	// Query contains inbound query parameters.
+	// Query 包含入站查询参数。
 	Query url.Values
-	// Body contains the raw request body.
+	// Body 包含原始请求体。
 	Body []byte
 }
 
-// FrontendAuthResponse reports the authentication decision and identity metadata.
+// FrontendAuthResponse 报告认证决策与身份元数据。
 type FrontendAuthResponse struct {
-	// Authenticated reports whether the request was accepted.
+	// Authenticated 报告请求是否被接受。
 	Authenticated bool
-	// Principal is the authenticated subject identifier.
+	// Principal 是已认证的主体标识符。
 	Principal string
-	// Metadata carries plugin-defined identity attributes for downstream use.
+	// Metadata 携带插件定义的身份属性，供下游使用。
 	Metadata map[string]string
 }
 
 const (
-	// SchedulerBuiltinRoundRobin delegates auth selection to the built-in round-robin scheduler.
+	// SchedulerBuiltinRoundRobin 将凭据选择委托给内置轮询调度器。
 	SchedulerBuiltinRoundRobin = "round-robin"
-	// SchedulerBuiltinFillFirst delegates auth selection to the built-in fill-first scheduler.
+	// SchedulerBuiltinFillFirst 将凭据选择委托给内置 fill-first 调度器。
 	SchedulerBuiltinFillFirst = "fill-first"
 )
 
-// Scheduler chooses an auth candidate before the built-in scheduler runs.
+// Scheduler 在内置调度器运行之前选择凭据候选。
 type Scheduler interface {
 	Pick(context.Context, SchedulerPickRequest) (SchedulerPickResponse, error)
 }
 
-// ModelRouter routes matching requests to a plugin executor, the router's own executor,
-// or a built-in provider before model-to-provider resolution and auth selection.
+// ModelRouter 在模型到供应商解析和凭据选择之前，将匹配的请求路由到插件执行器、路由自身的执行器
+// 或内置供应商。
 type ModelRouter interface {
 	RouteModel(context.Context, ModelRouteRequest) (ModelRouteResponse, error)
 }
 
-// SchedulerPickRequest describes the routing context offered to a scheduler plugin.
+// SchedulerPickRequest 描述提供给调度器插件的路由上下文。
 type SchedulerPickRequest struct {
-	// Plugin is the metadata of the plugin being executed.
+	// Plugin 是被执行插件的元数据。
 	Plugin Metadata
-	// Provider is the primary provider key requested by the route.
+	// Provider 是路由请求的主要供应商键。
 	Provider string
-	// Providers contains every provider key accepted by the route.
+	// Providers 包含该路由接受的所有供应商键。
 	Providers []string
-	// Model is the requested model identifier.
+	// Model 是请求的模型标识符。
 	Model string
-	// Stream reports whether the request expects streaming output.
+	// Stream 报告该请求是否期望流式输出。
 	Stream bool
-	// Options contains request-scoped scheduler inputs.
+	// Options 包含请求作用域的调度器输入。
 	Options SchedulerOptions
-	// Candidates contains auth records available for selection.
+	// Candidates 包含可供选择的凭据记录。
 	Candidates []SchedulerAuthCandidate
 }
 
-// SchedulerOptions carries request-scoped scheduler inputs.
+// SchedulerOptions 携带请求作用域的调度器输入。
 type SchedulerOptions struct {
-	// Headers contains request headers relevant to scheduling.
+	// Headers 包含与调度相关的请求头。
 	Headers map[string][]string
-	// Metadata carries host-provided scheduler context.
+	// Metadata 携带宿主提供的调度器上下文。
 	Metadata map[string]any
 }
 
-// SchedulerAuthCandidate describes one auth candidate available to a scheduler.
+// SchedulerAuthCandidate 描述调度器可用的一个凭据候选。
 type SchedulerAuthCandidate struct {
-	// ID identifies the auth record.
+	// ID 标识凭据记录。
 	ID string
-	// Provider identifies the auth provider.
+	// Provider 标识凭据供应商。
 	Provider string
-	// Priority is the host priority assigned to the auth record.
+	// Priority 是分配给该凭据记录的宿主优先级。
 	Priority int
-	// Status is the current host-visible auth status.
+	// Status 是当前宿主可见的凭据状态。
 	Status string
-	// Attributes contains immutable routing and provider attributes.
+	// Attributes 包含不可变的路由与供应商属性。
 	Attributes map[string]string
-	// Metadata contains mutable host-managed auth metadata.
+	// Metadata 包含可变的宿主托管凭据元数据。
 	Metadata map[string]any
 }
 
-// SchedulerPickResponse returns a scheduler plugin routing decision.
+// SchedulerPickResponse 返回调度器插件的路由决策。
 type SchedulerPickResponse struct {
-	// AuthID identifies the selected auth record.
+	// AuthID 标识被选中的凭据记录。
 	AuthID string
-	// DelegateBuiltin asks the host to use a named built-in scheduler.
+	// DelegateBuiltin 请求宿主使用具名的内置调度器。
 	DelegateBuiltin string
-	// Handled reports whether the plugin made a scheduling decision.
+	// Handled 报告插件是否做出了调度决策。
 	Handled bool
-	// Reject indicates that the scheduler explicitly rejected candidate selection.
-	// When Reject is true and Handled is true, candidate selection terminates with an error
-	// instead of falling back to built-in schedulers.
+	// Reject 表示调度器显式拒绝了候选选择。
+	// 当 Reject 为 true 且 Handled 为 true 时，候选选择会以错误终止，
+	// 而不会回退到内置调度器。
 	Reject bool
-	// RejectReason is an optional human-readable reason for why candidate selection was rejected.
+	// RejectReason 是候选选择被拒绝的可选人类可读原因。
 	RejectReason string
-	// RejectCode is an optional machine-readable error code for the rejection (defaults to "auth_unavailable").
+	// RejectCode 是拒绝的可选机器可读错误码（默认为 "auth_unavailable"）。
 	RejectCode string
 }
 
-// UnmarshalJSON supports both Go struct field names and snake_case field names.
+// UnmarshalJSON 同时支持 Go 结构体字段名和 snake_case 字段名。
 func (r *SchedulerPickResponse) UnmarshalJSON(data []byte) error {
 	type rawResponse struct {
 		AuthID          *string `json:"AuthID"`
@@ -597,63 +597,63 @@ func (r *SchedulerPickResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ModelRouteRequest describes the original request context offered to a model router plugin.
+// ModelRouteRequest 描述提供给模型路由插件的原始请求上下文。
 type ModelRouteRequest struct {
-	// Plugin is the metadata of the plugin being executed.
+	// Plugin 是被执行插件的元数据。
 	Plugin Metadata
-	// PluginID is the host-local plugin identifier for the router being executed.
+	// PluginID 是正在执行的路由器的宿主本地插件标识符。
 	PluginID string
-	// SourceFormat is the original client protocol format.
+	// SourceFormat 是原始客户端协议格式。
 	SourceFormat string
-	// RequestedModel is the client-requested model before provider/auth selection.
+	// RequestedModel 是供应商/凭据选择之前客户端请求的模型。
 	RequestedModel string
-	// Stream reports whether the request expects streaming output.
+	// Stream 报告该请求是否期望流式输出。
 	Stream bool
-	// Headers contains inbound request headers.
+	// Headers 包含入站请求头。
 	Headers http.Header
-	// Query contains inbound query parameters.
+	// Query 包含入站查询参数。
 	Query url.Values
-	// Body contains the raw client request payload.
+	// Body 包含原始客户端请求载荷。
 	Body []byte
-	// Metadata is a best-effort cloned context snapshot. Treat it as read-only and JSON-like.
+	// Metadata 是尽力克隆的上下文快照。请将其视为只读且类似 JSON 的数据。
 	Metadata map[string]any
-	// AvailableProviders lists built-in provider keys that currently have auth registered.
-	// A router may target one of them via TargetKind=provider to run the request through the
-	// built-in auth/executor path. Treat as read-only.
+	// AvailableProviders 列出当前已注册凭据的内置供应商键。
+	// 路由器可以通过 TargetKind=provider 指定其中之一，让请求经由
+	// 内置凭据/执行器路径运行。请视为只读。
 	AvailableProviders []string
 }
 
-// ModelRouteTargetKind selects the execution target for a handled model route decision.
+// ModelRouteTargetKind 为已处理的模型路由决策选择执行目标。
 type ModelRouteTargetKind string
 
 const (
-	// ModelRouteTargetSelf routes to the router plugin's own executor.
+	// ModelRouteTargetSelf 路由到路由器插件自身的执行器。
 	ModelRouteTargetSelf ModelRouteTargetKind = "self"
-	// ModelRouteTargetExecutor routes to a specific plugin executor.
+	// ModelRouteTargetExecutor 路由到特定的插件执行器。
 	ModelRouteTargetExecutor ModelRouteTargetKind = "executor"
-	// ModelRouteTargetProvider routes through the built-in auth/executor path.
+	// ModelRouteTargetProvider 经由内置凭据/执行器路径路由。
 	ModelRouteTargetProvider ModelRouteTargetKind = "provider"
 )
 
-// ModelRouteResponse returns a model router plugin decision.
+// ModelRouteResponse 返回模型路由插件的决策。
 //
-// When Handled is true, set TargetKind to one of self, executor, or provider.
-// Target carries the plugin id for executor routes and the provider key for provider routes.
+// 当 Handled 为 true 时，将 TargetKind 设置为 self、executor 或 provider 之一。
+// Target 对 executor 路由携带插件 id，对 provider 路由携带供应商键。
 type ModelRouteResponse struct {
-	// Handled reports whether the plugin made a routing decision.
+	// Handled 报告插件是否做出了路由决策。
 	Handled bool
-	// TargetKind selects the execution target when Handled is true.
+	// TargetKind 在 Handled 为 true 时选择执行目标。
 	TargetKind ModelRouteTargetKind
-	// Target is the plugin executor id for executor routes and the provider key for provider routes.
+	// Target 对 executor 路由是插件执行器 id，对 provider 路由是供应商键。
 	Target string
-	// TargetModel is the model name used on the provider path. When empty, the host keeps
-	// the original client-requested model. Only meaningful with TargetKind=provider.
+	// TargetModel 是 provider 路径上使用的模型名称。为空时，宿主保留
+	// 客户端原本请求的模型。仅在 TargetKind=provider 时有意义。
 	TargetModel string
-	// Reason is an optional diagnostic reason for the route decision.
+	// Reason 是路由决策的可选诊断原因。
 	Reason string
 }
 
-// ProviderExecutor handles model execution, streaming, HTTP bridging, and token counting.
+// ProviderExecutor 处理模型执行、流式传输、HTTP 桥接和 token 计数。
 type ProviderExecutor interface {
 	Identifier() string
 	Execute(context.Context, ExecutorRequest) (ExecutorResponse, error)
@@ -662,199 +662,199 @@ type ProviderExecutor interface {
 	HttpRequest(context.Context, ExecutorHTTPRequest) (ExecutorHTTPResponse, error)
 }
 
-// HostHTTPClient executes plugin HTTP requests through host transport policy.
-// Plugin executors must use this client for upstream calls so request-log can
-// capture the outbound request and raw upstream response when enabled.
+// HostHTTPClient 通过宿主传输策略执行插件 HTTP 请求。
+// 插件执行器进行上游调用时必须使用该客户端，这样在启用时 request-log 才能
+// 捕获出站请求和原始上游响应。
 type HostHTTPClient interface {
 	Do(context.Context, HTTPRequest) (HTTPResponse, error)
 	DoStream(context.Context, HTTPRequest) (HTTPStreamResponse, error)
 }
 
-// HostModelExecutionRequest describes a model execution request issued through the host.
+// HostModelExecutionRequest 描述通过宿主发出的模型执行请求。
 type HostModelExecutionRequest struct {
-	// EntryProtocol is the inbound client protocol format.
+	// EntryProtocol 是入站客户端协议格式。
 	EntryProtocol string `json:"entry_protocol"`
-	// ExitProtocol is the target provider protocol format.
+	// ExitProtocol 是目标供应商协议格式。
 	ExitProtocol string `json:"exit_protocol"`
-	// Model is the requested model identifier.
+	// Model 是请求的模型标识符。
 	Model string `json:"model"`
-	// Stream reports whether the request expects streaming output.
+	// Stream 报告该请求是否期望流式输出。
 	Stream bool `json:"stream"`
-	// Body contains the raw request body.
+	// Body 包含原始请求体。
 	Body []byte `json:"body"`
-	// Headers contains request headers.
+	// Headers 包含请求头。
 	Headers http.Header `json:"headers"`
-	// Query contains request query parameters.
+	// Query 包含请求查询参数。
 	Query url.Values `json:"query"`
-	// Alt carries an alternate route or mode suffix when present.
+	// Alt 在存在时携带备用路由或模式后缀。
 	Alt string `json:"alt"`
-	// ForcedProvider optionally restricts execution to a specific provider.
+	// ForcedProvider 可选地将执行限制到特定供应商。
 	ForcedProvider string `json:"forced_provider,omitempty"`
-	// AuthID optionally locks execution to an exact credential ID.
+	// AuthID 可选地将执行锁定到确切的凭据 ID。
 	AuthID string `json:"auth_id,omitempty"`
-	// ProxyURL optionally overrides the outbound proxy for this model execution only.
-	// Supported schemes are http, https, socks5, and socks5h.
+	// ProxyURL 可选地仅为本模型执行覆盖出站代理。
+	// 支持的协议方案有 http、https、socks5 和 socks5h。
 	ProxyURL string `json:"proxy_url,omitempty"`
-	// Path optionally specifies or overrides the request path (e.g. "/v1/images/generations" or "/v1/images/edits").
+	// Path 可选地指定或覆盖请求路径（例如 "/v1/images/generations" 或 "/v1/images/edits"）。
 	Path string `json:"path,omitempty"`
 }
 
-// HostModelExecutionResponse describes a non-streaming host model execution response.
+// HostModelExecutionResponse 描述非流式的宿主模型执行响应。
 type HostModelExecutionResponse struct {
-	// StatusCode is the model execution HTTP status code.
+	// StatusCode 是模型执行的 HTTP 状态码。
 	StatusCode int `json:"status_code"`
-	// Headers contains response headers.
+	// Headers 包含响应头。
 	Headers http.Header `json:"headers"`
-	// Body contains the raw response body.
+	// Body 包含原始响应体。
 	Body []byte `json:"body"`
 }
 
-// HostModelStreamResponse describes a streaming host model execution response.
+// HostModelStreamResponse 描述流式的宿主模型执行响应。
 type HostModelStreamResponse struct {
-	// StatusCode is the model execution HTTP status code.
+	// StatusCode 是模型执行的 HTTP 状态码。
 	StatusCode int `json:"status_code"`
-	// Headers contains response headers.
+	// Headers 包含响应头。
 	Headers http.Header `json:"headers"`
-	// StreamID identifies the host-owned stream for later reads.
+	// StreamID 标识宿主拥有的流，供后续读取。
 	StreamID string `json:"stream_id"`
 }
 
-// HostModelStreamReadRequest asks the host to read the next model stream chunk.
+// HostModelStreamReadRequest 请求宿主读取下一个模型流分块。
 type HostModelStreamReadRequest struct {
-	// StreamID identifies the host-owned stream.
+	// StreamID 标识宿主拥有的流。
 	StreamID string `json:"stream_id"`
 }
 
-// HostModelStreamReadResponse returns one model stream chunk or terminal state.
+// HostModelStreamReadResponse 返回一个模型流分块或终态。
 type HostModelStreamReadResponse struct {
-	// Payload contains the raw stream chunk bytes.
+	// Payload 包含原始流分块字节。
 	Payload []byte `json:"payload"`
-	// Error reports a stream error associated with this read.
+	// Error 报告与本次读取关联的流错误。
 	Error string `json:"error"`
-	// Done reports whether the stream has ended.
+	// Done 报告流是否已结束。
 	Done bool `json:"done"`
 }
 
-// HostModelStreamCloseRequest asks the host to close a model stream.
+// HostModelStreamCloseRequest 请求宿主关闭模型流。
 type HostModelStreamCloseRequest struct {
-	// StreamID identifies the host-owned stream.
+	// StreamID 标识宿主拥有的流。
 	StreamID string `json:"stream_id"`
 }
 
 type HostRecentRequestEntry struct {
-	// Time is the recent request bucket label.
+	// Time 是最近请求桶的标签。
 	Time string `json:"time"`
-	// Success is the success count in the bucket.
+	// Success 是该桶中的成功计数。
 	Success int64 `json:"success"`
-	// Failed is the failure count in the bucket.
+	// Failed 是该桶中的失败计数。
 	Failed int64 `json:"failed"`
 }
 
-// HostAuthFileEntry describes one credential exposed through host auth callbacks.
+// HostAuthFileEntry 描述通过宿主凭据回调暴露的一个凭据。
 type HostAuthFileEntry struct {
-	// ID identifies the credential record.
+	// ID 标识凭据记录。
 	ID string `json:"id,omitempty"`
-	// AuthIndex is the stable runtime credential index.
+	// AuthIndex 是稳定的运行时凭据索引。
 	AuthIndex string `json:"auth_index,omitempty"`
-	// Name is the credential file name or runtime identifier.
+	// Name 是凭据文件名或运行时标识符。
 	Name string `json:"name"`
-	// Type is the credential provider type.
+	// Type 是凭据供应商类型。
 	Type string `json:"type,omitempty"`
-	// Provider is the credential provider key.
+	// Provider 是凭据供应商键。
 	Provider string `json:"provider,omitempty"`
-	// Label is the human-readable credential label.
+	// Label 是人类可读的凭据标签。
 	Label string `json:"label,omitempty"`
-	// Status is the current credential status.
+	// Status 是当前凭据状态。
 	Status string `json:"status,omitempty"`
-	// StatusMessage carries the latest status detail.
+	// StatusMessage 携带最新的状态详情。
 	StatusMessage string `json:"status_message,omitempty"`
-	// Disabled reports whether the credential is disabled.
+	// Disabled 报告该凭据是否已禁用。
 	Disabled bool `json:"disabled,omitempty"`
-	// Unavailable reports whether the credential is currently unavailable.
+	// Unavailable 报告该凭据当前是否不可用。
 	Unavailable bool `json:"unavailable,omitempty"`
-	// RuntimeOnly reports whether the credential has no backing auth file.
+	// RuntimeOnly 报告该凭据是否没有后备凭据文件。
 	RuntimeOnly bool `json:"runtime_only,omitempty"`
-	// Source reports whether the credential came from file or memory.
+	// Source 报告该凭据来自文件还是内存。
 	Source string `json:"source,omitempty"`
-	// Path is the backing auth file path when available.
+	// Path 是凭据文件在可用时的后备路径。
 	Path string `json:"path,omitempty"`
-	// Size is the backing auth file size when available.
+	// Size 是凭据文件在可用时的大小。
 	Size int64 `json:"size,omitempty"`
-	// ModTime is the last modification time when available.
+	// ModTime 是可用时的最后修改时间。
 	ModTime time.Time `json:"modtime,omitempty"`
-	// UpdatedAt is the last credential update time.
+	// UpdatedAt 是凭据最后更新时间。
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// CreatedAt is the credential creation time.
+	// CreatedAt 是凭据创建时间。
 	CreatedAt time.Time `json:"created_at,omitempty"`
-	// LastRefresh is the last refresh timestamp.
+	// LastRefresh 是最后一次刷新时间戳。
 	LastRefresh time.Time `json:"last_refresh,omitempty"`
-	// NextRetryAfter is the next retry timestamp.
+	// NextRetryAfter 是下一次重试时间戳。
 	NextRetryAfter time.Time `json:"next_retry_after,omitempty"`
-	// Email is the credential email when available.
+	// Email 是凭据在可用时的邮箱。
 	Email string `json:"email,omitempty"`
-	// ProjectID is the credential project identifier when available.
+	// ProjectID 是凭据在可用时的项目标识符。
 	ProjectID string `json:"project_id,omitempty"`
-	// AccountType is the credential account type when available.
+	// AccountType 是凭据在可用时的账户类型。
 	AccountType string `json:"account_type,omitempty"`
-	// Account is the credential account identifier when available.
+	// Account 是凭据在可用时的账户标识符。
 	Account string `json:"account,omitempty"`
-	// Priority is the credential routing priority when available.
+	// Priority 是凭据在可用时的路由优先级。
 	Priority int `json:"priority,omitempty"`
-	// Note is the credential note when available.
+	// Note 是凭据在可用时的备注。
 	Note string `json:"note,omitempty"`
-	// BaseURL is the upstream base URL configured for the credential when available.
+	// BaseURL 是为该凭据配置的上游基础 URL（可用时）。
 	BaseURL string `json:"base_url,omitempty"`
-	// Websockets reports whether websocket mode is enabled when available.
+	// Websockets 报告在可用时是否启用了 WebSocket 模式。
 	Websockets bool `json:"websockets,omitempty"`
-	// Success is the recent success count.
+	// Success 是最近的成功计数。
 	Success int64 `json:"success,omitempty"`
-	// Failed is the recent failure count.
+	// Failed 是最近的失败计数。
 	Failed int64 `json:"failed,omitempty"`
-	// RecentRequests is the recent request snapshot.
+	// RecentRequests 是最近的请求快照。
 	RecentRequests []HostRecentRequestEntry `json:"recent_requests,omitempty"`
 }
 
-// HostAuthGetRequest asks the host for credential JSON by auth index.
+// HostAuthGetRequest 通过凭据索引向宿主请求凭据 JSON。
 type HostAuthGetRequest struct {
-	// AuthIndex identifies the credential index.
+	// AuthIndex 标识凭据索引。
 	AuthIndex string `json:"auth_index"`
 }
 
-// HostAuthGetResponse returns credential JSON resolved by auth index.
+// HostAuthGetResponse 返回按凭据索引解析出的凭据 JSON。
 type HostAuthGetResponse struct {
-	// AuthIndex identifies the credential index.
+	// AuthIndex 标识凭据索引。
 	AuthIndex string `json:"auth_index"`
-	// Name is the credential file name or runtime identifier.
+	// Name 是凭据文件名或运行时标识符。
 	Name string `json:"name,omitempty"`
-	// Path is the backing auth file path when available.
+	// Path 是凭据文件在可用时的后备路径。
 	Path string `json:"path,omitempty"`
-	// JSON contains the credential JSON payload.
+	// JSON 包含凭据 JSON 载荷。
 	JSON json.RawMessage `json:"json"`
 }
 
-// HostAuthGetRuntimeResponse returns runtime credential information by auth index.
+// HostAuthGetRuntimeResponse 按凭据索引返回运行时凭据信息。
 type HostAuthGetRuntimeResponse struct {
-	// Auth is the runtime credential entry.
+	// Auth 是运行时凭据条目。
 	Auth HostAuthFileEntry `json:"auth"`
 }
 
-// HostAuthSaveRequest asks the host to persist credential JSON to a physical auth file.
+// HostAuthSaveRequest 请求宿主将凭据 JSON 持久化到物理凭据文件。
 type HostAuthSaveRequest struct {
-	// Name is the target auth file name. It must end with .json.
+	// Name 是目标凭据文件名。它必须以 .json 结尾。
 	Name string `json:"name"`
-	// JSON contains the credential JSON payload to save.
+	// JSON 包含要保存的凭据 JSON 载荷。
 	JSON json.RawMessage `json:"json"`
 }
 
-// HostAuthSaveResponse reports the saved physical auth file.
+// HostAuthSaveResponse 报告已保存的物理凭据文件。
 type HostAuthSaveResponse struct {
-	// Name is the saved auth file name.
+	// Name 是已保存的凭据文件名。
 	Name string `json:"name"`
-	// Path is the saved auth file path.
+	// Path 是已保存的凭据文件路径。
 	Path string `json:"path"`
 }
 
-// Host affinity lookup status outcomes.
+// 宿主亲和性查找的状态结果。
 const (
 	HostAffinityStatusBound       = "bound"
 	HostAffinityStatusUnbound     = "unbound"
@@ -862,332 +862,332 @@ const (
 	HostAffinityStatusUnsupported = "unsupported"
 )
 
-// HostAffinityLookupRequest asks the host to observe the current affinity binding for a session.
+// HostAffinityLookupRequest 请求宿主观察会话的当前亲和性绑定。
 type HostAffinityLookupRequest struct {
-	// Provider identifies the model provider (e.g., "anthropic", "openai").
+	// Provider 标识模型供应商（例如 "anthropic"、"openai"）。
 	Provider string `json:"provider"`
-	// Model identifies the requested model.
+	// Model 标识请求的模型。
 	Model string `json:"model"`
-	// SessionID identifies the client session.
+	// SessionID 标识客户端会话。
 	SessionID string `json:"session_id"`
 }
 
-// HostAffinityLookupResponse describes the observed affinity binding state for a session.
+// HostAffinityLookupResponse 描述观察到的会话亲和性绑定状态。
 type HostAffinityLookupResponse struct {
-	// Status reports the observation outcome ("bound", "unbound", "ambiguous", "unsupported").
+	// Status 报告观察结果（"bound"、"unbound"、"ambiguous"、"unsupported"）。
 	Status string `json:"status"`
-	// AuthIndex identifies the bound credential index usable with host.auth.get_runtime when Status is "bound".
+	// AuthIndex 标识可在 Status 为 "bound" 时与 host.auth.get_runtime 一起使用的绑定凭据索引。
 	AuthIndex string `json:"auth_index,omitempty"`
-	// ObservedAt reports the observation timestamp.
+	// ObservedAt 报告观察时间戳。
 	ObservedAt time.Time `json:"observed_at,omitempty"`
-	// Disabled reports whether the bound credential is known to be disabled.
+	// Disabled 报告绑定的凭据是否已知为已禁用。
 	Disabled bool `json:"disabled,omitempty"`
-	// Unavailable reports whether the bound credential is currently unavailable.
+	// Unavailable 报告绑定的凭据当前是否不可用。
 	Unavailable bool `json:"unavailable,omitempty"`
 }
 
-// HostRoutingResetCooldownRequest asks the host to clear quota and cooldown routing state for one credential.
+// HostRoutingResetCooldownRequest 请求宿主清除某个凭据的额度和冷却路由状态。
 type HostRoutingResetCooldownRequest struct {
-	// AuthIndex identifies the credential index.
+	// AuthIndex 标识凭据索引。
 	AuthIndex string `json:"auth_index"`
 }
 
-// HostRoutingResetCooldownResponse reports the credential whose quota and cooldown state was cleared.
+// HostRoutingResetCooldownResponse 报告其额度和冷却状态已被清除的凭据。
 type HostRoutingResetCooldownResponse struct {
-	// AuthIndex identifies the credential index.
+	// AuthIndex 标识凭据索引。
 	AuthIndex string `json:"auth_index"`
-	// Models lists the model keys whose routing state was reset.
+	// Models 列出路由状态已被重置的模型键。
 	Models []string `json:"models,omitempty"`
 }
 
-// HTTPWireProfile configures transport-level wire representation for plugin HTTP requests.
+// HTTPWireProfile 配置插件 HTTP 请求的传输层线上表示。
 type HTTPWireProfile struct {
-	// HTTP1Only forces the transport to use HTTP/1.1 and disables HTTP/2 negotiation.
+	// HTTP1Only 强制传输使用 HTTP/1.1 并禁用 HTTP/2 协商。
 	HTTP1Only bool `json:"http1_only,omitempty"`
-	// DisableAutoCompression prevents transparent decompression and automatic Accept-Encoding injection.
+	// DisableAutoCompression 阻止透明解压和自动注入 Accept-Encoding。
 	DisableAutoCompression bool `json:"disable_auto_compression,omitempty"`
-	// HeaderProfile defines desired header-name order and exact casing on the wire.
+	// HeaderProfile 定义线上期望的请求头名称顺序和精确大小写。
 	HeaderProfile []string `json:"header_profile,omitempty"`
 }
 
-// HTTPRequest describes an upstream HTTP request issued through the host.
+// HTTPRequest 描述通过宿主发出的上游 HTTP 请求。
 type HTTPRequest struct {
-	// Method is the HTTP method.
+	// Method 是 HTTP 方法。
 	Method string
-	// URL is the absolute upstream URL.
+	// URL 是绝对上游 URL。
 	URL string
-	// Headers contains request headers.
+	// Headers 包含请求头。
 	Headers http.Header
-	// Body contains the raw request body.
+	// Body 包含原始请求体。
 	Body []byte
-	// WireProfile specifies optional outbound HTTP wire profile settings.
+	// WireProfile 指定可选的出站 HTTP 线上配置设置。
 	WireProfile *HTTPWireProfile `json:"wire_profile,omitempty"`
 }
 
-// HTTPResponse describes a non-streaming host HTTP response.
+// HTTPResponse 描述非流式的宿主 HTTP 响应。
 type HTTPResponse struct {
-	// StatusCode is the upstream HTTP status code.
+	// StatusCode 是上游 HTTP 状态码。
 	StatusCode int
-	// Headers contains upstream response headers.
+	// Headers 包含上游响应头。
 	Headers http.Header
-	// Body contains the raw response body.
+	// Body 包含原始响应体。
 	Body []byte
 }
 
-// HTTPStreamResponse describes a streaming host HTTP response.
+// HTTPStreamResponse 描述流式的宿主 HTTP 响应。
 type HTTPStreamResponse struct {
-	// StatusCode is the upstream HTTP status code.
+	// StatusCode 是上游 HTTP 状态码。
 	StatusCode int
-	// Headers contains upstream response headers.
+	// Headers 包含上游响应头。
 	Headers http.Header
-	// Chunks yields streaming payload chunks until the channel closes.
+	// Chunks 产出流式载荷分块，直到通道关闭。
 	Chunks <-chan HTTPStreamChunk
 }
 
-// HTTPStreamChunk carries one host HTTP stream chunk or an error.
+// HTTPStreamChunk 携带一个宿主 HTTP 流分块或一个错误。
 type HTTPStreamChunk struct {
-	// Payload contains the raw stream chunk bytes.
+	// Payload 包含原始流分块字节。
 	Payload []byte
-	// Err reports a stream error associated with this chunk.
+	// Err 报告与该分块关联的流错误。
 	Err error
 }
 
-// ExecutorHTTPRequest describes an executor-owned HTTP request.
+// ExecutorHTTPRequest 描述执行器自有的 HTTP 请求。
 type ExecutorHTTPRequest struct {
-	// AuthID identifies the selected credential.
+	// AuthID 标识被选中的凭据。
 	AuthID string
-	// AuthProvider identifies the credential provider.
+	// AuthProvider 标识凭据供应商。
 	AuthProvider string
-	// Method is the HTTP method.
+	// Method 是 HTTP 方法。
 	Method string
-	// URL is the absolute upstream URL.
+	// URL 是绝对上游 URL。
 	URL string
-	// Headers contains request headers.
+	// Headers 包含请求头。
 	Headers http.Header
-	// Body contains the raw request body.
+	// Body 包含原始请求体。
 	Body []byte
-	// StorageJSON contains provider-owned auth storage for this concrete auth.
+	// StorageJSON 包含该具体凭据的供应商自有凭据存储。
 	StorageJSON []byte
-	// Metadata contains mutable host-managed auth metadata.
+	// Metadata 包含可变的宿主托管凭据元数据。
 	Metadata map[string]any
-	// Attributes contains immutable routing and provider attributes.
+	// Attributes 包含不可变的路由与供应商属性。
 	Attributes map[string]string
-	// HTTPClient executes upstream HTTP requests through host transport policy and request-log capture.
+	// HTTPClient 通过宿主传输策略和 request-log 捕获执行上游 HTTP 请求。
 	HTTPClient HostHTTPClient `json:"-"`
 }
 
-// ExecutorHTTPResponse describes an executor-owned HTTP response.
+// ExecutorHTTPResponse 描述执行器自有的 HTTP 响应。
 type ExecutorHTTPResponse struct {
-	// StatusCode is the upstream HTTP status code.
+	// StatusCode 是上游 HTTP 状态码。
 	StatusCode int
-	// Headers contains upstream response headers.
+	// Headers 包含上游响应头。
 	Headers http.Header
-	// Body contains the raw response body.
+	// Body 包含原始响应体。
 	Body []byte
 }
 
-// ExecutorRequest describes a model execution or token counting call.
+// ExecutorRequest 描述模型执行或 token 计数调用。
 type ExecutorRequest struct {
-	// AuthID identifies the selected credential.
+	// AuthID 标识被选中的凭据。
 	AuthID string
-	// AuthProvider identifies the credential provider.
+	// AuthProvider 标识凭据供应商。
 	AuthProvider string
-	// Model is the requested model identifier.
+	// Model 是请求的模型标识符。
 	Model string
-	// Format is the target request or response protocol format.
+	// Format 是目标请求或响应协议格式。
 	Format string
-	// Stream reports whether the request expects streaming output.
+	// Stream 报告该请求是否期望流式输出。
 	Stream bool
-	// Alt carries an alternate route or mode suffix when present.
+	// Alt 在存在时携带备用路由或模式后缀。
 	Alt string
-	// Headers contains request headers passed to the executor.
+	// Headers 包含传递给执行器的请求头。
 	Headers http.Header
-	// Query contains request query parameters passed to the executor.
+	// Query 包含传递给执行器的请求查询参数。
 	Query url.Values
-	// OriginalRequest contains the raw client request body.
+	// OriginalRequest 包含原始客户端请求体。
 	OriginalRequest []byte
-	// SourceFormat is the original client protocol format.
+	// SourceFormat 是原始客户端协议格式。
 	SourceFormat string
-	// Payload contains the translated provider payload.
+	// Payload 包含已转换的供应商载荷。
 	Payload []byte
-	// Metadata is an extension bag for host and plugin coordination data.
+	// Metadata 是宿主与插件协调数据的扩展包。
 	Metadata map[string]any
-	// StorageJSON contains provider-owned auth storage for this concrete auth.
+	// StorageJSON 包含该具体凭据的供应商自有凭据存储。
 	StorageJSON []byte
-	// AuthMetadata contains mutable host-managed auth metadata.
+	// AuthMetadata 包含可变的宿主托管凭据元数据。
 	AuthMetadata map[string]any
-	// AuthAttributes contains immutable routing and provider attributes.
+	// AuthAttributes 包含不可变的路由与供应商属性。
 	AuthAttributes map[string]string
-	// HTTPClient executes upstream HTTP requests through host transport policy and request-log capture.
+	// HTTPClient 通过宿主传输策略和 request-log 捕获执行上游 HTTP 请求。
 	HTTPClient HostHTTPClient `json:"-"`
 }
 
-// ExecutorResponse returns a non-streaming executor result.
+// ExecutorResponse 返回非流式执行器结果。
 type ExecutorResponse struct {
-	// Payload contains the raw response body.
+	// Payload 包含原始响应体。
 	Payload []byte
-	// Headers contains response headers to forward or inspect.
+	// Headers 包含要转发或检查的响应头。
 	Headers http.Header
-	// Metadata is an extension bag for executor-specific response data.
+	// Metadata 是执行器特定响应数据的扩展包。
 	Metadata map[string]any
 }
 
-// ExecutorStreamResponse returns a streaming executor result.
+// ExecutorStreamResponse 返回流式执行器结果。
 type ExecutorStreamResponse struct {
-	// Headers contains response headers available before stream chunks.
+	// Headers 包含在流分块之前可用的响应头。
 	Headers http.Header
-	// Chunks yields streaming payload chunks until the channel closes.
+	// Chunks 产出流式载荷分块，直到通道关闭。
 	Chunks <-chan ExecutorStreamChunk
 }
 
-// ExecutorStreamChunk carries one streaming payload chunk or an error.
+// ExecutorStreamChunk 携带一个流式载荷分块或一个错误。
 type ExecutorStreamChunk struct {
-	// Payload contains the raw stream chunk bytes.
+	// Payload 包含原始流分块字节。
 	Payload []byte
-	// Err reports a stream error associated with this chunk.
+	// Err 报告与该分块关联的流错误。
 	Err error
 }
 
-// RequestTranslator converts canonical request payloads to another format.
+// RequestTranslator 将规范请求载荷转换为另一种格式。
 type RequestTranslator interface {
 	TranslateRequest(context.Context, RequestTransformRequest) (PayloadResponse, error)
 }
 
-// RequestNormalizer converts request payloads into a canonical format.
+// RequestNormalizer 将请求载荷转换为规范格式。
 type RequestNormalizer interface {
 	NormalizeRequest(context.Context, RequestTransformRequest) (PayloadResponse, error)
 }
 
-// ResponseTranslator converts canonical response payloads to another format.
+// ResponseTranslator 将规范响应载荷转换为另一种格式。
 type ResponseTranslator interface {
 	TranslateResponse(context.Context, ResponseTransformRequest) (PayloadResponse, error)
 }
 
-// ResponseNormalizer converts response payloads into a canonical format.
+// ResponseNormalizer 将响应载荷转换为规范格式。
 type ResponseNormalizer interface {
 	NormalizeResponse(context.Context, ResponseTransformRequest) (PayloadResponse, error)
 }
 
-// RequestInterceptor rewrites execution requests before and after credential selection.
+// RequestInterceptor 在凭据选择前后重写执行请求。
 type RequestInterceptor interface {
 	InterceptRequestBeforeAuth(context.Context, RequestInterceptRequest) (RequestInterceptResponse, error)
 	InterceptRequestAfterAuth(context.Context, RequestInterceptRequest) (RequestInterceptResponse, error)
 }
 
-// RequestLifecyclePlugin receives asynchronous terminal events after execution finishes, fails, is rejected, or is canceled.
+// RequestLifecyclePlugin 在执行完成、失败、被拒绝或被取消后接收异步终态事件。
 type RequestLifecyclePlugin interface {
 	HandleRequestComplete(context.Context, RequestCompletion) error
 }
 
-// ResponseInterceptor rewrites successful non-streaming execution responses before downstream delivery.
+// ResponseInterceptor 在下游交付之前重写成功的非流式执行响应。
 type ResponseInterceptor interface {
 	InterceptResponse(context.Context, ResponseInterceptRequest) (ResponseInterceptResponse, error)
 }
 
-// StreamChunkInterceptor rewrites successful stream chunks before downstream delivery.
+// StreamChunkInterceptor 在下游交付之前重写成功的流分块。
 type StreamChunkInterceptor interface {
 	InterceptStreamChunk(context.Context, StreamChunkInterceptRequest) (StreamChunkInterceptResponse, error)
 }
 
-// WebSocketResponseObserver observes upstream WebSocket response events received during execution.
+// WebSocketResponseObserver 观察执行期间收到的上游 WebSocket 响应事件。
 type WebSocketResponseObserver interface {
 	ObserveWebSocketResponseEvent(context.Context, WebSocketResponseEvent) error
 }
 
-// StreamChunkHeaderInitIndex marks the header-only stream initialization interceptor call.
+// StreamChunkHeaderInitIndex 标记仅含头部的流初始化拦截器调用。
 const StreamChunkHeaderInitIndex = -1
 
-// RequestTransformRequest describes a request payload transformation.
+// RequestTransformRequest 描述请求载荷转换。
 type RequestTransformRequest struct {
-	// FromFormat is the source protocol format.
+	// FromFormat 是源协议格式。
 	FromFormat string
-	// ToFormat is the target protocol format.
+	// ToFormat 是目标协议格式。
 	ToFormat string
-	// Model is the requested model identifier.
+	// Model 是请求的模型标识符。
 	Model string
-	// Stream reports whether the request expects streaming output.
+	// Stream 报告该请求是否期望流式输出。
 	Stream bool
-	// Body contains the payload to transform.
+	// Body 包含要转换的载荷。
 	Body []byte
 }
 
-// ResponseTransformRequest describes a response payload transformation.
+// ResponseTransformRequest 描述响应载荷转换。
 type ResponseTransformRequest struct {
-	// FromFormat is the source protocol format.
+	// FromFormat 是源协议格式。
 	FromFormat string
-	// ToFormat is the target protocol format.
+	// ToFormat 是目标协议格式。
 	ToFormat string
-	// Model is the requested model identifier.
+	// Model 是请求的模型标识符。
 	Model string
-	// Stream reports whether the response is streaming.
+	// Stream 报告该响应是否为流式。
 	Stream bool
-	// OriginalRequest contains the raw client request body.
+	// OriginalRequest 包含原始客户端请求体。
 	OriginalRequest []byte
-	// TranslatedRequest contains the provider request body.
+	// TranslatedRequest 包含供应商请求体。
 	TranslatedRequest []byte
-	// Body contains the response payload to transform.
+	// Body 包含要转换的响应载荷。
 	Body []byte
 }
 
-// RequestInterceptRequest describes a request about to be executed upstream.
+// RequestInterceptRequest 描述即将在上游执行的请求。
 type RequestInterceptRequest struct {
-	// RequestID uniquely identifies one model execution and correlates it with RequestCompletion.
+	// RequestID 唯一标识一次模型执行，并将其与 RequestCompletion 关联。
 	RequestID string
-	// TraceID identifies the parent inbound HTTP request when available.
+	// TraceID 在可用时标识父级入站 HTTP 请求。
 	TraceID string
-	// SourceFormat is the original client protocol format.
+	// SourceFormat 是原始客户端协议格式。
 	SourceFormat string
-	// ToFormat is the selected upstream protocol format. It is empty before credential selection.
+	// ToFormat 是选定的上游协议格式。在凭据选择之前为空。
 	ToFormat string
-	// Model is the current execution model. After credential selection this is the selected upstream model.
+	// Model 是当前执行模型。凭据选择之后，它是选定的上游模型。
 	Model string
-	// RequestedModel is the client-requested model before alias/model-pool rewriting.
+	// RequestedModel 是别名/模型池重写之前客户端请求的模型。
 	RequestedModel string
-	// Stream reports whether the request expects streaming output.
+	// Stream 报告该请求是否期望流式输出。
 	Stream bool
-	// Headers contains the current upstream request headers.
+	// Headers 包含当前的上游请求头。
 	Headers http.Header
-	// Body contains the current request payload. Treat it as read-only; modifications must be returned in RequestInterceptResponse.Body.
+	// Body 包含当前请求载荷。请将其视为只读；修改必须通过 RequestInterceptResponse.Body 返回。
 	Body []byte
-	// Metadata is a best-effort cloned context snapshot. Treat it as read-only and JSON-like.
+	// Metadata 是尽力克隆的上下文快照。请将其视为只读且类似 JSON 的数据。
 	Metadata map[string]any
 }
 
-// RequestInterceptResponse returns request modifications.
+// RequestInterceptResponse 返回请求修改。
 type RequestInterceptResponse struct {
-	// Path optionally overrides the target request path (e.g. "/v1/images/generations").
+	// Path 可选地覆盖目标请求路径（例如 "/v1/images/generations"）。
 	Path string `json:"path,omitempty"`
-	// Headers replaces matching current request headers and preserves headers not mentioned here.
+	// Headers 替换匹配的当前请求头，并保留此处未提及的请求头。
 	Headers http.Header
-	// Body replaces the current request body only when non-empty.
+	// Body 仅在非空时替换当前请求体。
 	Body []byte
-	// ClearHeaders explicitly removes current request headers before Headers is applied.
+	// ClearHeaders 在应用 Headers 之前显式移除当前请求头。
 	ClearHeaders []string
-	// Terminate stops the interceptor chain and prevents the request from reaching an upstream executor.
+	// Terminate 停止拦截器链，并阻止请求到达上游执行器。
 	Terminate bool
-	// StatusCode is the downstream HTTP status used when Terminate is true. Invalid values default to 403.
+	// StatusCode 是 Terminate 为 true 时使用的下游 HTTP 状态。无效值默认为 403。
 	StatusCode int
-	// ResponseHeaders contains downstream response headers used when Terminate is true.
+	// ResponseHeaders 包含 Terminate 为 true 时使用的下游响应头。
 	ResponseHeaders http.Header
-	// ResponseBody contains the downstream response body used when Terminate is true.
+	// ResponseBody 包含 Terminate 为 true 时使用的下游响应体。
 	ResponseBody []byte
 }
 
-// RequestCompletionOutcome identifies how an intercepted request ended.
+// RequestCompletionOutcome 标识被拦截请求的结束方式。
 type RequestCompletionOutcome string
 
 const (
-	// RequestCompletionSucceeded means the request completed successfully.
+	// RequestCompletionSucceeded 表示请求成功完成。
 	RequestCompletionSucceeded RequestCompletionOutcome = "succeeded"
-	// RequestCompletionFailed means model execution failed.
+	// RequestCompletionFailed 表示模型执行失败。
 	RequestCompletionFailed RequestCompletionOutcome = "failed"
-	// RequestCompletionRejected means a request interceptor terminated the request before execution.
+	// RequestCompletionRejected 表示请求拦截器在执行之前终止了请求。
 	RequestCompletionRejected RequestCompletionOutcome = "rejected"
-	// RequestCompletionCanceled means the request context was canceled or the downstream client disconnected.
+	// RequestCompletionCanceled 表示请求上下文被取消或下游客户端断开连接。
 	RequestCompletionCanceled RequestCompletionOutcome = "canceled"
 )
 
-// RequestCompletion describes the terminal state of an intercepted request.
+// RequestCompletion 描述被拦截请求的终态。
 type RequestCompletion struct {
 	RequestID      string
 	TraceID        string
@@ -1203,7 +1203,7 @@ type RequestCompletion struct {
 	Metadata       map[string]any
 }
 
-// ResponseInterceptRequest describes a successful non-streaming response.
+// ResponseInterceptRequest 描述成功的非流式响应。
 type ResponseInterceptRequest struct {
 	RequestID       string
 	SourceFormat    string
@@ -1219,17 +1219,17 @@ type ResponseInterceptRequest struct {
 	Metadata        map[string]any
 }
 
-// ResponseInterceptResponse returns non-streaming response modifications.
+// ResponseInterceptResponse 返回非流式响应修改。
 type ResponseInterceptResponse struct {
-	// Headers replaces matching current response headers and preserves headers not mentioned here.
+	// Headers 替换匹配的当前响应头，并保留此处未提及的响应头。
 	Headers http.Header
-	// Body replaces the current response body only when non-empty.
+	// Body 仅在非空时替换当前响应体。
 	Body []byte
-	// ClearHeaders explicitly removes current response headers before Headers is applied.
+	// ClearHeaders 在应用 Headers 之前显式移除当前响应头。
 	ClearHeaders []string
 }
 
-// StreamChunkInterceptRequest describes a successful stream chunk before downstream delivery.
+// StreamChunkInterceptRequest 描述下游交付之前的成功流分块。
 type StreamChunkInterceptRequest struct {
 	RequestID       string
 	SourceFormat    string
@@ -1237,45 +1237,45 @@ type StreamChunkInterceptRequest struct {
 	RequestedModel  string
 	RequestHeaders  http.Header
 	ResponseHeaders http.Header
-	// OriginalRequest contains the raw client request body.
-	// Always populated on header-init (ChunkIndex == StreamChunkHeaderInitIndex), as a fresh clone.
-	// On payload chunks (ChunkIndex >= 0):
-	//   - schema_version >= 3: omitted (nil); cache from header-init or request intercept hooks
-	//   - schema_version < 3: populated as a fresh clone each call (legacy compatibility)
-	// Callers must treat this slice as read-only; hosts clone before delivery to keep snapshots isolated.
+	// OriginalRequest 包含原始客户端请求体。
+	// 在头部初始化时（ChunkIndex == StreamChunkHeaderInitIndex）始终填充，为一个全新克隆。
+	// 在载荷分块上（ChunkIndex >= 0）：
+	//   - schema_version >= 3：省略（nil）；从头部初始化或请求拦截钩子缓存
+	//   - schema_version < 3：每次调用都填充为全新克隆（旧版兼容）
+	// 调用方必须将该切片视为只读；宿主在交付前克隆以保持快照隔离。
 	OriginalRequest []byte
-	// RequestBody contains the provider/executed request payload.
-	// Same population / cloning / schema-version rules as OriginalRequest.
+	// RequestBody 包含供应商/已执行的请求载荷。
+	// 填充/克隆/schema 版本规则与 OriginalRequest 相同。
 	RequestBody []byte
 	Body        []byte
-	// HistoryChunks contains a bounded recent history of chunks already delivered downstream.
-	// The host currently retains at most 64 chunks and 1 MiB total history bytes.
-	// Always preserved on header-init (ChunkIndex == StreamChunkHeaderInitIndex) when non-empty.
-	// On payload chunks (ChunkIndex >= 0):
-	//   - schema_version >= 5: omitted (nil) to avoid per-chunk cloning and serialization
-	//   - schema_version < 5: populated as a fresh clone each call (legacy compatibility)
-	// Callers must treat these slices as read-only; hosts clone before delivery to keep snapshots isolated.
+	// HistoryChunks 包含已交付下游的分块的有限最近历史。
+	// 宿主目前最多保留 64 个分块和 1 MiB 的历史总字节数。
+	// 在头部初始化时（ChunkIndex == StreamChunkHeaderInitIndex）非空则始终保留。
+	// 在载荷分块上（ChunkIndex >= 0）：
+	//   - schema_version >= 5：省略（nil），以避免逐分块克隆和序列化
+	//   - schema_version < 5：每次调用都填充为全新克隆（旧版兼容）
+	// 调用方必须将这些切片视为只读；宿主在交付前克隆以保持快照隔离。
 	HistoryChunks [][]byte
-	// ChunkIndex starts at 0 for payload chunks. StreamChunkHeaderInitIndex marks the header-only initialization call.
+	// 载荷分块的 ChunkIndex 从 0 开始。StreamChunkHeaderInitIndex 标记仅含头部的初始化调用。
 	ChunkIndex int
-	// Metadata is a best-effort cloned context snapshot. Treat it as read-only and JSON-like.
+	// Metadata 是尽力克隆的上下文快照。请将其视为只读且类似 JSON 的数据。
 	Metadata map[string]any
 }
 
-// StreamChunkInterceptResponse returns stream chunk modifications.
+// StreamChunkInterceptResponse 返回流分块修改。
 type StreamChunkInterceptResponse struct {
-	// Headers replaces matching current stream headers and preserves headers not mentioned here.
+	// Headers 替换匹配的当前流头，并保留此处未提及的请求头。
 	Headers http.Header
-	// Body replaces the current stream chunk body only when non-empty.
+	// Body 仅在非空时替换当前流分块体。
 	Body []byte
-	// ClearHeaders explicitly removes current stream headers before Headers is applied.
+	// ClearHeaders 在应用 Headers 之前显式移除当前流头。
 	ClearHeaders []string
-	// DropChunk skips delivery of the current payload chunk and prevents it from entering HistoryChunks.
-	// Header updates returned with DropChunk still apply to the interceptor chain state.
+	// DropChunk 跳过当前载荷分块的交付，并阻止其进入 HistoryChunks。
+	// 与 DropChunk 一起返回的头部更新仍会应用到拦截器链状态。
 	DropChunk bool
 }
 
-// WebSocketResponseEvent describes an upstream WebSocket response event received during execution.
+// WebSocketResponseEvent 描述执行期间收到的上游 WebSocket 响应事件。
 type WebSocketResponseEvent struct {
 	RequestID      string
 	TraceID        string
@@ -1291,344 +1291,344 @@ type WebSocketResponseEvent struct {
 	Metadata       map[string]any
 }
 
-// PayloadResponse returns a transformed raw payload.
+// PayloadResponse 返回转换后的原始载荷。
 type PayloadResponse struct {
-	// Body contains the transformed payload bytes.
+	// Body 包含转换后的载荷字节。
 	Body []byte
 }
 
-// ThinkingConfig is the public canonical thinking configuration passed to plugins.
+// ThinkingConfig 是传递给插件的公开规范思考配置。
 type ThinkingConfig struct {
-	// Mode is the canonical thinking mode: budget, level, none, or auto.
+	// Mode 是规范思考模式：budget、level、none 或 auto。
 	Mode string
-	// Budget is the normalized thinking token budget.
+	// Budget 是规范化后的思考 token 预算。
 	Budget int
-	// Level is the normalized named thinking effort level.
+	// Level 是规范化后的具名思考强度等级。
 	Level string
 }
 
-// ThinkingApplyRequest asks a plugin to apply canonical thinking config.
+// ThinkingApplyRequest 请求插件应用规范思考配置。
 type ThinkingApplyRequest struct {
-	// Provider is the normalized provider key being applied.
+	// Provider 是正在应用的规范化供应商键。
 	Provider string
-	// Model describes the model associated with the request.
+	// Model 描述与该请求关联的模型。
 	Model ModelInfo
-	// Config is the already parsed and normalized thinking config.
+	// Config 是已解析并规范化的思考配置。
 	Config ThinkingConfig
-	// Body contains the provider payload to rewrite.
+	// Body 包含要重写的供应商载荷。
 	Body []byte
 }
 
-// ThinkingApplier applies provider-specific thinking configuration.
+// ThinkingApplier 应用供应商特定的思考配置。
 type ThinkingApplier interface {
-	// Identifier returns the provider key handled by this thinking applier.
+	// Identifier 返回该思考应用器处理的供应商键。
 	Identifier() string
-	// ApplyThinking returns the payload with provider-specific thinking fields.
+	// ApplyThinking 返回带有供应商特定思考字段的载荷。
 	ApplyThinking(context.Context, ThinkingApplyRequest) (PayloadResponse, error)
 }
 
-// UsagePlugin receives usage records after request completion.
+// UsagePlugin 在请求完成后接收用量记录。
 type UsagePlugin interface {
 	HandleUsage(context.Context, UsageRecord)
 }
 
-// CommandLinePlugin declares and handles plugin-owned command-line flags.
+// CommandLinePlugin 声明并处理插件自有的命令行标志。
 type CommandLinePlugin interface {
 	RegisterCommandLine(context.Context, CommandLineRegistrationRequest) (CommandLineRegistrationResponse, error)
 	ExecuteCommandLine(context.Context, CommandLineExecutionRequest) (CommandLineExecutionResponse, error)
 }
 
-// CommandLineRegistrationRequest carries host context for command-line registration.
+// CommandLineRegistrationRequest 携带命令行注册的宿主上下文。
 type CommandLineRegistrationRequest struct {
-	// Plugin is the metadata of the plugin being registered.
+	// Plugin 是被注册插件的元数据。
 	Plugin Metadata
 }
 
-// CommandLineRegistrationResponse lists command-line flags owned by a plugin.
+// CommandLineRegistrationResponse 列出插件自有的命令行标志。
 type CommandLineRegistrationResponse struct {
-	// Flags contains the concrete flags to expose in -help.
+	// Flags 包含在 -help 中暴露的具体标志。
 	Flags []CommandLineFlag
 }
 
-// CommandLineFlag describes one plugin-owned command-line flag.
+// CommandLineFlag 描述一个插件自有的命令行标志。
 type CommandLineFlag struct {
-	// Name is the flag name without leading dashes.
+	// Name 是不含前导短横线的标志名。
 	Name string
-	// Usage is shown in -help output.
+	// Usage 显示在 -help 输出中。
 	Usage string
-	// Type is one of bool, string, int, int64, float64, or duration.
+	// Type 是 bool、string、int、int64、float64 或 duration 之一。
 	Type string
-	// DefaultValue is parsed according to Type before flag registration.
+	// DefaultValue 在标志注册之前按 Type 解析。
 	DefaultValue string
 }
 
-// CommandLineFlagValue describes a parsed command-line flag value.
+// CommandLineFlagValue 描述已解析的命令行标志值。
 type CommandLineFlagValue struct {
-	// Name is the flag name without leading dashes.
+	// Name 是不含前导短横线的标志名。
 	Name string
-	// Type is one of bool, string, int, int64, float64, or duration.
+	// Type 是 bool、string、int、int64、float64 或 duration 之一。
 	Type string
-	// Value is the parsed value in string form.
+	// Value 是字符串形式的已解析值。
 	Value string
-	// Set reports whether the user explicitly provided this flag.
+	// Set 报告用户是否显式提供了该标志。
 	Set bool
 }
 
-// CommandLineExecutionRequest describes a plugin command-line invocation.
+// CommandLineExecutionRequest 描述插件命令行调用。
 type CommandLineExecutionRequest struct {
-	// Plugin is the metadata of the plugin being executed.
+	// Plugin 是被执行插件的元数据。
 	Plugin Metadata
-	// Program is os.Args[0].
+	// Program 是 os.Args[0]。
 	Program string
-	// Args contains every command-line argument after Program, including all flags.
+	// Args 包含 Program 之后的每个命令行参数，包括所有标志。
 	Args []string
-	// ConfigPath is the effective configuration path used by the host.
+	// ConfigPath 是宿主使用的有效配置路径。
 	ConfigPath string
-	// Host contains relevant host configuration.
+	// Host 包含相关的宿主配置。
 	Host HostConfigSummary
-	// Flags contains all currently registered command-line flags visible to the host.
+	// Flags 包含宿主可见的所有当前已注册命令行标志。
 	Flags map[string]CommandLineFlagValue
-	// TriggeredFlags contains the plugin-owned flags that triggered this execution.
+	// TriggeredFlags 包含触发本次执行的插件自有标志。
 	TriggeredFlags map[string]CommandLineFlagValue
 }
 
-// CommandLineExecutionResponse returns command-line output from a plugin.
+// CommandLineExecutionResponse 返回插件的命令行输出。
 type CommandLineExecutionResponse struct {
-	// Stdout is written to process stdout after plugin execution.
+	// Stdout 在插件执行后写入进程标准输出。
 	Stdout []byte
-	// Stderr is written to process stderr after plugin execution.
+	// Stderr 在插件执行后写入进程标准错误。
 	Stderr []byte
-	// Auths contains auth records created by the command. The host persists them.
+	// Auths 包含该命令创建的凭据记录。宿主会持久化它们。
 	Auths []AuthData
-	// ExitCode is used as the process exit code when non-zero.
+	// ExitCode 在非零时用作进程退出码。
 	ExitCode int
 }
 
-// ManagementAPI declares plugin-owned Management API and resource routes.
+// ManagementAPI 声明插件自有的 Management API 和资源路由。
 type ManagementAPI interface {
 	RegisterManagement(context.Context, ManagementRegistrationRequest) (ManagementRegistrationResponse, error)
 }
 
-// ManagementRegistrationRequest carries host context for Management API registration.
+// ManagementRegistrationRequest 携带 Management API 注册的宿主上下文。
 type ManagementRegistrationRequest struct {
-	// Plugin is the metadata of the plugin being registered.
+	// Plugin 是被注册插件的元数据。
 	Plugin Metadata
-	// BasePath is the only Management API prefix plugins may register under.
+	// BasePath 是插件可注册的唯一 Management API 前缀。
 	BasePath string
-	// ResourceBasePath is the plugin resource prefix for browser-navigable resources.
+	// ResourceBasePath 是可供浏览器导航的插件资源前缀。
 	ResourceBasePath string
 }
 
-// ManagementRegistrationResponse lists plugin-owned Management API and resource routes.
+// ManagementRegistrationResponse 列出插件自有的 Management API 和资源路由。
 type ManagementRegistrationResponse struct {
-	// Routes contains the exact Management API routes to expose.
+	// Routes 包含要暴露的确切 Management API 路由。
 	Routes []ManagementRoute
-	// Resources contains browser-navigable plugin resources exposed under /v0/resource/plugins/<pluginID>/.
+	// Resources 包含在 /v0/resource/plugins/<pluginID>/ 下暴露的可供浏览器导航的插件资源。
 	Resources []ResourceRoute
 }
 
-// ManagementRoute describes one plugin-owned Management API route.
+// ManagementRoute 描述一个插件自有的 Management API 路由。
 type ManagementRoute struct {
-	// Method is the HTTP method, for example GET or POST.
+	// Method 是 HTTP 方法，例如 GET 或 POST。
 	Method string
-	// Path is an exact path under /v0/management/. Relative paths are resolved under that prefix.
+	// Path 是 /v0/management/ 下的确切路径。相对路径会在该前缀下解析。
 	Path string
-	// Menu is a legacy resource menu label. GET routes with Menu are registered under /v0/resource/plugins/<pluginID>/.
+	// Menu 是旧版资源菜单标签。带有 Menu 的 GET 路由注册在 /v0/resource/plugins/<pluginID>/ 下。
 	Menu string
-	// Description explains the legacy resource menu entry for UI display.
+	// Description 说明用于 UI 显示的旧版资源菜单条目。
 	Description string
-	// Handler processes matching Management API requests.
+	// Handler 处理匹配的 Management API 请求。
 	Handler ManagementHandler
 }
 
-// ResourceRoute describes one plugin-owned browser-navigable resource route.
+// ResourceRoute 描述一个插件自有的可供浏览器导航的资源路由。
 type ResourceRoute struct {
-	// Path is an exact path under /v0/resource/plugins/<pluginID>/. Relative paths are resolved under that prefix.
+	// Path 是 /v0/resource/plugins/<pluginID>/ 下的确切路径。相对路径会在该前缀下解析。
 	Path string
-	// Menu is the management UI menu label for this GET resource.
+	// Menu 是该 GET 资源的管理 UI 菜单标签。
 	Menu string
-	// Description explains the resource route for UI display.
+	// Description 说明用于 UI 显示的资源路由。
 	Description string
-	// Handler processes matching resource requests. Resource requests are not management-authenticated.
+	// Handler 处理匹配的资源请求。资源请求不进行管理认证。
 	Handler ManagementHandler
 }
 
-// ManagementHandler handles one plugin-owned Management API or resource route.
+// ManagementHandler 处理一个插件自有的 Management API 或资源路由。
 type ManagementHandler interface {
 	HandleManagement(context.Context, ManagementRequest) (ManagementResponse, error)
 }
 
-// ManagementRequest describes an authenticated Management API request.
+// ManagementRequest 描述已认证的 Management API 请求。
 type ManagementRequest struct {
-	// Method is the HTTP method.
+	// Method 是 HTTP 方法。
 	Method string
-	// Path is the request path.
+	// Path 是请求路径。
 	Path string
-	// Headers contains request headers.
+	// Headers 包含请求头。
 	Headers http.Header
-	// Query contains request query parameters.
+	// Query 包含请求查询参数。
 	Query url.Values
-	// Body contains the raw request body.
+	// Body 包含原始请求体。
 	Body []byte
 }
 
-// ManagementResponse describes a plugin Management API response.
+// ManagementResponse 描述插件 Management API 响应。
 type ManagementResponse struct {
-	// StatusCode is the HTTP status code. Zero defaults to 200.
+	// StatusCode 是 HTTP 状态码。零值默认为 200。
 	StatusCode int
-	// Headers contains response headers.
+	// Headers 包含响应头。
 	Headers http.Header
-	// Body contains the raw response body.
-	// On schema_version >= 6, JSON bodies are returned without HTML entity escaping.
-	// On schema_version < 6, JSON response string values are HTML-escaped for legacy compatibility.
+	// Body 包含原始响应体。
+	// 在 schema_version >= 6 时，返回的 JSON 体不做 HTML 实体转义。
+	// 在 schema_version < 6 时，出于旧版兼容，JSON 响应的字符串值会进行 HTML 转义。
 	Body []byte
 }
 
-// UsageRecord describes request usage and billing metadata.
+// UsageRecord 描述请求用量与计费元数据。
 type UsageRecord struct {
-	// RequestID uniquely identifies this specific model execution instance (UUID v4).
+	// RequestID 唯一标识这个特定的模型执行实例（UUID v4）。
 	RequestID string
-	// TraceID identifies the parent inbound HTTP request when available (8-character hex).
+	// TraceID 在可用时标识父级入站 HTTP 请求（8 位十六进制）。
 	TraceID string
-	// Provider identifies the upstream provider.
+	// Provider 标识上游供应商。
 	Provider string
-	// BaseURL is the upstream base URL configured for the request/credential when available.
+	// BaseURL 是为该请求/凭据配置的上游基础 URL（可用时）。
 	BaseURL string
-	// ExecutorType identifies the executor implementation.
+	// ExecutorType 标识执行器实现。
 	ExecutorType string
-	// Model is the model used for the request.
+	// Model 是该请求使用的模型。
 	Model string
-	// Alias is the user-facing model alias when one was used.
+	// Alias 是使用时的面向用户模型别名。
 	Alias string
-	// APIKey is the client API key identifier when available.
+	// APIKey 是客户端 API 密钥标识符（可用时）。
 	APIKey string
-	// IsNativeKey reports whether the client API key was authenticated by CPA's native config provider.
+	// IsNativeKey 报告客户端 API 密钥是否由 CPA 的原生配置供应商认证。
 	IsNativeKey bool
-	// AccessProvider identifies the client request authentication provider (e.g. "config-inline" or plugin ID).
+	// AccessProvider 标识客户端请求认证供应商（例如 "config-inline" 或插件 ID）。
 	AccessProvider string
-	// SessionID identifies the session when present.
+	// SessionID 在存在时标识会话。
 	SessionID string
-	// ParentSessionID identifies the parent session in a hierarchy or fork.
+	// ParentSessionID 在层级或分叉中标识父会话。
 	ParentSessionID string
-	// AuthID identifies the selected credential.
+	// AuthID 标识被选中的凭据。
 	AuthID string
-	// AuthIndex identifies the credential index when applicable.
+	// AuthIndex 在适用时标识凭据索引。
 	AuthIndex string
-	// AuthType identifies the credential type.
+	// AuthType 标识凭据类型。
 	AuthType string
-	// Source identifies the request source or integration.
+	// Source 标识请求来源或集成。
 	Source string
-	// ReasoningEffort records the requested reasoning effort.
+	// ReasoningEffort 记录请求的推理强度。
 	ReasoningEffort string
-	// ServiceTier records the requested or reported service tier.
+	// ServiceTier 记录请求的或报告的服务层级。
 	ServiceTier string
-	// ResponseServiceTier stores the final tier reported by the upstream response.
+	// ResponseServiceTier 存储上游响应报告的最终层级。
 	ResponseServiceTier string
-	// ResponseModel stores the model name reported by the upstream response, empty when unknown.
+	// ResponseModel 存储上游响应报告的模型名称，未知时为空。
 	ResponseModel string
-	// Generate reports whether the client requested actual generation.
-	// The host normalizes omitted usage.Record values to true before delivery.
+	// Generate 报告客户端是否请求了实际生成。
+	// 宿主在交付之前会将省略的 usage.Record 值规范化为 true。
 	Generate bool
-	// Stream reports whether the request was executed in streaming mode.
+	// Stream 报告该请求是否以流式模式执行。
 	Stream bool
-	// RequestedAt is the time the request was received.
+	// RequestedAt 是收到请求的时间。
 	RequestedAt time.Time
-	// Latency is the total request latency.
+	// Latency 是请求总延迟。
 	Latency time.Duration
-	// TTFT is the time to first token for streaming requests.
+	// TTFT 是流式请求的首 token 时间。
 	TTFT time.Duration
-	// Failed reports whether the request failed.
+	// Failed 报告请求是否失败。
 	Failed bool
-	// Failure contains failure details when Failed is true.
+	// Failure 在 Failed 为 true 时包含失败详情。
 	Failure UsageFailure
-	// Detail contains token usage counters.
+	// Detail 包含 token 用量计数器。
 	Detail UsageDetail
-	// ResponseHeaders contains selected upstream response headers.
+	// ResponseHeaders 包含选定的上游响应头。
 	ResponseHeaders http.Header
 }
 
-// UsageFailure describes an upstream or executor failure.
+// UsageFailure 描述上游或执行器失败。
 type UsageFailure struct {
-	// StatusCode is the HTTP status code associated with the failure.
+	// StatusCode 是与该失败关联的 HTTP 状态码。
 	StatusCode int
-	// Body contains the failure response body or message.
+	// Body 包含失败响应体或消息。
 	Body string
 }
 
-// UsageDetail contains token accounting counters.
+// UsageDetail 包含 token 计费计数器。
 type UsageDetail struct {
-	// InputTokens is the prompt or input token count.
+	// InputTokens 是提示或输入 token 数。
 	InputTokens int64
-	// OutputTokens is the completion or output token count.
+	// OutputTokens 是补全或输出 token 数。
 	OutputTokens int64
-	// ReasoningTokens is the reasoning token count.
+	// ReasoningTokens 是推理 token 数。
 	ReasoningTokens int64
-	// CachedTokens is the total cached token count.
+	// CachedTokens 是缓存 token 总数。
 	CachedTokens int64
-	// CacheReadTokens is the cache read token count.
+	// CacheReadTokens 是缓存读取 token 数。
 	CacheReadTokens int64
-	// CacheCreationTokens is the cache creation token count.
+	// CacheCreationTokens 是缓存创建 token 数。
 	CacheCreationTokens int64
-	// TotalTokens is the total token count.
+	// TotalTokens 是 token 总数。
 	TotalTokens int64
 }
 
-// QuotaProvider surfaces credential quota, balance, and billing information for management clients.
+// QuotaProvider 向管理客户端暴露凭据额度、余额与计费信息。
 type QuotaProvider interface {
-	// Identifier returns the provider key handled by this quota provider.
+	// Identifier 返回该额度供应商处理的供应商键。
 	Identifier() string
-	// DescribeQuota returns metadata and supported provider keys for this quota provider.
+	// DescribeQuota 返回该额度供应商的元数据和支持的供应商键。
 	DescribeQuota(context.Context, QuotaDescribeRequest) (QuotaDescribeResponse, error)
-	// FetchQuota retrieves normalized quota information for a credential.
+	// FetchQuota 获取某个凭据的规范化额度信息。
 	FetchQuota(context.Context, QuotaFetchRequest) (QuotaFetchResponse, error)
-	// ResetQuota resets quota or usage for a credential if supported.
+	// ResetQuota 在支持时重置某个凭据的额度或用量。
 	ResetQuota(context.Context, QuotaResetRequest) (QuotaResetResponse, error)
 }
 
-// QuotaDescribeRequest carries host context for describing quota capabilities.
+// QuotaDescribeRequest 携带描述额度能力的宿主上下文。
 type QuotaDescribeRequest struct {
-	// Plugin is the metadata of the plugin being queried.
+	// Plugin 是被查询插件的元数据。
 	Plugin Metadata `json:"plugin,omitempty"`
 }
 
-// QuotaDescribeResponse describes supported providers and capabilities of a quota provider.
+// QuotaDescribeResponse 描述额度供应商支持的供应商和能力。
 type QuotaDescribeResponse struct {
-	// SupportedProviders lists provider keys supported by this quota provider.
+	// SupportedProviders 列出该额度供应商支持的供应商键。
 	SupportedProviders []string `json:"supported_providers,omitempty"`
-	// DisplayName is a user-facing label for this quota provider.
+	// DisplayName 是该额度供应商的面向用户标签。
 	DisplayName string `json:"display_name,omitempty"`
-	// SupportsReset reports whether this provider supports resetting quota.
+	// SupportsReset 报告该供应商是否支持重置额度。
 	SupportsReset bool `json:"supports_reset,omitempty"`
 }
 
-// QuotaFetchRequest carries credential context for querying quota.
+// QuotaFetchRequest 携带查询额度的凭据上下文。
 type QuotaFetchRequest struct {
-	// AuthIndex identifies the credential index.
+	// AuthIndex 标识凭据索引。
 	AuthIndex string `json:"auth_index"`
-	// AuthID identifies the credential ID.
+	// AuthID 标识凭据 ID。
 	AuthID string `json:"auth_id"`
-	// Provider identifies the credential provider.
+	// Provider 标识凭据供应商。
 	Provider string `json:"provider"`
-	// StorageJSON contains provider-owned persisted auth data.
+	// StorageJSON 包含供应商自有的持久化凭据数据。
 	StorageJSON []byte `json:"storage_json,omitempty"`
-	// Metadata contains mutable host-managed auth metadata.
+	// Metadata 包含可变的宿主托管凭据元数据。
 	Metadata map[string]any `json:"metadata,omitempty"`
-	// Attributes contains immutable routing and provider attributes.
+	// Attributes 包含不可变的路由与供应商属性。
 	Attributes map[string]string `json:"attributes,omitempty"`
-	// Host contains relevant host configuration.
+	// Host 包含相关的宿主配置。
 	Host HostConfigSummary `json:"host,omitempty"`
-	// HTTPClient executes upstream HTTP requests through host transport policy.
+	// HTTPClient 通过宿主传输策略执行上游 HTTP 请求。
 	HTTPClient HostHTTPClient `json:"-"`
 }
 
-// QuotaSubscription describes plan and tier information in normalized quota.
+// QuotaSubscription 描述规范化额度中的套餐和层级信息。
 type QuotaSubscription struct {
 	Plan     string `json:"plan,omitempty"`
 	TierName string `json:"tierName,omitempty"`
 	TierID   string `json:"tierId,omitempty"`
 }
 
-// UnmarshalJSON supports both camelCase and snake_case field names.
+// UnmarshalJSON 同时支持 camelCase 和 snake_case 字段名。
 func (s *QuotaSubscription) UnmarshalJSON(data []byte) error {
 	type Alias QuotaSubscription
 	aux := struct {
@@ -1650,13 +1650,13 @@ func (s *QuotaSubscription) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// QuotaGroup describes a group of quota buckets in normalized quota.
+// QuotaGroup 描述规范化额度中的一组额度桶。
 type QuotaGroup struct {
 	DisplayName string        `json:"displayName,omitempty"`
 	Buckets     []QuotaBucket `json:"buckets,omitempty"`
 }
 
-// UnmarshalJSON supports both camelCase and snake_case field names.
+// UnmarshalJSON 同时支持 camelCase 和 snake_case 字段名。
 func (g *QuotaGroup) UnmarshalJSON(data []byte) error {
 	type Alias QuotaGroup
 	aux := struct {
@@ -1674,7 +1674,7 @@ func (g *QuotaGroup) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// QuotaBucket describes a single quota window or limit bucket.
+// QuotaBucket 描述单个额度窗口或限额桶。
 type QuotaBucket struct {
 	Window            string  `json:"window,omitempty"`
 	RemainingFraction float64 `json:"remainingFraction"`
@@ -1682,7 +1682,7 @@ type QuotaBucket struct {
 	Description       string  `json:"description,omitempty"`
 }
 
-// UnmarshalJSON supports both camelCase and snake_case field names.
+// UnmarshalJSON 同时支持 camelCase 和 snake_case 字段名。
 func (b *QuotaBucket) UnmarshalJSON(data []byte) error {
 	type Alias QuotaBucket
 	aux := struct {
@@ -1707,8 +1707,8 @@ func (b *QuotaBucket) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// QuotaMetric is a provider-defined, bounded numeric account summary for management UI rendering.
-// Format is "number" or "currency"; Currency is an ISO 4217 code when Format is "currency".
+// QuotaMetric 是供应商定义的、有界的数值账户摘要，用于管理 UI 渲染。
+// Format 为 "number" 或 "currency"；当 Format 为 "currency" 时，Currency 是 ISO 4217 代码。
 type QuotaMetric struct {
 	Key      string  `json:"key"`
 	Label    string  `json:"label"`
@@ -1718,7 +1718,7 @@ type QuotaMetric struct {
 	Currency string  `json:"currency,omitempty"`
 }
 
-// QuotaFetchResponse carries normalized quota information for management UI rendering.
+// QuotaFetchResponse 携带用于管理 UI 渲染的规范化额度信息。
 type QuotaFetchResponse struct {
 	Subscription       *QuotaSubscription `json:"subscription,omitempty"`
 	Summary            []QuotaMetric      `json:"summary,omitempty"`
@@ -1726,7 +1726,7 @@ type QuotaFetchResponse struct {
 	Groups             []QuotaGroup       `json:"groups,omitempty"`
 }
 
-// UnmarshalJSON supports both camelCase and snake_case field names.
+// UnmarshalJSON 同时支持 camelCase 和 snake_case 字段名。
 func (r *QuotaFetchResponse) UnmarshalJSON(data []byte) error {
 	type Alias QuotaFetchResponse
 	aux := struct {
@@ -1744,27 +1744,27 @@ func (r *QuotaFetchResponse) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// QuotaResetRequest carries credential context for resetting quota.
+// QuotaResetRequest 携带重置额度的凭据上下文。
 type QuotaResetRequest struct {
-	// AuthIndex identifies the credential index.
+	// AuthIndex 标识凭据索引。
 	AuthIndex string `json:"auth_index"`
-	// AuthID identifies the credential ID.
+	// AuthID 标识凭据 ID。
 	AuthID string `json:"auth_id"`
-	// Provider identifies the credential provider.
+	// Provider 标识凭据供应商。
 	Provider string `json:"provider"`
-	// StorageJSON contains provider-owned persisted auth data.
+	// StorageJSON 包含供应商自有的持久化凭据数据。
 	StorageJSON []byte `json:"storage_json,omitempty"`
-	// Metadata contains mutable host-managed auth metadata.
+	// Metadata 包含可变的宿主托管凭据元数据。
 	Metadata map[string]any `json:"metadata,omitempty"`
-	// Attributes contains immutable routing and provider attributes.
+	// Attributes 包含不可变的路由与供应商属性。
 	Attributes map[string]string `json:"attributes,omitempty"`
-	// Host contains relevant host configuration.
+	// Host 包含相关的宿主配置。
 	Host HostConfigSummary `json:"host,omitempty"`
-	// HTTPClient executes upstream HTTP requests through host transport policy.
+	// HTTPClient 通过宿主传输策略执行上游 HTTP 请求。
 	HTTPClient HostHTTPClient `json:"-"`
 }
 
-// QuotaResetResponse returns the result of a quota reset action.
+// QuotaResetResponse 返回额度重置操作的结果。
 type QuotaResetResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message,omitempty"`

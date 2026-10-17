@@ -8,25 +8,25 @@ func TestIsClaudeThinkingModel(t *testing.T) {
 		model    string
 		expected bool
 	}{
-		// Claude thinking models - should return true
+		// Claude thinking 模型 - 应返回 true
 		{"claude-sonnet-4-5-thinking", "claude-sonnet-4-5-thinking", true},
 		{"claude-opus-4-5-thinking", "claude-opus-4-5-thinking", true},
 		{"claude-opus-4-6-thinking", "claude-opus-4-6-thinking", true},
 		{"Claude-Sonnet-Thinking uppercase", "Claude-Sonnet-4-5-Thinking", true},
 		{"claude thinking mixed case", "Claude-THINKING-Model", true},
 
-		// Non-thinking Claude models - should return false
+		// 非 thinking 的 Claude 模型 - 应返回 false
 		{"claude-sonnet-4-5 (no thinking)", "claude-sonnet-4-5", false},
 		{"claude-opus-4-5 (no thinking)", "claude-opus-4-5", false},
 		{"claude-3-5-sonnet", "claude-3-5-sonnet-20240620", false},
 
-		// Non-Claude models - should return false
+		// 非 Claude 模型 - 应返回 false
 		{"kimi-k2-thinking", "kimi-k2-thinking", false},
-		{"kimi-thinking model", "kimi-k2-thinking", false}, // not Claude
+		{"kimi-thinking model", "kimi-k2-thinking", false}, // 不是 Claude
 		{"gpt-4o", "gpt-4o", false},
 		{"empty string", "", false},
 
-		// Edge cases
+		// 边界情况
 		{"thinking without claude", "thinking-model", false},
 		{"claude without thinking", "claude-model", false},
 	}

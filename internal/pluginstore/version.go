@@ -5,11 +5,11 @@ import (
 	"strings"
 )
 
-// UpdateAvailable reports whether latest should be offered as an upgrade over
-// installed. A leading "v"/"V" is ignored on both sides. Versions are compared
-// numerically when both are dotted release numbers, so an installed version
-// newer than the registry one is not reported as an update; otherwise any
-// difference counts as an update.
+// UpdateAvailable 报告是否应将 latest 作为 installed 的升级提供。
+// 两侧开头的 "v"/"V" 都会被忽略。当两者都是点分发布号时，
+// 版本按数值比较，因此比注册表中更新的已安装版本
+// 不会被报告为可更新；否则任何
+// 差异都算作一次更新。
 func UpdateAvailable(installed, latest string) bool {
 	installed = normalizeVersion(installed)
 	latest = normalizeVersion(latest)
@@ -31,9 +31,9 @@ func normalizeVersion(version string) string {
 	return version
 }
 
-// compareVersions compares dotted numeric versions segment by segment, with
-// missing segments treated as zero. It reports false when either version
-// contains a non-numeric segment.
+// compareVersions 逐段比较点分数字版本，
+// 缺失的段视为零。当任一版本
+// 包含非数字段时返回 false。
 func compareVersions(a, b string) (int, bool) {
 	segmentsA := strings.Split(a, ".")
 	segmentsB := strings.Split(b, ".")

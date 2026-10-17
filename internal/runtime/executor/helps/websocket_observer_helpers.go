@@ -8,7 +8,7 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// EmitWebSocketResponseEvent delivers an upstream WebSocket response frame to any configured observer.
+// EmitWebSocketResponseEvent 将上游 WebSocket 响应帧投递给已配置的观察者。
 func EmitWebSocketResponseEvent(ctx context.Context, opts cliproxyexecutor.Options, auth *cliproxyauth.Auth, provider, model string, payload []byte) {
 	if opts.WebSocketResponseObserver == nil || len(payload) == 0 {
 		return

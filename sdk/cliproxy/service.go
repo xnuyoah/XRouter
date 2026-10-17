@@ -1,6 +1,6 @@
-// Package cliproxy provides the core service implementation for XRouter.
-// It includes service lifecycle management, authentication handling, file watching,
-// and integration with various AI service providers through a unified interface.
+// Package cliproxy 提供 XRouter 的核心服务实现。
+// 它包括服务生命周期管理、认证处理、文件监听，
+// 以及通过统一接口与各类 AI 服务供应商的集成。
 package cliproxy
 
 import (
@@ -21,20 +21,20 @@ import (
 	sdkpluginstore "github.com/xnuyoah/XRouter/v8/sdk/pluginstore"
 )
 
-// Service wraps the proxy server lifecycle so external programs can embed the CLI proxy.
-// It manages the complete lifecycle including authentication, file watching, HTTP server,
-// and integration with various AI service providers.
+// Service 封装代理服务器生命周期，使外部程序可以嵌入该 CLI 代理。
+// 它管理完整的生命周期，包括认证、文件监听、HTTP 服务器，
+// 以及与各类 AI 服务供应商的集成。
 type Service struct {
-	// cfg holds the current application configuration.
+	// cfg 保存当前应用程序配置。
 	cfg *config.Config
 
-	// cfgMu protects concurrent access to the configuration.
+	// cfgMu 保护对配置的并发访问。
 	cfgMu sync.RWMutex
 
-	// configUpdateMu serializes config updates across watcher + home.
+	// configUpdateMu 串行化跨监听器与 home 的配置更新。
 	configUpdateMu sync.Mutex
 
-	// configRuntimeMu orders side-effecting runtime application after config commits.
+	// configRuntimeMu 确保有副作用的运行时应用在配置提交之后有序执行。
 	configRuntimeMu        sync.Mutex
 	executorRegistrationMu sync.Mutex
 	authUpdateMu           sync.Mutex
@@ -44,64 +44,64 @@ type Service struct {
 	configSequence         uint64
 	appliedRoutingState    *routingRuntimeState
 
-	// configPath is the path to the configuration file.
+	// configPath 是配置文件的路径。
 	configPath string
 
-	// tokenProvider handles loading token-based clients.
+	// tokenProvider 负责加载基于令牌的客户端。
 	tokenProvider TokenClientProvider
 
-	// apiKeyProvider handles loading API key-based clients.
+	// apiKeyProvider 负责加载基于 API key 的客户端。
 	apiKeyProvider APIKeyClientProvider
 
-	// watcherFactory creates file watcher instances.
+	// watcherFactory 创建文件监听器实例。
 	watcherFactory WatcherFactory
 
-	// hooks provides lifecycle callbacks.
+	// hooks 提供生命周期回调。
 	hooks Hooks
 
-	// serverOptions contains additional server configuration options.
+	// serverOptions 包含额外的服务器配置选项。
 	serverOptions []api.ServerOption
 
-	// server is the HTTP API server instance.
+	// server 是 HTTP API 服务器实例。
 	server *api.Server
 
-	// pprofServer manages the optional pprof HTTP debug server.
+	// pprofServer 管理可选的 pprof HTTP 调试服务器。
 	pprofServer *pprofServer
 
-	// discoveryManager manages local network mDNS / DNS-SD service advertising.
+	// discoveryManager 管理本地网络的 mDNS / DNS-SD 服务广播。
 	discoveryManager *discoveryAdvertiserManager
 
-	// serverErr channel for server startup/shutdown errors.
+	// serverErr 用于传递服务器启动/关闭错误的 channel。
 	serverErr chan error
 
-	// watcher handles file system monitoring.
+	// watcher 负责文件系统监控。
 	watcher *WatcherWrapper
 
-	// watcherCancel cancels the watcher context.
+	// watcherCancel 取消监听器的 context。
 	watcherCancel context.CancelFunc
 
-	// authUpdates channel for authentication updates.
+	// authUpdates 用于传递认证更新的 channel。
 	authUpdates chan watcher.AuthUpdate
 
-	// authQueueStop cancels the auth update queue processing.
+	// authQueueStop 取消 auth 更新队列的处理。
 	authQueueStop context.CancelFunc
 
-	// authManager handles legacy authentication operations.
+	// authManager 处理旧版认证操作。
 	authManager *sdkAuth.Manager
 
-	// accessManager handles request authentication providers.
+	// accessManager 处理请求认证供应商。
 	accessManager *sdkaccess.Manager
 
-	// coreManager handles core authentication and execution.
+	// coreManager 处理核心认证与执行。
 	coreManager *coreauth.Manager
 
-	// cooldownStateStore persists runtime cooldown state when enabled.
+	// cooldownStateStore 在启用时持久化运行时冷却状态。
 	cooldownStateStore coreauth.CooldownStateStore
 
-	// pluginHost owns dynamic plugin lifecycle and runtime capability adapters.
+	// pluginHost 拥有动态插件生命周期与运行时能力适配器。
 	pluginHost *pluginhost.Host
 
-	// shutdownOnce ensures shutdown is called only once.
+	// shutdownOnce 确保 shutdown 只被调用一次。
 	shutdownOnce sync.Once
 
 	homeLifecycleMu              sync.Mutex
@@ -129,7 +129,7 @@ type Service struct {
 	homePluginDeleteTask         func(context.Context, *config.Config, home.PluginTask) homeplugins.SyncReport
 }
 
-// SetResultPolicy sets an execution result policy on the underlying core auth manager.
+// SetResultPolicy 在底层核心 auth 管理器上设置执行结果策略。
 func (s *Service) SetResultPolicy(policy coreauth.ResultPolicy) {
 	if s == nil || s.coreManager == nil {
 		return
@@ -137,7 +137,7 @@ func (s *Service) SetResultPolicy(policy coreauth.ResultPolicy) {
 	s.coreManager.SetResultPolicy(policy)
 }
 
-// ResultPolicy returns the execution result policy configured on the core auth manager.
+// ResultPolicy 返回在核心 auth 管理器上配置的执行结果策略。
 func (s *Service) ResultPolicy() coreauth.ResultPolicy {
 	if s == nil || s.coreManager == nil {
 		return nil

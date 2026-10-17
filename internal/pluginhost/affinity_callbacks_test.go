@@ -109,7 +109,7 @@ func TestHostAffinityLookupCallback_Contract(t *testing.T) {
 			t.Fatalf("callFromPlugin error = %v", errCall)
 		}
 
-		// Verify no secret, email, credential ID, or physical file path leaked in raw json
+		// 验证原始 json 中没有泄漏密钥、邮箱、凭据 ID 或物理文件路径
 		rawStr := string(rawResp)
 		for _, sensitive := range []string{"secret-api-key-a", "owner-a@example.com", "claude-owner-a@example.com.json", "/etc/secrets"} {
 			if strings.Contains(rawStr, sensitive) {
@@ -155,7 +155,7 @@ func TestHostAffinityLookupCallback_Contract(t *testing.T) {
 	})
 
 	t.Run("long session ID normalization (> 256 bytes)", func(t *testing.T) {
-		longSessionID := strings.Repeat("s", 252) // prefix "claude:" + 252 chars = 259 chars > 256
+		longSessionID := strings.Repeat("s", 252) // 前缀 "claude:" + 252 个字符 = 259 个字符 > 256
 		opts := cliproxyexecutor.Options{
 			Headers:  map[string][]string{"X-Claude-Code-Session-Id": {longSessionID}},
 			Metadata: make(map[string]any),
@@ -194,7 +194,7 @@ func TestHostAffinityLookupCallback_Contract(t *testing.T) {
 			t.Fatalf("initial pick = %s, want %s", picked.ID, authA.ID)
 		}
 
-		// Rebind to authB
+		// 重新绑定到 authB
 		picked2, _ := selector.Pick(context.Background(), "anthropic", "claude-3-7-sonnet", opts, []*coreauth.Auth{authB})
 		if picked2.ID != authB.ID {
 			t.Fatalf("second pick = %s, want %s", picked2.ID, authB.ID)
@@ -213,7 +213,7 @@ func TestHostAffinityLookupCallback_Contract(t *testing.T) {
 	})
 
 	t.Run("unknown subagent does not guess parent binding", func(t *testing.T) {
-		// Parent is bound to authA
+		// 父级绑定到 authA
 		parentSession := "parent-main-thread-100"
 		opts := cliproxyexecutor.Options{
 			Headers:  map[string][]string{"Session-Id": {parentSession}},
@@ -221,7 +221,7 @@ func TestHostAffinityLookupCallback_Contract(t *testing.T) {
 		}
 		selector.Pick(context.Background(), "anthropic", "claude-3-7-sonnet", opts, []*coreauth.Auth{authA})
 
-		// Query unknown child subagent
+		// 查询未知的子 agent
 		reqPayload, _ := json.Marshal(pluginapi.HostAffinityLookupRequest{
 			Provider:  "anthropic",
 			Model:     "claude-3-7-sonnet",
@@ -235,7 +235,7 @@ func TestHostAffinityLookupCallback_Contract(t *testing.T) {
 	})
 
 	t.Run("ambiguous unqualified session resolves to ambiguous across namespaces", func(t *testing.T) {
-		// Bind "ambig-sess" under claude to authA, and under codex to authB
+		// 将 claude 下的 "ambig-sess" 绑定到 authA，将 codex 下的绑定到 authB
 		optsClaude := cliproxyexecutor.Options{
 			Headers:  map[string][]string{"X-Claude-Code-Session-Id": {"ambig-sess"}},
 			Metadata: make(map[string]any),
@@ -248,7 +248,7 @@ func TestHostAffinityLookupCallback_Contract(t *testing.T) {
 		}
 		selector.Pick(context.Background(), "anthropic", "claude-3-7-sonnet", optsCodex, []*coreauth.Auth{authB})
 
-		// Query bare "ambig-sess" without namespace
+		// 查询不带命名空间的裸 "ambig-sess"
 		reqPayload, _ := json.Marshal(pluginapi.HostAffinityLookupRequest{
 			Provider:  "anthropic",
 			Model:     "claude-3-7-sonnet",
@@ -260,7 +260,7 @@ func TestHostAffinityLookupCallback_Contract(t *testing.T) {
 			t.Fatalf("ambiguous session status = %q, want %q", resp.Status, pluginapi.HostAffinityStatusAmbiguous)
 		}
 
-		// Qualified queries resolve unambiguously
+		// 带限定词的查询可无歧义解析
 		reqClaude, _ := json.Marshal(pluginapi.HostAffinityLookupRequest{
 			Provider:  "anthropic",
 			Model:     "claude-3-7-sonnet",
@@ -331,7 +331,7 @@ func TestHostAffinityLookupCallback_Contract(t *testing.T) {
 					t.Fatalf("pick failed: auth=%v err=%v", picked, errPick)
 				}
 
-				// Query via bare ID
+				// 通过裸 ID 查询
 				reqBare, _ := json.Marshal(pluginapi.HostAffinityLookupRequest{
 					Provider:  "anthropic",
 					Model:     "claude-3-7-sonnet",
@@ -346,7 +346,7 @@ func TestHostAffinityLookupCallback_Contract(t *testing.T) {
 					t.Fatalf("bare lookup %q: got status=%q index=%q, want bound index=%q", tc.bareID, respBare.Status, respBare.AuthIndex, tc.auth.Index)
 				}
 
-				// Query via qualified ID
+				// 通过限定 ID 查询
 				reqQual, _ := json.Marshal(pluginapi.HostAffinityLookupRequest{
 					Provider:  "anthropic",
 					Model:     "claude-3-7-sonnet",
@@ -360,7 +360,7 @@ func TestHostAffinityLookupCallback_Contract(t *testing.T) {
 			})
 		}
 
-		// Conflict test: bind task:shared-clash to authA and claude:shared-clash to authB
+		// 冲突测试：将 task:shared-clash 绑定到 authA，将 claude:shared-clash 绑定到 authB
 		optsClash1 := cliproxyexecutor.Options{
 			Headers:  map[string][]string{"X-Task-ID": {"shared-clash"}},
 			Metadata: make(map[string]any),
@@ -392,7 +392,7 @@ func TestHostAffinityLookupCallback_Contract(t *testing.T) {
 		}
 		selector.Pick(context.Background(), "anthropic", "claude-3-7-sonnet", opts, []*coreauth.Auth{authA})
 
-		// Disable authA in manager
+		// 在 manager 中禁用 authA
 		authA.Disabled = true
 		manager.Update(context.Background(), authA)
 		defer func() {

@@ -183,9 +183,9 @@ func (m *Manager) executionModelCandidates(auth *Auth, routeModel string) []stri
 	return []string{resolved}
 }
 
-// ResolveExecutionModel returns the credential-aware upstream model used by
-// normal execution. It strips auth prefixes, applies configured aliases, and
-// prefers Home-dispatched upstream models when present.
+// ResolveExecutionModel 返回正常执行所使用的、
+// 感知凭据的上游模型。它会剥离 auth 前缀、应用已配置的别名，
+// 并在存在 Home 派发的上游模型时优先使用它们。
 func (m *Manager) ResolveExecutionModel(auth *Auth, routeModel string) string {
 	routeModel = strings.TrimSpace(routeModel)
 	if m == nil {
@@ -253,10 +253,10 @@ func (m *Manager) clientModelProjectionForAuth(auth *Auth, routeModel string, no
 		}
 	}
 	if len(auth.ModelStates) == 0 && auth.Unavailable && auth.NextRetryAfter.After(now) {
-		// With no per-model states, scheduling falls back to the credential-wide
-		// cooldown (isAuthBlockedForModel); the projection must agree with it.
-		// When states exist, unmatched models stay schedulable by design, so the
-		// credential-wide fields must not suspend them here either.
+		// 没有按模型状态时，调度回退到凭据级的
+		// 冷却（isAuthBlockedForModel）；投影必须与之保持一致。
+		// 存在状态时，未匹配的模型按设计仍可调度，因此
+		// 凭据级字段在此也不得将它们挂起。
 		isSuspended = true
 	}
 	if isSuspended && suspendReason == "" {
@@ -559,7 +559,7 @@ func (m *Manager) rebuildAPIKeyModelAliasFromRuntimeConfig() {
 	m.rebuildAPIKeyModelAliasLocked(cfg)
 }
 
-// RefreshAPIKeyModelAlias rebuilds the API-key model alias table from the current runtime config.
+// RefreshAPIKeyModelAlias 根据当前运行时配置重建 API-key 模型别名表。
 func (m *Manager) RefreshAPIKeyModelAlias() {
 	m.rebuildAPIKeyModelAliasFromRuntimeConfig()
 }
@@ -597,7 +597,7 @@ func (m *Manager) rebuildAPIKeyModelAliasLocked(cfg *internalconfig.Config) {
 		case "agnes":
 			compileAPIKeyModelAliasForModels(byAlias, nativeAPIEffectiveModels(resolveAgnesAPIKeyConfig(cfg, auth), "agnes"))
 		default:
-			// OpenAI-compat uses config selection from auth.Attributes.
+			// OpenAI 兼容使用来自 auth.Attributes 的配置选择。
 			providerKey := ""
 			compatName := ""
 			if auth.Attributes != nil {
@@ -648,10 +648,10 @@ func compileAPIKeyModelAliasForModels[T interface {
 		if alias == "" || name == "" {
 			continue
 		}
-		// Exact suffix routes are retained alongside first-entry base fallbacks.
+		// 精确后缀路由与首条目基础回退并存。
 		add(alias, name)
 		add(thinking.ParseSuffix(alias).ModelName, name)
-		// Direct upstream requests use the same exact-first lookup behavior.
+		// 直连上游请求使用相同的精确匹配优先查找行为。
 		add(name, name)
 		add(thinking.ParseSuffix(name).ModelName, name)
 	}
@@ -690,12 +690,12 @@ func (m *Manager) applyAPIKeyModelAliasWithRouting(routing *apiKeyModelRoutingSn
 		return requestedModel
 	}
 
-	// Fast path: lookup per-auth mapping table (keyed by auth.ID).
+	// 快速路径：查按 auth 的映射表（以 auth.ID 为键）。
 	if resolved := lookupAPIKeyUpstreamModel(routing, auth.ID, requestedModel); resolved != "" {
 		return resolved
 	}
 
-	// Slow path: scan the same config snapshot used to compile the alias table.
+	// 慢速路径：扫描编译别名表时所用的同一份配置快照。
 	cfg := routing.config
 	if cfg == nil {
 		cfg = &internalconfig.Config{}
@@ -716,14 +716,14 @@ func (m *Manager) applyAPIKeyModelAliasWithRouting(routing *apiKeyModelRoutingSn
 		upstreamModel = resolveUpstreamModelForOpenAICompatAPIKey(cfg, auth, requestedModel)
 	}
 
-	// Return upstream model if found, otherwise return requested model.
+	// 若找到则返回上游模型，否则返回请求的模型。
 	if upstreamModel != "" {
 		return upstreamModel
 	}
 	return requestedModel
 }
 
-// APIKeyConfigEntry is a generic interface for API key configurations.
+// APIKeyConfigEntry 是 API 密钥配置的通用接口。
 type APIKeyConfigEntry interface {
 	GetAPIKey() string
 	GetBaseURL() string
@@ -805,7 +805,7 @@ func resolveAgnesAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalc
 	return resolveAPIKeyConfig(cfg.AgnesKey, auth)
 }
 
-// nativeAPIEffectiveModels returns the credential's declared models or the family defaults.
+// nativeAPIEffectiveModels 返回凭据声明的模型或该系列默认值。
 func nativeAPIEffectiveModels(entry *internalconfig.NativeAPIKey, provider string) []internalconfig.NativeAPIModel {
 	return internalconfig.NativeAPIEffectiveModels(entry, provider)
 }

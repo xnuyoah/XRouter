@@ -70,7 +70,7 @@ func TestApplyPatchResponsesHelperDispatcherKeysAndFinal(t *testing.T) {
 				if !found {
 					t.Fatalf("dispatcher bypass: %s", out)
 				}
-				// Completed input is valid independently of response closure.
+				// 已完成的输入有效性独立于响应是否关闭。
 				if errFinish := s.Bridge.Finish(); errFinish != nil {
 					t.Fatal(errFinish)
 				}
@@ -238,7 +238,7 @@ func TestApplyPatchResponsesHelperRetainedDispatcherProvenance(t *testing.T) {
 			}
 			for _, wrapper := range tc.wrappers {
 				s.RememberDispatcherArguments([]byte(fmt.Sprintf(`{"type":"response.function_call_arguments.done","item_id":"a","arguments":%q}`, wrapper)))
-				// The real restorer removes the wrapper before this event reaches Transform.
+				// 真正的恢复器会在该事件到达 Transform 之前移除包装。
 				if _, errTransform := s.Transform([]byte(fmt.Sprintf(`{"type":"response.function_call_arguments.done","item_id":"a","arguments":%q}`, gjson.Get(wrapper, "arguments").Raw))); errTransform != nil {
 					t.Fatal(errTransform)
 				}
@@ -401,7 +401,7 @@ func TestApplyPatchResponsesHelperTerminalSourceIdentity(t *testing.T) {
 			t.Fatal(errTransform)
 		}
 	}
-	// Provider filtering can remove an earlier item after the original snapshot is copied.
+	// 在复制原始快照之后，供应商过滤可能移除更早的条目。
 	s.RememberDispatcherEvent([]byte(`{"type":"response.completed","response":{"output":[{"type":"message","id":"removed"},{"type":"function_call","id":"a","call_id":"c","name":"n","namespace":"other"}]}}`))
 	out, errTransform := s.Transform([]byte(`{"type":"response.completed","response":{"output":[{"type":"function_call","id":"a","call_id":"c","name":"n","namespace":"n"}]}}`))
 	if errTransform == nil || len(out) != 1 || gjson.GetBytes(out[0], "type").String() != "response.failed" {
@@ -416,7 +416,7 @@ func TestApplyPatchResponsesHelperIndexOnlyTerminal(t *testing.T) {
 	for _, raw := range []string{
 		`{"type":"response.output_item.added","output_index":0,"item":{"type":"function_call"}}`,
 		`{"type":"response.function_call_arguments.done","output_index":0,"arguments":"{\"name\":\"apply_patch\",\"arguments\":{\"input\":\"p\"}}"}`,
-		// IDs are real source evidence; the later sparse terminal still matches by index.
+		// ID 是真实的来源证据；后续的稀疏终止项仍按索引匹配。
 		`{"type":"response.function_call_arguments.done","output_index":0,"item_id":"a","call_id":"c","arguments":"{\"name\":\"apply_patch\",\"arguments\":{\"input\":\"p\"}}"}`,
 	} {
 		s.RememberDispatcherEvent([]byte(raw))

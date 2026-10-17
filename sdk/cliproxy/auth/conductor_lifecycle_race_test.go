@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Run with -race to check that scheduler snapshots never read published auths unlocked.
+// 使用 -race 运行，以检查调度器快照绝不会在未加锁的情况下读取已发布的 auth。
 func TestPublishedAuthSnapshotRace(t *testing.T) {
 	for _, operation := range []string{"Register", "Update", "UpdatePreparedAuth", "UpdateRefreshedAuth"} {
 		t.Run(operation, func(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// --- L1 direction A: Claude server tool blocks -> Responses web_search_call ---
+// --- L1 方向 A：Claude server tool 块 -> Responses web_search_call ---
 
 func claudeWebSearchStreamChunks() [][]byte {
 	return [][]byte{
@@ -52,7 +52,7 @@ func TestClaudeWebSearchBlocksBecomeWebSearchCallItem(t *testing.T) {
 	if got := item.Get("results.0.url").String(); got != "https://example.com/a" {
 		t.Fatalf("results[0].url = %q", got)
 	}
-	// Anthropic validates encrypted_content on replay, so it must survive the hop.
+	// Anthropic 在重放时会校验 encrypted_content，因此它必须能经过这一跳。
 	if got := item.Get("results.0.encrypted_content").String(); got != "ENC_A" {
 		t.Fatalf("results[0].encrypted_content = %q, want ENC_A", got)
 	}
@@ -78,7 +78,7 @@ func TestClaudeWebSearchBlocksBecomeWebSearchCallItemNonStream(t *testing.T) {
 	}
 }
 
-// --- L1 direction B: Responses web_search_call -> Claude server tool blocks ---
+// --- L1 方向 B：Responses web_search_call -> Claude server tool 块 ---
 
 func TestWebSearchCallItemReplaysAsClaudeServerToolBlocks(t *testing.T) {
 	raw := responsesRequestFromItems(`{
@@ -114,9 +114,9 @@ func TestWebSearchCallItemReplaysAsClaudeServerToolBlocks(t *testing.T) {
 	}
 }
 
-// Anthropic rejects a web_search_result without genuine encrypted_content and
-// rejects a server_tool_use with no result block at all, but accepts an empty
-// result list. A client that drops the field must therefore degrade, not break.
+// Anthropic 会拒绝没有真实 encrypted_content 的 web_search_result，
+// 也会拒绝完全没有结果块的 server_tool_use，但接受空的结果列表。
+// 因此丢弃该字段的客户端应当降级，而不是出错。
 func TestWebSearchCallWithoutEncryptedContentReplaysEmptyResults(t *testing.T) {
 	raw := responsesRequestFromItems(`{
 		"type":"web_search_call","id":"ws_srvtoolu_1","status":"completed",
@@ -150,7 +150,7 @@ func TestOutputTextAnnotationsReplayAsClaudeCitations(t *testing.T) {
 	if got := block.Get("citations.0.url").String(); got != "https://example.com/a" {
 		t.Fatalf("citation url = %q", got)
 	}
-	// encrypted_index is mandatory on replay; the annotation must ride through verbatim.
+	// encrypted_index 在重放时是必需的；该注解必须原样通过。
 	if got := block.Get("citations.0.encrypted_index").String(); got != "IDX_A" {
 		t.Fatalf("citation encrypted_index = %q, want IDX_A", got)
 	}
@@ -185,7 +185,7 @@ func TestRefusalPartReplaysAsClaudeText(t *testing.T) {
 	}
 }
 
-// --- L3 contract: every reachable Claude block survives a round trip ---
+// --- L3 契约：每个可达的 Claude 块都能经受一次往返 ---
 
 func TestRoundTripPreservesReachableClaudeBlocks(t *testing.T) {
 	chunks := [][]byte{
@@ -239,11 +239,11 @@ func TestRoundTripPreservesReachableClaudeBlocks(t *testing.T) {
 	}
 }
 
-// --- boundary and error cases ------------------------------------------------
+// --- 边界与错误场景 ------------------------------------------------
 
-// Anthropic constrains server tool ids to ^srvtoolu_[a-zA-Z0-9_]+$. Responses
-// items that never came from Claude (a native OpenAI web_search_call) carry ids
-// that violate it, so the id must be normalised instead of trusted.
+// Anthropic 将 server tool id 限制为 ^srvtoolu_[a-zA-Z0-9_]+$。并非来自 Claude 的
+// Responses 项（原生 OpenAI 的 web_search_call）所携带的 id 违反该约束，
+// 因此 id 必须被规范化，而不能被直接信任。
 func TestWebSearchCallIDNormalisedToClaudeServerToolPattern(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
@@ -278,8 +278,8 @@ func TestWebSearchCallWithoutIDProducesNoBlocks(t *testing.T) {
 	}
 }
 
-// A turn can end after the search block when the upstream stream is cut short;
-// the item must still be closed so the client does not see a dangling item.
+// 当上游流被提前截断时，一个轮次可能在搜索块之后结束；
+// 该项仍必须被关闭，以免客户端看到一个悬空项。
 func TestClaudeWebSearchWithoutResultBlockStillEmitsItem(t *testing.T) {
 	chunks := [][]byte{
 		[]byte(`data: {"type":"message_start","message":{"id":"msg_ws","usage":{"input_tokens":1,"output_tokens":0}}}`),
@@ -349,9 +349,9 @@ func TestWebSearchResultWithoutMatchingUseIsIgnored(t *testing.T) {
 	}
 }
 
-// Native OpenAI clients emit `queries` alongside `query`, and use an `open_page`
-// action with a url instead of a query; both shapes reach this translator when a
-// session started on an OpenAI provider is resumed against Claude.
+// 原生 OpenAI 客户端会在 `query` 之外同时发出 `queries`，并使用带 url 的
+// `open_page` 动作而非 query；当在 OpenAI 供应商上开始的会话针对 Claude
+// 恢复时，这两种形态都会到达此转换器。
 func TestWebSearchCallQueryAcceptsNativeOpenAIActionShapes(t *testing.T) {
 	for _, tc := range []struct{ name, action, want string }{
 		{"search with query", `{"type":"search","query":"go release","queries":["go release"]}`, "go release"},
@@ -368,8 +368,8 @@ func TestWebSearchCallQueryAcceptsNativeOpenAIActionShapes(t *testing.T) {
 	}
 }
 
-// An empty result list is distinct from a missing one: Claude reported a search
-// that returned nothing, which Anthropic accepts on replay.
+// 空的结果列表与缺失的结果列表不同：Claude 报告了一次没有返回任何内容的搜索，
+// Anthropic 在重放时接受这种情况。
 func TestClaudeWebSearchWithEmptyResultsKeepsEmptyList(t *testing.T) {
 	chunks := [][]byte{
 		[]byte(`data: {"type":"message_start","message":{"id":"msg_ws","usage":{"input_tokens":1,"output_tokens":0}}}`),
@@ -420,7 +420,7 @@ func TestClaudeWebSearchErrorResultSurvivesRoundTrip(t *testing.T) {
 		t.Fatalf("results[0].error_code = %q, want rate_limited", got)
 	}
 
-	// Replay back to Claude
+	// 重放回 Claude
 	req, _ := json.Marshal(map[string]any{"model": "claude-test", "input": []json.RawMessage{json.RawMessage(outputItems[0].Raw)}})
 	replayed, _ := ConvertOpenAIResponsesRequestToClaude("claude-test", req, false)
 	replayedBlocks := gjson.GetBytes(replayed, "messages.0.content")
@@ -472,7 +472,7 @@ func TestTextSearchTextOrderPreservedInStreamingAndReplay(t *testing.T) {
 		t.Fatalf("item 2 must have citation with encrypted_index IDX_ORD, got: %s", items[2].Raw)
 	}
 
-	// Also verify non-streaming matches streaming behavior:
+	// 同时校验非流式与流式行为一致：
 	var lines []string
 	for _, ch := range chunks {
 		lines = append(lines, string(ch))
@@ -496,7 +496,7 @@ func TestTextSearchTextOrderPreservedInStreamingAndReplay(t *testing.T) {
 		t.Fatalf("non-stream item 2 citation encrypted_index = %q, want IDX_ORD", nonStreamItems[2].Get("content.0.annotations.0.encrypted_index").String())
 	}
 
-	// Replay back to Claude and verify the block sequence matches original Claude order:
+	// 重放回 Claude，并校验块序列与原始 Claude 顺序一致：
 	// text -> server_tool_use -> web_search_tool_result -> text
 	var rawItems []json.RawMessage
 	for _, it := range items {

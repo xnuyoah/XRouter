@@ -158,8 +158,8 @@ func (p *pprofServer) startServer(addr string, owner uint64) *http.Server {
 	return server
 }
 
-// clearFailedServer removes a failed physical server even if a same-address
-// ApplyContext transferred lifecycle ownership while ListenAndServe was starting.
+// 即使同地址服务器的 ApplyContext 在 ListenAndServe
+// 启动期间转移了生命周期所有权，clearFailedServer 也会移除失败的物理服务器。
 func (p *pprofServer) clearFailedServer(server *http.Server) {
 	if p == nil || server == nil {
 		return

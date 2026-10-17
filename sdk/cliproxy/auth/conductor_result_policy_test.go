@@ -68,13 +68,13 @@ func TestManager_MarkResult_ResultPolicy_DemotesCredentialScopeBeforeMutationAnd
 
 	policy := ResultPolicyFunc(func(ctx context.Context, res Result) Result {
 		policyInvoked.Store(true)
-		// Check that at the time policy runs, auth is not yet marked unavailable or in credential quota cooldown
+		// 检查策略运行时，auth 尚未被标记为不可用或处于凭据额度冷却
 		current, exists := m.GetByID(auth.ID)
 		if exists && current != nil && !current.Unavailable && current.Quota.Reason != "credential_quota" {
 			stateCheckedBeforeMutation.Store(true)
 		}
 
-		// Downstream use case: Demote consumable-quota 429 so it cannot become a credential-scope gate.
+		// 下游用例：将可消耗额度类的 429 降级，使其无法成为凭据级门禁。
 		if res.Error != nil && res.Error.HTTPStatus == http.StatusTooManyRequests && res.CredentialScope {
 			res.CredentialScope = false
 		}
@@ -93,7 +93,7 @@ func TestManager_MarkResult_ResultPolicy_DemotesCredentialScopeBeforeMutationAnd
 		Model:           "claude-3-7-sonnet",
 		Success:         false,
 		RetryAfter:      &retryDuration,
-		CredentialScope: true, // Originally constructed as credential-scoped
+		CredentialScope: true, // 最初构造为凭据作用域
 		Error:           &Error{HTTPStatus: http.StatusTooManyRequests, Message: "organic consumable quota exceeded"},
 	})
 
@@ -109,7 +109,7 @@ func TestManager_MarkResult_ResultPolicy_DemotesCredentialScopeBeforeMutationAnd
 		t.Fatal("auth not found after MarkResult")
 	}
 
-	// Sibling model (claude-3-5-haiku) must NOT be demoted/unavailable because CredentialScope was cleared by policy
+	// 同级模型（claude-3-5-haiku）不得被降级/置为不可用，因为 CredentialScope 已被策略清除
 	haikuState := existingModelState(updated, canonicalModelKey("claude-3-5-haiku"))
 	if haikuState != nil && haikuState.Unavailable {
 		t.Fatalf("expected sibling model claude-3-5-haiku to remain available, but got unavailable: %+v", haikuState)
@@ -118,7 +118,7 @@ func TestManager_MarkResult_ResultPolicy_DemotesCredentialScopeBeforeMutationAnd
 		t.Fatalf("expected sibling model claude-3-5-haiku not to have credential_quota, got: %+v", haikuState.Quota)
 	}
 
-	// Verify sibling model is not blocked, while target model is blocked
+	// 验证同级模型未被阻塞，而目标模型被阻塞
 	blockedHaiku, _, _ := isAuthBlockedForModel(updated, "claude-3-5-haiku", time.Now())
 	if blockedHaiku {
 		t.Fatalf("expected sibling model claude-3-5-haiku not to be blocked")
@@ -128,24 +128,24 @@ func TestManager_MarkResult_ResultPolicy_DemotesCredentialScopeBeforeMutationAnd
 		t.Fatalf("expected target model claude-3-7-sonnet to be blocked by per-model 429")
 	}
 
-	// Verify sibling model remains selectable via Selector
+	// 验证同级模型仍可通过 Selector 选中
 	picked, errPick := m.Selector().Pick(context.Background(), auth.Provider, "claude-3-5-haiku", cliproxyexecutor.Options{}, []*Auth{updated})
 	if errPick != nil || picked == nil || picked.ID != auth.ID {
 		t.Fatalf("expected sibling model claude-3-5-haiku to remain selectable via Selector, got err=%v picked=%v", errPick, picked)
 	}
 
-	// Target model (claude-3-7-sonnet) should have per-model quota cooldown
+	// 目标模型（claude-3-7-sonnet）应具有按模型的额度冷却
 	sonnetState := existingModelState(updated, canonicalModelKey("claude-3-7-sonnet"))
 	if sonnetState == nil || !sonnetState.Unavailable {
 		t.Fatalf("expected target model claude-3-7-sonnet to be unavailable due to per-model 429: %+v", sonnetState)
 	}
 
-	// Entire credential auth must NOT be marked credential_quota
+	// 整个凭据 auth 不得被标记为 credential_quota
 	if updated.Quota.Reason == "credential_quota" {
 		t.Fatalf("expected auth.Quota.Reason not to be 'credential_quota' after demotion, got %q", updated.Quota.Reason)
 	}
 
-	// Cooldown persistence must NOT contain a credential-scoped record (Model == ""), but must contain target model record
+	// 冷却持久化不得包含凭据作用域记录（Model == ""），但必须包含目标模型记录
 	savedRecords := store.getRecords()
 	if len(savedRecords) == 0 {
 		t.Fatal("expected at least one cooldown record to be persisted for target model")
@@ -156,7 +156,7 @@ func TestManager_MarkResult_ResultPolicy_DemotesCredentialScopeBeforeMutationAnd
 		}
 	}
 
-	// Downstream OnResult hook must receive the demoted result
+	// 下游 OnResult hook 必须收到降级后的结果
 	received := hook.lastResult.Load()
 	if received == nil {
 		t.Fatal("expected OnResult to receive result")
@@ -173,7 +173,7 @@ func TestManager_MarkResult_ResultPolicy_NilPolicyNoop(t *testing.T) {
 
 	m, auth := newCooldownMonotonicManager(t, "model-1", "model-2")
 
-	// No policy set - MarkResult proceeds normally
+	// 未设置策略 - MarkResult 正常执行
 	retryDuration := 5 * time.Minute
 	m.MarkResult(context.Background(), Result{
 		AuthID:          auth.ID,
@@ -199,7 +199,7 @@ func TestManager_MarkResult_ResultPolicy_ClearWithNil(t *testing.T) {
 		t.Fatal("expected policy to be set")
 	}
 
-	// Clearing policy with nil must not panic and must set policy to nil
+	// 用 nil 清除策略不得 panic，且必须将策略置为 nil
 	m.SetResultPolicy(nil)
 	if m.ResultPolicy() != nil {
 		t.Fatal("expected policy to be nil after SetResultPolicy(nil)")
@@ -210,7 +210,7 @@ func TestManager_MarkResult_ResultPolicy_EmptyAuthIDAborts(t *testing.T) {
 	m, auth := newCooldownMonotonicManager(t, "model-abort")
 
 	policy := ResultPolicyFunc(func(_ context.Context, res Result) Result {
-		res.AuthID = "" // Drop result by emptying AuthID
+		res.AuthID = "" // 通过清空 AuthID 丢弃结果
 		return res
 	})
 	m.SetResultPolicy(policy)
@@ -243,7 +243,7 @@ func TestManager_MarkResult_ResultPolicy_ConcurrentSafety(t *testing.T) {
 	})
 	m.SetResultPolicy(p1)
 
-	// Ensure policy is operational before running concurrent swap stress
+	// 在运行并发替换压力测试前确保策略可用
 	m.MarkResult(context.Background(), Result{
 		AuthID:   auth.ID,
 		Provider: auth.Provider,
@@ -258,7 +258,7 @@ func TestManager_MarkResult_ResultPolicy_ConcurrentSafety(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
 
-	// Goroutines executing MarkResult concurrently
+	// 并发执行 MarkResult 的 goroutine
 	for i := 0; i < 20; i++ {
 		go func() {
 			defer wg.Done()
@@ -273,7 +273,7 @@ func TestManager_MarkResult_ResultPolicy_ConcurrentSafety(t *testing.T) {
 		}()
 	}
 
-	// Goroutines concurrently mutating and swapping policy
+	// 并发修改与替换策略的 goroutine
 	for i := 0; i < 10; i++ {
 		idx := i
 		go func() {

@@ -12,8 +12,8 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// registerOverloadAuths registers n active codex credentials with descending priority so the
-// selection order is deterministic, and returns their IDs in expected pick order.
+// registerOverloadAuths 注册 n 个优先级递减的活跃 codex 凭据，使
+// 选择顺序确定，并按预期的挑选顺序返回它们的 ID。
 func registerOverloadAuths(t *testing.T, m *Manager, n int) []string {
 	t.Helper()
 	reg := registry.GetGlobalRegistry()
@@ -24,7 +24,7 @@ func registerOverloadAuths(t *testing.T, m *Manager, n int) []string {
 			ID:       id,
 			Provider: "codex",
 			Status:   StatusActive,
-			// Higher priority is picked first, so descending values keep the order stable.
+			// 优先级更高者先被选中，因此递减的取值可保持顺序稳定。
 			Attributes: map[string]string{"priority": fmt.Sprintf("%d", 100-i)},
 		}
 		reg.RegisterClient(id, "codex", []*registry.ModelInfo{{ID: "gpt-5.6-terra"}})
@@ -66,10 +66,10 @@ func successStreamResult() *cliproxyexecutor.StreamResult {
 	}
 }
 
-// With stream-bootstrap-buffering enabled the codex executor returns the overload rejection
-// synchronously instead of relaying it in-stream. This test pins the operational question: with
-// request-retry=5 and max-retry-credentials=6, do three consecutive overloaded accounts get
-// skipped so the fourth credential serves the request?
+// 启用 stream-bootstrap-buffering 时，codex 执行器会同步返回过载拒绝，
+// 而不是在流内转发。该测试固定了运维问题：
+// 在 request-retry=5、max-retry-credentials=6 时，连续三个过载账号是否会被
+// 跳过，从而由第四个凭据来服务该请求？
 func TestExecuteStream_BootstrapOverload_SkipsConsecutiveOverloadedCredentials(t *testing.T) {
 	previous := quotaCooldownDisabled.Load()
 	quotaCooldownDisabled.Store(false)
@@ -180,15 +180,15 @@ func TestExecuteStream_BootstrapCapacity_SkipsConsecutiveOverloadedCredentials(t
 	}
 }
 
-// The credential budget must be honoured: when every credential is overloaded the request fails
-// after max-retry-credentials attempts rather than looping forever.
+// 凭据预算必须被遵守：当每个凭据都过载时，请求会在达到
+// max-retry-credentials 次尝试后失败，而不是无限循环。
 func TestExecuteStream_BootstrapOverload_StopsAtCredentialBudget(t *testing.T) {
 	previous := quotaCooldownDisabled.Load()
 	quotaCooldownDisabled.Store(false)
 	t.Cleanup(func() { quotaCooldownDisabled.Store(previous) })
 
 	m := NewManager(nil, nil, nil)
-	// Six credentials exist and only four may be attempted in one round.
+	// 共有六个凭据，而一轮中最多只可尝试四个。
 	m.SetRetryConfig(5, 0, 4)
 	registerOverloadAuths(t, m, 6)
 
@@ -221,8 +221,8 @@ func TestExecuteStream_BootstrapOverload_StopsAtCredentialBudget(t *testing.T) {
 	if attempts == 0 {
 		t.Fatal("expected at least one attempt")
 	}
-	// A no-wait retry round may consume the remaining two credentials after the
-	// first four-credential sweep, but it must not exceed the available set.
+	// 无等待的重试轮可以在第一次四凭据扫描之后消耗剩余的两个
+	// 凭据，但不得超过可用集合。
 	if attempts < 4 || attempts > 6 {
 		t.Fatalf("attempts = %d, want between 4 and 6", attempts)
 	}

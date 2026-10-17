@@ -10,7 +10,7 @@ import (
 
 var modelFieldPaths = []string{"model", "modelVersion", "response.model", "response.modelVersion", "message.model"}
 
-const maxPendingBufSize = 1 << 20 // 1MB limit for pending buffer
+const maxPendingBufSize = 1 << 20 // 待处理缓冲区上限 1MB
 
 func rewriteSSEPayloadLines(payload []byte, targetModel string) []byte {
 	if targetModel == "" || len(payload) == 0 {
@@ -45,12 +45,12 @@ func rewriteModelInResponse(data []byte, targetModel string) []byte {
 	return data
 }
 
-// StreamRewriteOptions configures the stream rewriter.
+// StreamRewriteOptions 配置流式重写器。
 type StreamRewriteOptions struct {
 	RewriteModel string
 }
 
-// StreamRewriter rewrites model names in streaming SSE responses.
+// StreamRewriter 重写流式 SSE 响应中的模型名。
 type StreamRewriter struct {
 	options         StreamRewriteOptions
 	pendingBuf      []byte
@@ -59,7 +59,7 @@ type StreamRewriter struct {
 	loggedFinished  bool
 }
 
-// NewStreamRewriter creates a new stream rewriter.
+// NewStreamRewriter 创建一个新的流式重写器。
 func NewStreamRewriter(options StreamRewriteOptions) *StreamRewriter {
 	return &StreamRewriter{
 		options:     options,
@@ -122,7 +122,7 @@ func (r *StreamRewriter) logStreamFinishedOnce() {
 	log.Debugf("response rewriter: stream finished, successfully rewrote %d chunks to %s", r.rewrittenChunks, r.options.RewriteModel)
 }
 
-// RewriteChunk rewrites model names in a single SSE chunk.
+// RewriteChunk 重写单个 SSE 分块中的模型名。
 func (r *StreamRewriter) RewriteChunk(chunk []byte) []byte {
 	if r.options.RewriteModel == "" {
 		return chunk
@@ -144,7 +144,7 @@ func (r *StreamRewriter) RewriteChunk(chunk []byte) []byte {
 		return chunk
 	}
 
-	// Handle raw JSON chunks (OpenAI format without SSE "data:" prefix)
+	// 处理原始 JSON 分块（不带 SSE "data:" 前缀的 OpenAI 格式）
 	trimmed := bytes.TrimSpace(chunk)
 	if len(trimmed) > 0 && trimmed[0] == '{' && gjson.ValidBytes(trimmed) {
 		rewritten := trimmed
@@ -267,13 +267,13 @@ func normalizeGluedSSEEvents(chunk []byte) []byte {
 	if len(chunk) == 0 {
 		return chunk
 	}
-	// Antigravity translators emit event frames without trailing blank lines.
-	// When multiple frames are buffered back-to-back they can glue as "...}event:...".
-	// Only split when the bytes before the glue close a valid SSE data JSON object.
+	// Antigravity 转换器发出的事件帧不带尾部空行。
+	// 多个帧连续缓冲时可能粘连成 "...}event:..."。
+	// 仅当粘连处之前的字节能闭合一个有效的 SSE data JSON 对象时才拆分。
 	chunk = safeReplaceGlued(chunk, []byte("}event:"), []byte("}\n\nevent:"))
 	chunk = safeReplaceGlued(chunk, []byte("}\r\nevent:"), []byte("}\r\n\r\nevent:"))
-	// Codex executor emits one "data: {json}" chunk per SSE line without trailing newlines.
-	// Buffered chunks can glue as "...}data:...".
+	// Codex 执行器每行 SSE 发出一个 "data: {json}" 分块且不带尾部换行。
+	// 缓冲的分块可能粘连成 "...}data:..."。
 	chunk = safeReplaceGlued(chunk, []byte("}data:"), []byte("}\ndata:"))
 	chunk = safeReplaceGlued(chunk, []byte("}\r\ndata:"), []byte("}\r\ndata:"))
 	return chunk
@@ -314,7 +314,7 @@ func safeReplaceGlued(chunk []byte, old, new []byte) []byte {
 	return result
 }
 
-// Finish flushes any buffered partial SSE data at the end of a stream.
+// Finish 在流结束时冲刷所有缓冲的不完整 SSE 数据。
 func (r *StreamRewriter) Finish() []byte {
 	if len(r.pendingBuf) == 0 {
 		return nil

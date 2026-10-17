@@ -1,4 +1,4 @@
-// Package httpwire contains narrowly scoped HTTP/1.1 wire helpers.
+// Package httpwire 包含范围明确限定的 HTTP/1.1 线路层辅助工具。
 package httpwire
 
 import (
@@ -13,14 +13,14 @@ import (
 
 const maxBufferedRequestHeader = 1 << 20
 
-// RequestHeaderOrder returns the desired header-name order for one HTTP/1.1
-// request. Names are compared case-insensitively. Headers omitted from the
-// returned list retain their original relative order after the listed headers.
+// RequestHeaderOrder 返回某个 HTTP/1.1 请求期望的头名称顺序。
+// 名称按大小写不敏感比较。未出现在返回列表中的头
+// 会在已列出的头之后保持其原有相对顺序。
 type RequestHeaderOrder func(method, requestTarget string) []string
 
-// NewOrderedRequestConn wraps conn and rewrites HTTP/1.1 request-header order
-// and matches header casing to the desired order list. Request lines, unlisted
-// header casing and values, and body bytes remain intact.
+// NewOrderedRequestConn 包装 conn，重写 HTTP/1.1 请求头顺序，
+// 并使头的大小写与期望顺序列表一致。请求行、未列出的
+// 头的大小写与取值以及 body 字节均保持原样。
 func NewOrderedRequestConn(conn net.Conn, order RequestHeaderOrder) net.Conn {
 	if conn == nil || order == nil {
 		return conn
@@ -106,9 +106,9 @@ func (c *orderedRequestConn) Write(p []byte) (int, error) {
 
 		ordered, contentLength, chunked := orderRequestHeader(header, c.order)
 		if _, errWrite := writeAll(c.Conn, ordered); errWrite != nil {
-			// All caller bytes were accepted into the wrapper before the transformed
-			// header write failed. Return the full input count with the terminal
-			// connection error so callers do not replay an ambiguous partial header.
+			// 在转换后的头部写入失败之前，调用方的所有字节都已被
+			// 包装器接受。此时返回完整的输入计数以及终止性
+			// 连接错误，使调用方不会重放模棱两可的部分头部。
 			return originalLength, errWrite
 		}
 		consumed += currentHeaderBytes

@@ -203,8 +203,8 @@ func ValidatePlugin(plugin Plugin) error {
 	if !validPluginID(strings.TrimSpace(plugin.ID)) {
 		return fmt.Errorf("invalid plugin id %q", plugin.ID)
 	}
-	// The version is optional since the latest release is the source of truth;
-	// when present it is only used as a display fallback and must be valid.
+	// version 是可选的，因为最新发布版本才是真实来源；
+	// 若存在，它仅用作展示回退值，且必须合法。
 	if version := strings.TrimSpace(plugin.Version); version != "" && !validPluginVersion(version) {
 		return fmt.Errorf("invalid plugin version %q", plugin.Version)
 	}

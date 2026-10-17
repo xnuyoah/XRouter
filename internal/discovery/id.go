@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	// DefaultInstancePrefix is the prefix used for default instance names.
+	// DefaultInstancePrefix 是默认实例名使用的前缀。
 	DefaultInstancePrefix = "CPA-"
 	instanceIDFilename    = "instance_id"
 )
@@ -34,9 +34,9 @@ func isValidHex4(s string) bool {
 	return true
 }
 
-// GetOrGenerateInstanceID retrieves the persistent instance ID from stateDir,
-// or generates a new 4-character hex ID (e.g. "8F3B") and persists it atomically.
-// Thread-safe, cached per stateDir, and protected against race conditions.
+// GetOrGenerateInstanceID 从 stateDir 获取持久化实例 ID，
+// 或生成新的 4 位十六进制 ID（例如 "8F3B"）并以原子方式持久化。
+// 线程安全，按 stateDir 缓存，并防止竞态条件。
 func GetOrGenerateInstanceID(stateDir string) string {
 	cleanDir := ""
 	if stateDir != "" {
@@ -46,7 +46,7 @@ func GetOrGenerateInstanceID(stateDir string) string {
 	idMu.Lock()
 	defer idMu.Unlock()
 
-	// If already resolved and cached in-process for this directory, return immediately
+	// 如果该目录已在进程内解析并缓存，则立即返回
 	if id, ok := cachedIDs[cleanDir]; ok && isValidHex4(id) {
 		return id
 	}
@@ -62,15 +62,15 @@ func GetOrGenerateInstanceID(stateDir string) string {
 		}
 	}
 
-	// Generate random 2 bytes -> 4 hex chars with cryptographically secure PRNG
+	// 使用密码学安全的 PRNG 生成 2 个随机字节 -> 4 个十六进制字符
 	buf := make([]byte, 2)
 	if _, err := rand.Read(buf); err != nil {
-		// Defensive fallback if entropy source is temporarily unavailable
+		// 熵源暂时不可用时的防御性回退
 		return fmt.Sprintf("%04X", os.Getpid()&0xFFFF)
 	}
 	id := strings.ToUpper(hex.EncodeToString(buf))
 
-	// Persist atomically if stateDir is specified
+	// 若指定了 stateDir 则以原子方式持久化
 	if cleanDir != "" {
 		if errDir := os.MkdirAll(cleanDir, 0700); errDir == nil {
 			idPath := filepath.Join(cleanDir, instanceIDFilename)
@@ -91,16 +91,16 @@ func GetOrGenerateInstanceID(stateDir string) string {
 	return id
 }
 
-// ResetCachedInstanceID resets in-memory cached IDs for test isolation.
+// ResetCachedInstanceID 重置内存中缓存的 ID，以实现测试隔离。
 func ResetCachedInstanceID() {
 	idMu.Lock()
 	defer idMu.Unlock()
 	cachedIDs = make(map[string]string)
 }
 
-// FormatInstanceName returns a DNS-SD instance name that always includes the
-// persistent short ID, so LAN advertisements stay unique without a startup browse.
-// An empty custom name becomes CPA-<ShortID>; a custom name becomes <name>-<ShortID>.
+// FormatInstanceName 返回始终包含持久化短 ID 的 DNS-SD 实例名，
+// 因此局域网广播无需启动时浏览即可保持唯一。
+// 空的自定义名会变为 CPA-<ShortID>；自定义名会变为 <name>-<ShortID>。
 func FormatInstanceName(customName, instanceID string) string {
 	if !isValidHex4(instanceID) {
 		instanceID = "0001"

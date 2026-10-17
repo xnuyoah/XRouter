@@ -427,9 +427,9 @@ func executeOnce(opts runOptions) (pluginapi.HostModelExecutionResponse, error) 
 	if errBody != nil {
 		return pluginapi.HostModelExecutionResponse{}, errBody
 	}
-	// Forward HostCallbackID so the host skips this plugin's interceptors on the
-	// nested model execution. Host model callbacks do not recursively call the
-	// originating plugin's interceptor chain.
+	// 转发 HostCallbackID，使主机在嵌套模型执行时跳过该插件的
+	// 拦截器。主机模型回调不会递归调用发起该调用的
+	// 插件拦截器链。
 	result, errCall := callHost(pluginabi.MethodHostModelExecute, hostModelExecutionRequest{
 		HostModelExecutionRequest: pluginapi.HostModelExecutionRequest{
 			EntryProtocol: opts.EntryProtocol,
@@ -459,9 +459,9 @@ func executeStream(opts runOptions) (data streamPageData) {
 		data.Error = errBody.Error()
 		return data
 	}
-	// Forward HostCallbackID so the host skips this plugin's interceptors on the
-	// nested model execution. Host model callbacks do not recursively call the
-	// originating plugin's interceptor chain.
+	// 转发 HostCallbackID，使主机在嵌套模型执行时跳过该插件的
+	// 拦截器。主机模型回调不会递归调用发起该调用的
+	// 插件拦截器链。
 	result, errCall := callHost(pluginabi.MethodHostModelExecuteStream, hostModelExecutionRequest{
 		HostModelExecutionRequest: pluginapi.HostModelExecutionRequest{
 			EntryProtocol: opts.EntryProtocol,
@@ -492,7 +492,7 @@ func executeStream(opts runOptions) (data streamPageData) {
 		return data
 	}
 	if opts.ImplicitClose {
-		// When implicit_close=true, the host closes this stream when the management.handle RPC callback scope returns.
+		// 当 implicit_close=true 时，主机在 management.handle RPC 回调作用域返回时关闭该流。
 		data.CloseMode = "implicit close at management.handle return"
 	} else {
 		data.CloseMode = "explicit close through host.model.stream_close"

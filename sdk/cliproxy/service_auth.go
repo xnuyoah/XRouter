@@ -15,7 +15,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
-// newDefaultAuthManager creates a default authentication manager with supported OAuth providers.
+// newDefaultAuthManager 创建一个包含受支持 OAuth 供应商的默认认证管理器。
 func newDefaultAuthManager() *sdkAuth.Manager {
 	return sdkAuth.NewManager(
 		sdkAuth.GetTokenStore(),
@@ -91,9 +91,9 @@ func (s *Service) handleAuthUpdates(ctx context.Context, updates []watcher.AuthU
 	if s == nil {
 		return
 	}
-	// Keep this path limited to the targeted auths. Global plugin rebuilds and
-	// in-flight credential probes can hold authUpdateMu for minutes and stall
-	// Management API PATCH responses.
+	// 将这条路径限制在目标 auth 上。全局插件重建和
+	// 进行中的凭据探测可能持有多分钟 authUpdateMu，并阻塞
+	// 管理 API 的 PATCH 响应。
 	s.authUpdateMu.Lock()
 	locked := true
 	defer func() {
@@ -202,9 +202,9 @@ func (s *Service) handleAuthUpdates(ctx context.Context, updates []watcher.AuthU
 					log.Debugf("skipping stale auth delete for %s: incoming gen=%d, existing gen=%d", id, update.Auth.Generation, existing.Generation)
 					continue
 				}
-				// Whole-file deletes can outlive a persisted re-create whose inline
-				// sync did not carry a revision. Recheck local files, including remote
-				// store mirrors, but do not suppress per-ID content/config deletes.
+				// 整文件删除可能比一次已持久化的重建存在更久，因为后者的内联
+				// 同步未携带修订号。重新检查本地文件（包括远端
+				// 存储镜像），但不要抑制按 ID 的内容/配置删除。
 				if update.Auth == nil && update.IsFileRemoval() {
 					path := existing.Attributes[coreauth.AttributePath]
 					switch existing.AuthSourceKind() {
@@ -213,7 +213,7 @@ func (s *Service) handleAuthUpdates(ctx context.Context, updates []watcher.AuthU
 							path = existing.Attributes[coreauth.AttributeSource]
 						}
 					case coreauth.AuthSourceGit, coreauth.AuthSourcePostgres, coreauth.AuthSourceObjectStore:
-						// Remote stores are file-backed only when they provide a local path.
+						// 远端存储仅在提供本地路径时才由文件支持。
 					default:
 						path = ""
 					}
@@ -240,7 +240,7 @@ func (s *Service) handleAuthUpdates(ctx context.Context, updates []watcher.AuthU
 	waitAuthRegistrations(skippedWaits)
 }
 
-// shouldSkipFileAuthDelete retains re-created IDs and preserves auths on uncertain reads.
+// shouldSkipFileAuthDelete 保留被重建的 ID，并在读取不确定时保全 auth。
 func (s *Service) shouldSkipFileAuthDelete(path, id string) bool {
 	_, errStat := os.Stat(path)
 	if os.IsNotExist(errStat) {
@@ -250,8 +250,8 @@ func (s *Service) shouldSkipFileAuthDelete(path, id string) bool {
 		log.Debugf("skipping auth delete for %s: backing file is not confirmed missing", id)
 		return true
 	}
-	// A file can return with only a subset of its previous plugin auth IDs.
-	// Read just this file so another file with the same ID cannot retain the auth.
+	// 一个文件返回时可能只带有其先前插件 auth ID 的一个子集。
+	// 只读取该文件，这样具有相同 ID 的另一个文件就无法保留该 auth。
 	auths, errSnapshotAuthFile := s.currentWatcher().SnapshotAuthFile(path)
 	if errSnapshotAuthFile != nil || len(auths) == 0 {
 		log.Debugf("skipping auth delete for %s: file auth snapshot is uncertain (err=%v)", id, errSnapshotAuthFile)
@@ -263,8 +263,8 @@ func (s *Service) shouldSkipFileAuthDelete(path, id string) bool {
 			continue
 		}
 		hasAuth = true
-		// Store IDs retain case, but the file synthesizer lowercases IDs on Windows.
-		// Other platforms keep exact matching for case-sensitive plugin auth IDs.
+		// Store 的 ID 保留大小写，但文件合成器在 Windows 上会将 ID 转为小写。
+		// 其他平台对区分大小写的插件 auth ID 保持精确匹配。
 		if authIDMatches(auth.ID, id, runtime.GOOS == "windows") {
 			log.Debugf("skipping auth delete for %s: auth ID is present in the re-created file", id)
 			return true
@@ -337,9 +337,9 @@ func (s *Service) prepareCoreAuthForModelRegistration(ctx context.Context, auth 
 	auth = auth.Clone()
 	s.ensureExecutorsForAuthWithContext(ctx, auth, false)
 
-	// IMPORTANT: Update coreManager FIRST, before model registration.
-	// This ensures that configuration changes (proxy_url, prefix, etc.) take effect
-	// immediately for API calls, rather than waiting for model registration to complete.
+	// 重要：先更新 coreManager，再注册模型。
+	// 这确保配置变更（proxy_url、prefix 等）对 API 调用
+	// 立即生效，而无需等待模型注册完成。
 	op := "register"
 	var err error
 	if existing, ok := s.coreManager.GetByID(auth.ID); ok {
@@ -455,18 +455,18 @@ func (s *Service) shouldSkipModelRegistration(authID string, expectedGeneration 
 	return current.Disabled != expectedDisabled
 }
 
-// isStaleCoreAuth reports whether an incoming auth update is older than the current
-// state in coreManager, based on registration epoch and generation.
+// isStaleCoreAuth 根据注册 epoch 和代次，报告传入的 auth 更新
+// 是否比 coreManager 中的当前状态更旧。
 func isStaleCoreAuth(existing, incoming *coreauth.Auth) bool {
 	if existing == nil || incoming == nil {
 		return false
 	}
-	// If incoming has an explicit registration epoch that is older than existing, it's stale.
+	// 如果传入项带有显式注册 epoch 且比现有项更旧，则它是过期的。
 	if incoming.RegistrationEpoch > 0 && incoming.RegistrationEpoch < existing.RegistrationEpoch {
 		return true
 	}
-	// Versioned snapshots with an older generation must not overwrite a newer persist.
-	// Generation 0 is left unversioned (file-watcher synthesizer snapshots).
+	// 代次更旧的带版本快照不得覆盖更新的持久化结果。
+	// 代次 0 保持不带版本（文件监听器合成器的快照）。
 	if incoming.Generation > 0 && incoming.Generation < existing.Generation {
 		return true
 	}
@@ -494,10 +494,10 @@ func (s *Service) completeModelRegistrationForAuthWithCache(ctx context.Context,
 	}
 	s.reconcileRegisteredModelStates(ctx, targetAuth)
 
-	// Refresh the scheduler entry so that the auth's supportedModelSet is rebuilt
-	// from the now-populated global model registry. Without this, newly added auths
-	// have an empty supportedModelSet (because Register/Update upserts into the
-	// scheduler before registerModelsForAuth runs) and are invisible to the scheduler.
+	// 刷新调度器条目，使该 auth 的 supportedModelSet 从
+	// 此时已填充的全局模型注册表重建。否则新添加的 auth
+	// 会拥有空的 supportedModelSet（因为 Register/Update 在
+	// registerModelsForAuth 运行之前就 upsert 进调度器），从而对调度器不可见。
 	s.coreManager.RefreshSchedulerEntry(targetAuth.ID)
 	return targetAuth.Generation
 }
@@ -510,9 +510,9 @@ func (s *Service) applyCoreAuthRemoval(ctx context.Context, id string) {
 		return
 	}
 	id = strings.TrimSpace(id)
-	// Invalidate the auth before advancing the registry epoch. Otherwise a
-	// refresh can adopt the tombstone epoch while the auth still exists and
-	// republish its cached models after the registry has been cleared.
+	// 在推进注册表 epoch 之前先使该 auth 失效。否则
+	// 刷新可能会在该 auth 仍存在时采用墓碑 epoch，
+	// 并在注册表已清空后重新发布其缓存的模型。
 	s.coreManager.Remove(ctx, id)
 	GlobalModelRegistry().UnregisterClient(id)
 }

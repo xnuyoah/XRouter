@@ -9,8 +9,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ParseConfigBytes parses a YAML configuration payload into Config and applies the same
-// in-memory normalizations as LoadConfigOptional, without persisting any changes to disk.
+// ParseConfigBytes 将 YAML 配置载荷解析为 Config，并应用与
+// LoadConfigOptional 相同的内存内规范化，不向磁盘持久化任何变更。
 func ParseConfigBytes(data []byte) (*Config, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("config payload is empty")
@@ -21,8 +21,8 @@ func ParseConfigBytes(data []byte) (*Config, error) {
 	}
 
 	var cfg Config
-	// Keep defaults aligned with LoadConfigOptional.
-	cfg.Host = "" // Default empty: binds to all interfaces (IPv4 + IPv6)
+	// 保持默认值与 LoadConfigOptional 一致。
+	cfg.Host = "" // 默认为空：绑定所有接口（IPv4 + IPv6）
 	cfg.LoggingToFile = false
 	cfg.LogsMaxTotalSizeMB = 0
 	cfg.ErrorLogsMaxFiles = 10
@@ -60,7 +60,7 @@ func ParseConfigBytes(data []byte) (*Config, error) {
 		cfg.Discovery.Subtypes = []string{"_chat-completions", "_responses", "_messages"}
 	}
 
-	// Hash remote management key if plaintext is detected (nested), but do NOT persist.
+	// 检测到明文时对远程管理密钥做哈希（嵌套），但不持久化。
 	if cfg.RemoteManagement.SecretKey != "" && !looksLikeBcrypt(cfg.RemoteManagement.SecretKey) {
 		hashed, errHash := bcrypt.GenerateFromPassword([]byte(cfg.RemoteManagement.SecretKey), bcrypt.DefaultCost)
 		if errHash != nil {
@@ -98,7 +98,7 @@ func ParseConfigBytes(data []byte) (*Config, error) {
 		return nil, errResolvePluginsDir
 	}
 
-	// Apply the same sanitization pipeline.
+	// 应用相同的净化流水线。
 	cfg.SanitizeNativeAPIKeys()
 	cfg.SanitizeOpenAICompatibility()
 	cfg.OAuthExcludedModels = NormalizeOAuthExcludedModels(cfg.OAuthExcludedModels)

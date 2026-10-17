@@ -8,7 +8,7 @@ import (
 	cliproxysession "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/session"
 )
 
-// DerivedSessionID returns the first context-derived session identity in metadata order.
+// DerivedSessionID 按元数据顺序返回第一个由上下文派生的会话标识。
 func DerivedSessionID(metadataSets ...map[string]any) string {
 	for _, metadata := range metadataSets {
 		if derivedID := cliproxysession.DerivedID(metadata); derivedID != "" {
@@ -18,12 +18,12 @@ func DerivedSessionID(metadataSets ...map[string]any) string {
 	return ""
 }
 
-// DerivedSessionUUID maps a derived session identity to a provider-scoped stable UUID.
+// DerivedSessionUUID 将派生会话标识映射为供应商范围内稳定的 UUID。
 func DerivedSessionUUID(provider string, metadataSets ...map[string]any) string {
 	return stableProviderSessionUUID(provider, "derived-session", DerivedSessionID(metadataSets...))
 }
 
-// ProviderSessionUUID prefers a long-lived execution session and falls back to the derived identity.
+// ProviderSessionUUID 优先使用长生命周期的执行会话，缺失时回退到派生的标识。
 func ProviderSessionUUID(provider string, metadataSets ...map[string]any) string {
 	for _, metadata := range metadataSets {
 		if executionID := metadataString(metadata, cliproxyexecutor.ExecutionSessionMetadataKey); executionID != "" {

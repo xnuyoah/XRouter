@@ -28,7 +28,7 @@ func TestDiffOAuthSettingsChanges(t *testing.T) {
 
 	changes, affected := DiffOAuthSettingsChanges(oldMap, newMap)
 
-	// vertex removed, claude added, codex updated
+	// 移除了 vertex，新增了 claude，更新了 codex
 	expectContains := func(slice []string, expected string) {
 		t.Helper()
 		found := false

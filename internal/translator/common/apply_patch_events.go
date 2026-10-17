@@ -2,7 +2,7 @@ package common
 
 import "github.com/tidwall/sjson"
 
-// ApplyPatchCallState owns the input decoder and identity of one tool call.
+// ApplyPatchCallState 拥有一次工具调用的输入解码器和标识。
 type ApplyPatchCallState struct {
 	ItemID      string
 	CallID      string
@@ -12,12 +12,12 @@ type ApplyPatchCallState struct {
 	Decoder     ApplyPatchInputDecoder
 }
 
-// PushArguments decodes the next arguments fragment for this call.
+// PushArguments 解码本次调用的下一个参数片段。
 func (s *ApplyPatchCallState) PushArguments(fragment string) (string, error) {
 	return s.Decoder.Push(fragment)
 }
 
-// FinishArguments returns any unsent suffix and the complete decoded input.
+// FinishArguments 返回任何未发送的后缀以及完整的已解码输入。
 func (s *ApplyPatchCallState) FinishArguments(arguments string) (string, string, error) {
 	tail, errFinish := s.Decoder.Finish(arguments)
 	if errFinish != nil {
@@ -26,7 +26,7 @@ func (s *ApplyPatchCallState) FinishArguments(arguments string) (string, string,
 	return tail, s.Decoder.Input(), nil
 }
 
-// ApplyPatchInputDelta builds a Responses custom-tool input delta without SSE framing.
+// ApplyPatchInputDelta 构建一个不带 SSE 封帧的 Responses custom-tool 输入增量。
 func ApplyPatchInputDelta(s *ApplyPatchCallState, delta string, sequence int) []byte {
 	payload := []byte(`{"type":"response.custom_tool_call_input.delta","item_id":"","call_id":"","output_index":0,"sequence_number":0,"delta":""}`)
 	payload = applyPatchEventIdentity(payload, s, sequence)
@@ -34,7 +34,7 @@ func ApplyPatchInputDelta(s *ApplyPatchCallState, delta string, sequence int) []
 	return payload
 }
 
-// ApplyPatchInputDone builds a Responses custom-tool input completion without SSE framing.
+// ApplyPatchInputDone 构建一个不带 SSE 封帧的 Responses custom-tool 输入完成事件。
 func ApplyPatchInputDone(s *ApplyPatchCallState, input string, sequence int) []byte {
 	payload := []byte(`{"type":"response.custom_tool_call_input.done","item_id":"","call_id":"","output_index":0,"sequence_number":0,"input":""}`)
 	payload = applyPatchEventIdentity(payload, s, sequence)
@@ -50,7 +50,7 @@ func applyPatchEventIdentity(payload []byte, s *ApplyPatchCallState, sequence in
 	return payload
 }
 
-// ApplyPatchFailure builds a terminal Responses failure without exposing upstream arguments.
+// ApplyPatchFailure 构建终止性的 Responses 失败事件，且不暴露上游参数。
 func ApplyPatchFailure(responseID string, sequence int) []byte {
 	payload := []byte(`{"type":"response.failed","sequence_number":0,"response":{"id":"","object":"response","status":"failed","error":{"type":"server_error","code":"invalid_tool_arguments","message":"Invalid apply_patch tool arguments received from upstream.","param":null}}}`)
 	payload, _ = sjson.SetBytes(payload, "response.id", responseID)
@@ -58,17 +58,17 @@ func ApplyPatchFailure(responseID string, sequence int) []byte {
 	return payload
 }
 
-// ApplyPatchErrorState retains a conversion error for the caller.
+// ApplyPatchErrorState 为调用方保留转换错误。
 type ApplyPatchErrorState struct {
 	err error
 }
 
-// SetToolInputError stores the original conversion error for executor handling.
+// SetToolInputError 存储原始转换错误，供执行器处理。
 func (s *ApplyPatchErrorState) SetToolInputError(err error) {
 	s.err = err
 }
 
-// ToolInputError returns the original conversion error, if any.
+// ToolInputError 返回原始转换错误（如果有）。
 func (s *ApplyPatchErrorState) ToolInputError() error {
 	return s.err
 }

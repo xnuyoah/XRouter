@@ -28,9 +28,9 @@ func testClaudeThinkingSignature() string {
 	return base64.StdEncoding.EncodeToString(payload)
 }
 
-// TestBase64AlphabetSet_MatchesEncoderAlphabets pins the charset lookup tables
-// against the encoders they stand in for. A wrong table would silently accept
-// bytes that are not valid base64, or reject a legal payload character.
+// TestBase64AlphabetSet_MatchesEncoderAlphabets 将字符集查找表
+// 与其所代表的编码器对照固定。错误的字符表会静默接受
+// 并非合法 base64 的字节，或拒绝一个合法的载荷字符。
 func TestBase64AlphabetSet_MatchesEncoderAlphabets(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -54,9 +54,9 @@ func TestBase64AlphabetSet_MatchesEncoderAlphabets(t *testing.T) {
 	}
 }
 
-// replaySafeEnvelopeFixtures returns one fixture per self-describing provider
-// envelope that carries replayable state. Every entry must survive the structural
-// pre-filter, because losing one would silently reclassify that provider.
+// replaySafeEnvelopeFixtures 为每一种携带可重放状态的、自描述供应商
+// 信封返回一个测试夹具。每个条目都必须通过结构预过滤，
+// 因为丢失一个条目会静默地将该供应商重新分类。
 func replaySafeEnvelopeFixtures(t *testing.T) map[string]struct {
 	sig  string
 	want SignatureProvider
@@ -73,12 +73,12 @@ func replaySafeEnvelopeFixtures(t *testing.T) map[string]struct {
 	}
 }
 
-// TestSelfDescribingSignatureFirstChars_CoversEveryKnownEnvelope guards the
-// structural pre-filter. DetectSignatureProviderForBlock skips every provider
-// validator when maybeSelfDescribingSignatureEnvelope returns false, so an
-// envelope missing from selfDescribingSignatureFirstChars would silently fall
-// through to the residual class. Adding a provider envelope without registering
-// its base64 first character fails here.
+// TestSelfDescribingSignatureFirstChars_CoversEveryKnownEnvelope 守护
+// 结构预过滤。当 maybeSelfDescribingSignatureEnvelope 返回 false 时，
+// DetectSignatureProviderForBlock 会跳过所有供应商校验器，因此
+// 未列入 selfDescribingSignatureFirstChars 的信封会静默落入
+// 残余类别。新增一个供应商信封却未注册其 base64 首字符时，
+// 会在此处失败。
 func TestSelfDescribingSignatureFirstChars_CoversEveryKnownEnvelope(t *testing.T) {
 	for name, fixture := range replaySafeEnvelopeFixtures(t) {
 		if !maybeSelfDescribingSignatureEnvelope(fixture.sig) {
@@ -87,8 +87,8 @@ func TestSelfDescribingSignatureFirstChars_CoversEveryKnownEnvelope(t *testing.T
 		}
 	}
 
-	// The pre-filter must not be so wide that it stops filtering. Opaque xAI
-	// ciphertext is the shape it exists to reject.
+	// 预过滤不能宽泛到不再起过滤作用。不透明的 xAI
+	// 密文正是它存在的意义所在——即拒绝这种形态。
 	for _, sig := range []string{
 		"K1ZAIbzDbO",
 		"jQDLUr+fD8RFP8nbkkfI",
@@ -100,9 +100,9 @@ func TestSelfDescribingSignatureFirstChars_CoversEveryKnownEnvelope(t *testing.T
 	}
 }
 
-// TestDetectSignatureProviderForBlock_ClassifiesEveryKnownEnvelope pins the
-// classification of each envelope so a reordering of the validator chain cannot
-// silently reassign one provider's signatures to another.
+// TestDetectSignatureProviderForBlock_ClassifiesEveryKnownEnvelope 固定
+// 每个信封的分类，使校验器链的重排不会静默地将某个供应商
+// 的签名重新归属于另一个供应商。
 func TestDetectSignatureProviderForBlock_ClassifiesEveryKnownEnvelope(t *testing.T) {
 	for name, fixture := range replaySafeEnvelopeFixtures(t) {
 		if got := DetectSignatureProvider(fixture.sig); got != fixture.want {
@@ -118,10 +118,10 @@ func TestDetectSignatureProvider_UsesProviderPrefix(t *testing.T) {
 	}
 }
 
-// TestDetectSignatureProvider_RejectsMisleadingPrefix keeps a provider prefix
-// from vouching for a payload that belongs to a different family. The prefix
-// names the provider, so a mismatch must fall through to unknown rather than
-// granting replay to whichever validator the prefix claims.
+// TestDetectSignatureProvider_RejectsMisleadingPrefix 防止某个供应商
+// 前缀为一个属于不同族的载荷背书。前缀指明了供应商，因此
+// 不匹配时必须落入 unknown，而不是把重放资格授予
+// 该前缀所声称的那个校验器。
 func TestDetectSignatureProvider_RejectsMisleadingPrefix(t *testing.T) {
 	mislabeledSig := "claude#" + testGPTReasoningSignature()
 	if got := DetectSignatureProvider(mislabeledSig); got != SignatureProviderUnknown {

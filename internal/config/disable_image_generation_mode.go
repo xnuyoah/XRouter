@@ -9,14 +9,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// DisableImageGenerationMode is a four-state config value for disable-image-generation.
+// DisableImageGenerationMode 是 disable-image-generation 的四态配置值。
 //
-// It supports:
-//   - false: enabled
-//   - true: disabled everywhere (including /v1/images/* endpoints)
-//   - "chat": disabled for all non-images endpoints, but enabled for /v1/images/generations and /v1/images/edits
-//   - "passthrough": never inject and never strip image_generation on non-images endpoints
-//     (the client payload is forwarded unchanged); on /v1/images/* endpoints behave like "chat"
+// 它支持：
+//   - false: 启用
+//   - true: 全局禁用（包括 /v1/images/* 端点）
+//   - "chat": 对所有非 images 端点禁用，但对 /v1/images/generations 和 /v1/images/edits 启用
+//   - "passthrough": 在非 images 端点上既不注入也不剥离 image_generation
+//     （客户端载荷原样转发）；在 /v1/images/* 端点上行为等同于 "chat"
 type DisableImageGenerationMode int
 
 const (
@@ -90,7 +90,7 @@ func parseDisableImageGenerationNode(value *yaml.Node) (DisableImageGenerationMo
 		return DisableImageGenerationOff, nil
 	}
 
-	// First try a typed bool decode (covers unquoted true/false and YAML 1.1 bools).
+	// 先尝试 bool 类型解码（覆盖未加引号的 true/false 以及 YAML 1.1 布尔值）。
 	var b bool
 	if err := value.Decode(&b); err == nil && value.Kind == yaml.ScalarNode && value.ShortTag() == "!!bool" {
 		if b {
@@ -99,7 +99,7 @@ func parseDisableImageGenerationNode(value *yaml.Node) (DisableImageGenerationMo
 		return DisableImageGenerationOff, nil
 	}
 
-	// Fall back to string decoding (covers quoted "true"/"false" and "chat").
+	// 回退到字符串解码（覆盖带引号的 "true"/"false" 以及 "chat"）。
 	var s string
 	if err := value.Decode(&s); err != nil {
 		return DisableImageGenerationOff, fmt.Errorf("invalid disable-image-generation value")

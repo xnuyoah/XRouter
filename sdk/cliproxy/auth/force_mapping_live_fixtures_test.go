@@ -1,7 +1,7 @@
 package auth
 
-// Live CPA-derived upstream response fixtures (2026-06-24, local 8343).
-// Executors emit these upstream model names; tests assert client-visible aliases after force-mapping.
+// 来自 CPA 的实时上游响应 fixture（2026-06-24，本地 8343）。
+// 执行器会发出这些上游模型名；测试断言强制映射后客户端可见的别名。
 
 const liveCodexResponsesCreatedUpstream = `{"type":"response.created","response":{"id":"resp_live","object":"response","created_at":1782272843,"status":"in_progress","model":"gpt-5.4","output":[],"parallel_tool_calls":true}}`
 

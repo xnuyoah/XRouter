@@ -1,4 +1,4 @@
-// Package util provides utility functions for the XRouter server.
+// Package util 为 XRouter 服务器提供工具函数。
 package util
 
 import (
@@ -17,14 +17,14 @@ var gjsonPathKeyReplacer = strings.NewReplacer(".", "\\.", "*", "\\*", "?", "\\?
 
 const placeholderReasonDescription = "Brief explanation of why you are calling this tool"
 
-// Pass a single JSON schema to the functions below — never a whole request document.
+// 请向下面的函数传入单个 JSON schema —— 绝不要传整个请求文档。
 //
-// Cleaning walks every node and rewrites keys by name, and schema keywords such as "title",
-// "format", "default" and "const" are also ordinary data keys. Handing these functions a request
-// silently rewrites tool-call arguments inside the conversation history: the guard that protects
-// a key under ".properties" does not apply to argument values, so the keys are deleted outright
-// and replacements such as "enum" and "type" are fabricated. That regression reached production
-// once already; scope every call site to the schema itself.
+// 清洗会遍历每个节点并按名称重写键，而诸如 "title"、
+// "format"、"default" 和 "const" 这样的 schema 关键字同时也是普通的数据键。把这些函数用于请求文档时，
+// 会静默重写会话历史中的工具调用参数：保护
+// ".properties" 下某个键的防护逻辑并不适用于参数值，因此这些键会被直接删除，
+// 并臆造出 "enum"、"type" 之类的替换内容。该回归问题已经
+// 进入过一次生产环境；请把每个调用点都限定在 schema 本身。
 
 type jsonSchemaCleanOptions struct {
 	addPlaceholder       bool
@@ -33,9 +33,9 @@ type jsonSchemaCleanOptions struct {
 	removeToolTitle      bool
 	removeGeminiMetadata bool
 	flattenUnions        bool
-	// flattenMultiBranchUnions forces multi-branch anyOf/oneOf unions down to a single
-	// strongest branch instead of preserving them. It is used on routes whose upstream
-	// rejects nested multi-branch unions even though they are valid JSON Schema.
+	// flattenMultiBranchUnions 将多分支的 anyOf/oneOf 联合强制压缩为单个
+	// 最强分支，而不是保留它们。它用于那些上游会拒绝嵌套多分支
+	// 联合（尽管它们是合法的 JSON Schema）的路由。
 	flattenMultiBranchUnions          bool
 	forceEnumStringType               bool
 	dropAllEnums                      bool
@@ -45,10 +45,10 @@ type jsonSchemaCleanOptions struct {
 	preserveStandardConstraints       bool
 }
 
-// CleanJSONSchemaForGeminiJSONSchema transforms a JSON schema for Gemini tool calling
-// when using the parametersJsonSchema carrier. It preserves standard JSON Schema constraints
-// (such as pattern, minLength, maxLength) and additionalProperties (both boolean and schema-valued),
-// while removing Gemini-incompatible metadata fields and cleaning required properties.
+// CleanJSONSchemaForGeminiJSONSchema 在使用 parametersJsonSchema 载体时，
+// 为 Gemini 工具调用转换 JSON schema。它会保留标准 JSON Schema 约束
+// （例如 pattern、minLength、maxLength）以及 additionalProperties（布尔型和 schema 值型均保留），
+// 同时移除 Gemini 不兼容的元数据字段并清理 required 属性。
 func CleanJSONSchemaForGeminiJSONSchema(jsonStr string) string {
 	return cleanJSONSchema(jsonStr, jsonSchemaCleanOptions{
 		addMissingArrayItems:            true,
@@ -60,12 +60,12 @@ func CleanJSONSchemaForGeminiJSONSchema(jsonStr string) string {
 	})
 }
 
-// cleanJSONSchema performs the core cleaning operations on the JSON schema.
+// cleanJSONSchema 对 JSON schema 执行核心清洗操作。
 func cleanJSONSchema(jsonStr string, options jsonSchemaCleanOptions) string {
-	// Phase 0: Normalize malformed schemas (e.g. bare property maps and boolean required from MCP tools)
+	// 阶段 0：规范化畸形 schema（例如来自 MCP 工具的裸属性映射和布尔型 required）
 	jsonStr = normalizeMalformedSchemaObjects(jsonStr, options.addMissingArrayItems)
 
-	// Phase 1: Convert and add hints
+	// 阶段 1：转换并添加提示
 	if options.antigravitySemantics {
 		jsonStr = inlineLocalRefs(jsonStr)
 	}
@@ -82,7 +82,7 @@ func cleanJSONSchema(jsonStr string, options jsonSchemaCleanOptions) string {
 		jsonStr = moveNotToDescription(jsonStr)
 	}
 
-	// Phase 2: Flatten complex structures
+	// 阶段 2：展平复杂结构
 	jsonStr = mergeConditionals(jsonStr)
 	jsonStr = mergeAllOf(jsonStr)
 	if options.flattenUnions {
@@ -90,21 +90,21 @@ func cleanJSONSchema(jsonStr string, options jsonSchemaCleanOptions) string {
 	}
 	jsonStr = flattenTypeArrays(jsonStr, options.antigravitySemantics)
 
-	// Phase 3: Cleanup
+	// 阶段 3：清理
 	jsonStr = removeUnsupportedKeywords(jsonStr, options)
 	if options.removeGeminiMetadata {
-		// Gemini schema cleanup: remove nullable/title and placeholder-only fields.
+		// Gemini schema 清理：移除 nullable/title 以及仅作为占位的字段。
 		jsonStr = removeKeywords(jsonStr, []string{"nullable", "title"})
 		jsonStr = removePlaceholderFields(jsonStr)
 	} else if options.removeToolTitle {
-		// Legacy non-VALIDATED Antigravity requests used the Gemini cleaner, which drops title.
-		// Keep that harmless metadata policy without losing Antigravity's native nullable support.
+		// 旧版非 VALIDATED 的 Antigravity 请求使用 Gemini 清理器，它会丢弃 title。
+		// 保留这一无害的元数据策略，同时不丢失 Antigravity 原生的 nullable 支持。
 		jsonStr = removeKeywords(jsonStr, []string{"title"})
 	}
 	jsonStr = cleanupRequiredFields(jsonStr)
 	jsonStr = sanitizeArrayItems(jsonStr)
 	jsonStr = sanitizeObjectProperties(jsonStr)
-	// Phase 4: Add placeholder for empty object schemas (Claude VALIDATED mode requirement)
+	// 阶段 4：为空对象 schema 添加占位（Claude VALIDATED 模式的要求）
 	if options.addPlaceholder {
 		jsonStr = addEmptySchemaPlaceholder(jsonStr)
 	}
@@ -112,9 +112,9 @@ func cleanJSONSchema(jsonStr string, options jsonSchemaCleanOptions) string {
 	return jsonStr
 }
 
-// sanitizeObjectProperties ensures that any schema node declaring "properties" has "type": "object".
-// Gemini's protobuf validator enforces a strict field predicate on properties and required ($type == Type.OBJECT);
-// if type is missing or not object, it is normalized to object so nested properties and required fields remain valid.
+// sanitizeObjectProperties 确保任何声明了 "properties" 的 schema 节点都带有 "type": "object"。
+// Gemini 的 protobuf 校验器会对 properties 和 required 强制执行严格的字段谓词（$type == Type.OBJECT）；
+// 若 type 缺失或不是 object，则将其规范化为 object，使嵌套的 properties 和 required 字段保持有效。
 func sanitizeObjectProperties(jsonStr string) string {
 	paths := findPaths(jsonStr, "properties")
 	sortByDepth(paths)
@@ -137,9 +137,9 @@ func sanitizeObjectProperties(jsonStr string) string {
 	return jsonStr
 }
 
-// sanitizeArrayItems ensures that any schema node declaring "items" has "type": "array".
-// Gemini's protobuf validator enforces a strict field predicate on items ($type == Type.ARRAY);
-// if type is missing, it is inferred as array; if type is explicitly a non-array, items is removed.
+// sanitizeArrayItems 确保任何声明了 "items" 的 schema 节点都带有 "type": "array"。
+// Gemini 的 protobuf 校验器会对 items 强制执行严格的字段谓词（$type == Type.ARRAY）；
+// 若 type 缺失，则推断为 array；若 type 明确不是 array，则移除 items。
 func sanitizeArrayItems(jsonStr string) string {
 	paths := findPaths(jsonStr, "items")
 	sortByDepth(paths)
@@ -160,7 +160,7 @@ func sanitizeArrayItems(jsonStr string) string {
 	return jsonStr
 }
 
-// removeKeywords removes all occurrences of specified keywords from the JSON schema.
+// removeKeywords 从 JSON schema 中移除指定关键字的所有出现。
 func removeKeywords(jsonStr string, keywords []string) string {
 	deletePaths := make([]string, 0)
 	pathsByField := findPathsByFields(jsonStr, keywords)
@@ -179,9 +179,9 @@ func removeKeywords(jsonStr string, keywords []string) string {
 	return jsonStr
 }
 
-// removePlaceholderFields removes placeholder-only properties ("_" and "reason") and their required entries.
+// removePlaceholderFields 移除仅作为占位的属性（"_" 和 "reason"）及其 required 条目。
 func removePlaceholderFields(jsonStr string) string {
-	// Remove "_" placeholder properties.
+	// 移除 "_" 占位属性。
 	paths := findPaths(jsonStr, "_")
 	sortByDepth(paths)
 	for _, p := range paths {
@@ -208,7 +208,7 @@ func removePlaceholderFields(jsonStr string) string {
 		}
 	}
 
-	// Remove placeholder-only "reason" objects.
+	// 移除仅作为占位的 "reason" 对象。
 	reasonPaths := findPaths(jsonStr, "reason")
 	sortByDepth(reasonPaths)
 	for _, p := range reasonPaths {
@@ -246,11 +246,11 @@ func removePlaceholderFields(jsonStr string) string {
 	return jsonStr
 }
 
-// normalizeMalformedSchemaObjects normalizes malformed JSON schema nodes commonly produced by
-// certain MCP tool definitions (e.g. Asana MCP server):
-// 1. Bare property maps missing the "type": "object" and "properties": {...} wrappers are wrapped.
-// 2. Boolean "required": true on property definitions are stripped and promoted to the parent's "required" array.
-// 3. Tool array schemas missing "items" receive a string item schema required by Gemini and Antigravity.
+// normalizeMalformedSchemaObjects 规范化某些 MCP 工具定义（例如 Asana MCP 服务器）
+// 常产生的畸形 JSON schema 节点：
+// 1. 缺少 "type": "object" 和 "properties": {...} 包装的裸属性映射会被包装起来。
+// 2. 属性定义上的布尔型 "required": true 会被剥离，并提升到父级的 "required" 数组中。
+// 3. 缺少 "items" 的工具数组 schema 会获得 Gemini 和 Antigravity 要求的字符串元素 schema。
 func normalizeMalformedSchemaObjects(jsonStr string, addMissingArrayItems bool) string {
 	if jsonStr == "" {
 		return jsonStr
@@ -272,7 +272,7 @@ func normalizeMalformedSchemaObjects(jsonStr string, addMissingArrayItems bool) 
 		return jsonStr
 	}
 
-	// If wrapped in single-key {"schema": ...} by cleanNestedSchema, unwrap, repair, and re-wrap.
+	// 若被 cleanNestedSchema 包装为单键的 {"schema": ...}，则先解包、修复，再重新包装。
 	if len(rootMap) == 1 {
 		if innerSchema, ok := rootMap["schema"].(map[string]any); ok {
 			repairedInner, modified := repairSchemaNode(innerSchema, addMissingArrayItems)
@@ -399,7 +399,7 @@ func repairSchemaNode(node map[string]any, addMissingArrayItems bool) (map[strin
 		clone[k] = v
 	}
 
-	// 1. If not declared as a primitive/array type, collect bare property definition maps
+	// 1. 若未声明为基本类型/数组类型，则收集裸属性定义映射
 	if !isNonObjectDeclaredType(clone["type"]) {
 		var bareProps map[string]any
 		for k, v := range clone {
@@ -444,7 +444,7 @@ func repairSchemaNode(node map[string]any, addMissingArrayItems bool) (map[strin
 		}
 	}
 
-	// 2. If node has a "properties" map, recursively repair all properties inside it
+	// 2. 若节点有 "properties" 映射，则递归修复其中的所有属性
 	if propsVal, ok := clone["properties"].(map[string]any); ok {
 		if _, hasType := clone["type"]; !hasType {
 			clone["type"] = "object"
@@ -463,8 +463,8 @@ func repairSchemaNode(node map[string]any, addMissingArrayItems bool) (map[strin
 		}
 	}
 
-	// Gemini and Antigravity reject tool array schemas without an items definition,
-	// and reject tool schemas with items whose type is not ARRAY.
+	// Gemini 和 Antigravity 会拒绝没有 items 定义的工具数组 schema，
+	// 也会拒绝 items 的类型不是 ARRAY 的工具 schema。
 	if addMissingArrayItems {
 		if isArrayDeclaredType(clone["type"]) {
 			if _, hasItems := clone["items"]; !hasItems {
@@ -479,7 +479,7 @@ func repairSchemaNode(node map[string]any, addMissingArrayItems bool) (map[strin
 		}
 	}
 
-	// 3. Recurse into all other standard schema containers
+	// 3. 递归处理所有其他标准 schema 容器
 	if itemsVal, ok := clone["items"].(map[string]any); ok {
 		repairedItems, itemsMod := repairSchemaNode(itemsVal, addMissingArrayItems)
 		if itemsMod {
@@ -665,9 +665,9 @@ func mergeStringSlices(existing, promoted []string) []string {
 	return res
 }
 
-// inlineLocalRefs resolves JSON Pointer references against the original schema before definition
-// containers are stripped. Each expansion receives its own copy, sibling keywords override the
-// referenced definition, and cycles terminate as a typed hint instead of recursing forever.
+// inlineLocalRefs 在定义容器被剥离之前，针对原始 schema 解析 JSON Pointer 引用。
+// 每次展开都会获得自己的副本，同级关键字会覆盖被引用的定义，循环引用会以类型化提示
+// 终止，而不是无限递归。
 func inlineLocalRefs(jsonStr string) string {
 	if !strings.Contains(jsonStr, `"$ref"`) {
 		return jsonStr
@@ -787,8 +787,8 @@ func refName(ref string) string {
 	return ref
 }
 
-// convertRefsToHints retains sibling keywords and converts only unresolved or external references
-// to descriptions. Local references have already been expanded by inlineLocalRefs.
+// convertRefsToHints 保留同级关键字，只把未解析或外部的引用转换为描述。
+// 本地引用已由 inlineLocalRefs 展开。
 func convertRefsToHints(jsonStr string, preserveSiblings bool) string {
 	paths := findPaths(jsonStr, "$ref")
 	sortByDepth(paths)
@@ -829,9 +829,9 @@ func convertConstToEnum(jsonStr string) string {
 	return jsonStr
 }
 
-// convertEnumValuesToStrings ensures all enum values use the string representation required by
-// Gemini's proto schema. The declared type remains independent: Antigravity uses it to choose the
-// emitted JSON type on both response and function-argument paths.
+// convertEnumValuesToStrings 确保所有 enum 值都使用 Gemini proto schema 要求的字符串表示。
+// 声明的类型保持独立：Antigravity 会用它来决定响应路径和函数参数路径上
+// 发出的 JSON 类型。
 func convertEnumValuesToStrings(jsonStr string, forceStringType bool) string {
 	for _, p := range findPaths(jsonStr, "enum") {
 		arr := gjson.Get(jsonStr, p)
@@ -875,9 +875,9 @@ func addEnumHints(jsonStr string) string {
 	return jsonStr
 }
 
-// Antigravity does not enforce enum on function arguments and ignores boolean response enums.
-// Preserve the advisory values in description, but do not leave an unenforced constraint in the
-// schema contract. Response enums for string, number, and integer remain native constraints.
+// Antigravity 不会在函数参数上强制 enum，并且会忽略布尔型的响应 enum。
+// 将这些提示性的值保留在 description 中，但不要在 schema 契约中留下未强制执行的约束。
+// 针对 string、number 和 integer 的响应 enum 保持为原生约束。
 func dropIgnoredEnumsToHints(jsonStr string, options jsonSchemaCleanOptions) string {
 	for _, path := range findPaths(jsonStr, "enum") {
 		parentPath := trimSuffix(path, ".enum")
@@ -906,7 +906,7 @@ func addAdditionalPropertiesHints(jsonStr string) string {
 var unsupportedConstraints = []string{
 	"minLength", "maxLength", "exclusiveMinimum", "exclusiveMaximum",
 	"pattern", "minItems", "maxItems", "uniqueItems", "contains", "format",
-	"default", "examples", // Claude rejects these in VALIDATED mode
+	"default", "examples", // Claude 在 VALIDATED 模式下会拒绝这些
 }
 
 func constraintKeywords(options jsonSchemaCleanOptions) []string {
@@ -1031,7 +1031,7 @@ func mergeAllOf(jsonStr string) string {
 					updated, _ := sjson.SetBytes([]byte(jsonStr), reqPath, current)
 					jsonStr = string(updated)
 				case "if", "then", "else", "allOf":
-					// Conditional applicability cannot be represented by the upstream schema.
+					// 条件适用性无法由上游 schema 表达。
 				default:
 					destination := joinPath(parentPath, escapeGJSONPathKey(field))
 					jsonStr = mergeMissingSchemaAtPath(jsonStr, destination, value)
@@ -1044,9 +1044,9 @@ func mergeAllOf(jsonStr string) string {
 	return jsonStr
 }
 
-// mergeMissingSchemaAtPath recursively fills absent fields without replacing any existing
-// definition. A parent schema is the canonical definition; allOf and conditional branches may
-// enrich gaps in it, but can never replace it with a narrower branch shell.
+// mergeMissingSchemaAtPath 递归填充缺失的字段，而不替换任何已有的定义。
+// 父 schema 是权威定义；allOf 和条件分支可以补充其中的空缺，
+// 但绝不能用一个更窄的分支外壳替换它。
 func mergeMissingSchemaAtPath(jsonStr, destination string, incoming gjson.Result) string {
 	existing := gjson.Get(jsonStr, destination)
 	if !existing.Exists() {
@@ -1178,13 +1178,13 @@ func flattenAnyOfOneOf(jsonStr string, preserveOneOf, flattenMultiBranch bool) s
 			parent = gjson.Parse(jsonStr)
 		}
 
-		// When a node declares both anyOf and oneOf on a native Schema carrier (!preserveOneOf),
-		// protobuf Schema has only a single anyOf field and cannot represent a second union
-		// conjunction structurally. Preserve anyOf as the primary union and move the sibling
-		// oneOf constraint to a description hint instead of concatenating it into anyOf.
-		// Routes that flatten multi-branch unions skip this shortcut: the primary union is
-		// about to be flattened away too, and hinting the raw oneOf JSON into the
-		// description would only add a giant, misleading hint.
+		// 当节点在原生 Schema 载体上同时声明 anyOf 和 oneOf 时（!preserveOneOf），
+		// protobuf Schema 只有一个 anyOf 字段，无法在结构上表示第二个联合的
+		// 合取。此时保留 anyOf 作为主联合，并把同级的 oneOf 约束改为 description
+		// 提示，而不是将其拼接到 anyOf 中。
+		// 展平多分支联合的路由会跳过这一捷径：主联合同样即将被展平掉，
+		// 而且把原始 oneOf JSON 作为提示写入 description 只会增加一个巨大的、
+		// 具有误导性的提示。
 		if key == "oneOf" && !flattenMultiBranch && !preserveOneOf && parent.Get("anyOf").IsArray() {
 			jsonStr = appendHint(jsonStr, parentPath, "oneOf: "+arr.Raw)
 			jsonStr, _ = sjson.Delete(jsonStr, p)
@@ -1194,16 +1194,16 @@ func flattenAnyOfOneOf(jsonStr string, preserveOneOf, flattenMultiBranch bool) s
 		items := arr.Array()
 		parentProps := parent.Get("properties")
 		nonNullItems, hasNull, hasFilteredBranch := partitionUnionBranches(items, parentProps)
-		// An earlier union-preserving pass may already have stripped the null branch and
-		// recorded it as nullable:true on this node (translator -> executor chain). That
-		// marker is part of the schema contract, so the flattening below must inherit it.
+		// 更早的联合保留处理可能已经剥离了 null 分支，并在该节点上记录为
+		// nullable:true（转换器 -> 执行器链路）。该标记是 schema 契约的一部分，
+		// 因此下面的展平必须继承它。
 		nullable := hasNull || parent.Get("nullable").Bool()
 
-		// Preserve multi-branch unions (2+ standalone non-null branches) so non-first branches are not lost.
-		// On native Gemini/Antigravity Schema carriers (!preserveOneOf), normalize oneOf to anyOf because
-		// the protobuf Schema message supports anyOf but rejects oneOf.
-		// Routes that reject multi-branch unions upstream (flattenMultiBranch) skip this
-		// preservation and fall through to the single-strongest-branch flattening below.
+		// 保留多分支联合（2 个及以上独立的非 null 分支），以免非首个分支丢失。
+		// 在原生 Gemini/Antigravity Schema 载体上（!preserveOneOf）把 oneOf 规范化为 anyOf，
+		// 因为 protobuf Schema 消息支持 anyOf 但会拒绝 oneOf。
+		// 那些上游会拒绝多分支联合的路由（flattenMultiBranch）会跳过这一保留逻辑，
+		// 转而走下面的单最强分支展平。
 		if len(nonNullItems) >= 2 && !flattenMultiBranch {
 			targetKey := key
 			if key == "oneOf" && !preserveOneOf {
@@ -1234,9 +1234,9 @@ func flattenAnyOfOneOf(jsonStr string, preserveOneOf, flattenMultiBranch bool) s
 			continue
 		}
 
-		// If the parent already defines properties (e.g. an object schema with unmaterializable
-		// union constraints or a single-branch union), do not replace the parent with a single branch.
-		// Instead, merge any branch properties into the parent and delete the union keyword.
+		// 若父级已定义 properties（例如带有无法具体化的联合约束的对象
+		// schema，或单分支联合），不要用单个分支替换父级。
+		// 取而代之的是把各分支的 properties 合并进父级，并删除联合关键字。
 		if parentProps.IsObject() {
 			for _, item := range nonNullItems {
 				if branchProps := item.Get("properties"); branchProps.IsObject() {
@@ -1282,9 +1282,9 @@ func flattenAnyOfOneOf(jsonStr string, preserveOneOf, flattenMultiBranch bool) s
 
 		parentDesc := gjson.Get(jsonStr, descriptionPath(parentPath)).String()
 		_, allTypes := selectBest(candidateItems)
-		// Select the strongest non-null branch (ties keep the first one), matching the
-		// pre-preservation flattening behavior. selectBest already treats union-bearing
-		// branches as score-0, so a nested union never wins over a null-free scalar here.
+		// 选择最强的非 null 分支（得分相同时保留第一个），与保留逻辑之前的
+		// 展平行为一致。selectBest 已经将含联合的分支视为 0 分，因此嵌套联合在这里
+		// 绝不会胜过不含 null 的标量。
 		selected := nonNullItems[0].Raw
 		if bestIdx, _ := selectBest(nonNullItems); bestIdx >= 0 && bestIdx < len(nonNullItems) {
 			selected = nonNullItems[bestIdx].Raw
@@ -1432,10 +1432,10 @@ func removeUnsupportedKeywords(jsonStr string, options jsonSchemaCleanOptions) s
 	keywords := append(constraintKeywords(options),
 		"$schema", "$defs", "definitions", "const", "$ref", "$id", "id", "additionalProperties",
 		"$anchor", "$vocabulary", "$dynamicRef", "$dynamicAnchor",
-		"propertyNames", "patternProperties", // Gemini doesn't support these schema keywords
+		"propertyNames", "patternProperties", // Gemini 不支持这些 schema 关键字
 		"dependentRequired", "dependentSchemas", "dependencies",
 		"if", "then", "else",
-		"$comment", "enumDescriptions", "enumTitles", "prefill", "deprecated", "encrypted", "discriminator", // Schema metadata fields unsupported by Gemini
+		"$comment", "enumDescriptions", "enumTitles", "prefill", "deprecated", "encrypted", "discriminator", // Gemini 不支持的 Schema 元数据字段
 		"additionalItems", "unevaluatedProperties", "unevaluatedItems", "contentSchema",
 	)
 	if options.antigravitySemantics {
@@ -1464,19 +1464,19 @@ func removeUnsupportedKeywords(jsonStr string, options jsonSchemaCleanOptions) s
 	for _, p := range deletePaths {
 		jsonStr, _ = sjson.Delete(jsonStr, p)
 	}
-	// Remove x-* extension fields (e.g., x-google-enum-descriptions) that are not supported by Gemini API
+	// 移除 Gemini API 不支持的 x-* 扩展字段（例如 x-google-enum-descriptions）
 	jsonStr = removeExtensionFields(jsonStr)
 	return jsonStr
 }
 
-// removeExtensionFields removes all x-* extension fields from the JSON schema.
-// These are OpenAPI/JSON Schema extension fields that Google APIs don't recognize.
+// removeExtensionFields 从 JSON schema 中移除所有 x-* 扩展字段。
+// 这些是 Google API 无法识别的 OpenAPI/JSON Schema 扩展字段。
 func removeExtensionFields(jsonStr string) string {
 	var paths []string
 	walkForExtensions(gjson.Parse(jsonStr), "", &paths)
-	// walkForExtensions returns paths in a way that deeper paths are added before their ancestors
-	// when they are not deleted wholesale, but since we skip children of deleted x-* nodes,
-	// any collected path is safe to delete. We still use DeleteBytes for efficiency.
+	// walkForExtensions 返回路径的方式是：当不会被整体删除时，更深的路径会先于其祖先加入，
+	// 但由于我们跳过了已删除 x-* 节点的子节点，
+	// 任何收集到的路径都可以安全删除。为提升效率我们仍使用 DeleteBytes。
 
 	b := []byte(jsonStr)
 	for _, p := range paths {
@@ -1500,7 +1500,7 @@ func walkForExtensions(value gjson.Result, path string, paths *[]string) {
 			safeKey := escapeGJSONPathKey(keyStr)
 			childPath := joinPath(path, safeKey)
 
-			// If it's an extension field, we delete it and don't need to look at its children.
+			// 若它是扩展字段，我们删除它，且无需再查看其子节点。
 			if strings.HasPrefix(keyStr, "x-") && !isPropertyDefinition(path) {
 				*paths = append(*paths, childPath)
 				return true
@@ -1547,13 +1547,13 @@ func cleanupRequiredFields(jsonStr string) string {
 	return jsonStr
 }
 
-// addEmptySchemaPlaceholder adds a placeholder "reason" property to empty object schemas.
-// Claude VALIDATED mode requires at least one required property in tool schemas.
+// addEmptySchemaPlaceholder 为空对象 schema 添加占位的 "reason" 属性。
+// Claude VALIDATED 模式要求工具 schema 中至少有一个 required 属性。
 func addEmptySchemaPlaceholder(jsonStr string) string {
-	// Find all "type" fields
+	// 查找所有 "type" 字段
 	paths := findPaths(jsonStr, "type")
 
-	// Process from deepest to shallowest (to handle nested objects properly)
+	// 从最深到最浅处理（以便正确处理嵌套对象）
 	sortByDepth(paths)
 
 	for _, p := range paths {
@@ -1562,10 +1562,10 @@ func addEmptySchemaPlaceholder(jsonStr string) string {
 			continue
 		}
 
-		// Get the parent path (the object containing "type")
+		// 获取父路径（包含 "type" 的对象）
 		parentPath := trimSuffix(p, ".type")
 
-		// Check if properties exists and is empty or missing
+		// 检查 properties 是否存在、是否为空或缺失
 		propsPath := joinPath(parentPath, "properties")
 		propsVal := gjson.Get(jsonStr, propsPath)
 		reqPath := joinPath(parentPath, "required")
@@ -1577,31 +1577,31 @@ func addEmptySchemaPlaceholder(jsonStr string) string {
 
 		needsPlaceholder := false
 		if !propsVal.Exists() {
-			// No properties field at all
+			// 完全没有 properties 字段
 			needsPlaceholder = true
 		} else if propsVal.IsObject() && len(propsVal.Map()) == 0 {
-			// Empty properties object
+			// properties 为空对象
 			needsPlaceholder = true
 		}
 
 		if needsPlaceholder {
-			// Add placeholder "reason" property
+			// 添加占位的 "reason" 属性
 			reasonPath := joinPath(propsPath, "reason")
 			updated, _ := sjson.SetBytes([]byte(jsonStr), reasonPath+".type", "string")
 			jsonStr = string(updated)
 			updated, _ = sjson.SetBytes([]byte(jsonStr), reasonPath+".description", placeholderReasonDescription)
 			jsonStr = string(updated)
 
-			// Add to required array
+			// 加入 required 数组
 			updated, _ = sjson.SetBytes([]byte(jsonStr), reqPath, []string{"reason"})
 			jsonStr = string(updated)
 			continue
 		}
 
-		// If schema has properties but none are required, add a minimal placeholder.
+		// 若 schema 有 properties 但没有任何 required，则添加一个最小占位。
 		if propsVal.IsObject() && !hasRequiredProperties {
-			// DO NOT add placeholder if it's a top-level schema (parentPath is empty)
-			// or if we've already added a placeholder reason above.
+			// 如果它是顶层 schema（parentPath 为空），
+			// 或者我们上面已经添加了占位的 reason，则不要添加占位。
 			if parentPath == "" {
 				continue
 			}
@@ -1618,7 +1618,7 @@ func addEmptySchemaPlaceholder(jsonStr string) string {
 	return jsonStr
 }
 
-// --- Helpers ---
+// --- 辅助函数 ---
 
 func findPaths(jsonStr, field string) []string {
 	var paths []string
@@ -1658,7 +1658,7 @@ func walkForFields(value gjson.Result, path string, fields map[string]struct{}, 
 			return true
 		})
 	case gjson.String, gjson.Number, gjson.True, gjson.False, gjson.Null:
-		// Terminal types - no further traversal needed
+		// 终结类型 - 无需继续遍历
 	}
 }
 
@@ -1690,8 +1690,8 @@ func setRawAt(jsonStr, path, value string) string {
 	return string(result)
 }
 
-// schemaNameMapKeywords are the schema keywords whose value maps author-chosen names to
-// subschemas. A key directly under one of them is a name, never a schema keyword.
+// schemaNameMapKeywords 是那些其值将作者自选的名称映射到子 schema 的 schema 关键字。
+// 位于它们之下的直接键是名称，而绝不是 schema 关键字。
 var schemaNameMapKeywords = map[string]struct{}{
 	"properties":        {},
 	"patternProperties": {},
@@ -1700,20 +1700,20 @@ var schemaNameMapKeywords = map[string]struct{}{
 	"definitions":       {},
 }
 
-// isPropertyDefinition reports whether path points at a map whose keys are names chosen by the
-// tool author, so a key spelled like a schema keyword there must be preserved.
+// isPropertyDefinition 报告 path 是否指向一个映射，其键是工具作者选定的名称，
+// 因此那里拼写与 schema 关键字相同的键必须被保留。
 //
-// A trailing ".properties" is not enough to tell: a tool may declare a property named
-// "properties", and the schema for that property then sits at a path ending in ".properties" while
-// being an ordinary schema node. Classifying it as a name map skipped every cleaning pass inside
-// it, so unsupported keywords such as "propertyNames" reached the private Gemini backend, which
-// rejects unknown fields with a 400.
+// 仅凭结尾的 ".properties" 并不足以判断：工具可能声明一个名为
+// "properties" 的属性，那么该属性的 schema 位于以 ".properties" 结尾的路径上，
+// 却是一个普通的 schema 节点。把它归类为名称映射会跳过其内部的每一次清理处理，
+// 导致诸如 "propertyNames" 这类不受支持的关键字到达私有的 Gemini 后端，
+// 而后者会以 400 拒绝未知字段。
 //
-// Each name-map keyword at the end of the path therefore flips the answer, because the node it
-// names is a map only when its own parent is a schema: "properties" is a map,
-// "properties.properties" the schema of a property named "properties", and
-// "properties.properties.properties" that schema's own map. Only the trailing run matters, so any
-// prefix the caller nests the schema under is ignored.
+// 因此路径末尾的每个名称映射关键字都会翻转判断结果，因为它所指的节点
+// 只有在其自身的父级是 schema 时才是映射："properties" 是映射，
+// "properties.properties" 是名为 "properties" 的属性的 schema，而
+// "properties.properties.properties" 是该 schema 自己的映射。只有末尾的连续片段重要，
+// 因此调用方把 schema 嵌套在何种前缀之下都被忽略。
 func isPropertyDefinition(path string) bool {
 	segments := splitGJSONPath(path)
 	trailing := 0
@@ -1733,15 +1733,15 @@ func descriptionPath(parentPath string) string {
 	return parentPath + ".description"
 }
 
-// mergeHint combines an existing description with a hint. Cleaning is not always a single pass:
-// a schema may be cleaned by a translator and again by an executor, so an already-present hint is
-// kept as-is instead of being appended a second time.
+// mergeHint 将已有的 description 与提示合并。清洗并不总是单次完成的：
+// 一个 schema 可能先被转换器清洗，再被执行器清洗，因此已存在的提示会
+// 原样保留，而不是被再次追加。
 func mergeHint(existing, hint string) string {
 	if existing == "" {
 		return hint
 	}
-	// A hint added to an empty description is stored bare and later hints are appended after it, so
-	// the bare form may sit alone, lead the description, or appear parenthesised further along.
+	// 添加到空 description 的提示会以裸形式存储，后续提示追加在其后，因此
+	// 该裸形式可能单独出现、位于 description 开头，或在更靠后的位置以括号形式出现。
 	if existing == hint ||
 		strings.HasPrefix(existing, hint+" (") ||
 		strings.Contains(existing, fmt.Sprintf("(%s)", hint)) {

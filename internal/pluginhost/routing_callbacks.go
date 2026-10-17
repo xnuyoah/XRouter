@@ -11,8 +11,8 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
-// callHostRoutingResetCooldown clears quota and cooldown routing state for one credential, the
-// same reset POST /v8/management/routing/cooldown/reset performs, while ensuring token files are left alone.
+// callHostRoutingResetCooldown 清除某个凭据的额度和冷却路由状态，与
+// POST /v8/management/routing/cooldown/reset 执行的复位相同，同时确保令牌文件不被触碰。
 func (h *Host) callHostRoutingResetCooldown(ctx context.Context, request []byte) ([]byte, error) {
 	var req pluginapi.HostRoutingResetCooldownRequest
 	if errUnmarshal := json.Unmarshal(request, &req); errUnmarshal != nil {

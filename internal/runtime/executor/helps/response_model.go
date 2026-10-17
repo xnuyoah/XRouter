@@ -8,13 +8,13 @@ import (
 )
 
 const (
-	// maxResponseModelLength is a defensive bound on an upstream-controlled string
-	// reaching logs and usage records; known model ids stay under ~128 bytes.
+	// maxResponseModelLength 是对上游可控字符串进入日志和用量记录的
+	// 防御性上限；已知模型 id 都保持在约 128 字节以内。
 	maxResponseModelLength = 128
 )
 
-// extractResponseModelEvent returns the model an upstream reports serving, read
-// from a raw JSON frame or an SSE line, and whether the event terminates the response.
+// extractResponseModelEvent 返回上游声称正在提供服务的模型，读取自
+// 原始 JSON 帧或 SSE 行，以及该事件是否终止响应。
 func extractResponseModelEvent(payload []byte, provider string) (model string, terminal bool) {
 	data := jsonPayload(payload)
 	if len(data) == 0 {
@@ -31,7 +31,7 @@ func extractResponseModelEvent(payload []byte, provider string) (model string, t
 	}
 }
 
-// extractClaudeResponseModelEvent extracts the response model from an Anthropic Claude response.
+// extractClaudeResponseModelEvent 从 Anthropic Claude 响应中提取响应模型。
 func extractClaudeResponseModelEvent(data []byte) (model string, terminal bool) {
 	eventType := gjson.GetBytes(data, "type").String()
 	switch eventType {
@@ -74,7 +74,7 @@ func extractClaudeResponseModelEvent(data []byte) (model string, terminal bool) 
 	}
 }
 
-// extractGenericResponseModelEvent extracts the response model from standard JSON / SSE responses.
+// extractGenericResponseModelEvent 从标准 JSON / SSE 响应中提取响应模型。
 func extractGenericResponseModelEvent(data []byte) (model string, terminal bool) {
 	if !gjson.ValidBytes(data) {
 		return "", false
@@ -152,15 +152,15 @@ func isInteractionsTerminal(eventType, status string) bool {
 	return false
 }
 
-// extractCodexResponseModelEvent returns the model a codex upstream reports serving, read
-// from a raw JSON frame or an SSE line, and whether the event terminates the response.
+// extractCodexResponseModelEvent 返回 codex 上游声称正在提供服务的模型，读取自
+// 原始 JSON 帧或 SSE 行，以及该事件是否终止响应。
 func extractCodexResponseModelEvent(payload []byte) (model string, terminal bool) {
 	data := jsonPayload(payload)
 	if len(data) == 0 {
 		return "", false
 	}
-	// The event type is checked before the payload is validated, so the hot path
-	// (output deltas) stays a single cheap lookup.
+	// 在验证载荷之前先检查事件类型，因此热路径
+	// （输出增量）保持为单次廉价查找。
 	carriesModel, terminal := codexResponseModelEventKind(gjson.GetBytes(data, "type").String())
 	if !carriesModel {
 		return "", false
@@ -168,8 +168,8 @@ func extractCodexResponseModelEvent(payload []byte) (model string, terminal bool
 	if !gjson.ValidBytes(data) {
 		return "", false
 	}
-	// The value is upstream-controlled: reject non-string and oversized names
-	// rather than propagating them into logs and usage records.
+	// 该值由上游控制：拒绝非字符串和超长的名称，
+	// 而不是将它们传播到日志和用量记录中。
 	modelResult := gjson.GetBytes(data, "response.model")
 	if modelResult.Type != gjson.String {
 		return "", terminal
@@ -181,8 +181,8 @@ func extractCodexResponseModelEvent(payload []byte) (model string, terminal bool
 	return model, terminal
 }
 
-// codexResponseModelEventKind reports whether a codex event embeds the authoritative
-// response object, and whether that event terminates the response.
+// codexResponseModelEventKind 报告某个 codex 事件是否内嵌权威的
+// 响应对象，以及该事件是否终止响应。
 func codexResponseModelEventKind(eventType string) (carriesModel bool, terminal bool) {
 	switch strings.TrimSpace(eventType) {
 	case "response.created", "response.in_progress":
@@ -194,8 +194,8 @@ func codexResponseModelEventKind(eventType string) (carriesModel bool, terminal 
 	}
 }
 
-// normalizeModelName lower-cases a model id and drops its thinking suffix,
-// which never reaches the upstream request body.
+// normalizeModelName 将模型 id 转为小写并去掉其思考后缀，
+// 该后缀从不会进入上游请求 body。
 func normalizeModelName(model string) string {
 	return strings.TrimSpace(thinking.ParseSuffix(strings.ToLower(strings.TrimSpace(model))).ModelName)
 }
@@ -207,8 +207,8 @@ func stripModelProviderPrefix(model string) string {
 	return model
 }
 
-// IsModelSubstituted reports whether the upstream served a model other than the
-// requested one for any provider; dated aliases and snapshot pins are accepted.
+// IsModelSubstituted 报告上游是否提供了与请求不同的
+// 模型（适用于任何供应商）；带日期的别名和快照固定版本被接受。
 func IsModelSubstituted(requested, served string) bool {
 	servedModel := normalizeModelName(served)
 	if servedModel == "" {

@@ -169,7 +169,7 @@ func TestConfigureLogOutput_V8MigrationMirror(t *testing.T) {
 		t.Fatalf("expected console mirror to capture migration warning under file logging, got: %s", consoleBuf.String())
 	}
 
-	// Switch back to stdout logging
+	// 切换回 stdout 日志
 	cfg.LoggingToFile = false
 	consoleBuf.Reset()
 	if err := ConfigureLogOutput(cfg); err != nil {
@@ -180,7 +180,7 @@ func TestConfigureLogOutput_V8MigrationMirror(t *testing.T) {
 		t.Fatalf("NormalizeConfigLayout() error = %v", err)
 	}
 
-	// Under stdout logging, console mirror is false (it goes to stdout directly)
+	// 在 stdout 日志下，控制台镜像为 false（它直接输出到 stdout）
 	if consoleBuf.Len() != 0 {
 		t.Fatalf("expected console mirror to be disabled under stdout logging, got: %s", consoleBuf.String())
 	}
@@ -251,7 +251,7 @@ func TestConfigureLogOutput_ConcurrentMigration(t *testing.T) {
 func TestLogFormatterFormatsShortRequestID(t *testing.T) {
 	formatter := &LogFormatter{}
 
-	// Test case 1: UUID v7 full string truncated to trailing 8 chars in console log
+	// 用例 1：控制台日志中 UUID v7 完整字符串被截断为末尾 8 个字符
 	entryUUID := log.NewEntry(log.New())
 	entryUUID.Time = time.Date(2026, 9, 28, 12, 0, 0, 0, time.Local)
 	entryUUID.Level = log.InfoLevel
@@ -270,7 +270,7 @@ func TestLogFormatterFormatsShortRequestID(t *testing.T) {
 		t.Fatalf("formatted line %q should not contain full UUID", lineUUID)
 	}
 
-	// Test case 2: legacy or short 8-char request ID preserved
+	// 用例 2：保留旧版或短格式的 8 字符请求 ID
 	entryShort := log.NewEntry(log.New())
 	entryShort.Time = time.Date(2026, 9, 28, 12, 0, 0, 0, time.Local)
 	entryShort.Level = log.InfoLevel
@@ -286,7 +286,7 @@ func TestLogFormatterFormatsShortRequestID(t *testing.T) {
 		t.Fatalf("formatted line %q does not contain expected request ID [00000042]", lineShort)
 	}
 
-	// Test case 3: omitted request ID formats placeholder
+	// 用例 3：省略请求 ID 时格式化占位符
 	entryEmpty := log.NewEntry(log.New())
 	entryEmpty.Time = time.Date(2026, 9, 28, 12, 0, 0, 0, time.Local)
 	entryEmpty.Level = log.InfoLevel

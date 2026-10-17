@@ -120,7 +120,7 @@ func TestRemoteStoresSaveDoesNotShortCircuitWhenLocalFileMatches(t *testing.T) {
 				Metadata: map[string]any{"type": "antigravity"},
 			}
 
-			// First Save writes the local file, then fails on the remote backend.
+			// 第一次 Save 写入本地文件，然后在远程后端上失败。
 			if _, errSave := store.Save(context.Background(), auth); !errors.Is(errSave, errRemoteDown) {
 				t.Fatalf("first Save() error = %v, want %v", errSave, errRemoteDown)
 			}
@@ -132,7 +132,7 @@ func TestRemoteStoresSaveDoesNotShortCircuitWhenLocalFileMatches(t *testing.T) {
 				t.Fatalf("unexpected local mirror file after failed remote Save: %q (%v)", string(localBytes), errRead)
 			}
 
-			// Second Save with identical metadata must still sync to the remote backend.
+			// 元数据相同的第二次 Save 仍必须同步到远程后端。
 			failRemote = false
 			if _, errSave := store.Save(context.Background(), auth); errSave != nil {
 				t.Fatalf("second Save() after remote recovery failed: %v", errSave)

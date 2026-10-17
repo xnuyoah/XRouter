@@ -44,12 +44,12 @@ var (
 	windowsHostCallbackEntries sync.Map
 	windowsHostCallCallback    = syscall.NewCallback(windowsHostCall)
 	windowsHostFreeCallback    = syscall.NewCallback(windowsHostFree)
-	// windowsResidentHostState pins the host context and host API blocks of
-	// every loaded plugin for the lifetime of the process. A resident
-	// plugin runtime may pass the context back into windowsHostCall at any
-	// time, long after its client was detached, and native pointers are
-	// not GC roots. Only these small blocks are pinned, never the client
-	// or the host.
+	// windowsResidentHostState 在进程整个生命周期内固定（pin）每个已加载插件的
+	// host context 和 host API 块。常驻的
+	// 插件运行时可能在其客户端早已分离之后的任意时刻
+	// 把该 context 传回 windowsHostCall，而原生指针
+	// 并非 GC root。只固定这些小内存块，绝不固定客户端
+	// 或宿主。
 	windowsResidentHostState sync.Map
 )
 
@@ -82,8 +82,8 @@ func (dynamicLibraryLoader) Open(file pluginFile, host *Host) (pluginClient, err
 	}
 	proc, errProc := dll.FindProc("cliproxy_plugin_init")
 	if errProc != nil {
-		// Do not release the module: loading it may already have started
-		// the plugin runtime, which cannot be unloaded safely.
+		// 不要释放该模块：加载它时可能已经启动了
+		// 插件运行时，而该运行时无法安全卸载。
 		return nil, errProc
 	}
 	id := windowsHostCallbackID.Add(1)
@@ -198,13 +198,13 @@ func (c *dynamicLibraryClient) closeAfterOpenFailure() {
 	c.close()
 }
 
-// close detaches the client logically without unloading the plugin module.
-// Go plugin DLLs are not safe to hot-unload from the host process: the
-// plugin runtime, its threads and its signal handlers stay resident after
-// FreeLibrary. This also applies when initialization failed, because
-// loading the module may already have started the runtime. The plugin was
-// loaded from a shadow copy, so keeping the module mapped does not block
-// deleting or replacing the source artifact.
+// close 在逻辑上分离客户端，但不卸载插件模块。
+// Go 插件 DLL 无法从宿主进程安全地热卸载：
+// FreeLibrary 之后插件运行时、其线程和信号处理器仍然常驻。
+// 初始化失败时也是如此，因为
+// 加载该模块可能已经启动了运行时。该插件是
+// 从影子副本加载的，因此保持模块映射不会阻碍
+// 删除或替换源产物。
 func (c *dynamicLibraryClient) close() {
 	if c == nil {
 		return
@@ -220,10 +220,10 @@ func (c *dynamicLibraryClient) close() {
 	c.api.call = 0
 	c.api.freeBuffer = 0
 	if c.hostCtx != nil {
-		// Drop the callback registration so repeated reloads do not pin
-		// the host forever. The context and host API blocks stay pinned in
-		// windowsResidentHostState because the resident plugin runtime may
-		// still dereference them on late callbacks.
+		// 移除回调注册，使反复重载不会
+		// 永久固定宿主。context 和 host API 块仍固定在
+		// windowsResidentHostState 中，因为常驻的插件运行时
+		// 仍可能在迟到的回调中解引用它们。
 		windowsHostCallbackEntries.Delete(*c.hostCtx)
 	}
 }

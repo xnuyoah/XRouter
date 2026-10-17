@@ -674,7 +674,7 @@ func TestExecuteModelPinsExactAuthAcrossPrioritiesWithoutFallback(t *testing.T) 
 
 	handler := NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager)
 
-	// 1. Without AuthID pin, normal selection picks high priority auth
+	// 1. 不固定 AuthID 时，正常选择会挑选高优先级 auth
 	resp, errMsg := handler.ExecuteModel(context.Background(), ModelExecutionRequest{
 		EntryProtocol:  "openai",
 		ExitProtocol:   "openai",
@@ -694,7 +694,7 @@ func TestExecuteModelPinsExactAuthAcrossPrioritiesWithoutFallback(t *testing.T) 
 	}
 	mu.Unlock()
 
-	// 2. With AuthID pin to low priority auth, exact low priority auth is executed
+	// 2. 将 AuthID 固定到低优先级 auth 时，执行的正是该低优先级 auth
 	resp, errMsg = handler.ExecuteModel(context.Background(), ModelExecutionRequest{
 		EntryProtocol:  "openai",
 		ExitProtocol:   "openai",
@@ -715,7 +715,7 @@ func TestExecuteModelPinsExactAuthAcrossPrioritiesWithoutFallback(t *testing.T) 
 	}
 	mu.Unlock()
 
-	// 3. Pinning to non-existent auth fails without falling back to high priority auth
+	// 3. 固定到不存在的 auth 会失败，且不回退到高优先级 auth
 	_, errMsg = handler.ExecuteModel(context.Background(), ModelExecutionRequest{
 		EntryProtocol:  "openai",
 		ExitProtocol:   "openai",
@@ -728,7 +728,7 @@ func TestExecuteModelPinsExactAuthAcrossPrioritiesWithoutFallback(t *testing.T) 
 		t.Fatal("ExecuteModel() with non-existent AuthID error = nil, want auth_not_found")
 	}
 
-	// 4. Pinning to disabled auth fails without falling back
+	// 4. 固定到已禁用的 auth 会失败，且不回退
 	_, errMsg = handler.ExecuteModel(context.Background(), ModelExecutionRequest{
 		EntryProtocol:  "openai",
 		ExitProtocol:   "openai",

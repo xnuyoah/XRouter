@@ -4,22 +4,22 @@ import "sync/atomic"
 
 var currentClient atomic.Pointer[Client]
 
-// SetCurrent sets the active home client used by runtime integrations.
+// SetCurrent 设置运行时集成使用的活动 home 客户端。
 func SetCurrent(client *Client) {
 	currentClient.Store(client)
 }
 
-// Current returns the active home client instance, if any.
+// Current 返回活动的 home 客户端实例（若有）。
 func Current() *Client {
 	return currentClient.Load()
 }
 
-// ClearCurrent removes the active home client.
+// ClearCurrent 移除活动的 home 客户端。
 func ClearCurrent() {
 	currentClient.Store(nil)
 }
 
-// ClearCurrentIf removes the active client only when it is client.
+// ClearCurrentIf 仅当活动客户端就是 client 时才移除它。
 func ClearCurrentIf(client *Client) {
 	if client != nil {
 		currentClient.CompareAndSwap(client, nil)

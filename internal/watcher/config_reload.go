@@ -1,5 +1,5 @@
-// config_reload.go implements debounced configuration hot reload.
-// It detects material changes and reloads clients when the config changes.
+// config_reload.go 实现去抖动的配置热重载。
+// 它检测实质性变更，并在配置变化时重载客户端。
 package watcher
 
 import (
@@ -42,7 +42,7 @@ func (w *Watcher) scheduleConfigReload() {
 	})
 }
 
-// ReloadConfigIfChanged runs the same config reload path used by filesystem events.
+// ReloadConfigIfChanged 运行与文件系统事件相同的配置重载路径。
 func (w *Watcher) ReloadConfigIfChanged() {
 	if w == nil {
 		return
@@ -51,8 +51,8 @@ func (w *Watcher) ReloadConfigIfChanged() {
 }
 
 func (w *Watcher) reloadConfigIfChanged() {
-	// File events and post-save reloads may arrive together; an older read must
-	// not apply after a newer one.
+	// 文件事件与保存后的重载可能同时到达；较旧的读取绝不能
+	// 在较新的读取之后生效。
 	w.configApplyMu.Lock()
 	defer w.configApplyMu.Unlock()
 
@@ -78,9 +78,9 @@ func (w *Watcher) reloadConfigIfChanged() {
 	}
 	log.Infof("config file changed, reloading: %s", w.configPath)
 	if w.reloadConfig() {
-		// Record the bytes the reload actually parsed, not the change-check read or a
-		// later re-read: a write landing between them must not count as applied. A
-		// write-back during load only costs one extra reload.
+		// 记录重载实际解析的字节，而不是变更检查时的读取或
+		// 之后的再次读取：落在两者之间的写入不得计为已生效。
+		// 加载期间的写回只会多消耗一次重载。
 		w.clientsMutex.Lock()
 		appliedHash := newHash
 		if w.config != nil && w.config.SourceHash != "" {

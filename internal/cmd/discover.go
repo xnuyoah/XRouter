@@ -17,7 +17,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// DiscoverOptions configures a one-shot LAN discovery scan.
+// DiscoverOptions 配置一次性的 LAN 发现扫描。
 type DiscoverOptions struct {
 	Timeout     time.Duration
 	JSONOutput  bool
@@ -37,7 +37,7 @@ func newLANBrowser(include, exclude []string) (discovery.Browser, error) {
 	return discovery.NewZeroconfBrowser(ifaces...), nil
 }
 
-// ParseInterfaceList splits comma-separated interface names and drops blanks.
+// ParseInterfaceList 拆分逗号分隔的接口名并丢弃空项。
 func ParseInterfaceList(values ...string) []string {
 	var out []string
 	seen := make(map[string]struct{})
@@ -57,7 +57,7 @@ func ParseInterfaceList(values ...string) []string {
 	return out
 }
 
-// ResolveDiscoveryInterfaceFilters prefers explicit CLI filters over config filters.
+// ResolveDiscoveryInterfaceFilters 优先使用显式 CLI 过滤器而非配置过滤器。
 func ResolveDiscoveryInterfaceFilters(cliInclude, cliExclude, cfgInclude, cfgExclude []string) (include, exclude []string) {
 	if len(cliInclude) > 0 || len(cliExclude) > 0 {
 		return append([]string(nil), cliInclude...), append([]string(nil), cliExclude...)
@@ -65,8 +65,8 @@ func ResolveDiscoveryInterfaceFilters(cliInclude, cliExclude, cfgInclude, cfgExc
 	return append([]string(nil), cfgInclude...), append([]string(nil), cfgExclude...)
 }
 
-// LoadDiscoveryScanFilters reads discovery.interfaces from a config file.
-// Missing or invalid files yield empty filters so the default physical LAN allow-list is used.
+// LoadDiscoveryScanFilters 从配置文件中读取 discovery.interfaces。
+// 文件缺失或无效时返回空过滤器，从而使用默认的物理 LAN 允许列表。
 func defaultDiscoveryConfigPath() string {
 	wd, errGetwd := os.Getwd()
 	if errGetwd != nil {
@@ -98,18 +98,18 @@ func LoadDiscoveryScanFilters(configPath string) (include, exclude []string) {
 	return ParseInterfaceList(payload.Discovery.Interfaces.Include...), ParseInterfaceList(payload.Discovery.Interfaces.Exclude...)
 }
 
-// DoDiscover executes the LAN AI gateway discovery workflow and outputs results.
-// Returns 0 on success, 1 on error.
+// DoDiscover 执行 LAN AI 网关发现流程并输出结果。
+// 成功返回 0，出错返回 1。
 func DoDiscover(timeout time.Duration, jsonOutput bool) int {
 	return DoDiscoverWithOptions(DiscoverOptions{Timeout: timeout, JSONOutput: jsonOutput})
 }
 
-// DoDiscoverWithServiceType executes LAN discovery for the requested DNS-SD service type.
+// DoDiscoverWithServiceType 为请求的 DNS-SD 服务类型执行 LAN 发现。
 func DoDiscoverWithServiceType(timeout time.Duration, jsonOutput bool, serviceType string) int {
 	return DoDiscoverWithOptions(DiscoverOptions{Timeout: timeout, JSONOutput: jsonOutput, ServiceType: serviceType})
 }
 
-// DoDiscoverWithOptions executes LAN discovery with explicit scan options.
+// DoDiscoverWithOptions 使用显式扫描选项执行 LAN 发现。
 func DoDiscoverWithOptions(opts DiscoverOptions) int {
 	include, exclude := ResolveDiscoveryInterfaceFilters(opts.Include, opts.Exclude, nil, nil)
 	return runDiscoverWithOptions(opts, os.Stdout, os.Stderr, func() (discovery.Browser, error) {
@@ -241,7 +241,7 @@ func runDiscoverWithOptions(opts DiscoverOptions, stdout, stderr io.Writer, newB
 		}
 		fmt.Fprintf(stdout, "    Auth:      %s\n", authStatus)
 
-		// Endpoints display
+		// 端点展示
 		scheme := "http"
 		if gw.RawTXT["tls"] == "1" {
 			scheme = "https"
@@ -317,8 +317,8 @@ func sanitizeDisplayHost(host string) string {
 	return host
 }
 
-// sanitizeTerminal strips control characters, ANSI escape sequences, Bidi overrides,
-// and invisible Unicode format characters to prevent terminal injection and spoofing.
+// sanitizeTerminal 剥离控制字符、ANSI 转义序列、Bidi 覆盖符
+// 以及不可见的 Unicode 格式字符，以防止终端注入与欺骗。
 func sanitizeTerminal(s string) string {
 	var b strings.Builder
 	for _, r := range s {
@@ -326,7 +326,7 @@ func sanitizeTerminal(s string) string {
 			b.WriteRune(' ')
 			continue
 		}
-		// Allow safe printable runes; block Bidi controls, zero-width chars, and line/paragraph separators
+		// 允许安全的可打印 rune；阻止 Bidi 控制符、零宽字符以及行/段落分隔符
 		if unicode.IsPrint(r) && !unicode.Is(unicode.Bidi_Control, r) {
 			if r != '\u2028' && r != '\u2029' && !(r >= 0x200B && r <= 0x200F) && r != '\uFEFF' && r != 0x00AD {
 				b.WriteRune(r)

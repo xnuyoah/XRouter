@@ -26,7 +26,7 @@ func ConvertOpenAIResponsesRequestToCodex(modelName string, inputRawJSON []byte,
 	rawJSON = setCodexRequiredBool(rawJSON, "store", false)
 	rawJSON = setCodexRequiredBool(rawJSON, "parallel_tool_calls", true)
 	rawJSON = setCodexRequiredInclude(rawJSON)
-	// Codex Responses rejects token limit fields, so strip them out before forwarding.
+	// Codex Responses 拒绝 token 限制字段，因此在转发前将它们剥离。
 	rawJSON = deleteCodexRequestFields(rawJSON, "max_output_tokens", "max_completion_tokens", "temperature", "top_p")
 	if serviceTier := gjson.GetBytes(rawJSON, "service_tier"); serviceTier.Exists() {
 		if serviceTier.Type == gjson.String {
@@ -51,10 +51,10 @@ func ConvertOpenAIResponsesRequestToCodex(modelName string, inputRawJSON []byte,
 	rawJSON = stripCodexResponsesCacheBreakpoints(rawJSON)
 	rawJSON = applyResponsesCompactionCompatibility(rawJSON)
 
-	// Delete the user field as it is not supported by the Codex upstream.
+	// 删除 user 字段，因为 Codex 上游不支持它。
 	rawJSON = deleteCodexRequestFields(rawJSON, "user")
 
-	// Convert role "system" to "developer" in input array to comply with Codex API requirements.
+	// 将 input 数组中的角色 "system" 转换为 "developer"，以满足 Codex API 的要求。
 	rawJSON = convertSystemRoleToDeveloper(rawJSON)
 	rawJSON = normalizeCodexBuiltinTools(rawJSON)
 	rawJSON = normalizeEmptyFunctionCallArguments(rawJSON)
@@ -62,13 +62,13 @@ func ConvertOpenAIResponsesRequestToCodex(modelName string, inputRawJSON []byte,
 	return rawJSON, nil
 }
 
-// normalizeEmptyFunctionCallArguments rewrites blank string arguments on
-// history function_call items to "{}". Some Responses clients serialize
-// parameter-less tool calls as an empty string, which strict Codex Responses
-// upstreams reject with "`arguments` must be valid JSON". Only blank strings
-// are touched: non-empty strings (even invalid JSON) pass through unchanged
-// so other errors keep their original shape, and custom_tool_call items use
-// the separate input field and are never affected.
+// normalizeEmptyFunctionCallArguments 将历史 function_call 条目上的空白字符串
+// arguments 重写为 "{}"。一些 Responses 客户端会把无参数的工具调用
+// 序列化为空字符串，而严格的 Codex Responses 上游会以
+// "`arguments` must be valid JSON" 拒绝它。只有空白字符串会被处理：
+// 非空字符串（即使不是合法 JSON）也原样通过，
+// 从而使其他错误保持原有形态，而 custom_tool_call 条目使用
+// 单独的 input 字段，永远不会受影响。
 func normalizeEmptyFunctionCallArguments(rawJSON []byte) []byte {
 	inputResult := util.GetGJSONBytesNoCopy(rawJSON, "input")
 	if !inputResult.IsArray() {
@@ -161,13 +161,13 @@ func deleteCodexRequestFields(rawJSON []byte, paths ...string) []byte {
 	return rawJSON
 }
 
-// stripCodexResponsesCacheBreakpoints removes any "prompt_cache_breakpoint" hint
-// attached to input items: inside content-part arrays (message input[].content[]
-// and function_call_output input[].output[]) or as an item-level field. Some
-// clients (e.g. GitHub Copilot CLI) attach this field per content item when
-// targeting the OpenAI Responses format. Codex Responses rejects it outright:
+// stripCodexResponsesCacheBreakpoints 移除附加到 input 条目上的任何
+// "prompt_cache_breakpoint" 提示：内容部分数组内部（message input[].content[]
+// 和 function_call_output input[].output[]）或作为条目级字段。一些
+// 客户端（例如 GitHub Copilot CLI）在以 OpenAI Responses 格式为目标时
+// 会按内容条目附加该字段。Codex Responses 会直接拒绝它：
 // {"error":{"message":"prompt_cache_breakpoint is not supported on this model", ...}}.
-// The top-level prompt_cache_options strip above does not cover these nested cases.
+// 上面的顶层 prompt_cache_options 剥离并未覆盖这些嵌套情形。
 func stripCodexResponsesCacheBreakpoints(rawJSON []byte) []byte {
 	if !bytes.Contains(rawJSON, []byte(`"prompt_cache_breakpoint"`)) {
 		return rawJSON
@@ -220,8 +220,8 @@ func stripCodexResponsesCacheBreakpoints(rawJSON []byte) []byte {
 	return updated
 }
 
-// stripPromptCacheBreakpointFromContent removes "prompt_cache_breakpoint" from each
-// content part that carries it and reports whether anything changed.
+// stripPromptCacheBreakpointFromContent 从携带 "prompt_cache_breakpoint" 的
+// 每个内容部分中移除它，并报告是否有任何改动。
 func stripPromptCacheBreakpointFromContent(content gjson.Result) ([]byte, bool) {
 	parts := content.Array()
 	hasBreakpoint := false
@@ -253,14 +253,14 @@ func stripPromptCacheBreakpointFromContent(content gjson.Result) ([]byte, bool) 
 	return translatorcommon.JoinRawArray(rebuiltParts), true
 }
 
-// applyResponsesCompactionCompatibility handles OpenAI Responses context_management.compaction
-// for Codex upstream compatibility.
+// applyResponsesCompactionCompatibility 处理 OpenAI Responses 的 context_management.compaction，
+// 以兼容 Codex 上游。
 //
-// Codex /responses currently rejects context_management with:
-// {"detail":"Unsupported parameter: context_management"}.
+// Codex /responses 目前会以下列错误拒绝 context_management：
+// {"detail":"Unsupported parameter: context_management"}。
 //
-// Compatibility strategy:
-// 1) Remove context_management before forwarding to Codex upstream.
+// 兼容策略：
+// 1) 在转发到 Codex 上游之前移除 context_management。
 func applyResponsesCompactionCompatibility(rawJSON []byte) []byte {
 	if !gjson.GetBytes(rawJSON, "context_management").Exists() {
 		return rawJSON
@@ -270,9 +270,9 @@ func applyResponsesCompactionCompatibility(rawJSON []byte) []byte {
 	return rawJSON
 }
 
-// convertSystemRoleToDeveloper traverses the input array and converts any message items
-// with role "system" to role "developer". This is necessary because Codex API does not
-// accept "system" role in the input array.
+// convertSystemRoleToDeveloper 遍历 input 数组，并将角色为 "system" 的
+// 任何 message 条目转换为角色 "developer"。这是必要的，因为 Codex API
+// 不接受 input 数组中的 "system" 角色。
 func convertSystemRoleToDeveloper(rawJSON []byte) []byte {
 	return convertSystemRoleToDeveloperWithInput(rawJSON, util.GetGJSONBytesNoCopy(rawJSON, "input"))
 }
@@ -327,8 +327,8 @@ func convertSystemRoleToDeveloperWithInput(rawJSON []byte, inputResult gjson.Res
 	return updated
 }
 
-// normalizeCodexBuiltinTools rewrites legacy/preview built-in tool variants to the
-// stable names expected by the current Codex upstream.
+// normalizeCodexBuiltinTools 将旧版/预览版内置工具变体重写为
+// 当前 Codex 上游所期望的稳定名称。
 func normalizeCodexBuiltinTools(rawJSON []byte) []byte {
 	result := normalizeCodexBuiltinToolArray(rawJSON, "tools")
 	result = normalizeCodexBuiltinToolAtPath(result, "tool_choice.type")
@@ -385,9 +385,9 @@ func normalizeCodexBuiltinToolAtPath(rawJSON []byte, path string) []byte {
 	return updated
 }
 
-// normalizeCodexBuiltinToolType centralizes the current known Codex Responses
-// built-in tool alias compatibility. If Codex introduces more legacy aliases,
-// extend this helper instead of adding path-specific rewrite logic elsewhere.
+// normalizeCodexBuiltinToolType 集中处理当前已知的 Codex Responses
+// 内置工具别名兼容。如果 Codex 引入更多旧版别名，
+// 请扩展此辅助函数，而不要在别处添加针对特定路径的重写逻辑。
 func normalizeCodexBuiltinToolType(toolType string) string {
 	switch toolType {
 	case "web_search_preview", "web_search_preview_2025_03_11":

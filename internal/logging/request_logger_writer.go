@@ -19,30 +19,30 @@ import (
 
 var requestLogID atomic.Uint64
 
-// LogRequest logs a complete non-streaming request/response cycle to a file.
+// LogRequest 将完整的非流式请求/响应周期记录到文件。
 //
-// Parameters:
-//   - url: The request URL
-//   - method: The HTTP method
-//   - requestHeaders: The request headers
-//   - body: The request body
-//   - statusCode: The response status code
-//   - responseHeaders: The response headers
-//   - response: The raw response data
-//   - apiRequest: The API request data
-//   - apiResponse: The API response data
-//   - requestID: Optional request ID for log file naming
-//   - requestTimestamp: When the request was received
-//   - apiResponseTimestamp: When the API response was received
+// 参数：
+//   - url: 请求 URL
+//   - method: HTTP 方法
+//   - requestHeaders: 请求头
+//   - body: 请求体
+//   - statusCode: 响应状态码
+//   - responseHeaders: 响应头
+//   - response: 原始响应数据
+//   - apiRequest: API 请求数据
+//   - apiResponse: API 响应数据
+//   - requestID: 用于日志文件命名的可选请求 ID
+//   - requestTimestamp: 请求接收时间
+//   - apiResponseTimestamp: API 响应接收时间
 //
-// Returns:
-//   - error: An error if logging fails, nil otherwise
+// 返回：
+//   - error: 记录日志失败时的错误，否则为 nil
 func (l *FileRequestLogger) LogRequest(url, method string, requestHeaders map[string][]string, body []byte, statusCode int, responseHeaders map[string][]string, response, websocketTimeline, apiRequest, apiResponse, apiWebsocketTimeline []byte, apiResponseErrors []*interfaces.ErrorMessage, requestID string, requestTimestamp, apiResponseTimestamp time.Time) error {
 	return l.logRequest(url, method, requestHeaders, body, statusCode, responseHeaders, response, websocketTimeline, apiRequest, apiResponse, apiWebsocketTimeline, apiResponseErrors, false, requestID, requestTimestamp, apiResponseTimestamp)
 }
 
-// LogRequestWithOptions logs a request with optional forced logging behavior.
-// The force flag allows writing error logs even when regular request logging is disabled.
+// LogRequestWithOptions 使用可选的强制记录行为记录请求。
+// force 标志允许在常规请求日志被禁用时仍写入错误日志。
 func (l *FileRequestLogger) LogRequestWithOptions(url, method string, requestHeaders map[string][]string, body []byte, statusCode int, responseHeaders map[string][]string, response, websocketTimeline, apiRequest, apiResponse, apiWebsocketTimeline []byte, apiResponseErrors []*interfaces.ErrorMessage, force bool, requestID string, requestTimestamp, apiResponseTimestamp time.Time) error {
 	return l.logRequestWithSources(url, method, requestHeaders, body, statusCode, responseHeaders, response, websocketTimeline, nil, apiRequest, nil, apiResponse, nil, apiWebsocketTimeline, nil, apiResponseErrors, force, requestID, requestTimestamp, apiResponseTimestamp)
 }
@@ -51,12 +51,12 @@ func (l *FileRequestLogger) logRequest(url, method string, requestHeaders map[st
 	return l.logRequestWithSources(url, method, requestHeaders, body, statusCode, responseHeaders, response, websocketTimeline, nil, apiRequest, nil, apiResponse, nil, apiWebsocketTimeline, nil, apiResponseErrors, force, requestID, requestTimestamp, apiResponseTimestamp)
 }
 
-// LogRequestWithOptionsAndSources logs a request with optional file-backed large sections.
+// LogRequestWithOptionsAndSources 记录请求，可选使用文件承载的大区段。
 func (l *FileRequestLogger) LogRequestWithOptionsAndSources(url, method string, requestHeaders map[string][]string, body []byte, statusCode int, responseHeaders map[string][]string, response, websocketTimeline []byte, websocketTimelineSource *FileBodySource, apiRequest, apiResponse, apiWebsocketTimeline []byte, apiWebsocketTimelineSource *FileBodySource, apiResponseErrors []*interfaces.ErrorMessage, force bool, requestID string, requestTimestamp, apiResponseTimestamp time.Time) error {
 	return l.logRequestWithSources(url, method, requestHeaders, body, statusCode, responseHeaders, response, websocketTimeline, websocketTimelineSource, apiRequest, nil, apiResponse, nil, apiWebsocketTimeline, apiWebsocketTimelineSource, apiResponseErrors, force, requestID, requestTimestamp, apiResponseTimestamp)
 }
 
-// LogRequestWithOptionsAndAllSources logs a request with optional file-backed request and response sections.
+// LogRequestWithOptionsAndAllSources 记录请求，可选使用文件承载的请求和响应区段。
 func (l *FileRequestLogger) LogRequestWithOptionsAndAllSources(url, method string, requestHeaders map[string][]string, body []byte, statusCode int, responseHeaders map[string][]string, response, websocketTimeline []byte, websocketTimelineSource *FileBodySource, apiRequest []byte, apiRequestSource *FileBodySource, apiResponse []byte, apiResponseSource *FileBodySource, apiWebsocketTimeline []byte, apiWebsocketTimelineSource *FileBodySource, apiResponseErrors []*interfaces.ErrorMessage, force bool, requestID string, requestTimestamp, apiResponseTimestamp time.Time) error {
 	return l.logRequestWithSources(url, method, requestHeaders, body, statusCode, responseHeaders, response, websocketTimeline, websocketTimelineSource, apiRequest, apiRequestSource, apiResponse, apiResponseSource, apiWebsocketTimeline, apiWebsocketTimelineSource, apiResponseErrors, force, requestID, requestTimestamp, apiResponseTimestamp)
 }
@@ -104,12 +104,12 @@ func (l *FileRequestLogger) logRequestWithSources(url, method string, requestHea
 		return l.forwardRequestLogToHome(context.Background(), requestHeaders, requestID, buf.String())
 	}
 
-	// Ensure logs directory exists
+	// 确保日志目录存在
 	if errEnsure := l.ensureLogsDir(); errEnsure != nil {
 		return fmt.Errorf("failed to create logs directory: %w", errEnsure)
 	}
 
-	// Generate filename with request ID
+	// 生成带请求 ID 的文件名
 	filename := l.generateFilename(url, requestID)
 	if force && !l.enabled {
 		filename = l.generateErrorFilename(url, requestID)
@@ -129,7 +129,7 @@ func (l *FileRequestLogger) logRequestWithSources(url, method string, requestHea
 
 	responseToWrite, decompressErr := l.decompressResponse(responseHeaders, response)
 	if decompressErr != nil {
-		// If decompression fails, continue with original response and annotate the log output.
+		// 如果解压失败，则继续使用原始响应，并在日志输出中标注。
 		responseToWrite = response
 	}
 
@@ -180,18 +180,18 @@ func (l *FileRequestLogger) logRequestWithSources(url, method string, requestHea
 	return nil
 }
 
-// LogStreamingRequest initiates logging for a streaming request.
+// LogStreamingRequest 为流式请求启动日志记录。
 //
-// Parameters:
-//   - url: The request URL
-//   - method: The HTTP method
-//   - headers: The request headers
-//   - body: The request body
-//   - requestID: Optional request ID for log file naming
+// 参数：
+//   - url: 请求 URL
+//   - method: HTTP 方法
+//   - headers: 请求头
+//   - body: 请求体
+//   - requestID: 用于日志文件命名的可选请求 ID
 //
-// Returns:
-//   - StreamingLogWriter: A writer for streaming response chunks
-//   - error: An error if logging initialization fails, nil otherwise
+// 返回：
+//   - StreamingLogWriter: 用于流式响应数据块的写入器
+//   - error: 日志初始化失败时的错误，否则为 nil
 func (l *FileRequestLogger) LogStreamingRequest(url, method string, headers map[string][]string, body []byte, requestID string) (StreamingLogWriter, error) {
 	if !l.enabled {
 		return &NoOpStreamingLogWriter{}, nil
@@ -205,12 +205,12 @@ func (l *FileRequestLogger) LogStreamingRequest(url, method string, headers map[
 		return newHomeStreamingLogWriter(url, method, headers, body, requestID), nil
 	}
 
-	// Ensure logs directory exists
+	// 确保日志目录存在
 	if err := l.ensureLogsDir(); err != nil {
 		return nil, fmt.Errorf("failed to create logs directory: %w", err)
 	}
 
-	// Generate filename with request ID
+	// 生成带请求 ID 的文件名
 	filename := l.generateFilename(url, requestID)
 
 	requestHeaders := make(map[string][]string, len(headers))
@@ -232,7 +232,7 @@ func (l *FileRequestLogger) LogStreamingRequest(url, method string, headers map[
 	}
 	responseBodyPath := responseBodyFile.Name()
 
-	// Create streaming writer
+	// 创建流式写入器
 	writer := &FileStreamingLogWriter{
 		logsDir:          l.logsDir,
 		logFilename:      filename,
@@ -243,26 +243,26 @@ func (l *FileRequestLogger) LogStreamingRequest(url, method string, headers map[
 		requestBodyPath:  requestBodyPath,
 		responseBodyPath: responseBodyPath,
 		responseBodyFile: responseBodyFile,
-		chunkChan:        make(chan []byte, 100), // Buffered channel for async writes
+		chunkChan:        make(chan []byte, 100), // 用于异步写入的带缓冲通道
 		closeChan:        make(chan struct{}),
 		errorChan:        make(chan error, 1),
 	}
 
-	// Start async writer goroutine
+	// 启动异步写入 goroutine
 	go writer.asyncWriter()
 
 	return writer, nil
 }
 
-// generateErrorFilename creates a filename with an error prefix to differentiate forced error logs.
+// generateErrorFilename 创建带 error 前缀的文件名，以区分强制错误日志。
 func (l *FileRequestLogger) generateErrorFilename(url string, requestID ...string) string {
 	return fmt.Sprintf("error-%s", l.generateFilename(url, requestID...))
 }
 
-// ensureLogsDir creates the logs directory if it doesn't exist.
+// ensureLogsDir 在日志目录不存在时创建它。
 //
-// Returns:
-//   - error: An error if directory creation fails, nil otherwise
+// 返回：
+//   - error: 创建目录失败时的错误，否则为 nil
 func (l *FileRequestLogger) ensureLogsDir() error {
 	if _, err := os.Stat(l.logsDir); os.IsNotExist(err) {
 		return os.MkdirAll(l.logsDir, 0755)
@@ -270,34 +270,34 @@ func (l *FileRequestLogger) ensureLogsDir() error {
 	return nil
 }
 
-// generateFilename creates a sanitized filename from the URL path and current timestamp.
-// Format: v1-responses-2025-12-23T195811-a1b2c3d4.log
+// generateFilename 根据 URL 路径和当前时间戳创建清洗后的文件名。
+// 格式：v1-responses-2025-12-23T195811-a1b2c3d4.log
 //
-// Parameters:
-//   - url: The request URL
-//   - requestID: Optional request ID to include in filename
+// 参数：
+//   - url: 请求 URL
+//   - requestID: 要包含在文件名中的可选请求 ID
 //
-// Returns:
-//   - string: A sanitized filename for the log file
+// 返回：
+//   - string: 日志文件的清洗后文件名
 func (l *FileRequestLogger) generateFilename(url string, requestID ...string) string {
-	// Extract path from URL
+	// 从 URL 中提取路径
 	path := url
 	if strings.Contains(url, "?") {
 		path = strings.Split(url, "?")[0]
 	}
 
-	// Remove leading slash
+	// 移除开头的斜杠
 	if strings.HasPrefix(path, "/") {
 		path = path[1:]
 	}
 
-	// Sanitize path for filename
+	// 清洗路径以用作文件名
 	sanitized := l.sanitizeForFilename(path)
 
-	// Add timestamp
+	// 添加时间戳
 	timestamp := time.Now().Format("2006-01-02T150405")
 
-	// Use request ID if provided, otherwise use sequential ID
+	// 如果提供了请求 ID 则使用它，否则使用顺序 ID
 	var idPart string
 	if len(requestID) > 0 && requestID[0] != "" {
 		idPart = ShortRequestID(requestID[0])
@@ -309,8 +309,8 @@ func (l *FileRequestLogger) generateFilename(url string, requestID ...string) st
 	return fmt.Sprintf("%s-%s-%s.log", sanitized, timestamp, idPart)
 }
 
-// createUniqueLogFile atomically opens a unique log file within dir. If a file with filename already exists,
-// it avoids overwriting by injecting an incrementing sequence number before the trailing request ID component.
+// createUniqueLogFile 在 dir 中以原子方式打开一个唯一的日志文件。如果同名文件已存在，
+// 它会在末尾的请求 ID 部分之前注入递增的序号以避免覆盖。
 func createUniqueLogFile(dir, filename string) (*os.File, string, error) {
 	ext := filepath.Ext(filename)
 	base := strings.TrimSuffix(filename, ext)
@@ -345,32 +345,32 @@ func createUniqueLogFile(dir, filename string) (*os.File, string, error) {
 	return nil, "", fmt.Errorf("too many conflicting log files for %s", filename)
 }
 
-// sanitizeForFilename replaces characters that are not safe for filenames.
+// sanitizeForFilename 替换对文件名不安全的字符。
 //
-// Parameters:
-//   - path: The path to sanitize
+// 参数：
+//   - path: 要清洗的路径
 //
-// Returns:
-//   - string: A sanitized filename
+// 返回：
+//   - string: 清洗后的文件名
 func (l *FileRequestLogger) sanitizeForFilename(path string) string {
-	// Replace slashes with hyphens
+	// 用连字符替换斜杠
 	sanitized := strings.ReplaceAll(path, "/", "-")
 
-	// Replace colons with hyphens
+	// 用连字符替换冒号
 	sanitized = strings.ReplaceAll(sanitized, ":", "-")
 
-	// Replace other problematic characters with hyphens
+	// 用连字符替换其他有问题的字符
 	reg := regexp.MustCompile(`[<>:"|?*\s]`)
 	sanitized = reg.ReplaceAllString(sanitized, "-")
 
-	// Remove multiple consecutive hyphens
+	// 合并多个连续的连字符
 	reg = regexp.MustCompile(`-+`)
 	sanitized = reg.ReplaceAllString(sanitized, "-")
 
-	// Remove leading/trailing hyphens
+	// 移除开头/结尾的连字符
 	sanitized = strings.Trim(sanitized, "-")
 
-	// Handle empty result
+	// 处理空结果
 	if sanitized == "" {
 		sanitized = "root"
 	}
@@ -378,7 +378,7 @@ func (l *FileRequestLogger) sanitizeForFilename(path string) string {
 	return sanitized
 }
 
-// cleanupOldErrorLogs keeps only the newest errorLogsMaxFiles forced error log files.
+// cleanupOldErrorLogs 仅保留最新的 errorLogsMaxFiles 个强制错误日志文件。
 func (l *FileRequestLogger) cleanupOldErrorLogs() error {
 	if l.errorLogsMaxFiles <= 0 {
 		return nil

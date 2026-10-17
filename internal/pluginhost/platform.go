@@ -24,14 +24,14 @@ type pluginFile struct {
 	Version string
 }
 
-// PluginFileInfo describes a plugin binary selected by the host discovery rules.
+// PluginFileInfo 描述由宿主发现规则选中的插件二进制文件。
 type PluginFileInfo struct {
 	ID      string
 	Path    string
 	Version string
 }
 
-// ValidatePluginID reports whether id can be used as a plugin configuration key.
+// ValidatePluginID 报告 id 是否可用作插件配置键。
 func ValidatePluginID(id string) bool {
 	return validPluginID(id)
 }
@@ -95,7 +95,7 @@ func pluginFileFromPath(filePath string, requiredExtension string) (pluginFile, 
 	return pluginFile{ID: id, Path: filePath, Version: version}, true
 }
 
-// PluginExtension returns the dynamic library file extension used for goos.
+// PluginExtension 返回 goos 所用的动态库文件扩展名。
 func PluginExtension(goos string) string {
 	return pluginExtension(goos)
 }
@@ -288,7 +288,7 @@ func cleanupUnselectedPluginFiles(root string, loaded []pluginFile) error {
 	return errors.Join(errs...)
 }
 
-// DiscoverPluginFiles returns plugin binaries selected by the current host discovery rules.
+// DiscoverPluginFiles 返回由当前宿主发现规则选中的插件二进制文件。
 func DiscoverPluginFiles(root string, desiredVersions ...map[string]string) ([]PluginFileInfo, error) {
 	files, errSelect := selectPluginFiles(root, desiredVersions...)
 	if errSelect != nil {

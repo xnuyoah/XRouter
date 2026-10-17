@@ -1,13 +1,13 @@
-// Package main demonstrates how to create a custom AI provider executor
-// and integrate it with the XRouter server. This example shows how to:
-// - Create a custom executor that implements the Executor interface
-// - Register custom translators for request/response transformation
-// - Integrate the custom provider with the SDK server
-// - Register custom models in the model registry
+// Package main 演示如何创建自定义 AI 供应商执行器
+// 并将其集成到 XRouter 服务器中。本示例展示如何：
+// - 创建一个实现 Executor 接口的自定义执行器
+// - 注册用于请求/响应转换的自定义转换器
+// - 将自定义供应商与 SDK 服务器集成
+// - 在模型注册表中注册自定义模型
 //
-// This example uses a simple echo service (httpbin.org) as the upstream API
-// for demonstration purposes. In a real implementation, you would replace
-// this with your actual AI service provider.
+// 本示例使用一个简单的回声服务（httpbin.org）作为上游 API
+// 用于演示目的。在真实实现中，你应当将其替换为
+// 你实际的 AI 服务供应商。
 package main
 
 import (
@@ -35,19 +35,19 @@ import (
 )
 
 const (
-	// providerKey is the identifier for our custom provider.
+	// providerKey 是我们自定义供应商的标识符。
 	providerKey = "myprov"
 
-	// fOpenAI represents the OpenAI chat format.
+	// fOpenAI 表示 OpenAI chat 格式。
 	fOpenAI = sdktr.Format("openai.chat")
 
-	// fMyProv represents our custom provider's chat format.
+	// fMyProv 表示我们自定义供应商的 chat 格式。
 	fMyProv = sdktr.Format("myprov.chat")
 )
 
-// init registers trivial translators for demonstration purposes.
-// In a real implementation, you would implement proper request/response
-// transformation logic between OpenAI format and your provider's format.
+// init 为演示目的注册简单的转换器。
+// 在真实实现中，你应当实现 OpenAI 格式与你的供应商格式之间
+// 恰当的请求/响应转换逻辑。
 func init() {
 	sdktr.Register(fOpenAI, fMyProv,
 		func(model string, raw []byte, stream bool) ([]byte, error) { return raw, nil },
@@ -62,23 +62,23 @@ func init() {
 	)
 }
 
-// MyExecutor is a minimal provider implementation for demonstration purposes.
-// It implements the Executor interface to handle requests to a custom AI provider.
+// MyExecutor 是一个用于演示目的的最小供应商实现。
+// 它实现 Executor 接口，以处理发往自定义 AI 供应商的请求。
 type MyExecutor struct{}
 
-// Identifier returns the unique identifier for this executor.
+// Identifier 返回此执行器的唯一标识符。
 func (MyExecutor) Identifier() string { return providerKey }
 
-// PrepareRequest optionally injects credentials to raw HTTP requests.
-// This method is called before each request to allow the executor to modify
-// the HTTP request with authentication headers or other necessary modifications.
+// PrepareRequest 可选地向原始 HTTP 请求注入凭据。
+// 该方法在每个请求之前被调用，使执行器可以用认证头
+// 或其他必要的修改来调整 HTTP 请求。
 //
-// Parameters:
-//   - req: The HTTP request to prepare
-//   - a: The authentication information
+// 参数：
+//   - req: 要准备的 HTTP 请求
+//   - a: 认证信息
 //
-// Returns:
-//   - error: An error if request preparation fails
+// 返回：
+//   - error: 请求准备失败时的错误
 func (MyExecutor) PrepareRequest(req *http.Request, a *coreauth.Auth) error {
 	if req == nil || a == nil {
 		return nil
@@ -108,7 +108,7 @@ func upstreamEndpoint(a *coreauth.Auth) string {
 			return ep
 		}
 	}
-	// Demo echo endpoint; replace with your upstream.
+	// 演示用回声端点；请替换为你的上游。
 	return "https://httpbin.org/post"
 }
 
@@ -122,7 +122,7 @@ func (MyExecutor) Execute(ctx context.Context, a *coreauth.Auth, req clipexec.Re
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	// Inject credentials via PrepareRequest hook.
+	// 通过 PrepareRequest 钩子注入凭据。
 	if errPrep := (MyExecutor{}).PrepareRequest(httpReq, a); errPrep != nil {
 		return clipexec.Response{}, errPrep
 	}
@@ -187,7 +187,7 @@ func main() {
 
 	hooks := cliproxy.Hooks{
 		OnAfterStart: func(s *cliproxy.Service) {
-			// Register demo models for the custom provider so they appear in /v1/models.
+			// 为自定义供应商注册演示模型，使它们出现在 /v1/models 中。
 			models := []*cliproxy.ModelInfo{{ID: "myprov-pro-1", Object: "model", Type: providerKey, DisplayName: "MyProv Pro 1"}}
 			for _, a := range core.List() {
 				if strings.EqualFold(a.Provider, providerKey) {
@@ -202,7 +202,7 @@ func main() {
 		WithConfigPath("config.yaml").
 		WithCoreAuthManager(core).
 		WithServerOptions(
-			// Optional: add a simple middleware + custom request logger
+			// 可选：添加一个简单的中间件 + 自定义请求日志记录器
 			api.WithMiddleware(func(c *gin.Context) { c.Header("X-Example", "custom-provider"); c.Next() }),
 			api.WithRequestLoggerFactory(func(cfg *config.Config, cfgPath string) logging.RequestLogger {
 				return logging.NewFileRequestLoggerWithOptions(true, "logs", filepath.Dir(cfgPath), cfg.ErrorLogsMaxFiles)
@@ -220,6 +220,6 @@ func main() {
 	if errRun := svc.Run(ctx); errRun != nil && !errors.Is(errRun, context.Canceled) {
 		panic(errRun)
 	}
-	_ = os.Stderr // keep os import used (demo only)
+	_ = os.Stderr // 保持 os 导入被使用（仅演示用）
 	_ = time.Second
 }

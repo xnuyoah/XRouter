@@ -14,8 +14,8 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
-// newIssue6631Handler returns a handler backed by a legacy config file and a router
-// exposing the field endpoints used in the issue report.
+// newIssue6631Handler 返回一个由旧版配置文件和一个暴露
+// 问题报告中使用的字段端点的路由器支持的处理器。
 func newIssue6631Handler(t *testing.T, raw string) (*Handler, string, *gin.Engine) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -58,7 +58,7 @@ func readIssue6631Disk(t *testing.T, path string) *config.Config {
 
 func TestSetConfigIgnoresConfigLoadedBeforeManagementSave_Issue6631(t *testing.T) {
 	h, path, router := newIssue6631Handler(t, "request-retry: 3\nmax-retry-credentials: 0\n")
-	// A watcher reload read config.yaml before the next save and publishes late.
+	// 一次监听器重载在下次保存之前读取了 config.yaml，并延迟发布。
 	staleReload, errLoad := config.LoadConfig(path)
 	if errLoad != nil {
 		t.Fatal(errLoad)
@@ -83,7 +83,7 @@ func TestSetConfigIgnoresConfigLoadedBeforeManagementSave_Issue6631(t *testing.T
 func TestSetConfigAppliesCurrentFileAndNonFileConfigs_Issue6631(t *testing.T) {
 	h, path, _ := newIssue6631Handler(t, "request-retry: 3\n")
 
-	// An external edit is published by the reload that read it.
+	// 外部编辑由读取到它的那次重载发布。
 	if errWrite := os.WriteFile(path, []byte("request-retry: 9\n"), 0o600); errWrite != nil {
 		t.Fatal(errWrite)
 	}
@@ -99,7 +99,7 @@ func TestSetConfigAppliesCurrentFileAndNonFileConfigs_Issue6631(t *testing.T) {
 		t.Fatalf("request-retry after external edit = %d, want 9", gotExternal)
 	}
 
-	// Configs that were not loaded from the file, such as Home updates, still apply.
+	// 并非从文件加载的配置（例如 Home 更新）仍会生效。
 	h.SetConfig(&config.Config{RequestRetry: 11})
 	h.mu.Lock()
 	gotNonFile := h.cfg.RequestRetry
@@ -123,7 +123,7 @@ func TestManagementWritesSurviveConcurrentReloadPublications_Issue6631(t *testin
 				return
 			default:
 			}
-			// Mirror watcher reloads: load config.yaml, then publish it to the handler.
+			// 模拟监听器重载：加载 config.yaml，然后将其发布给处理器。
 			if reloaded, errLoad := config.LoadConfig(path); errLoad == nil {
 				h.SetConfig(reloaded)
 			}

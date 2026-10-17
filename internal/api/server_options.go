@@ -29,7 +29,7 @@ type serverOptionConfig struct {
 	exampleAPIKeySafeMode bool
 }
 
-// ServerOption customises HTTP server construction.
+// ServerOption 用于定制 HTTP 服务器的构建。
 type ServerOption func(*serverOptionConfig)
 
 func defaultRequestLoggerFactory(cfg *config.Config, configPath string) logging.RequestLogger {
@@ -51,35 +51,35 @@ func effectiveSDKConfig(cfg *config.Config) *config.SDKConfig {
 	return &sdkCfg
 }
 
-// WithMiddleware appends additional Gin middleware during server construction.
+// WithMiddleware 在服务器构建期间追加额外的 Gin 中间件。
 func WithMiddleware(mw ...gin.HandlerFunc) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.extraMiddleware = append(cfg.extraMiddleware, mw...)
 	}
 }
 
-// WithEngineConfigurator allows callers to mutate the Gin engine prior to middleware setup.
+// WithEngineConfigurator 允许调用方在中间件设置之前修改 Gin engine。
 func WithEngineConfigurator(fn func(*gin.Engine)) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.engineConfigurator = fn
 	}
 }
 
-// WithRouterConfigurator appends a callback after default routes are registered.
+// WithRouterConfigurator 在默认路由注册之后追加一个回调。
 func WithRouterConfigurator(fn func(*gin.Engine, *handlers.BaseAPIHandler, *config.Config)) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.routerConfigurator = fn
 	}
 }
 
-// WithLocalManagementPassword stores a runtime-only management password accepted for localhost requests.
+// WithLocalManagementPassword 存储仅运行时的管理密码，用于接受来自 localhost 的请求。
 func WithLocalManagementPassword(password string) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.localPassword = password
 	}
 }
 
-// WithKeepAliveEndpoint enables a keep-alive endpoint with the provided timeout and callback.
+// WithKeepAliveEndpoint 用给定的超时和回调启用 keep-alive 端点。
 func WithKeepAliveEndpoint(timeout time.Duration, onTimeout func()) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		if timeout <= 0 || onTimeout == nil {
@@ -91,42 +91,42 @@ func WithKeepAliveEndpoint(timeout time.Duration, onTimeout func()) ServerOption
 	}
 }
 
-// WithRequestLoggerFactory customises request logger creation.
+// WithRequestLoggerFactory 定制请求日志记录器的创建。
 func WithRequestLoggerFactory(factory func(*config.Config, string) logging.RequestLogger) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.requestLoggerFactory = factory
 	}
 }
 
-// WithPostAuthHook registers a hook to be called after auth record creation.
+// WithPostAuthHook 注册在认证记录创建之后调用的钩子。
 func WithPostAuthHook(hook auth.PostAuthHook) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.postAuthHook = hook
 	}
 }
 
-// WithPostAuthPersistHook registers a hook to be called after auth persistence.
+// WithPostAuthPersistHook 注册在认证持久化之后调用的钩子。
 func WithPostAuthPersistHook(hook auth.PostAuthHook) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.postAuthPersistHook = hook
 	}
 }
 
-// WithPluginHost registers dynamic plugin HTTP adapters with the server.
+// WithPluginHost 向服务器注册动态插件 HTTP 适配器。
 func WithPluginHost(host *pluginhost.Host) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.pluginHost = host
 	}
 }
 
-// WithConfigReloadHook registers a callback used after management saves config changes.
+// WithConfigReloadHook 注册在管理端保存配置变更之后使用的回调。
 func WithConfigReloadHook(hook func(context.Context, *config.Config)) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.configReloadHook = hook
 	}
 }
 
-// WithExampleAPIKeySafeMode blocks proxy API endpoints while template API keys remain configured.
+// WithExampleAPIKeySafeMode 在模板 API key 仍处于配置状态时屏蔽代理 API 端点。
 func WithExampleAPIKeySafeMode() ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.exampleAPIKeySafeMode = true

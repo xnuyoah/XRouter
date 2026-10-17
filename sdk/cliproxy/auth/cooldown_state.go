@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// CooldownStateRecord is a persisted runtime cooldown snapshot for one auth/model pair.
+// CooldownStateRecord 是一条持久化的运行时冷却快照，对应一对认证/模型。
 type CooldownStateRecord struct {
 	Provider       string     `json:"provider,omitempty"`
 	AuthID         string     `json:"auth_id"`
@@ -29,13 +29,13 @@ type CooldownStateRecord struct {
 	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
-// CooldownStateStore persists runtime cooldown state independently from auth tokens.
+// CooldownStateStore 独立于认证令牌持久化运行时冷却状态。
 type CooldownStateStore interface {
 	Load(context.Context) ([]CooldownStateRecord, error)
 	Save(context.Context, []CooldownStateRecord) error
 }
 
-// CooldownStateStoreProvider exposes a backend-specific cooldown state store.
+// CooldownStateStoreProvider 暴露特定后端的冷却状态存储。
 type CooldownStateStoreProvider interface {
 	CooldownStateStore() CooldownStateStore
 }
@@ -48,20 +48,20 @@ type cooldownStateFile struct {
 	Records   []CooldownStateRecord `json:"records"`
 }
 
-// FileCooldownStateStore stores cooldown state as one .cds file per auth.
+// FileCooldownStateStore 将冷却状态按每个认证一个 .cds 文件存储。
 type FileCooldownStateStore struct {
 	mu      sync.Mutex
 	dir     string
 	authDir string
 }
 
-// NewFileCooldownStateStore creates a file-backed cooldown state store rooted at dir.
+// NewFileCooldownStateStore 创建以 dir 为根目录的文件后端冷却状态存储。
 func NewFileCooldownStateStore(dir string) *FileCooldownStateStore {
 	return NewFileCooldownStateStoreWithAuthDir(dir, "")
 }
 
-// NewFileCooldownStateStoreWithAuthDir creates a store and derives per-auth .cds
-// paths from auth files relative to authDir when possible.
+// NewFileCooldownStateStoreWithAuthDir 创建存储，并在可能时
+// 根据相对于 authDir 的认证文件推导每个认证的 .cds 路径。
 func NewFileCooldownStateStoreWithAuthDir(dir, authDir string) *FileCooldownStateStore {
 	return &FileCooldownStateStore{
 		dir:     strings.TrimSpace(dir),
@@ -69,7 +69,7 @@ func NewFileCooldownStateStoreWithAuthDir(dir, authDir string) *FileCooldownStat
 	}
 }
 
-// Load reads all cooldown state files. A missing directory is treated as empty state.
+// Load 读取所有冷却状态文件。目录缺失视为空状态。
 func (s *FileCooldownStateStore) Load(ctx context.Context) ([]CooldownStateRecord, error) {
 	if s == nil || s.dir == "" {
 		return nil, nil
@@ -132,7 +132,7 @@ func readCooldownStateFile(ctx context.Context, path string) ([]CooldownStateRec
 	return envelope.Records, nil
 }
 
-// Save atomically writes one cooldown state file per auth and removes stale files.
+// Save 以原子方式为每个认证写入一个冷却状态文件，并移除过期文件。
 func (s *FileCooldownStateStore) Save(ctx context.Context, records []CooldownStateRecord) error {
 	if s == nil || s.dir == "" {
 		return nil

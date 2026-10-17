@@ -144,8 +144,8 @@ func TestHomeConfigPayloadPortApplication(t *testing.T) {
 
 const seededConfigTestSecret = "git-seed-plaintext-secret"
 
-// persistSeededConfigForTest seeds content into configFilePath and returns what each
-// persist call found in that file.
+// persistSeededConfigForTest 将内容写入 configFilePath，并返回每次
+// persist 调用在该文件中读到的内容。
 func persistSeededConfigForTest(t *testing.T, configFilePath, content string) ([]string, error) {
 	t.Helper()
 	if errMkdir := os.MkdirAll(filepath.Dir(configFilePath), 0o700); errMkdir != nil {
@@ -191,8 +191,8 @@ func TestPersistSeededConfigHashesSecretBeforePersisting(t *testing.T) {
 	}
 }
 
-// The template copy is removed when refused, so the next start seeds again and fails
-// again instead of running from a config the repository never received.
+// 被拒绝时模板副本会被删除，因此下次启动会再次播种并再次失败，
+// 而不是使用仓库从未收到的配置运行。
 func TestPersistSeededConfigRefusesConfigThatKeepsPlaintextSecret(t *testing.T) {
 	for name, content := range map[string]string{
 		"unparsable":      "remote-management:\n  secret-key: " + seededConfigTestSecret + "\nport: [11016\n",

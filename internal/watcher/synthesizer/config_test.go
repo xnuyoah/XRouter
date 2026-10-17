@@ -48,8 +48,8 @@ func TestConfigSynthesizer_DeepseekKeys_SkipsEmptyAndHeaders(t *testing.T) {
 	ctx := &SynthesisContext{
 		Config: &config.Config{
 			DeepseekKey: []config.DeepseekKey{
-				{APIKey: ""},    // empty, should be skipped
-				{APIKey: "   "}, // whitespace, should be skipped
+				{APIKey: ""},    // 为空，应被跳过
+				{APIKey: "   "}, // 仅空白，应被跳过
 				{APIKey: "valid-key", Headers: map[string]string{"X-Custom": "value"}},
 			},
 		},
@@ -156,8 +156,8 @@ func TestConfigSynthesizer_OpenAIKeys_SkipsEmptyAndHeaders(t *testing.T) {
 	ctx := &SynthesisContext{
 		Config: &config.Config{
 			OpenAIKey: []config.OpenAIKey{
-				{APIKey: ""},   // empty key without base URL, should be skipped
-				{APIKey: "  "}, // whitespace key without base URL, should be skipped
+				{APIKey: ""},   // 无 base URL 的空 key，应被跳过
+				{APIKey: "  "}, // 无 base URL 的空白 key，应被跳过
 				{APIKey: "valid-key", Headers: map[string]string{"Authorization": "Bearer xyz"}},
 			},
 		},
@@ -396,7 +396,7 @@ func TestConfigSynthesizer_OpenAICompat_FallbackWithModels(t *testing.T) {
 						{Name: "model-x"},
 					},
 					Headers: map[string]string{"X-API": "header-value"},
-					// No APIKeyEntries - should use fallback path
+					// 没有 APIKeyEntries - 应使用回退路径
 				},
 			},
 		},
@@ -426,7 +426,7 @@ func TestConfigSynthesizer_IDStability(t *testing.T) {
 		},
 	}
 
-	// Generate IDs twice with fresh generators
+	// 使用全新的生成器生成两次 ID
 	synth1 := NewConfigSynthesizer()
 	ctx1 := &SynthesisContext{
 		Config:      cfg,

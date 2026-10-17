@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// StartOAuthV8 dispatches login using the provider query parameter.
+// StartOAuthV8 使用 provider 查询参数分发登录。
 func (h *Handler) StartOAuthV8(c *gin.Context) {
 	switch strings.ToLower(strings.TrimSpace(c.Query("provider"))) {
 	case "":
@@ -19,7 +19,7 @@ func (h *Handler) StartOAuthV8(c *gin.Context) {
 	}
 }
 
-// ImportOAuthV8 dispatches credential import using the provider query parameter.
+// ImportOAuthV8 使用 provider 查询参数分发凭据导入。
 func (h *Handler) ImportOAuthV8(c *gin.Context) {
 	switch strings.ToLower(strings.TrimSpace(c.Query("provider"))) {
 	case "":

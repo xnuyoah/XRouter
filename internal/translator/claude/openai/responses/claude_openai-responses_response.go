@@ -18,10 +18,10 @@ import (
 type claudeToResponsesState struct {
 	translatorcommon.ApplyPatchErrorState
 	ApplyPatchCalls map[string]*translatorcommon.ApplyPatchCallState
-	// ToolSearch is upstream.claude.tool-search as pinned for this response.
+	// ToolSearch 是本响应所固定的 upstream.claude.tool-search。
 	ToolSearch bool
-	// RequestJSON is the validated request body picked once per stream;
-	// the per-chunk path reuses it instead of re-validating the full body.
+	// RequestJSON 是每个流只挑选一次的已校验请求体；
+	// 逐块路径复用它，而不是重新校验整个请求体。
 	RequestJSON             []byte
 	ToolWinners             map[string]responsesToolDescriptor
 	ToolNames               claudeToolNames
@@ -43,21 +43,21 @@ type claudeToResponsesState struct {
 	MessageOpen             bool
 	ContentPartOpen         bool
 	MessageOutputIndex      int
-	FuncArgsBuf             map[int]*strings.Builder // index -> args
+	FuncArgsBuf             map[int]*strings.Builder // 索引 -> 参数
 	FuncArgsDone            map[int]bool
 	FuncItemDone            map[int]bool
 	FuncItemStatus          map[int]string
-	// function call bookkeeping for output aggregation
-	FuncNames         map[int]string // Claude block index -> function name
-	FuncCallIDs       map[int]string // Claude block index -> call id
-	FuncCustom        map[int]bool   // Claude block index -> freeform custom tool
-	FuncOutputIndices map[int]int    // Claude block index -> Responses output index
-	// message text aggregation
+	// 用于输出聚合的函数调用簿记
+	FuncNames         map[int]string // Claude 块索引 -> 函数名
+	FuncCallIDs       map[int]string // Claude 块索引 -> 调用 id
+	FuncCustom        map[int]bool   // Claude 块索引 -> 自由格式自定义工具
+	FuncOutputIndices map[int]int    // Claude 块索引 -> Responses 输出索引
+	// 消息文本聚合
 	TextBuf            strings.Builder
 	CurrentTextBuf     strings.Builder
 	MessageAnnotations []any
 	MessageItems       []claudeResponsesMessageItem
-	// reasoning state
+	// 推理状态
 	ReasoningActive     bool
 	ReasoningDeltasDone bool
 	ReasoningItemID     string
@@ -65,13 +65,13 @@ type claudeToResponsesState struct {
 	ReasoningSignature  string
 	ReasoningIndex      int
 	ReasoningItems      []claudeResponsesReasoningItem
-	// server-side web search state: a Claude server_tool_use block and its
-	// web_search_tool_result block fold into one Responses web_search_call item.
+	// 服务端 web 搜索状态：一个 Claude server_tool_use 块及其
+	// web_search_tool_result 块会折叠为一个 Responses web_search_call 条目。
 	WebSearchByBlock  map[int]*claudeResponsesWebSearchItem
 	WebSearchByToolID map[string]*claudeResponsesWebSearchItem
 	WebSearchItems    []*claudeResponsesWebSearchItem
 	StopReason        string
-	// usage aggregation
+	// 用量聚合
 	Usage claudeResponsesUsageTokens
 }
 
@@ -114,20 +114,20 @@ type claudeResponsesUsageTokens struct {
 
 var dataTag = []byte("data:")
 
-// ClaudeResponsesRedactedThinkingPrefix marks a Responses reasoning item whose
-// encrypted_content carries an Anthropic redacted_thinking payload instead of a
-// thinking signature. Responses has no redacted reasoning item type, and
-// Anthropic requires redacted_thinking blocks to be replayed verbatim, so the
-// payload rides in encrypted_content behind this marker and is restored on the
-// way back. The marker is not a valid signature for any provider, so a foreign
-// upstream drops the block instead of replaying an unusable value.
+// ClaudeResponsesRedactedThinkingPrefix 标记一个 Responses 推理条目，其
+// encrypted_content 携带的是 Anthropic redacted_thinking 载荷，而非
+// thinking 签名。Responses 没有 redacted 推理条目类型，而
+// Anthropic 要求 redacted_thinking 块原样重放，因此该
+// 载荷搭乘在此标记之后的 encrypted_content 中，并在
+// 返回途中被还原。该标记对任何供应商都不是有效签名，因此外来的
+// 上游会丢弃该块，而不是重放一个不可用的值。
 const ClaudeResponsesRedactedThinkingPrefix = "claude-redacted-thinking:"
 
-// claudeReasoningCarrier returns the encrypted_content value for the Responses
-// reasoning item that mirrors a Claude thinking or redacted_thinking block.
-// Streaming thinking blocks usually announce an empty signature and fill it in
-// through signature_delta, so an empty result here is expected and later
-// replaced.
+// claudeReasoningCarrier 返回映照 Claude thinking 或 redacted_thinking 块的
+// Responses 推理条目的 encrypted_content 值。
+// 流式 thinking 块通常会先声明一个空签名，然后
+// 通过 signature_delta 填充它，因此这里返回空结果是预期内的，稍后会被
+// 替换。
 func claudeReasoningCarrier(contentBlock gjson.Result) string {
 	if contentBlock.Get("type").String() == "redacted_thinking" {
 		if data := contentBlock.Get("data"); data.Exists() && data.String() != "" {
@@ -173,9 +173,9 @@ func claudeResponsesIncompleteDetails(stopReason string) ([]byte, bool) {
 	case "max_tokens":
 		return []byte(`{"reason":"max_output_tokens"}`), true
 	case "pause_turn":
-		// Anthropic's server-tool iteration pause is unfinished, not a token limit:
+		// Anthropic 的服务端工具迭代暂停属于未完成，而非令牌上限：
 		// https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons#pause_turn
-		// Responses has no matching incomplete reason, so keep its nullable details null.
+		// Responses 没有与之匹配的 incomplete 原因，因此让其可空 details 保持 null。
 		return []byte(`null`), true
 	}
 	return nil, false
@@ -251,8 +251,8 @@ func (st *claudeToResponsesState) functionOutputIndex(blockIndex int) int {
 	return index
 }
 
-// startWebSearch opens the Responses item that stands for a Claude server-side
-// search block.
+// startWebSearch 打开代表 Claude 服务端
+// 搜索块的 Responses 条目。
 func (st *claudeToResponsesState) startWebSearch(blockIndex int, toolUseID string) *claudeResponsesWebSearchItem {
 	item := &claudeResponsesWebSearchItem{ToolUseID: toolUseID, OutputIndex: st.allocateOutputIndex()}
 	st.WebSearchByBlock[blockIndex] = item
@@ -261,8 +261,8 @@ func (st *claudeToResponsesState) startWebSearch(blockIndex int, toolUseID strin
 	return item
 }
 
-// finalizeWebSearchWithStatus emits output_item.done once the result block has been seen,
-// or at message_stop when the turn ended without one.
+// finalizeWebSearchWithStatus 在见到结果块后立即发出 output_item.done，
+// 或者在本轮没有结果块就结束时于 message_stop 发出。
 func (st *claudeToResponsesState) finalizeWebSearchWithStatus(item *claudeResponsesWebSearchItem, status string, nextSeq func() int) [][]byte {
 	if item == nil || item.Emitted {
 		return nil
@@ -278,21 +278,21 @@ func (st *claudeToResponsesState) finalizeWebSearchWithStatus(item *claudeRespon
 	return [][]byte{emitEvent("response.output_item.done", done)}
 }
 
-// isApplyPatch consults the original request's winning declaration, not the
-// sanitized upstream name or a discarded declaration with the same name.
+// isApplyPatch 查询原始请求中胜出的声明，而不是
+// 清洗后的上游名称或同名但被丢弃的声明。
 func (st *claudeToResponsesState) isApplyPatch(name string) bool {
 	d, ok := st.ToolWinners[st.ToolNames.identity(name)]
 	return ok && d.toolType == "custom" && applypatch.IsCustomTool(d.tool)
 }
 
-// isToolSearch reports whether a Claude tool name maps to the client
-// tool_search declaration.
+// isToolSearch 报告某个 Claude 工具名是否映射到客户端
+// tool_search 声明。
 func (st *claudeToResponsesState) isToolSearch(name string) bool {
 	return st.ToolWinners[st.ToolNames.identity(name)].clientSearch
 }
 
-// validateApplyPatchSnapshots permits equivalent JSON spellings but never
-// silently replaces one complete patch input with another.
+// validateApplyPatchSnapshots 允许等价的 JSON 写法，但绝不
+// 用一个完整的补丁输入静默替换另一个完整的补丁输入。
 func validateApplyPatchSnapshots(previous, current string) error {
 	var call translatorcommon.ApplyPatchCallState
 	if previous != "" {
@@ -304,9 +304,9 @@ func validateApplyPatchSnapshots(previous, current string) error {
 	return errFinishArguments
 }
 
-// finishClaudeApplyPatchArguments treats complete streamed JSON as a complete
-// snapshot, not a prefix that a later snapshot may silently extend. A partial
-// source can still be completed by a consistent full snapshot.
+// finishClaudeApplyPatchArguments 把完整的流式 JSON 视为一个完整
+// 快照，而不是之后某个快照可以静默扩展的前缀。不完整的
+// 源仍可由一个一致且完整的快照补全。
 func finishClaudeApplyPatchArguments(call *translatorcommon.ApplyPatchCallState, arguments, snapshot string) (string, string, error) {
 	if snapshot == "" {
 		return call.FinishArguments(arguments)
@@ -663,7 +663,7 @@ func newClaudeToResponsesState(requestJSON []byte, toolSearch bool) *claudeToRes
 	}
 }
 
-// ConvertClaudeResponseToOpenAIResponses converts Claude SSE to OpenAI Responses SSE events.
+// ConvertClaudeResponseToOpenAIResponses 把 Claude SSE 转换为 OpenAI Responses SSE 事件。
 func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) [][]byte {
 	if *param == nil {
 		*param = newClaudeToResponsesState(pickRequestJSON(originalRequestRawJSON, requestRawJSON), ClientToolSearchEnabledFor(ctx))
@@ -673,7 +673,7 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 		return nil
 	}
 
-	// Expect `data: {..}` from Claude clients
+	// 期望来自 Claude 客户端的 `data: {..}`
 	if !bytes.HasPrefix(rawJSON, dataTag) {
 		return [][]byte{}
 	}
@@ -690,7 +690,7 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 		if msg := root.Get("message"); msg.Exists() {
 			st.ResponseID = msg.Get("id").String()
 			st.CreatedAt = time.Now().Unix()
-			// Reset per-message aggregation state
+			// 重置每条消息的聚合状态
 			st.TextBuf.Reset()
 			st.CurrentTextBuf.Reset()
 			st.MessageAnnotations = nil
@@ -759,19 +759,19 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 		idx := int(root.Get("index").Int())
 		typ := cb.Get("type").String()
 
-		// Keep adjacent text blocks in the same assistant message.
+		// 让相邻的文本块保留在同一条助手消息中。
 		if typ != "text" {
 			out = append(out, st.finalizeAssistantMessage(nextSeq)...)
 		}
-		// Finalize previous reasoning item
+		// 结束前一个推理条目
 		if st.ReasoningActive || st.ReasoningItemID != "" {
 			out = append(out, st.finalizeReasoningItem("completed", nextSeq)...)
 		}
-		// Finalize any previous completed function calls
+		// 结束所有先前已完成的函数调用
 		for prevIdx := range st.FuncCallIDs {
 			if !st.FuncItemDone[prevIdx] && prevIdx != idx {
-				// Patch calls may interleave; a new block is not a completion
-				// snapshot for a still-open (or not-yet-named) call.
+				// 补丁调用可能交错出现；新块并不是某个仍打开（或尚未命名）的调用的
+				// 完成快照。
 				if (st.isApplyPatch(st.FuncNames[prevIdx]) || st.FuncNames[prevIdx] == "") && !st.FuncBlockStopped[prevIdx] {
 					continue
 				}
@@ -781,7 +781,7 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 				}
 			}
 		}
-		// Finalize any previous web search items
+		// 结束所有先前的 web 搜索条目
 		for _, item := range st.WebSearchItems {
 			if !item.Emitted && item.Results != nil {
 				out = append(out, st.finalizeWebSearchWithStatus(item, "completed", nextSeq)...)
@@ -814,7 +814,7 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 			st.InFuncBlock = true
 			callID, name := cb.Get("id").String(), cb.Get("name").String()
 			oldID, oldName := st.FuncCallIDs[idx], st.FuncNames[idx]
-			// Pending identity evidence must survive later matching updates.
+			// 待定的身份证据必须在后续的匹配更新后仍然保留。
 			if callID != "" && oldID != "" && callID != oldID {
 				st.FuncIdentityConflicts[idx] = true
 			}
@@ -824,8 +824,8 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 				}
 			}
 			if !st.FuncItemAdded[idx] {
-				// Keep the block key even before its ID arrives so terminal
-				// validation cannot overlook an unnamed or ID-less call.
+				// 即使 ID 尚未到达也保留该块键，这样终止阶段
+				// 的校验就不会遗漏未命名或无 ID 的调用。
 				if callID != "" || oldID == "" {
 					st.FuncCallIDs[idx] = callID
 				}
@@ -838,16 +838,16 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 			if st.FuncArgsBuf[idx] == nil {
 				st.FuncArgsBuf[idx] = &strings.Builder{}
 			}
-			// Empty start input is a Claude placeholder, not an arguments fragment.
-			// Retain populated snapshot evidence without fabricating progress.
+			// 空的起始输入是 Claude 的占位符，而不是参数片段。
+			// 保留已填充的快照证据，不伪造进展。
 			if input := cb.Get("input"); input.Exists() && (!input.IsObject() || len(input.Map()) > 0) {
-				// Validate without emitting or finishing the live decoder; defer
-				// failures until classification selects the patch bridge.
+				// 只做校验，不发出或结束实时解码器；把失败
+				// 推迟到分类环节选定补丁桥接之后。
 				if errValidateApplyPatchSnapshots := validateApplyPatchSnapshots(st.FuncInputSnapshot[idx], input.Raw); errValidateApplyPatchSnapshots != nil && st.FuncInputSnapshotErrors[idx] == nil {
 					st.FuncInputSnapshotErrors[idx] = errValidateApplyPatchSnapshots
 				}
-				// Item completion does not seal the response. Compare late snapshots
-				// against this call's finished decoder without emitting more input.
+				// 条目完成并不会封闭响应。把迟到的快照
+				// 与此调用已结束的解码器比较，而不发出更多输入。
 				if st.FuncItemDone[idx] {
 					if patchCall := st.ApplyPatchCalls[fmt.Sprint(idx)]; patchCall != nil {
 						if _, _, errFinishArguments := patchCall.FinishArguments(input.Raw); errFinishArguments != nil {
@@ -866,8 +866,8 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 			out = append(out, st.emitPendingFuncArgs(idx, nextSeq)...)
 		} else if typ == "server_tool_use" {
 			if name := cb.Get("name").String(); name != claudeWebSearchToolName {
-				// Reachability guard: only web_search can be enabled on Claude by
-				// this translator, so anything else means a new upstream tool.
+				// 可达性防护：本转换器在 Claude 上只能启用 web_search，
+				// 因此其他任何情况都意味着出现了新的上游工具。
 				log.Debugf("claude->responses: unmapped server_tool_use %q at block %d", name, idx)
 			} else {
 				item := st.startWebSearch(idx, cb.Get("id").String())
@@ -878,16 +878,16 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 				out = append(out, emitEvent("response.output_item.added", added))
 			}
 		} else if typ == "web_search_tool_result" {
-			// A result block carries its full content up front and has no deltas.
-			// Results are stored here and the item is closed when the next block
-			// starts or at message_stop so the final stop_reason is respected.
+			// 结果块一次性携带其全部内容，没有增量。
+			// 结果在此处存储，并在下一个块开始或到达 message_stop 时
+			// 关闭该条目，以尊重最终的 stop_reason。
 			if item := st.WebSearchByToolID[cb.Get("tool_use_id").String()]; item != nil {
 				item.Results = claudeWebSearchResultsToResponses(cb.Get("content"))
 			} else {
 				log.Debugf("claude->responses: web_search_tool_result without matching server_tool_use at block %d", idx)
 			}
 		} else if typ == "thinking" || typ == "redacted_thinking" {
-			// start reasoning item
+			// 开始推理条目
 			st.ReasoningActive = true
 			st.ReasoningDeltasDone = false
 			st.ReasoningIndex = st.allocateOutputIndex()
@@ -900,7 +900,7 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 			item, _ = sjson.SetBytes(item, "item.id", st.ReasoningItemID)
 			item, _ = sjson.SetBytes(item, "item.encrypted_content", st.ReasoningSignature)
 			out = append(out, emitEvent("response.output_item.added", item))
-			// add a summary part placeholder
+			// 添加一个摘要部分占位符
 			part := []byte(`{"type":"response.reasoning_summary_part.added","sequence_number":0,"item_id":"","output_index":0,"summary_index":0,"part":{"type":"summary_text","text":""}}`)
 			part, _ = sjson.SetBytes(part, "sequence_number", nextSeq())
 			part, _ = sjson.SetBytes(part, "item_id", st.ReasoningItemID)
@@ -921,7 +921,7 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 				msg, _ = sjson.SetBytes(msg, "output_index", st.messageOutputIndex())
 				msg, _ = sjson.SetBytes(msg, "delta", t.String())
 				out = append(out, emitEvent("response.output_text.delta", msg))
-				// aggregate text for response.output
+				// 为 response.output 聚合文本
 				st.TextBuf.WriteString(t.String())
 				st.CurrentTextBuf.WriteString(t.String())
 			}
@@ -1011,7 +1011,7 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 		if len(incompleteDetails) > 0 {
 			completed, _ = sjson.SetRawBytes(completed, "response.incomplete_details", incompleteDetails)
 		}
-		// Inject original request fields into response as per docs/response.completed.json
+		// 按 docs/response.completed.json 将原始请求字段注入响应
 
 		reqBytes := st.RequestJSON
 		if len(reqBytes) > 0 {
@@ -1078,9 +1078,9 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 			}
 		}
 
-		// Build response.output from aggregated state
+		// 由聚合状态构建 response.output
 		outputsWrapper := []byte(`{"arr":[]}`)
-		// reasoning items
+		// 推理条目
 		for _, reasoning := range st.ReasoningItems {
 			status := reasoning.Status
 			if status == "" {
@@ -1095,7 +1095,7 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 			item = translatorcommon.SetRawArrayItems(item, "summary", [][]byte{summary})
 			outputsWrapper, _ = sjson.SetRawBytes(outputsWrapper, fmt.Sprintf("arr.%d", reasoning.OutputIndex), item)
 		}
-		// assistant message items
+		// 助手消息条目
 		for _, message := range st.MessageItems {
 			item := []byte(`{"id":"","type":"message","status":"completed","content":[{"type":"output_text","annotations":[],"logprobs":[],"text":""}],"role":"assistant"}`)
 			item, _ = sjson.SetBytes(item, "id", message.ID)
@@ -1106,7 +1106,7 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 			}
 			outputsWrapper, _ = sjson.SetRawBytes(outputsWrapper, fmt.Sprintf("arr.%d", message.OutputIndex), item)
 		}
-		// web_search_call items
+		// web_search_call 条目
 		for _, item := range st.WebSearchItems {
 			status := item.Status
 			if status == "" {
@@ -1116,14 +1116,14 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 			rendered, _ = sjson.SetBytes(rendered, "status", status)
 			outputsWrapper, _ = sjson.SetRawBytes(outputsWrapper, fmt.Sprintf("arr.%d", item.OutputIndex), rendered)
 		}
-		// function_call items (in ascending index order for determinism)
+		// function_call 条目（按索引升序以保证确定性）
 		if len(st.FuncArgsBuf) > 0 {
-			// collect indices
+			// 收集索引
 			idxs := make([]int, 0, len(st.FuncArgsBuf))
 			for idx := range st.FuncArgsBuf {
 				idxs = append(idxs, idx)
 			}
-			// simple sort (small N), avoid adding new imports
+			// 简单排序（N 很小），避免新增导入
 			for i := 0; i < len(idxs); i++ {
 				for j := i + 1; j < len(idxs); j++ {
 					if idxs[j] < idxs[i] {
@@ -1202,14 +1202,14 @@ func ConvertClaudeResponseToOpenAIResponses(ctx context.Context, modelName strin
 	return noSSEOutput(out)
 }
 
-// ConvertClaudeResponseToOpenAIResponsesNonStream aggregates Claude SSE into a single OpenAI Responses JSON.
+// ConvertClaudeResponseToOpenAIResponsesNonStream 把 Claude SSE 聚合为单个 OpenAI Responses JSON。
 func ConvertClaudeResponseToOpenAIResponsesNonStream(ctx context.Context, _ string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) []byte {
 	rawJSON, nativeModel := translatorcommon.ClaudeMessagesJSONToSSE(rawJSON)
-	// Aggregate Claude SSE lines into a single OpenAI Responses JSON (non-stream)
-	// We follow the same aggregation logic as the streaming variant but produce
-	// one final object matching docs/out.json structure.
+	// 把 Claude SSE 行聚合为单个 OpenAI Responses JSON（非流式）
+	// 我们沿用与流式变体相同的聚合逻辑，但产出
+	// 一个符合 docs/out.json 结构的最终对象。
 
-	// Collect SSE data: lines start with "data: "; ignore others
+	// 收集 SSE 数据：以 "data: " 开头的行，忽略其他行
 	var chunks [][]byte
 	remaining := rawJSON
 	for len(remaining) > 0 {
@@ -1235,10 +1235,10 @@ func ConvertClaudeResponseToOpenAIResponsesNonStream(ctx context.Context, _ stri
 		*param = st
 	}
 
-	// Base OpenAI Responses (non-stream) object
+	// 基础的 OpenAI Responses（非流式）对象
 	out := []byte(`{"id":"","object":"response","created_at":0,"status":"completed","background":false,"error":null,"incomplete_details":null,"output":[],"usage":{"input_tokens":0,"input_tokens_details":{"cached_tokens":0},"output_tokens":0,"output_tokens_details":{},"total_tokens":0}}`)
 
-	// Aggregation state
+	// 聚合状态
 	var (
 		responseID  string
 		createdAt   int64
@@ -1283,11 +1283,11 @@ func ConvertClaudeResponseToOpenAIResponsesNonStream(ctx context.Context, _ stri
 		return item
 	}
 
-	// Walk through SSE chunks to fill state
+	// 遍历 SSE 数据块以填充状态
 	for _, ch := range chunks {
 		root := gjson.ParseBytes(ch)
 		ev := root.Get("type").String()
-		// Match the streaming path: no input after the protocol terminator.
+		// 与流式路径一致：协议终止符之后不再有输入。
 		if ev == "message_stop" {
 			break
 		}
@@ -1384,8 +1384,8 @@ func ConvertClaudeResponseToOpenAIResponsesNonStream(ctx context.Context, _ stri
 				item.id = responsesWebSearchCallID(toolUseID)
 				item.callID = toolUseID
 				webSearchByToolID[toolUseID] = item
-				// Streaming announces an empty input and fills it through
-				// input_json_delta; only seed when the query is already present.
+				// 流式会先声明空输入，然后通过
+				// input_json_delta 填充；仅在查询已存在时才预置。
 				if input := cb.Get("input"); input.IsObject() && claudeWebSearchQuery(input.Raw) != "" {
 					item.args.WriteString(input.Raw)
 				}
@@ -1447,7 +1447,7 @@ func ConvertClaudeResponseToOpenAIResponsesNonStream(ctx context.Context, _ stri
 			}
 
 		case "content_block_stop":
-			// Output items are finalized after all deltas have been aggregated.
+			// 输出条目会在所有增量聚合完成后再结束。
 
 		case "message_delta":
 			usageTokens.Merge(root.Get("usage"))
@@ -1457,7 +1457,7 @@ func ConvertClaudeResponseToOpenAIResponsesNonStream(ctx context.Context, _ stri
 		}
 	}
 
-	// Populate base fields
+	// 填充基础字段
 	_, responseStatus, incompleteDetails := claudeResponsesTerminalState(stopReason)
 	out, _ = sjson.SetBytes(out, "id", responseID)
 	out, _ = sjson.SetBytes(out, "created_at", createdAt)
@@ -1466,7 +1466,7 @@ func ConvertClaudeResponseToOpenAIResponsesNonStream(ctx context.Context, _ stri
 		out, _ = sjson.SetRawBytes(out, "incomplete_details", incompleteDetails)
 	}
 
-	// Inject request echo fields as top-level (similar to streaming variant)
+	// 将请求回显字段注入为顶层字段（与流式变体类似）
 	if len(reqBytes) > 0 {
 		req := gjson.ParseBytes(reqBytes)
 		if v := req.Get("instructions"); v.Exists() {
@@ -1531,13 +1531,13 @@ func ConvertClaudeResponseToOpenAIResponsesNonStream(ctx context.Context, _ stri
 		}
 	}
 
-	// A native response's model is authoritative; otherwise retain request echo
-	// behavior, including the existing SSE path.
+	// 原生响应的 model 具有权威性；否则保留请求回显
+	// 行为，包括现有的 SSE 路径。
 	if nativeModel != "" {
 		out, _ = sjson.SetBytes(out, "model", nativeModel)
 	}
 
-	// Build output array in the order of the original content blocks.
+	// 按原始内容块的顺序构建 output 数组。
 	outputs := make([][]byte, 0, len(outputItems))
 	for i, outputItem := range outputItems {
 		itemStatus := "completed"
@@ -1613,7 +1613,7 @@ func ConvertClaudeResponseToOpenAIResponsesNonStream(ctx context.Context, _ stri
 		out, _ = sjson.SetRawBytes(out, "output", translatorcommon.JoinRawArray(outputs))
 	}
 
-	// Usage
+	// 用量
 	inputTokens, outputTokens, totalTokens, cachedTokens := usageTokens.OpenAIResponsesUsage()
 	if inputTokens != 0 {
 		out, _ = sjson.SetBytes(out, "usage.input_tokens", inputTokens)
@@ -1634,7 +1634,7 @@ func ConvertClaudeResponseToOpenAIResponsesNonStream(ctx context.Context, _ stri
 		}
 	}
 	if reasoningLength > 0 {
-		// Rough estimate similar to chat completions
+		// 与 chat completions 类似的粗略估算
 		reasoningTokens := int64(reasoningLength / 4)
 		if reasoningTokens > 0 {
 			out, _ = sjson.SetBytes(out, "usage.output_tokens_details.reasoning_tokens", reasoningTokens)
@@ -1644,7 +1644,7 @@ func ConvertClaudeResponseToOpenAIResponsesNonStream(ctx context.Context, _ stri
 	return out
 }
 
-// FinalizeToolInput rejects a patch-enabled stream lacking its source terminator.
+// FinalizeToolInput 拒绝缺少源终止符的、启用补丁的流。
 func (st *claudeToResponsesState) FinalizeToolInput() [][]byte {
 	if st.ToolInputError() != nil || st.CompletedEmitted {
 		return nil

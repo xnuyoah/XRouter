@@ -1,5 +1,5 @@
-// clients.go implements watcher client lifecycle logic and persistence helpers.
-// It reloads clients, handles incremental auth file changes, and persists updates when supported.
+// clients.go 实现监听器客户端的生命周期逻辑与持久化辅助函数。
+// 它负责重载客户端、处理认证文件的增量变更，并在支持时持久化更新。
 package watcher
 
 import (
@@ -105,7 +105,7 @@ func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string
 						sum := sha256.Sum256(data)
 						normalizedPath := w.normalizeAuthPath(fullPath)
 						newAuthHashes[normalizedPath] = hex.EncodeToString(sum[:])
-						// Parse and cache auth content for future diff comparisons (debug only).
+						// 解析并缓存认证内容，供后续差异比较使用（仅调试）。
 						if cacheAuthContents {
 							var auth coreauth.Auth
 							if errParse := json.Unmarshal(data, &auth); errParse == nil {
@@ -183,7 +183,7 @@ func (w *Watcher) addOrUpdateClientLocked(path string) {
 	curHash := hex.EncodeToString(sum[:])
 	normalized := w.normalizeAuthPath(path)
 
-	// Parse new auth content for diff comparison
+	// 解析新的认证内容以进行差异比较
 	var newAuth coreauth.Auth
 	if errParse := json.Unmarshal(data, &newAuth); errParse != nil {
 		log.Errorf("failed to parse auth file %s: %v", filepath.Base(path), errParse)
@@ -209,7 +209,7 @@ func (w *Watcher) addOrUpdateClientLocked(path string) {
 		return
 	}
 
-	// Get old auth for diff comparison
+	// 获取旧的认证以进行差异比较
 	var oldAuth *coreauth.Auth
 	if cacheAuthContents && w.lastAuthContents != nil {
 		if cached := w.lastAuthContents[normalized]; cached != nil {
@@ -217,7 +217,7 @@ func (w *Watcher) addOrUpdateClientLocked(path string) {
 		}
 	}
 
-	// Update caches
+	// 更新缓存
 	if w.lastAuthHashes == nil {
 		w.lastAuthHashes = make(map[string]string)
 	}
@@ -235,7 +235,7 @@ func (w *Watcher) addOrUpdateClientLocked(path string) {
 	}
 	w.clientsMutex.Unlock()
 
-	// Compute and log field changes
+	// 计算并记录字段变更
 	if cacheAuthContents {
 		if changes := diff.BuildAuthChangeDetails(oldAuth, &newAuth); len(changes) > 0 {
 			log.Debugf("auth field changes for %s:", filepath.Base(path))
@@ -245,7 +245,7 @@ func (w *Watcher) addOrUpdateClientLocked(path string) {
 		}
 	}
 
-	// Build synthesized auth entries for this single file only.
+	// 仅为该单个文件构建合成的认证条目。
 	sctx := &synthesizer.SynthesisContext{
 		Config:           cfg,
 		AuthDir:          authDir,
@@ -294,8 +294,8 @@ func (w *Watcher) removeClientLocked(path string) {
 	delete(w.fileAuthsByPath, normalized)
 
 	updates := w.computePerPathUpdatesLocked(oldByID, map[string]*coreauth.Auth{})
-	// Only the whole-file removal path gets this mark. Content diffs may drop
-	// individual plugin auth IDs while their source file still exists.
+	// 只有整文件移除路径会带上这个标记。内容差异可能会移除
+	// 单个插件认证 ID，而其源文件仍然存在。
 	for index := range updates {
 		if updates[index].Action == AuthUpdateActionDelete {
 			updates[index].SetFileRemoval(true)
@@ -392,7 +392,7 @@ func (w *Watcher) loadFileClients(cfg *config.Config) int {
 	return authFileCount
 }
 
-// APIKeyClientCounts summarizes configured API-key credentials per provider family.
+// APIKeyClientCounts 汇总每个供应商标族已配置的 API-key 凭据数量。
 type APIKeyClientCounts struct {
 	OpenAI       int
 	Deepseek     int
@@ -401,12 +401,12 @@ type APIKeyClientCounts struct {
 	OpenAICompat int
 }
 
-// Total returns the summed credential count across every API-key family.
+// Total 返回所有 API-key 族凭据数量的总和。
 func (c APIKeyClientCounts) Total() int {
 	return c.OpenAI + c.Deepseek + c.Nvidia + c.Agnes + c.OpenAICompat
 }
 
-// BuildAPIKeyClients counts configured API-key credentials per provider family.
+// BuildAPIKeyClients 统计每个供应商标族已配置的 API-key 凭据数量。
 func BuildAPIKeyClients(cfg *config.Config) APIKeyClientCounts {
 	var counts APIKeyClientCounts
 	if cfg == nil {

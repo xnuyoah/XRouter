@@ -3,7 +3,7 @@ package auth
 import "strings"
 
 const (
-	// CredentialPolicyCodexAlphaSearchV1 selects credentials supported by Codex Alpha Search.
+	// CredentialPolicyCodexAlphaSearchV1 选择 Codex Alpha Search 支持的凭据。
 	CredentialPolicyCodexAlphaSearchV1 = "codex_alpha_search_v1"
 )
 

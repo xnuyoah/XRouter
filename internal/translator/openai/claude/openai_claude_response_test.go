@@ -333,7 +333,7 @@ func TestStreamingTool_MixedEmptyNameAndValid(t *testing.T) {
 	if len(starts) != 2 {
 		t.Fatalf("expected two tool_use starts (valid mid-stream + synthetic empty-name), got %d", len(starts))
 	}
-	// Valid name+id is emitted mid-stream first; empty-name is belated at finish.
+	// 有效的 name+id 先在流中发出；空 name 在结束时才迟到补发。
 	if name := gjson.Get(starts[0].Payload, "content_block.name").String(); name != "do_it" {
 		t.Fatalf("first tool name = %q, want %q", name, "do_it")
 	}
@@ -1018,7 +1018,7 @@ func TestStreaming_InterleavedContentAndToolUse_StrictSequentialBlocks(t *testin
 
 	assertSequentialContentBlocks(t, events)
 
-	// Ensure tool call arguments were preserved and complete
+	// 确保工具调用参数被完整保留
 	var toolDeltas []sseEvent
 	for _, e := range events {
 		if e.Type == "content_block_delta" && gjson.Get(e.Payload, "delta.type").String() == "input_json_delta" {
@@ -1091,7 +1091,7 @@ func TestStreaming_InterleavedTextAndThinkingPreservesOrder(t *testing.T) {
 
 	assertSequentialContentBlocks(t, events)
 
-	// Block sequence should be:
+	// 块序列应为：
 	// 0: tool_use (Bash, command: "pwd")
 	// 1: text ("Note A: running check")
 	// 2: thinking ("Thinking about safety")
@@ -1112,7 +1112,7 @@ func TestStreaming_InterleavedTextAndThinkingPreservesOrder(t *testing.T) {
 		}
 	}
 
-	// Verify text and thinking contents
+	// 验证 text 与 thinking 内容
 	var textDeltas []string
 	var thinkingDeltas []string
 	var toolDelta string
@@ -1312,7 +1312,7 @@ func TestStreaming_EmptyReasoningContentFallsBackToReasoning(t *testing.T) {
 func TestNonStream_ReasoningFieldEmitsThinkingBlock(t *testing.T) {
 	rawJSON := []byte(`{"id":"chatcmpl-1","object":"chat.completion","model":"deepseek","choices":[{"index":0,"message":{"role":"assistant","content":"Done","reasoning":"Thought process"},"finish_reason":"stop"}]}`)
 
-	// Test ConvertOpenAIResponseToClaudeNonStream
+	// 测试 ConvertOpenAIResponseToClaudeNonStream
 	out := ConvertOpenAIResponseToClaudeNonStream(context.Background(), "", nil, nil, rawJSON, nil)
 	content := gjson.GetBytes(out, "content").Array()
 	var thinkingTexts []string
@@ -1325,7 +1325,7 @@ func TestNonStream_ReasoningFieldEmitsThinkingBlock(t *testing.T) {
 		t.Fatalf("expected non-stream content to contain thinking block 'Thought process', got %v (output: %s)", thinkingTexts, string(out))
 	}
 
-	// Test convertOpenAINonStreamingToAnthropic (via ConvertOpenAIResponseToClaude with non-stream payload)
+	// 测试 convertOpenAINonStreamingToAnthropic（通过带非流式载荷的 ConvertOpenAIResponseToClaude）
 	var paramAny any
 	emitted := ConvertOpenAIResponseToClaude(context.Background(), "", []byte(`{"stream":false}`), nil, append([]byte("data: "), rawJSON...), &paramAny)
 	if len(emitted) == 0 {

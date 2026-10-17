@@ -415,9 +415,9 @@ func responsesWebsocketManyItemsTranscriptFixture(transcriptSize int) ([]byte, [
 	return []byte(lastRequest.String()), []byte(lastResponseOutput.String()), appendInput.String()
 }
 
-// The legacy oracle detects broad behavior drift from the implementation that
-// preceded the allocation optimization. Explicit compatibility scenarios above
-// remain the independent specification for important merge behavior.
+// 旧版参照实现用于检测相对分配优化之前实现的
+// 大幅行为漂移。上述显式兼容性场景
+// 仍是重要合并行为的独立规范。
 type referenceResponsesWebsocketInputItem struct {
 	raw      json.RawMessage
 	itemType string

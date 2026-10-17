@@ -1,4 +1,4 @@
-// Package models builds model catalogs for Anthropic clients.
+// Package models 为 Anthropic 客户端构建模型目录。
 package models
 
 import (
@@ -8,7 +8,7 @@ import (
 
 const claudeDDModelPrefix = "claude-fable-5-dd-"
 
-// BuildResponse builds an Anthropic model response from available models.
+// BuildResponse 根据可用模型构建 Anthropic 模型响应。
 func BuildResponse(availableModels []map[string]any, disableCloaking bool) map[string]any {
 	models := make([]map[string]any, len(availableModels))
 	for i, model := range availableModels {
@@ -44,9 +44,9 @@ func BuildResponse(availableModels []map[string]any, disableCloaking bool) map[s
 	}
 }
 
-// EnsureClaudeModelIDPrefix rewrites model IDs for Anthropic model listings.
-// IDs that already start with "claude-" are returned unchanged; all other IDs
-// become "claude-fable-5-dd-" plus the original ID with its characters reversed.
+// EnsureClaudeModelIDPrefix 为 Anthropic 模型列表重写模型 ID。
+// 已以 "claude-" 开头的 ID 原样返回；所有其他 ID
+// 变为 "claude-fable-5-dd-" 加上原 ID 的字符反转结果。
 func EnsureClaudeModelIDPrefix(id string) string {
 	if id == "" || strings.HasPrefix(id, "claude-") {
 		return id
@@ -54,8 +54,8 @@ func EnsureClaudeModelIDPrefix(id string) string {
 	return claudeDDModelPrefix + reverseModelID(id)
 }
 
-// ResolveClaudeModelIDPrefix reverses EnsureClaudeModelIDPrefix for request routing.
-// Optional thinking suffixes in model(value) form are preserved.
+// ResolveClaudeModelIDPrefix 为请求路由反转 EnsureClaudeModelIDPrefix。
+// model(value) 形式的可选 thinking 后缀会被保留。
 func ResolveClaudeModelIDPrefix(id string) string {
 	if id == "" {
 		return id

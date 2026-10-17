@@ -9,8 +9,8 @@ import (
 	translatorcommon "github.com/xnuyoah/XRouter/v8/internal/translator/common"
 )
 
-// ConvertCodexResponseToOpenAIResponses converts OpenAI Chat Completions streaming chunks
-// to OpenAI Responses SSE events (response.*).
+// ConvertCodexResponseToOpenAIResponses 将 OpenAI Chat Completions 流式分块
+// 转换为 OpenAI Responses 的 SSE 事件（response.*）。
 
 func ConvertCodexResponseToOpenAIResponses(_ context.Context, modelName string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) [][]byte {
 	originalEvent := rawJSON
@@ -21,7 +21,7 @@ func ConvertCodexResponseToOpenAIResponses(_ context.Context, modelName string, 
 	updated := setResponsesModel(rawJSON, modelName, originalRequestRawJSON, requestRawJSON)
 	bridge := responsesBridge(param)
 	if bridge == nil {
-		// Native Codex never opts in, even when configuration supplies the bridge schema.
+		// 原生 Codex 从不选择启用，即使配置提供了 bridge schema。
 		if bytes.Equal(updated, rawJSON) {
 			return [][]byte{originalEvent}
 		}
@@ -39,7 +39,7 @@ func ConvertCodexResponseToOpenAIResponses(_ context.Context, modelName string, 
 	return outputs
 }
 
-// Only an executor-owned param can enable bridging on this shared translator.
+// 只有执行器拥有的 param 才能在这个共享转换器上启用桥接。
 func responsesBridge(param *any) *translatorcommon.ApplyPatchResponsesBridge {
 	if param != nil {
 		bridge, _ := (*param).(*translatorcommon.ApplyPatchResponsesBridge)
@@ -72,8 +72,8 @@ func setResponsesModel(rawJSON []byte, modelName string, originalRequestRawJSON,
 	return updated
 }
 
-// ConvertCodexResponseToOpenAIResponsesNonStream builds a single Responses JSON
-// from a non-streaming OpenAI Chat Completions response.
+// ConvertCodexResponseToOpenAIResponsesNonStream 从非流式的
+// OpenAI Chat Completions 响应构建单个 Responses JSON。
 func ConvertCodexResponseToOpenAIResponsesNonStream(_ context.Context, _ string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) []byte {
 	bridge := responsesBridge(param)
 	converted := rawJSON
@@ -85,7 +85,7 @@ func ConvertCodexResponseToOpenAIResponsesNonStream(_ context.Context, _ string,
 		}
 	}
 	rootResult := gjson.ParseBytes(converted)
-	// Verify this is a terminal response event.
+	// 校验这是一个终止性的响应事件。
 	responseType := rootResult.Get("type").String()
 	if responseType == "" && rootResult.Get("output").IsArray() {
 		return converted

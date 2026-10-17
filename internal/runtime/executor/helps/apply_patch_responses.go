@@ -13,7 +13,7 @@ import (
 	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
-// NormalizeApplyPatchResponsesRequest opts a non-Codex executor into the patch contract.
+// NormalizeApplyPatchResponsesRequest 让非 Codex 执行器加入补丁契约。
 func NormalizeApplyPatchResponsesRequest(body []byte, original ...[]byte) ([]byte, error) {
 	if len(original) > 0 {
 		body = preferChatFunctionPatchTools(original[0], body)
@@ -21,8 +21,8 @@ func NormalizeApplyPatchResponsesRequest(body []byte, original ...[]byte) ([]byt
 	return translatorcommon.NormalizeApplyPatchResponsesRequest(body)
 }
 
-// ApplyPatchResponsesState is owned explicitly by a non-native executor, never inferred
-// from the wire format or a configured function schema. Supporting state stays request-local.
+// ApplyPatchResponsesState 由非原生执行器显式拥有，绝不从
+// 线上格式或已配置的函数 schema 推断。配套状态保持在请求本地。
 type ApplyPatchResponsesState struct {
 	Bridge                 *translatorcommon.ApplyPatchResponsesBridge
 	tools                  map[string]util.ResponsesToolDescriptor
@@ -48,7 +48,7 @@ type patchDispatcherCall struct {
 	arguments string
 }
 
-// preferChatFunctionPatchTools preserves the Chat request converter's existing winner rule.
+// preferChatFunctionPatchTools 保留 Chat 请求转换器现有的胜出规则。
 func preferChatFunctionPatchTools(original, declarations []byte) []byte {
 	ordinary := map[string]bool{}
 	for _, tool := range gjson.GetBytes(original, "tools").Array() {
@@ -90,10 +90,10 @@ func NewApplyPatchResponsesState(source sdktranslator.Format, original, declarat
 	return s
 }
 
-// Active reports whether this explicitly non-native state owns a winning patch declaration.
+// Active 报告这个显式非原生状态是否拥有胜出的补丁声明。
 func (s *ApplyPatchResponsesState) Active() bool { return s.active }
 
-// AddDispatcher marks only xAI folded namespaces that contain a winning custom patch.
+// AddDispatcher 只标记包含胜出 custom 补丁的 xAI 折叠命名空间。
 func (s *ApplyPatchResponsesState) AddDispatcher(name, namespace string) {
 	for _, d := range s.tools {
 		if d.Namespace == namespace && applypatch.IsCustomTool(d.Tool) {
@@ -146,8 +146,8 @@ func (s *ApplyPatchResponsesState) newDispatcherCandidate(root gjson.Result) *pa
 	return call
 }
 
-// RememberDispatcherEvent retains upstream evidence before namespace restoration.
-// A wrapper alone never proves dispatcher provenance: only a declared dispatcher name does.
+// RememberDispatcherEvent 在命名空间还原之前保留上游证据。
+// 仅凭一个包装器永远无法证明分派器来源：只有已声明的分派器名称才可以。
 func (s *ApplyPatchResponsesState) RememberDispatcherEvent(event []byte) {
 	if s.failed || s.closed || s.transportDone || len(s.dispatchers) == 0 {
 		return
@@ -156,8 +156,8 @@ func (s *ApplyPatchResponsesState) RememberDispatcherEvent(event []byte) {
 	s.RememberDispatcherArguments(event)
 }
 
-// RememberDispatcherArguments keeps full snapshots on every matched candidate, including
-// unnamed calls. The common bridge retains all identity/type contradictions until acquisition.
+// RememberDispatcherArguments 在每个匹配到的候选（包括未命名调用）上保留完整快照。
+// 通用桥接会保留所有身份/类型矛盾，直到获取完成。
 func (s *ApplyPatchResponsesState) RememberDispatcherArguments(event []byte) {
 	if s.failed || s.closed || s.transportDone || len(s.dispatchers) == 0 || gjson.GetBytes(event, "type").String() != "response.function_call_arguments.done" {
 		return
@@ -242,7 +242,7 @@ func (s *ApplyPatchResponsesState) expandDispatcher(event, original []byte) ([][
 	}
 	if call.namespace == "" {
 		if name != "" {
-			// A late ordinary name releases untouched arguments, even if they look like a wrapper.
+			// 迟到的普通名称会释放未被触及的实参，即使它们看起来像包装器。
 			call.ordinary = true
 			events := call.events
 			call.events, call.originals = nil, nil
@@ -278,7 +278,7 @@ func (s *ApplyPatchResponsesState) expandDispatcher(event, original []byte) ([][
 			wrappers = append(wrappers, arguments)
 		}
 	}
-	// For callers without a pre-restoration copy, retain the original full-source contract.
+	// 对于没有还原前副本的调用方，保留原始的完整来源契约。
 	if len(wrappers) == 0 {
 		for _, pending := range call.events {
 			if args := gjson.GetBytes(pending, "arguments"); gjson.Get(args.String(), "name").String() != "" {
@@ -346,8 +346,8 @@ func (s *ApplyPatchResponsesState) expandDispatcher(event, original []byte) ([][
 		}
 	}
 
-	// Retain completed aliases and source evidence until the response actually closes.
-	// Repeated snapshots validate only the new event, never replay completed progress.
+	// 保留已完成的别名和来源证据，直到响应真正关闭。
+	// 重复的快照只校验新事件，绝不重放已完成的进度。
 	start := 0
 	if call.completed {
 		start = len(call.events) - 1
@@ -373,7 +373,7 @@ func (s *ApplyPatchResponsesState) expandDispatcher(event, original []byte) ([][
 		switch p.Get("type").String() {
 		case "response.function_call_arguments.delta":
 			if patch {
-				// A dispatcher envelope is not incremental child input.
+				// 分派器信封不是增量的子输入。
 				continue
 			}
 		case "response.output_item.added", "response.output_item.done":
@@ -393,7 +393,7 @@ func (s *ApplyPatchResponsesState) expandDispatcher(event, original []byte) ([][
 			if p.Get(pendingPath+"namespace").String() == "" {
 				pending, _ = sjson.SetBytes(pending, pendingPath+"namespace", call.namespace)
 			}
-			// Only actual upstream wrappers are unwrapped, not restored child contents.
+			// 只解包真正的上游包装器，而非还原后的子内容。
 			args := originalRoot.Get(pendingPath + "arguments")
 			if patch && args.Exists() && args.Type != gjson.String {
 				return nil, errors.New("apply_patch dispatcher arguments snapshot must be a string")
@@ -460,7 +460,7 @@ func (s *ApplyPatchResponsesState) Transform(event []byte) ([][]byte, error) {
 		for i, item := range root.Get("response.output").Array() {
 			done := []byte(`{"type":"response.output_item.done"}`)
 			done, _ = sjson.SetRawBytes(done, "item", []byte(item.Raw))
-			// Explicit IDs take priority over array position in a sparse terminal snapshot.
+			// 在稀疏的终止快照中，显式 ID 优先于数组位置。
 			call := s.dispatcher(gjson.ParseBytes(done))
 			if call == nil && item.Get("id").String() == "" && item.Get("call_id").String() == "" {
 				done, _ = sjson.SetBytes(done, "output_index", i)
@@ -473,7 +473,7 @@ func (s *ApplyPatchResponsesState) Transform(event []byte) ([][]byte, error) {
 					done, _ = sjson.SetBytes(done, "output_index", i)
 				}
 				originalDone := done
-				// Filtering may shift array positions, but restoration preserves both IDs.
+				// 过滤可能移动数组位置，但还原会保留两个 ID。
 				matches := func(candidate gjson.Result) bool {
 					return candidate.Get("id").String() == item.Get("id").String() && candidate.Get("call_id").String() == item.Get("call_id").String()
 				}
@@ -500,7 +500,7 @@ func (s *ApplyPatchResponsesState) Transform(event []byte) ([][]byte, error) {
 		if s.unfinishedDispatcher() {
 			return s.fail(errors.New("incomplete apply_patch namespace dispatcher received from upstream"))
 		}
-		// Unproven candidates remain ordinary; let common resolve or flush their evidence.
+		// 未获证明的候选保持普通处理；让通用逻辑解析或冲刷它们的证据。
 		for _, call := range s.records {
 			if call.namespace == "" && !call.ordinary {
 				preceding = append(preceding, call.events...)
@@ -530,8 +530,8 @@ func (s *ApplyPatchResponsesState) Transform(event []byte) ([][]byte, error) {
 	return out, nil
 }
 
-// Finish validates source response closure independently of completed tool input.
-// Common Finish remains argument-only because it also runs inside terminal conversion.
+// Finish 独立于已完成的工具输入来校验来源响应关闭。
+// 通用的 Finish 仍只处理实参，因为它也会在终止转换内部运行。
 func (s *ApplyPatchResponsesState) Finish() error {
 	if errFinish := s.Bridge.Finish(); errFinish != nil {
 		return errFinish
@@ -545,8 +545,8 @@ func (s *ApplyPatchResponsesState) Finish() error {
 	return errors.New("incomplete apply_patch source response received from upstream")
 }
 
-// Stream preserves SSE framing and updates event-name lines to match converted JSON.
-// A premature [DONE] is checked before publishing any success marker.
+// Stream 保留 SSE 分帧，并更新事件名行以匹配转换后的 JSON。
+// 在发布任何成功标记之前会检查过早出现的 [DONE]。
 func (s *ApplyPatchResponsesState) Stream(line []byte) ([][]byte, error) {
 	if !s.active {
 		return [][]byte{line}, nil
@@ -568,7 +568,7 @@ func (s *ApplyPatchResponsesState) Stream(line []byte) ([][]byte, error) {
 		if errFinish := s.Finish(); errFinish != nil {
 			events, errTransform = s.fail(errFinish)
 		} else {
-			// JSON completion and transport completion are separate boundaries.
+			// JSON 完成与传输完成是两个独立的边界。
 			s.transportDone = true
 			s.byDispatcherKey, s.records, s.upstream = nil, nil, nil
 			s.eventLine = nil
@@ -595,7 +595,7 @@ func (s *ApplyPatchResponsesState) Stream(line []byte) ([][]byte, error) {
 			}
 		}
 		data := append([]byte("data: "), event...)
-		// Each expanded event must be a complete SSE frame, even if the source had only one.
+		// 每个展开的事件都必须是完整的 SSE 帧，即使来源只有一个。
 		data = append(data, '\n', '\n')
 		out = append(out, data)
 	}
@@ -603,7 +603,7 @@ func (s *ApplyPatchResponsesState) Stream(line []byte) ([][]byte, error) {
 	return out, errTransform
 }
 
-// FinishStream emits the local failure once on EOF without a validated completion.
+// FinishStream 在 EOF 时若没有经过校验的完成，则发出一次本地失败。
 func (s *ApplyPatchResponsesState) FinishStream() ([][]byte, error) {
 	if s.failed || s.transportDone {
 		return nil, nil

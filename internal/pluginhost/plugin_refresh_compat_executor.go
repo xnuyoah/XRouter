@@ -12,13 +12,13 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// pluginRefreshCompatExecutor keeps native OpenAI-compat inference while
-// routing credential refresh to a plugin AuthProvider.
+// pluginRefreshCompatExecutor 保留原生 OpenAI 兼容推理，
+// 同时将凭据刷新路由到插件 AuthProvider。
 //
-// Plugins often set Attributes["base_url"] so host routing uses the built-in
-// OpenAI-compat executor. That binding previously swallowed refresh because
-// OpenAICompatExecutor.Refresh is a no-op for non-Home providers. This wrapper
-// preserves native Execute* paths and delegates Refresh to Host.RefreshAuth.
+// 插件常设置 Attributes["base_url"]，使 host 路由使用内置的
+// OpenAI 兼容执行器。该绑定此前会吞掉刷新，因为
+// 对非 Home 供应商而言 OpenAICompatExecutor.Refresh 是空操作。此包装器
+// 保留原生 Execute* 路径并将 Refresh 委托给 Host.RefreshAuth。
 type pluginRefreshCompatExecutor struct {
 	inner    coreauth.ProviderExecutor
 	host     *Host
@@ -26,8 +26,8 @@ type pluginRefreshCompatExecutor struct {
 	provider string
 }
 
-// NewPluginRefreshCompatExecutor wraps a native provider executor so Refresh is
-// handled by the plugin AuthProvider for the same provider key.
+// NewPluginRefreshCompatExecutor 包装原生供应商执行器，使 Refresh 由
+// 同一供应商键对应的插件 AuthProvider 处理。
 func NewPluginRefreshCompatExecutor(inner coreauth.ProviderExecutor, host *Host, cfg *config.Config) coreauth.ProviderExecutor {
 	if inner == nil {
 		return nil
@@ -41,14 +41,14 @@ func NewPluginRefreshCompatExecutor(inner coreauth.ProviderExecutor, host *Host,
 	}
 }
 
-// IsPluginRefreshCompatExecutor reports whether executor is a plugin-refresh wrapper.
+// IsPluginRefreshCompatExecutor 报告 executor 是否为插件刷新包装器。
 func IsPluginRefreshCompatExecutor(executor coreauth.ProviderExecutor) bool {
 	_, ok := executor.(*pluginRefreshCompatExecutor)
 	return ok
 }
 
-// UnwrapPluginRefreshCompatExecutor returns the inner native executor when executor
-// is a plugin-refresh wrapper.
+// UnwrapPluginRefreshCompatExecutor 在 executor 为插件刷新包装器时
+// 返回内层原生执行器。
 func UnwrapPluginRefreshCompatExecutor(executor coreauth.ProviderExecutor) (coreauth.ProviderExecutor, bool) {
 	wrapper, ok := executor.(*pluginRefreshCompatExecutor)
 	if !ok || wrapper == nil || wrapper.inner == nil {
@@ -105,7 +105,7 @@ func (e *pluginRefreshCompatExecutor) HttpRequest(ctx context.Context, auth *cor
 	return e.inner.HttpRequest(ctx, auth, req)
 }
 
-// PrepareRequest forwards credential injection to the inner executor when supported.
+// PrepareRequest 在受支持时将凭据注入转发给内层执行器。
 func (e *pluginRefreshCompatExecutor) PrepareRequest(req *http.Request, auth *coreauth.Auth) error {
 	if e == nil || e.inner == nil {
 		return fmt.Errorf("plugin refresh compat executor is unavailable")
@@ -160,7 +160,7 @@ func authHasRefreshToken(auth *coreauth.Auth) bool {
 	return false
 }
 
-// SupportsApplyPatch delegates only the inner executor's optional contract.
+// SupportsApplyPatch 仅委托内层执行器的可选契约。
 func (e *pluginRefreshCompatExecutor) SupportsApplyPatch() bool {
 	if e == nil || e.inner == nil {
 		return false

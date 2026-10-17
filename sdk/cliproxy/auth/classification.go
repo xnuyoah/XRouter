@@ -25,8 +25,8 @@ const (
 	AttributeWeight               = "weight"
 )
 
-// AuthKind returns the credential kind using explicit metadata first and legacy
-// field-shape fallbacks second.
+// AuthKind 返回凭据类型，优先使用显式元数据，其次
+// 回退到旧版字段形态判断。
 func (a *Auth) AuthKind() string {
 	if a == nil {
 		return ""
@@ -49,7 +49,7 @@ func (a *Auth) AuthKind() string {
 	return ""
 }
 
-// AuthSourceKind returns where the Auth entry came from at runtime.
+// AuthSourceKind 返回 Auth 条目在运行时来自何处。
 func (a *Auth) AuthSourceKind() string {
 	if a == nil {
 		return ""

@@ -173,13 +173,13 @@ func TestApplyClientModelCapabilities_UpdatesAllViews(t *testing.T) {
 		t.Fatal("expected capabilities to be applied")
 	}
 
-	// 1. Check GetModelsForClient
+	// 1. 检查 GetModelsForClient
 	clientModels := r.GetModelsForClient("ag-client-1")
 	if len(clientModels) != 1 || !clientModels[0].SupportsWebSearch {
 		t.Fatalf("GetModelsForClient: expected SupportsWebSearch=true, got %+v", clientModels)
 	}
 
-	// 2. Check GetModelInfo (both with provider and global)
+	// 2. 检查 GetModelInfo（带供应商与全局两种）
 	infoByProv := r.GetModelInfo("ag-flash-lite", "antigravity")
 	if infoByProv == nil || !infoByProv.SupportsWebSearch {
 		t.Fatalf("GetModelInfo with provider: expected SupportsWebSearch=true, got %+v", infoByProv)
@@ -189,7 +189,7 @@ func TestApplyClientModelCapabilities_UpdatesAllViews(t *testing.T) {
 		t.Fatalf("GetModelInfo global: expected SupportsWebSearch=true, got %+v", infoGlobal)
 	}
 
-	// 3. Check GetAvailableModelInfos
+	// 3. 检查 GetAvailableModelInfos
 	availInfos := r.GetAvailableModelInfos()
 	foundAvail := false
 	for _, m := range availInfos {
@@ -206,13 +206,13 @@ func TestApplyClientModelCapabilities_UpdatesAllViews(t *testing.T) {
 func TestMultiClientRegistration_PreservesProbedCapabilities(t *testing.T) {
 	r := newTestModelRegistry()
 
-	// 1. Client A registers model
+	// 1. 客户端 A 注册模型
 	r.RegisterClient("client-A", "antigravity", []*ModelInfo{{
 		ID:                "ag-flash-lite",
 		SupportsWebSearch: false,
 	}})
 
-	// A probes successfully -> SupportsWebSearch = true
+	// A 探测成功 -> SupportsWebSearch = true
 	epochA := r.ClientRegistrationEpoch("client-A")
 	r.ApplyClientModelCapabilities("client-A", epochA, func(modelID string, info *ModelInfo) {
 		if modelID == "ag-flash-lite" {
@@ -220,13 +220,13 @@ func TestMultiClientRegistration_PreservesProbedCapabilities(t *testing.T) {
 		}
 	})
 
-	// 2. Client B registers the same model with static info (SupportsWebSearch = false)
+	// 2. 客户端 B 用静态信息注册同一模型（SupportsWebSearch = false）
 	r.RegisterClient("client-B", "antigravity", []*ModelInfo{{
 		ID:                "ag-flash-lite",
 		SupportsWebSearch: false,
 	}})
 
-	// Check that global views preserve SupportsWebSearch=true because Client A is still registered and has the capability
+	// 检查全局视图是否保留 SupportsWebSearch=true，因为客户端 A 仍已注册且具备该能力
 	info := r.GetModelInfo("ag-flash-lite", "antigravity")
 	if info == nil || !info.SupportsWebSearch {
 		t.Fatalf("GetModelInfo: expected SupportsWebSearch=true to be preserved after client B registered, got %+v", info)
@@ -244,7 +244,7 @@ func TestMultiClientRegistration_PreservesProbedCapabilities(t *testing.T) {
 		t.Fatal("GetAvailableModelInfos: expected SupportsWebSearch=true to be preserved after client B registered")
 	}
 
-	// 3. Client A unregisters -> Now neither client supports web search, so global view should drop it
+	// 3. 客户端 A 注销 -> 现在两个客户端都不支持 web search，因此全局视图应将其移除
 	r.UnregisterClient("client-A")
 	infoAfterA := r.GetModelInfo("ag-flash-lite", "antigravity")
 	if infoAfterA == nil || infoAfterA.SupportsWebSearch {
@@ -255,7 +255,7 @@ func TestMultiClientRegistration_PreservesProbedCapabilities(t *testing.T) {
 func TestReRegisterClient_ClearsStaleProbedCapabilitiesWhenNoOtherClientSupports(t *testing.T) {
 	r := newTestModelRegistry()
 
-	// 1. Client A registers model and probes successfully (SupportsWebSearch=true)
+	// 1. 客户端 A 注册模型并探测成功（SupportsWebSearch=true）
 	r.RegisterClient("client-A", "antigravity", []*ModelInfo{{
 		ID:                "ag-flash-lite",
 		SupportsWebSearch: false,
@@ -267,21 +267,21 @@ func TestReRegisterClient_ClearsStaleProbedCapabilitiesWhenNoOtherClientSupports
 		}
 	})
 
-	// 2. Client B registers the same model without web search support
+	// 2. 客户端 B 注册同一模型但不支持 web search
 	r.RegisterClient("client-B", "antigravity", []*ModelInfo{{
 		ID:                "ag-flash-lite",
 		SupportsWebSearch: false,
 	}})
 
-	// 3. Client A now re-registers with new model definitions where SupportsWebSearch=false
-	// (e.g. config reload or model catalog update)
+	// 3. 客户端 A 现在用新的模型定义重新注册，其中 SupportsWebSearch=false
+	// （例如配置重载或模型目录更新）
 	r.RegisterClient("client-A", "antigravity", []*ModelInfo{{
 		ID:                "ag-flash-lite",
 		SupportsWebSearch: false,
 	}})
 
-	// Global view must NOT keep client A's stale pre-re-registration capability snapshot!
-	// Since neither A nor B now has SupportsWebSearch=true, the global and provider view must be false.
+	// 全局视图不得保留客户端 A 重新注册前的陈旧能力快照！
+	// 由于现在 A 和 B 都不再有 SupportsWebSearch=true，全局与供应商视图都必须为 false。
 	info := r.GetModelInfo("ag-flash-lite", "antigravity")
 	if info == nil || info.SupportsWebSearch {
 		t.Fatalf("GetModelInfo: expected SupportsWebSearch=false after client A re-registered with false, got %+v", info)

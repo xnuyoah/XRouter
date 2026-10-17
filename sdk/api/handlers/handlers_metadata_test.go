@@ -208,7 +208,7 @@ func TestSetGenerateMetadataHonorsExplicitFalse(t *testing.T) {
 }
 
 func TestExtractSessionIDsFromRequestCanonicalHierarchy(t *testing.T) {
-	// 1. Claude Code main session
+	// 1. Claude Code 主会话
 	reqMain := httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
 	reqMain.Header.Set("X-Claude-Code-Session-Id", "sess-claude-main")
 	sid, pid := extractSessionIDsFromRequest(reqMain)
@@ -216,7 +216,7 @@ func TestExtractSessionIDsFromRequestCanonicalHierarchy(t *testing.T) {
 		t.Fatalf("claude main session = (%q, %q), want (claude:sess-claude-main, empty)", sid, pid)
 	}
 
-	// 2. Claude Code subagent with parent agent
+	// 2. 带父 agent 的 Claude Code 子 agent
 	reqSub := httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
 	reqSub.Header.Set("X-Claude-Code-Session-Id", "sess-claude-main")
 	reqSub.Header.Set("X-Claude-Code-Agent-Id", "agent-worker-1")
@@ -226,7 +226,7 @@ func TestExtractSessionIDsFromRequestCanonicalHierarchy(t *testing.T) {
 		t.Fatalf("claude subagent = (%q, %q), want (claude:sess-claude-main:agent:agent-worker-1, claude:sess-claude-main:agent:agent-orchestrator)", sid, pid)
 	}
 
-	// 3. Generic X-Session-ID and X-Parent-Session-ID
+	// 3. 通用 X-Session-ID 与 X-Parent-Session-ID
 	reqGeneric := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
 	reqGeneric.Header.Set("X-Session-ID", "sess-worker-99")
 	reqGeneric.Header.Set("X-Parent-Session-ID", "sess-root-1")
@@ -247,7 +247,7 @@ func TestExtractSessionIDsFromRequestCanonicalHierarchy(t *testing.T) {
 func TestEnrichContextWithSessionHierarchyFromBody(t *testing.T) {
 	ctx := context.Background()
 
-	// 1. Body payload contains session_id and parent_session_id
+	// 1. Body 载荷包含 session_id 与 parent_session_id
 	bodyJSON := []byte(`{"session_id":"body-task-1","parent_session_id":"body-parent-task"}`)
 	ctx = enrichContextWithSessionHierarchy(ctx, nil, bodyJSON, nil)
 	meta := logging.GetClientRequestMetadata(ctx)
@@ -255,7 +255,7 @@ func TestEnrichContextWithSessionHierarchyFromBody(t *testing.T) {
 		t.Fatalf("body session = (%q, %q), want (session:body-task-1, session:body-parent-task)", meta.SessionID, meta.ParentSessionID)
 	}
 
-	// 2. Claude Code header combined with metadata.agent_id in body
+	// 2. Claude Code 头与 body 中的 metadata.agent_id 组合
 	headers := http.Header{"X-Claude-Code-Session-Id": []string{"claude-root-001"}}
 	subagentBody := []byte(`{"metadata":{"agent_id":"search-specialist"}}`)
 	ctx2 := enrichContextWithSessionHierarchy(context.Background(), headers, subagentBody, nil)
@@ -264,7 +264,7 @@ func TestEnrichContextWithSessionHierarchyFromBody(t *testing.T) {
 		t.Fatalf("claude body subagent = (%q, %q), want (claude:claude-root-001:agent:search-specialist, claude:claude-root-001)", meta2.SessionID, meta2.ParentSessionID)
 	}
 
-	// 3. Ghost Parent avoidance: Context had parent, but body resolves to a top-level root session
+	// 3. 幽灵父级规避：上下文有父级，但 body 解析为顶层根会话
 	ctxWithOldParent := logging.WithClientRequestMetadata(context.Background(), logging.ClientRequestMetadata{
 		SessionID:       "header:old-child",
 		ParentSessionID: "header:old-parent",
@@ -276,7 +276,7 @@ func TestEnrichContextWithSessionHierarchyFromBody(t *testing.T) {
 		t.Fatalf("top level body session = (%q, %q), want (session:top-level-session, empty parent)", meta3.SessionID, meta3.ParentSessionID)
 	}
 
-	// 4. Self-loop avoidance: SessionID == ParentSessionID
+	// 4. 自环规避：SessionID == ParentSessionID
 	selfLoopBody := []byte(`{"session_id":"same-id","parent_session_id":"same-id"}`)
 	ctx4 := enrichContextWithSessionHierarchy(context.Background(), nil, selfLoopBody, nil)
 	meta4 := logging.GetClientRequestMetadata(ctx4)
@@ -284,7 +284,7 @@ func TestEnrichContextWithSessionHierarchyFromBody(t *testing.T) {
 		t.Fatalf("self loop session = (%q, %q), want (session:same-id, empty parent)", meta4.SessionID, meta4.ParentSessionID)
 	}
 
-	// 5. Length bound: ID length is bounded to 256 bytes
+	// 5. 长度上限：ID 长度被限制为 256 字节
 	longID := strings.Repeat("a", 250)
 	longBody := []byte(`{"session_id":"` + longID + `"}`)
 	ctx5 := EnrichContextWithSessionHierarchy(context.Background(), nil, longBody, nil)
@@ -296,7 +296,7 @@ func TestEnrichContextWithSessionHierarchyFromBody(t *testing.T) {
 		t.Fatalf("SessionID = %q, want session: prefix", meta5.SessionID)
 	}
 
-	// 6. Clearing hierarchy when interceptor removes all session headers and body has no session
+	// 6. 当拦截器移除所有会话头且 body 中没有会话时清除层级
 	ctxWithHeaderSession := logging.WithClientRequestMetadata(context.Background(), logging.ClientRequestMetadata{
 		SessionID:       "header:cleared-session",
 		ParentSessionID: "header:cleared-parent",
@@ -307,7 +307,7 @@ func TestEnrichContextWithSessionHierarchyFromBody(t *testing.T) {
 		t.Fatalf("cleared context = (%q, %q), want (empty, empty)", metaCleared.SessionID, metaCleared.ParentSessionID)
 	}
 
-	// 7. Roo Code task delegation from body
+	// 7. 来自 body 的 Roo Code 任务委派
 	rooBody := []byte(`{"taskId":"task-child-99","parentTaskId":"task-parent-99"}`)
 	ctx7 := EnrichContextWithSessionHierarchy(context.Background(), nil, rooBody, nil)
 	meta7 := logging.GetClientRequestMetadata(ctx7)
@@ -315,7 +315,7 @@ func TestEnrichContextWithSessionHierarchyFromBody(t *testing.T) {
 		t.Fatalf("Roo Code task session = (%q, %q), want (task:task-child-99, task:task-parent-99)", meta7.SessionID, meta7.ParentSessionID)
 	}
 
-	// 8. OpenCode parent_id in payload
+	// 8. 载荷中的 OpenCode parent_id
 	opencodeBody := []byte(`{"session_id":"opencode-sess-1","parent_id":"opencode-root-1"}`)
 	ctx8 := EnrichContextWithSessionHierarchy(context.Background(), nil, opencodeBody, nil)
 	meta8 := logging.GetClientRequestMetadata(ctx8)

@@ -12,14 +12,14 @@ const (
 	defaultMaxSessionEntries = 65536
 )
 
-// sessionEntry stores an auth binding, its identifier aliases, and expiration.
+// sessionEntry 存储 auth 绑定、其标识符别名和过期时间。
 type sessionEntry struct {
 	authID    string
 	expiresAt time.Time
 	aliases   []string
 }
 
-// SessionCache provides TTL-based session to auth mapping with automatic cleanup.
+// SessionCache 提供基于 TTL 的会话到 auth 映射，并自动清理。
 type SessionCache struct {
 	mu               sync.RWMutex
 	entries          map[string]sessionEntry
@@ -32,13 +32,13 @@ type SessionCache struct {
 	stopOnce         sync.Once
 }
 
-// NewSessionCache creates a cache with the specified TTL.
-// A background goroutine periodically cleans expired entries.
+// NewSessionCache 使用指定的 TTL 创建缓存。
+// 后台 goroutine 会定期清理已过期的条目。
 func NewSessionCache(ttl time.Duration) *SessionCache {
 	return NewSessionCacheWithCapacity(ttl, defaultMaxSessionEntries)
 }
 
-// NewSessionCacheWithCapacity creates a cache with the specified TTL and max entries limit.
+// NewSessionCacheWithCapacity 使用指定的 TTL 和最大条目上限创建缓存。
 func NewSessionCacheWithCapacity(ttl time.Duration, maxEntries int) *SessionCache {
 	if ttl <= 0 {
 		ttl = 30 * time.Minute
@@ -74,8 +74,8 @@ func (c *SessionCache) ensureInitializedLocked() {
 	}
 }
 
-// Get retrieves the auth ID bound to a session, if still valid.
-// Does NOT refresh the TTL on access.
+// Get 获取绑定到某会话的 auth ID（若仍然有效）。
+// 访问时不会刷新 TTL。
 func (c *SessionCache) Get(sessionID string) (string, bool) {
 	if c == nil || sessionID == "" {
 		return "", false
@@ -106,8 +106,8 @@ func (c *SessionCache) Get(sessionID string) (string, bool) {
 	return "", false
 }
 
-// GetAndRefresh retrieves the auth ID bound to a session and refreshes the TTL
-// for every identifier known to represent the same logical session.
+// GetAndRefresh 获取绑定到某会话的 auth ID，并为已知代表同一逻辑会话的
+// 每个标识符刷新 TTL。
 func (c *SessionCache) GetAndRefresh(sessionID string) (string, bool) {
 	if c == nil || sessionID == "" {
 		return "", false
@@ -130,8 +130,8 @@ func (c *SessionCache) GetAndRefresh(sessionID string) (string, bool) {
 	return entry.authID, true
 }
 
-// Set binds a session to an auth ID with TTL refresh. Existing aliases for the
-// same logical session remain attached when the binding is refreshed or moved.
+// Set 将一个会话绑定到某 auth ID 并刷新 TTL。绑定被刷新或迁移时，
+// 同一逻辑会话的既有别名仍保持关联。
 func (c *SessionCache) Set(sessionID, authID string) {
 	if c == nil {
 		return
@@ -139,7 +139,7 @@ func (c *SessionCache) Set(sessionID, authID string) {
 	c.SetAliases(authID, sessionID)
 }
 
-// SetAliases binds multiple identifiers for one logical session to an auth ID.
+// SetAliases 将一个逻辑会话的多个标识符绑定到某 auth ID。
 func (c *SessionCache) SetAliases(authID string, sessionIDs ...string) {
 	if c == nil || authID == "" {
 		return
@@ -309,7 +309,7 @@ func mergeSessionAliases(existing []string, candidates ...string) []string {
 	return aliases
 }
 
-// Touch refreshes the expiration for a session binding if it currently matches expectedAuthID.
+// Touch 在当前与会话绑定匹配 expectedAuthID 时刷新其过期时间。
 func (c *SessionCache) Touch(sessionID, expectedAuthID string) bool {
 	if c == nil || sessionID == "" || expectedAuthID == "" {
 		return false
@@ -327,7 +327,7 @@ func (c *SessionCache) Touch(sessionID, expectedAuthID string) bool {
 	return true
 }
 
-// CompareAndDelete removes the session binding only if it is currently bound to expectedAuthID.
+// CompareAndDelete 仅在会话绑定当前绑定到 expectedAuthID 时才将其删除。
 func (c *SessionCache) CompareAndDelete(sessionID, expectedAuthID string) bool {
 	if c == nil || sessionID == "" || expectedAuthID == "" {
 		return false
@@ -353,8 +353,8 @@ func (c *SessionCache) CompareAndDelete(sessionID, expectedAuthID string) bool {
 	return true
 }
 
-// Invalidate removes a specific session binding without allowing another alias
-// in the same group to recreate it on its next refresh.
+// Invalidate 删除某个特定的会话绑定，同时不允许同一分组中的
+// 其他别名在下次刷新时重建它。
 func (c *SessionCache) Invalidate(sessionID string) {
 	if c == nil || sessionID == "" {
 		return
@@ -379,8 +379,8 @@ func (c *SessionCache) Invalidate(sessionID string) {
 	}
 }
 
-// InvalidateAuth removes all sessions bound to a specific auth ID.
-// Used when an auth becomes unavailable.
+// InvalidateAuth 删除绑定到特定 auth ID 的所有会话。
+// 在某个 auth 变得不可用时使用。
 func (c *SessionCache) InvalidateAuth(authID string) {
 	if c == nil || authID == "" {
 		return
@@ -395,7 +395,7 @@ func (c *SessionCache) InvalidateAuth(authID string) {
 	}
 }
 
-// Stop terminates the background cleanup goroutine.
+// Stop 终止后台清理 goroutine。
 func (c *SessionCache) Stop() {
 	if c == nil {
 		return
@@ -424,7 +424,7 @@ func (c *SessionCache) cleanupLoop() {
 	}
 }
 
-// Len returns the current count of tracked session aliases.
+// Len 返回当前跟踪的会话别名数量。
 func (c *SessionCache) Len() int {
 	if c == nil {
 		return 0

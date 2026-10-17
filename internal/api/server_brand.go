@@ -7,13 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Source asset: assets/brand/favicon.ico (a copy kept in sync by tests).
+// 源资源：assets/brand/favicon.ico（测试会保持一份同步副本）。
 //
 //go:embed brand/favicon.ico
 var embeddedFaviconICO []byte
 
-// serveFavicon serves the brand favicon for the bare host and for the
-// server-rendered pages (OAuth callback, safe-mode warning).
+// serveFavicon 为裸主机以及
+// 服务端渲染页面（OAuth 回调、安全模式警告）提供品牌 favicon。
 func (s *Server) serveFavicon(c *gin.Context) {
 	c.Header("Cache-Control", "public, max-age=86400")
 	c.Data(http.StatusOK, "image/x-icon", embeddedFaviconICO)

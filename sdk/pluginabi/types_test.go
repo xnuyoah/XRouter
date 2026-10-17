@@ -171,7 +171,7 @@ func TestErrorInterfaceAndConstructor(t *testing.T) {
 		t.Fatalf("unexpected error payload: %+v", env.Error)
 	}
 
-	// Test zero / omitted status
+	// 测试零值/省略的 status
 	defaultErr := NewError("server_error", "unexpected error")
 	if defaultErr.StatusCode() != 0 {
 		t.Fatalf("defaultErr.StatusCode() = %d, want 0", defaultErr.StatusCode())

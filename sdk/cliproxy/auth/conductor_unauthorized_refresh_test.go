@@ -254,7 +254,7 @@ func TestManager_Execute_RejectedTokenWithInvalidGrantStopsSelectingAuth(t *test
 	executor.mu.Lock()
 	executor.refreshErr = errors.New(`token refresh failed with status 400: {"error": "invalid_grant", "error_description": "Refresh token not found or invalid"}`)
 	executor.mu.Unlock()
-	// The revoked access token still has a future expiry, as in production.
+	// 与生产环境一样，被吊销的访问令牌仍具有未来的过期时间。
 	updated, ok := m.GetByID(primary.ID)
 	if !ok || updated == nil {
 		t.Fatal("primary auth missing")
@@ -301,7 +301,7 @@ func TestManager_MarkResult_InFlightResultDoesNotReviveTerminalUnauthorizedAuth(
 	executor.refreshErr = errors.New(`token refresh failed with status 400: {"error": "invalid_grant", "error_description": "Refresh token not found or invalid"}`)
 	executor.mu.Unlock()
 
-	// Initial request triggers 401 + invalid_grant -> terminal unauthorized.
+	// 初始请求触发 401 + invalid_grant -> 终态未授权。
 	_, errExecute := m.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: model}, cliproxyexecutor.Options{})
 	if errExecute != nil {
 		t.Fatalf("Execute error = %v, want success via backup", errExecute)
@@ -315,7 +315,7 @@ func TestManager_MarkResult_InFlightResultDoesNotReviveTerminalUnauthorizedAuth(
 		t.Fatalf("expected terminal unauthorized state initially")
 	}
 
-	// Simulate an in-flight request on primary finishing with 500 Internal Server Error.
+	// 模拟主凭据上一个在途请求以 500 Internal Server Error 结束。
 	m.MarkResult(context.Background(), Result{
 		AuthID:   primary.ID,
 		Provider: "codex",
@@ -336,7 +336,7 @@ func TestManager_MarkResult_InFlightResultDoesNotReviveTerminalUnauthorizedAuth(
 		t.Fatalf("expected terminal unauthorized state preserved after in-flight 500, got status=%s unavailable=%v last_error=%+v", authAfter500.Status, authAfter500.Unavailable, authAfter500.LastError)
 	}
 
-	// Simulate another in-flight request finishing with Success.
+	// 模拟另一个在途请求以成功结束。
 	m.MarkResult(context.Background(), Result{
 		AuthID:   primary.ID,
 		Provider: "codex",
@@ -352,10 +352,10 @@ func TestManager_MarkResult_InFlightResultDoesNotReviveTerminalUnauthorizedAuth(
 		t.Fatalf("expected terminal unauthorized state preserved after in-flight success, got status=%s unavailable=%v last_error=%+v", authAfterSuccess.Status, authAfterSuccess.Unavailable, authAfterSuccess.LastError)
 	}
 
-	// Reset any model cooldowns / advance time.
+	// 重置所有模型冷却 / 推进时间。
 	_, _, _ = m.ResetQuota(context.Background(), primary.ID)
 
-	// Execute again: primary MUST NOT be selected.
+	// 再次执行：绝不能被选中主凭据。
 	callsBefore := len(executor.ExecuteCalls())
 	resp, errSecond := m.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: model}, cliproxyexecutor.Options{})
 	if errSecond != nil {
@@ -417,8 +417,8 @@ func TestManager_ConcurrentUnauthorized_BarrierExecutionPreservesTerminalState(t
 		t.Fatalf("register backup: %v", err)
 	}
 
-	// Channel-based synchronization barrier:
-	// Hold both requests when executing primary until both have entered.
+	// 基于 channel 的同步屏障：
+	// 在执行主凭据时挂住两个请求，直到两者都已进入。
 	primaryEntered := make(chan struct{}, 2)
 	releasePrimary := make(chan struct{})
 	executor.mu.Lock()
@@ -447,7 +447,7 @@ func TestManager_ConcurrentUnauthorized_BarrierExecutionPreservesTerminalState(t
 		}()
 	}
 
-	// Wait until both concurrent goroutines have arrived at executing primary with timeout protection.
+	// 带超时保护地等待两个并发 goroutine 都到达执行主凭据的位置。
 	timeout := time.After(5 * time.Second)
 	for i := 0; i < 2; i++ {
 		select {
@@ -456,7 +456,7 @@ func TestManager_ConcurrentUnauthorized_BarrierExecutionPreservesTerminalState(t
 			t.Fatal("timed out waiting for concurrent executions to enter primary")
 		}
 	}
-	// Release both goroutines to receive 401 concurrently.
+	// 释放两个 goroutine，使它们并发收到 401。
 	close(releasePrimary)
 
 	waitDone := make(chan struct{})
@@ -479,7 +479,7 @@ func TestManager_ConcurrentUnauthorized_BarrierExecutionPreservesTerminalState(t
 		}
 	}
 
-	// Only 1 refresh attempt should have occurred for the invalidated primary token.
+	// 对于已失效的主令牌，只应发生 1 次刷新尝试。
 	if got := executor.RefreshCalls(); got != 1 {
 		t.Fatalf("expected 1 refresh call during concurrent execution, got %d", got)
 	}
@@ -493,7 +493,7 @@ func TestManager_ConcurrentUnauthorized_BarrierExecutionPreservesTerminalState(t
 			final.Unavailable, final.Status, final.NextRefreshAfter, final.LastError)
 	}
 
-	// Explicitly verify background and request-triggered refresh do NOT call executor.Refresh on terminal unauthorized auth.
+	// 显式验证：后台刷新和请求触发的刷新在遇到终态未授权的 auth 时都不调用 executor.Refresh。
 	callsBefore := executor.RefreshCalls()
 	m.refreshAuth(context.Background(), primary.ID)
 	if got := executor.RefreshCalls(); got != callsBefore {
@@ -508,13 +508,13 @@ func TestManager_ConcurrentUnauthorized_BarrierExecutionPreservesTerminalState(t
 		t.Fatalf("tryRefreshAfterUnauthorized called executor.Refresh on terminal unauthorized auth (%d -> %d)", callsBefore, got)
 	}
 
-	// Verify that manual ForceRefreshAuth DOES call executor.Refresh.
+	// 验证手动 ForceRefreshAuth 确实会调用 executor.Refresh。
 	_, _ = m.ForceRefreshAuth(context.Background(), primary.ID)
 	if got := executor.RefreshCalls(); got != callsBefore+1 {
 		t.Fatalf("ForceRefreshAuth should call executor.Refresh, got %d calls, want %d", got, callsBefore+1)
 	}
 
-	// Verify that a subsequent request still does not touch primary.
+	// 验证后续请求仍然不会触及主凭据。
 	execCallsBefore := len(executor.ExecuteCalls())
 	resp3, err3 := m.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: model}, cliproxyexecutor.Options{})
 	if err3 != nil {
@@ -533,7 +533,7 @@ func TestManager_ConcurrentUnauthorized_BarrierExecutionPreservesTerminalState(t
 func TestManager_ForceRefreshAuth_FailurePreservesTerminalUnauthorizedState(t *testing.T) {
 	m, executor, primary, backup, model := newUnauthorizedRefreshFixture(t, false)
 
-	// Primary has future nominal expiry.
+	// 主凭据具有未来的名义过期时间。
 	updated, ok := m.GetByID(primary.ID)
 	if !ok || updated == nil {
 		t.Fatal("primary auth missing")
@@ -547,7 +547,7 @@ func TestManager_ForceRefreshAuth_FailurePreservesTerminalUnauthorizedState(t *t
 	executor.refreshErr = errors.New(`token refresh failed with status 400: {"error": "invalid_grant", "error_description": "Refresh token not found or invalid"}`)
 	executor.mu.Unlock()
 
-	// Initial request triggers 401 + invalid_grant -> terminal unauthorized.
+	// 初始请求触发 401 + invalid_grant -> 终态未授权。
 	_, errExecute := m.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: model}, cliproxyexecutor.Options{})
 	if errExecute != nil {
 		t.Fatalf("Execute error: %v", errExecute)
@@ -558,7 +558,7 @@ func TestManager_ForceRefreshAuth_FailurePreservesTerminalUnauthorizedState(t *t
 		t.Fatalf("expected terminal unauthorized state initially")
 	}
 
-	// 1. Manually force refresh, but the refresh fails with 503 Service Unavailable.
+	// 1. 手动强制刷新，但刷新以 503 Service Unavailable 失败。
 	executor.mu.Lock()
 	executor.refreshErr = errors.New("upstream 503 service unavailable")
 	executor.mu.Unlock()
@@ -577,7 +577,7 @@ func TestManager_ForceRefreshAuth_FailurePreservesTerminalUnauthorizedState(t *t
 		t.Fatalf("expected NextRefreshAfter to remain zero after failed force refresh, got %v", authAfterFailedForce.NextRefreshAfter)
 	}
 
-	// Selection still skips primary.
+	// 选择仍然跳过主凭据。
 	resp, errAfterFailedForce := m.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: model}, cliproxyexecutor.Options{})
 	if errAfterFailedForce != nil {
 		t.Fatalf("Execute error: %v", errAfterFailedForce)
@@ -586,7 +586,7 @@ func TestManager_ForceRefreshAuth_FailurePreservesTerminalUnauthorizedState(t *t
 		t.Fatalf("expected backup selection, got %s", resp.Payload)
 	}
 
-	// 2. Now force refresh succeeds with a valid token.
+	// 2. 现在强制刷新成功并返回有效令牌。
 	executor.mu.Lock()
 	executor.refreshErr = nil
 	executor.refreshTokens[primary.ID] = "newly-minted-token"
@@ -694,7 +694,7 @@ func TestManager_Execute_UnauthorizedWithoutRefreshTokenDoesNotCallRefresh(t *te
 
 func TestManager_Execute_UnauthorizedRefreshThenRetryStillFailsFallsBackOnce(t *testing.T) {
 	m, executor, primary, backup, model := newUnauthorizedRefreshFixture(t, false)
-	// Refresh "succeeds" but hands back another invalidated token.
+	// 刷新“成功”但返回了另一个已失效的令牌。
 	executor.refreshTokens[primary.ID] = "still-invalid-token"
 	executor.mu.Lock()
 	executor.tokenInvalid["still-invalid-token"] = struct{}{}

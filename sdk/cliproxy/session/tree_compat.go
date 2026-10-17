@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-// SessionTreeNode represents a node in the session hierarchy.
-// Deprecated: Session tree management and multi-node lineage have moved to Home.
-// This struct is maintained as a migration stub for SDK backward compatibility.
+// SessionTreeNode 表示会话层级中的一个节点。
+// Deprecated: 会话树管理和多节点谱系已迁移到 Home。
+// 该结构体作为迁移存根保留，以维持 SDK 向后兼容。
 type SessionTreeNode struct {
 	SessionID       string         `json:"session_id"`
 	ParentSessionID string         `json:"parent_session_id,omitempty"`
@@ -27,8 +27,8 @@ type SessionTreeNode struct {
 	Metadata        map[string]any `json:"metadata,omitempty"`
 }
 
-// Clone returns a deep copy of the node.
-// Deprecated: Session tree management has moved to Home.
+// Clone 返回该节点的深拷贝。
+// Deprecated: 会话树管理已迁移到 Home。
 func (n *SessionTreeNode) Clone() *SessionTreeNode {
 	if n == nil {
 		return nil
@@ -43,8 +43,8 @@ func (n *SessionTreeNode) Clone() *SessionTreeNode {
 	return &res
 }
 
-// SessionTreeStore defines the interface for recording and querying session trees.
-// Deprecated: Session tree management has moved to Home.
+// SessionTreeStore 定义用于记录和查询会话树的接口。
+// Deprecated: 会话树管理已迁移到 Home。
 type SessionTreeStore interface {
 	RecordNode(info SessionTreeInfo) *SessionTreeNode
 	GetNode(sessionID string) (*SessionTreeNode, bool)
@@ -56,24 +56,24 @@ type SessionTreeStore interface {
 	Clear()
 }
 
-// InMemorySessionTreeStore is a backward-compatible in-memory session tree stub.
-// Deprecated: Standalone CPA nodes use flat KV session cache (SessionCache).
-// Full hierarchical session tree management and global aggregation are handled by Home.
+// InMemorySessionTreeStore 是向后兼容的内存会话树存根。
+// Deprecated: 独立 CPA 节点使用扁平 KV 会话缓存（SessionCache）。
+// 完整的层级会话树管理和全局聚合由 Home 处理。
 type InMemorySessionTreeStore struct {
 	mu    sync.RWMutex
 	nodes map[string]*SessionTreeNode
 }
 
-// NewInMemorySessionTreeStore creates a new in-memory session tree store stub.
-// Deprecated: Standalone CPA nodes use flat KV session cache.
+// NewInMemorySessionTreeStore 创建一个新的内存会话树存储存根。
+// Deprecated: 独立 CPA 节点使用扁平 KV 会话缓存。
 func NewInMemorySessionTreeStore(maxNodes int, ttl time.Duration) *InMemorySessionTreeStore {
 	return &InMemorySessionTreeStore{
 		nodes: make(map[string]*SessionTreeNode),
 	}
 }
 
-// RecordNode records a session tree node stub.
-// Deprecated: Session tree management has moved to Home.
+// RecordNode 记录一个会话树节点存根。
+// Deprecated: 会话树管理已迁移到 Home。
 func (s *InMemorySessionTreeStore) RecordNode(info SessionTreeInfo) *SessionTreeNode {
 	if s == nil || info.SessionID == "" {
 		return nil
@@ -108,8 +108,8 @@ func (s *InMemorySessionTreeStore) RecordNode(info SessionTreeInfo) *SessionTree
 	return node.Clone()
 }
 
-// GetNode returns a recorded node.
-// Deprecated: Session tree management has moved to Home.
+// GetNode 返回一个已记录的节点。
+// Deprecated: 会话树管理已迁移到 Home。
 func (s *InMemorySessionTreeStore) GetNode(sessionID string) (*SessionTreeNode, bool) {
 	if s == nil {
 		return nil, false
@@ -123,8 +123,8 @@ func (s *InMemorySessionTreeStore) GetNode(sessionID string) (*SessionTreeNode, 
 	return node.Clone(), true
 }
 
-// GetTree returns nodes under rootSessionID.
-// Deprecated: Session tree management has moved to Home.
+// GetTree 返回 rootSessionID 下的节点。
+// Deprecated: 会话树管理已迁移到 Home。
 func (s *InMemorySessionTreeStore) GetTree(rootSessionID string) []*SessionTreeNode {
 	if s == nil {
 		return nil
@@ -140,14 +140,14 @@ func (s *InMemorySessionTreeStore) GetTree(rootSessionID string) []*SessionTreeN
 	return res
 }
 
-// GetSubtree returns subtree rooted at sessionID.
-// Deprecated: Session tree management has moved to Home.
+// GetSubtree 返回以 sessionID 为根的子树。
+// Deprecated: 会话树管理已迁移到 Home。
 func (s *InMemorySessionTreeStore) GetSubtree(sessionID string) []*SessionTreeNode {
 	return s.GetTree(sessionID)
 }
 
-// Ancestors returns ancestor session IDs.
-// Deprecated: Session tree management has moved to Home.
+// Ancestors 返回祖先会话 ID。
+// Deprecated: 会话树管理已迁移到 Home。
 func (s *InMemorySessionTreeStore) Ancestors(sessionID string) []string {
 	if s == nil {
 		return nil
@@ -160,8 +160,8 @@ func (s *InMemorySessionTreeStore) Ancestors(sessionID string) []string {
 	return nil
 }
 
-// UpdateAffinity updates the latest successful upstream binding.
-// Deprecated: Session tree management has moved to Home.
+// UpdateAffinity 更新最近一次成功的上游绑定。
+// Deprecated: 会话树管理已迁移到 Home。
 func (s *InMemorySessionTreeStore) UpdateAffinity(sessionID, authID, provider, model string) bool {
 	if s == nil {
 		return false
@@ -184,8 +184,8 @@ func (s *InMemorySessionTreeStore) UpdateAffinity(sessionID, authID, provider, m
 	return false
 }
 
-// Len returns the number of nodes.
-// Deprecated: Session tree management has moved to Home.
+// Len 返回节点数量。
+// Deprecated: 会话树管理已迁移到 Home。
 func (s *InMemorySessionTreeStore) Len() int {
 	if s == nil {
 		return 0
@@ -195,8 +195,8 @@ func (s *InMemorySessionTreeStore) Len() int {
 	return len(s.nodes)
 }
 
-// Clear flushes all nodes.
-// Deprecated: Session tree management has moved to Home.
+// Clear 清空所有节点。
+// Deprecated: 会话树管理已迁移到 Home。
 func (s *InMemorySessionTreeStore) Clear() {
 	if s == nil {
 		return

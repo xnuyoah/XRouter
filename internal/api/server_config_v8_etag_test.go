@@ -10,9 +10,9 @@ import (
 	proxyconfig "github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
-// TestConfigV8ETagExposedForCORS covers issue #6666 through the real server:
-// a cross-origin management page must be able to read the ETag that the v8
-// config endpoints return, otherwise the GET -> If-Match flow cannot run.
+// TestConfigV8ETagExposedForCORS 通过真实服务器覆盖 issue #6666：
+// 跨域管理页面必须能读取 v8
+// 配置端点返回的 ETag，否则 GET -> If-Match 流程无法运行。
 func TestConfigV8ETagExposedForCORS(t *testing.T) {
 	t.Setenv("MANAGEMENT_PASSWORD", "test-management-key")
 
@@ -63,8 +63,8 @@ func TestConfigV8ETagExposedForCORS(t *testing.T) {
 	}
 
 	etag := wantETagExposed(do(http.MethodGet, "", ""), http.StatusOK)
-	// A stale precondition reports the current version, still CORS-readable.
+	// 过期的前置条件会报告当前版本，且仍可被 CORS 读取。
 	wantETagExposed(do(http.MethodPut, "config-version: 8\n", `"stale"`), http.StatusPreconditionFailed)
-	// A successful conditional write chains through its exposed new ETag.
+	// 成功的条件写入会通过其暴露的新 ETag 串联起来。
 	wantETagExposed(do(http.MethodPut, "config-version: 8\nserver: {port: 8318}\n", etag), http.StatusOK)
 }

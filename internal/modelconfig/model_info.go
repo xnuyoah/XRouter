@@ -6,8 +6,8 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
-// ResolveModelInfo returns a private capability snapshot for a configured model.
-// Explicit configuration takes precedence over the empty baseline.
+// ResolveModelInfo 返回某个已配置模型的私有能力快照。
+// 显式配置优先于空的基线。
 func ResolveModelInfo(name, modelType string, support *registry.ThinkingSupport) *registry.ModelInfo {
 	trimmedName := strings.TrimSpace(name)
 	info := &registry.ModelInfo{}
@@ -20,7 +20,7 @@ func ResolveModelInfo(name, modelType string, support *registry.ThinkingSupport)
 	return info
 }
 
-// NormalizeThinkingSupport clones and normalizes configured reasoning levels.
+// NormalizeThinkingSupport 克隆并规范化已配置的推理等级。
 func NormalizeThinkingSupport(raw *registry.ThinkingSupport) *registry.ThinkingSupport {
 	if raw == nil {
 		return nil

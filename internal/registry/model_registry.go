@@ -1,6 +1,6 @@
-// Package registry provides centralized model management for all AI service providers.
-// It implements a dynamic model registry with reference counting to track active clients
-// and automatically hide models when no clients are available or when quota is exceeded.
+// Package registry 为所有 AI 服务供应商提供集中的模型管理。
+// 它实现了一个带引用计数的动态模型注册表，用于跟踪活动客户端，
+// 并在没有可用客户端或额度超限时自动隐藏模型。
 package registry
 
 import (
@@ -17,7 +17,7 @@ import (
 	misc "github.com/xnuyoah/XRouter/v8/internal/misc"
 )
 
-// OpenAIImageModelType marks models that are callable through OpenAI-compatible image endpoints.
+// OpenAIImageModelType 标记可通过 OpenAI 兼容图像端点调用的模型。
 const OpenAIImageModelType = "openai-image"
 
 const (
@@ -25,100 +25,100 @@ const (
 	DefaultClaudeMaxOutputTokens = 64000
 )
 
-// NativeCapabilities contains tri-state native capability metadata from the catalog.
+// NativeCapabilities 包含来自目录的三态原生能力元数据。
 type NativeCapabilities struct {
-	// WebSearch reports explicit per-model support for native web search.
-	// nil means the catalog has not established support either way.
+	// WebSearch 报告该模型对原生网络搜索的显式支持。
+	// nil 表示目录尚未确定是否支持。
 	WebSearch *bool `json:"web_search,omitempty"`
-	// ToolSearch reports whether every credential behind a Home route can take
-	// Codex tool_search as Anthropic native tool search. Home computes it per
-	// route; nil means unknown and is treated as unsupported.
+	// ToolSearch 报告 Home 路由背后的每个凭据是否都能把
+	// Codex tool_search 当作 Anthropic 原生工具搜索。Home 按路由计算该值；
+	// nil 表示未知，并按不支持处理。
 	ToolSearch *bool `json:"tool_search,omitempty"`
 }
 
-// ModelInfo represents information about an available model
+// ModelInfo 表示可用模型的信息
 type ModelInfo struct {
-	// ID is the unique identifier for the model
+	// ID 是模型的唯一标识符
 	ID string `json:"id"`
-	// MetadataModelID identifies the canonical model used to resolve client metadata.
-	// It is internal and must not be exposed in model-list responses.
+	// MetadataModelID 标识用于解析客户端元数据的规范模型。
+	// 它属于内部字段，绝不能暴露在模型列表响应中。
 	MetadataModelID string `json:"-"`
-	// ExplicitThinking indicates thinking/reasoning configuration was explicitly configured for this model.
+	// ExplicitThinking 表示已为该模型显式配置了思考/推理配置。
 	ExplicitThinking bool `json:"-"`
-	// ExplicitInputModalities indicates input modalities were explicitly configured for this model.
+	// ExplicitInputModalities 表示已为该模型显式配置了输入模态。
 	ExplicitInputModalities bool `json:"-"`
-	// Object type for the model (typically "model")
+	// 模型的对象类型（通常为 "model"）
 	Object string `json:"object"`
-	// Created timestamp when the model was created
+	// Created 是模型创建时的时间戳
 	Created int64 `json:"created"`
-	// OwnedBy indicates the organization that owns the model
+	// OwnedBy 表示拥有该模型的组织
 	OwnedBy string `json:"owned_by"`
-	// Type indicates the model type (e.g., "claude", "openai")
+	// Type 表示模型类型（例如 "claude"、"openai"）
 	Type string `json:"type"`
-	// DisplayName is the human-readable name for the model
+	// DisplayName 是模型的人类可读名称
 	DisplayName string `json:"display_name,omitempty"`
-	// Name is the provider-native model identifier when it differs from ID
+	// Name 是与 ID 不同时供应商原生的模型标识符
 	Name string `json:"name,omitempty"`
-	// Version is the model version
+	// Version 是模型版本
 	Version string `json:"version,omitempty"`
-	// Description provides detailed information about the model
+	// Description 提供关于模型的详细信息
 	Description string `json:"description,omitempty"`
-	// InputTokenLimit is the maximum input token limit
+	// InputTokenLimit 是最大输入 token 上限
 	InputTokenLimit int `json:"inputTokenLimit,omitempty"`
-	// OutputTokenLimit is the maximum output token limit
+	// OutputTokenLimit 是最大输出 token 上限
 	OutputTokenLimit int `json:"outputTokenLimit,omitempty"`
-	// SupportedGenerationMethods lists supported generation methods
+	// SupportedGenerationMethods 列出支持的生成方法
 	SupportedGenerationMethods []string `json:"supportedGenerationMethods,omitempty"`
-	// ContextLength is the context window size
+	// ContextLength 是上下文窗口大小
 	ContextLength int `json:"context_length,omitempty"`
-	// MaxContextLength is an explicit per-model context window override from configuration.
-	// It is carried internally for Codex client model catalog generation.
+	// MaxContextLength 是从配置中显式指定的按模型上下文窗口覆盖值。
+	// 它在内部用于生成 Codex 客户端的模型目录。
 	MaxContextLength int `json:"-"`
-	// MaxCompletionTokens is the maximum completion tokens
+	// MaxCompletionTokens 是最大补全 token 数
 	MaxCompletionTokens int `json:"max_completion_tokens,omitempty"`
-	// SupportedParameters lists supported parameters
+	// SupportedParameters 列出支持的参数
 	SupportedParameters []string `json:"supported_parameters,omitempty"`
-	// SupportedInputModalities lists supported input modalities (e.g., TEXT, IMAGE, VIDEO, AUDIO)
+	// SupportedInputModalities 列出支持的输入模态（例如 TEXT、IMAGE、VIDEO、AUDIO）
 	SupportedInputModalities []string `json:"supportedInputModalities,omitempty"`
-	// SupportedOutputModalities lists supported output modalities (e.g., TEXT, IMAGE)
+	// SupportedOutputModalities 列出支持的输出模态（例如 TEXT、IMAGE）
 	SupportedOutputModalities []string `json:"supportedOutputModalities,omitempty"`
-	// SupportsWebSearch indicates this Antigravity model is listed by
-	// fetchAvailableModels.webSearchModelIds and can execute native googleSearch.
+	// SupportsWebSearch 表示该 Antigravity 模型被
+	// fetchAvailableModels.webSearchModelIds 列出，且可执行原生 googleSearch。
 	SupportsWebSearch bool `json:"supports_web_search,omitempty"`
 
-	// SupportConfigurationUpdate reports internal support for configuration_update.
+	// SupportConfigurationUpdate 报告对 configuration_update 的内部支持。
 	SupportConfigurationUpdate bool `json:"-"`
 
-	// NativeCapabilities contains internal, static per-model capability metadata.
-	// It is intentionally separate from Antigravity's dynamically probed capability.
+	// NativeCapabilities 包含内部的、静态的按模型能力元数据。
+	// 它有意与 Antigravity 动态探测的能力区分开。
 	NativeCapabilities *NativeCapabilities `json:"-"`
 
-	// Thinking holds provider-specific reasoning/thinking budget capabilities.
-	// This is optional and currently used for provider-specific thinking budget normalization.
+	// Thinking 保存供应商特定的推理/思考预算能力。
+	// 该字段可选，目前用于供应商特定的思考预算归一化。
 	Thinking *ThinkingSupport `json:"thinking,omitempty"`
 
-	// Config holds model-specific runtime overrides loaded from models.json.
+	// Config 保存从 models.json 加载的按模型运行时覆盖项。
 	Config *ModelConfig `json:"config,omitempty"`
 
-	// UserDefined indicates this model was defined through config file's models[]
-	// array (e.g., openai-compatibility.*.models[], *-api-key.models[]).
-	// UserDefined models have thinking configuration passed through without validation.
+	// UserDefined 表示该模型是通过配置文件的 models[]
+	// 数组定义的（例如 openai-compatibility.*.models[]、*-api-key.models[]）。
+	// UserDefined 模型的思考配置不做校验直接透传。
 	UserDefined bool `json:"-"`
 
-	// IsCompat enables compatibility handling for this configured API-key model.
-	// It is internal metadata and is not exposed in model listings.
+	// IsCompat 为这个已配置的 API-key 模型启用兼容性处理。
+	// 它属于内部元数据，不会在模型列表中暴露。
 	IsCompat bool `json:"-"`
 }
 
-// ModelConfig holds optional runtime overrides for a model definition.
+// ModelConfig 保存模型定义的可选运行时覆盖项。
 type ModelConfig struct {
-	// OverrideHeader forces upstream request headers when non-empty.
-	// Keys are header names (e.g. "user-agent"); values replace any existing header.
+	// OverrideHeader 非空时强制设置上游请求头。
+	// 键为请求头名称（例如 "user-agent"）；值会替换任何已存在的请求头。
 	OverrideHeader map[string]string `json:"override_header,omitempty"`
 }
 
-// UnmarshalJSON loads internal capability metadata without exposing it
-// through ModelInfo's normal JSON serialization.
+// UnmarshalJSON 加载内部能力元数据，而不通过
+// ModelInfo 的常规 JSON 序列化将其暴露。
 func (m *ModelInfo) UnmarshalJSON(data []byte) error {
 	type modelInfoAlias ModelInfo
 	aux := struct {
@@ -139,79 +139,79 @@ type availableModelsCacheEntry struct {
 	expiresAt time.Time
 }
 
-// ThinkingSupport describes a model family's supported internal reasoning budget range.
-// Values are interpreted in provider-native token units.
+// ThinkingSupport 描述某个模型系列支持的内部推理预算范围。
+// 数值以供应商原生的 token 单位解释。
 type ThinkingSupport struct {
-	// Min is the minimum allowed thinking budget (inclusive).
+	// Min 是允许的最小思考预算（含）。
 	Min int `json:"min,omitempty" yaml:"min,omitempty"`
-	// Max is the maximum allowed thinking budget (inclusive).
+	// Max 是允许的最大思考预算（含）。
 	Max int `json:"max,omitempty" yaml:"max,omitempty"`
-	// ZeroAllowed indicates whether 0 is a valid value (to disable thinking).
+	// ZeroAllowed 表示 0 是否为有效取值（用于禁用思考）。
 	ZeroAllowed bool `json:"zero_allowed,omitempty" yaml:"zero-allowed,omitempty"`
-	// DynamicAllowed indicates whether -1 is a valid value (dynamic thinking budget).
+	// DynamicAllowed 表示 -1 是否为有效取值（动态思考预算）。
 	DynamicAllowed bool `json:"dynamic_allowed,omitempty" yaml:"dynamic-allowed,omitempty"`
-	// Levels defines discrete reasoning effort levels (e.g., "low", "medium", "high").
-	// When set, the model uses level-based reasoning instead of token budgets.
+	// Levels 定义离散的推理投入等级（例如 "low"、"medium"、"high"）。
+	// 设置后，该模型使用基于等级的推理而非 token 预算。
 	Levels []string `json:"levels,omitempty" yaml:"levels,omitempty"`
 }
 
-// ModelRegistration tracks a model's availability
+// ModelRegistration 跟踪模型的可用性
 type ModelRegistration struct {
-	// Info contains the model metadata
+	// Info 包含模型元数据
 	Info *ModelInfo
-	// InfoByProvider maps provider identifiers to specific ModelInfo to support differing capabilities.
+	// InfoByProvider 将供应商标识映射到具体的 ModelInfo，以支持不同能力。
 	InfoByProvider map[string]*ModelInfo
-	// Count is the number of active clients that can provide this model
+	// Count 是能够提供该模型的活动客户端数量
 	Count int
-	// LastUpdated tracks when this registration was last modified
+	// LastUpdated 记录该注册最后一次被修改的时间
 	LastUpdated time.Time
-	// QuotaExceededClients tracks which clients have exceeded quota for this model
+	// QuotaExceededClients 跟踪哪些客户端对该模型额度超限
 	QuotaExceededClients map[string]*time.Time
-	// Providers tracks available clients grouped by provider identifier
+	// Providers 按供应商标识对可用客户端进行分组统计
 	Providers map[string]int
-	// SuspendedClients tracks temporarily disabled clients keyed by client ID
+	// SuspendedClients 以客户端 ID 为键跟踪被临时禁用的客户端
 	SuspendedClients map[string]string
 }
 
-// ModelRegistryHook provides optional callbacks for external integrations to track model list changes.
-// Hook implementations must be non-blocking and resilient; calls are executed asynchronously and panics are recovered.
+// ModelRegistryHook 为外部集成提供可选回调，用于跟踪模型列表变化。
+// Hook 实现必须非阻塞且健壮；调用以异步方式执行，并会恢复 panic。
 type ModelRegistryHook interface {
 	OnModelsRegistered(ctx context.Context, provider, clientID string, models []*ModelInfo)
 	OnModelsUnregistered(ctx context.Context, provider, clientID string)
 }
 
-// ModelRegistry manages the global registry of available models
+// ModelRegistry 管理可用模型的全局注册表
 type ModelRegistry struct {
-	// models maps model ID to registration information
+	// models 将模型 ID 映射到注册信息
 	models map[string]*ModelRegistration
-	// clientModels maps client ID to the models it provides
+	// clientModels 将客户端 ID 映射到其提供的模型
 	clientModels map[string][]string
-	// clientModelInfos maps client ID to a map of model ID -> ModelInfo
-	// This preserves the original model info provided by each client
+	// clientModelInfos 将客户端 ID 映射到 model ID -> ModelInfo 的映射
+	// 这样可保留每个客户端提供的原始模型信息
 	clientModelInfos map[string]map[string]*ModelInfo
-	// clientProviders maps client ID to its provider identifier
+	// clientProviders 将客户端 ID 映射到其供应商标识
 	clientProviders map[string]string
-	// clientEpochs tracks monotonic registration epochs for each client ID
+	// clientEpochs 跟踪每个客户端 ID 的单调注册纪元
 	clientEpochs map[string]uint64
-	// clientGenerations tracks the latest generation applied for each client ID
+	// clientGenerations 跟踪每个客户端 ID 已应用的最新代数
 	clientGenerations map[string]uint64
-	// mutex ensures thread-safe access to the registry
+	// mutex 确保对注册表的线程安全访问
 	mutex *sync.RWMutex
-	// availableModelsCache stores per-handler snapshots for GetAvailableModels.
+	// availableModelsCache 为 GetAvailableModels 按处理器存储快照。
 	availableModelsCache map[string]availableModelsCacheEntry
-	// generation tracks changes to model registrations and availability.
+	// generation 跟踪模型注册与可用性的变化。
 	generation uint64
-	// registrationEpoch tracks monotonic client registration and deregistration structural changes.
+	// registrationEpoch 跟踪客户端注册与注销结构性变化的单调递增。
 	registrationEpoch atomic.Uint64
-	// hook is an optional callback sink for model registration changes
+	// hook 是模型注册变化可选的回调接收端
 	hook ModelRegistryHook
 }
 
-// Global model registry instance
+// 全局模型注册表实例
 var globalRegistry *ModelRegistry
 var registryOnce sync.Once
 
-// GetGlobalRegistry returns the global model registry instance
+// GetGlobalRegistry 返回全局模型注册表实例
 func GetGlobalRegistry() *ModelRegistry {
 	registryOnce.Do(func() {
 		globalRegistry = &ModelRegistry{
@@ -241,15 +241,15 @@ func (r *ModelRegistry) invalidateAvailableModelsCacheLocked() {
 	clear(r.availableModelsCache)
 }
 
-// GetGeneration returns the current generation counter of model registrations.
+// GetGeneration 返回模型注册的当前代数计数器。
 func (r *ModelRegistry) GetGeneration() uint64 {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	return r.generation
 }
 
-// RegistrationEpoch returns a monotonically increasing epoch that increments whenever
-// client model registrations or deregistrations occur.
+// RegistrationEpoch 返回一个单调递增的纪元，每当
+// 发生客户端模型注册或注销时递增。
 func (r *ModelRegistry) RegistrationEpoch() uint64 {
 	if r == nil {
 		return 0
@@ -257,7 +257,7 @@ func (r *ModelRegistry) RegistrationEpoch() uint64 {
 	return r.registrationEpoch.Load()
 }
 
-// LookupModelInfo searches dynamic registry (provider-specific > global) then static definitions.
+// LookupModelInfo 先搜索动态注册表（供应商特定 > 全局），再搜索静态定义。
 func LookupModelInfo(modelID string, provider ...string) *ModelInfo {
 	modelID = strings.TrimSpace(modelID)
 	if modelID == "" {
@@ -275,15 +275,15 @@ func LookupModelInfo(modelID string, provider ...string) *ModelInfo {
 	return nil
 }
 
-// NativeCapabilityRoute describes one registered route to a public model.
+// NativeCapabilityRoute 描述一条到公共模型的已注册路由。
 type NativeCapabilityRoute struct {
 	Provider           string
 	NativeCapabilities *NativeCapabilities
 }
 
-// ResolveResponsesWebSearchCapability conservatively resolves native web search
-// across every route that can serve a public model. A known unsupported route or
-// explicit model-level false wins; missing/unknown data produces unknown.
+// ResolveResponsesWebSearchCapability 保守地解析所有能够服务某个公共模型的
+// 路由上的原生网络搜索能力。已知不支持的某个路由或
+// 显式的模型级 false 会胜出；数据缺失/未知则产生未知结果。
 func ResolveResponsesWebSearchCapability(routes []NativeCapabilityRoute) *bool {
 	if len(routes) == 0 {
 		return nil
@@ -329,8 +329,8 @@ func boolPointer(value bool) *bool {
 	return &value
 }
 
-// GetResponsesWebSearchCapability resolves capability metadata across every
-// registered client route for the exact public model ID.
+// GetResponsesWebSearchCapability 针对精确的公共模型 ID，在所有已注册的
+// 客户端路由上解析能力元数据。
 func (r *ModelRegistry) GetResponsesWebSearchCapability(modelID string) *bool {
 	modelID = strings.TrimSpace(modelID)
 	if r == nil || modelID == "" {
@@ -359,8 +359,8 @@ func (r *ModelRegistry) GetResponsesWebSearchCapability(modelID string) *bool {
 	return ResolveResponsesWebSearchCapability(routes)
 }
 
-// ModelOverrideHeaders returns models.json config.override_header for the model, if any.
-// The returned map is a defensive copy and may be empty but never nil when overrides exist.
+// ModelOverrideHeaders 返回该模型在 models.json 中的 config.override_header（如果有）。
+// 返回的 map 是防御性副本，在存在覆盖项时可能为空但绝不为 nil。
 func ModelOverrideHeaders(modelID string, provider ...string) map[string]string {
 	info := LookupModelInfo(modelID, provider...)
 	if info == nil || info.Config == nil || len(info.Config.OverrideHeader) == 0 {
@@ -380,7 +380,7 @@ func ModelOverrideHeaders(modelID string, provider ...string) map[string]string 
 	return out
 }
 
-// SetHook sets an optional hook for observing model registration changes.
+// SetHook 设置用于观察模型注册变化的可选 hook。
 func (r *ModelRegistry) SetHook(hook ModelRegistryHook) {
 	if r == nil {
 		return
@@ -428,22 +428,22 @@ func (r *ModelRegistry) triggerModelsUnregistered(provider, clientID string) {
 	}()
 }
 
-// RegisterClient registers a client and its supported models
-// Parameters:
-//   - clientID: Unique identifier for the client
-//   - clientProvider: Provider name (e.g., "claude", "openai")
-//   - models: List of models that this client can provide
+// RegisterClient 注册一个客户端及其支持的模型
+// 参数：
+//   - clientID：客户端的唯一标识符
+//   - clientProvider：供应商名称（例如 "claude"、"openai"）
+//   - models：该客户端可提供的模型列表
 func (r *ModelRegistry) RegisterClient(clientID, clientProvider string, models []*ModelInfo) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	r.registerClientLocked(clientID, clientProvider, models, false)
 }
 
-// RegisterClientIfEpochCurrent registers a client's models only if its
-// registration epoch still equals expectedEpoch and publish is non-nil. The
-// fence evaluation and the registration runs atomically under the registry
-// mutex. publish must be fast and must not call back into the registry or
-// block. The returned value reports whether the registration was applied.
+// RegisterClientIfEpochCurrent 仅当客户端的注册纪元仍等于
+// expectedEpoch 且 publish 非 nil 时，才注册该客户端的模型。
+// 栅栏判断与注册在注册表互斥锁下原子执行。
+// publish 必须快速执行，且不得回调注册表或
+// 阻塞。返回值报告注册是否被应用。
 func (r *ModelRegistry) RegisterClientIfEpochCurrent(clientID, clientProvider string, expectedEpoch uint64, models []*ModelInfo, publish func() bool) bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -454,11 +454,11 @@ func (r *ModelRegistry) RegisterClientIfEpochCurrent(clientID, clientProvider st
 	return true
 }
 
-// UnregisterClientIfEpochCurrent removes a client only if its registration
-// epoch still equals expectedEpoch and publish is non-nil. The fence
-// evaluation and the removal runs atomically under the registry mutex.
-// publish must be fast and must not call back into the registry or block.
-// The returned value reports whether the removal was applied.
+// UnregisterClientIfEpochCurrent 仅当客户端的注册纪元仍等于
+// expectedEpoch 且 publish 非 nil 时，才移除该客户端。栅栏
+// 判断与移除在注册表互斥锁下原子执行。
+// publish 必须快速执行，且不得回调注册表或阻塞。
+// 返回值报告移除是否被应用。
 func (r *ModelRegistry) UnregisterClientIfEpochCurrent(clientID string, expectedEpoch uint64, publish func() bool) bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -470,12 +470,12 @@ func (r *ModelRegistry) UnregisterClientIfEpochCurrent(clientID string, expected
 	return true
 }
 
-// ReplaceClientModels replaces a client's models only if its registration epoch matches.
-// Epoch zero and epochs for empty catalogs are valid. A successful replacement advances
-// the epoch and preserves quota, suspension state and the projection generation
-// watermark for an existing registration with the same provider.
-// Empty models unregister the client; a mismatched epoch leaves the registry unchanged.
-// The successful epoch is returned under the same lock as the replacement.
+// ReplaceClientModels 仅在客户端的注册纪元匹配时才替换其模型。
+// 纪元 0 以及空目录的纪元都是有效的。一次成功的替换会推进
+// 纪元，并为具有相同供应商的现有注册保留额度、挂起状态以及投影代数
+// 水位线。
+// 空模型列表会注销该客户端；纪元不匹配则注册表保持不变。
+// 成功时的纪元在与替换相同的锁下返回。
 func (r *ModelRegistry) ReplaceClientModels(clientID, clientProvider string, expectedEpoch uint64, models []*ModelInfo) (uint64, bool) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -486,7 +486,7 @@ func (r *ModelRegistry) ReplaceClientModels(clientID, clientProvider string, exp
 	return r.clientEpochs[clientID], true
 }
 
-// registerClientLocked reconciles a client's models while the registry mutex is held.
+// registerClientLocked 在持有注册表互斥锁的情况下协调客户端的模型。
 func (r *ModelRegistry) registerClientLocked(clientID, clientProvider string, models []*ModelInfo, preserveState bool) {
 	r.ensureAvailableModelsCacheLocked()
 
@@ -516,7 +516,7 @@ func (r *ModelRegistry) registerClientLocked(clientID, clientProvider string, mo
 	}
 
 	if len(uniqueModelIDs) == 0 {
-		// No models supplied; unregister existing client state if present.
+		// 未提供模型；若存在则注销现有的客户端状态。
 		r.unregisterClientInternal(clientID)
 		delete(r.clientModels, clientID)
 		delete(r.clientModelInfos, clientID)
@@ -530,8 +530,8 @@ func (r *ModelRegistry) registerClientLocked(clientID, clientProvider string, mo
 	oldProvider := r.clientProviders[clientID]
 	providerChanged := oldProvider != provider
 
-	// Retaining scheduling state also retains its projection watermark. An older
-	// request result may read the new epoch after capturing its auth snapshot.
+	// 保留调度状态也会保留其投影水位线。较旧的
+	// 请求结果可能在捕获其凭据快照后读到新的纪元。
 	r.clientEpochs[clientID]++
 	if !preserveState || !hadExisting || providerChanged {
 		r.clientGenerations[clientID] = uint64(0)
@@ -540,13 +540,13 @@ func (r *ModelRegistry) registerClientLocked(clientID, clientProvider string, mo
 
 	now := time.Now()
 	if !hadExisting {
-		// Pure addition path.
+		// 纯新增路径。
 		for _, modelID := range rawModelIDs {
 			model := newModels[modelID]
 			r.addModelRegistration(modelID, provider, model, now, clientID)
 		}
 		r.clientModels[clientID] = append([]string(nil), rawModelIDs...)
-		// Store client's own model infos
+		// 存储客户端自身的模型信息
 		clientInfos := make(map[string]*ModelInfo, len(newModels))
 		for id, m := range newModels {
 			clientInfos[id] = cloneModelInfo(m)
@@ -583,7 +583,7 @@ func (r *ModelRegistry) registerClientLocked(clientID, clientProvider string, mo
 		}
 	}
 
-	// Handle provider change for overlapping models before modifications.
+	// 在修改之前处理重叠模型的供应商变更。
 	if providerChanged && oldProvider != "" {
 		for id, newCount := range newCounts {
 			if newCount == 0 {
@@ -615,7 +615,7 @@ func (r *ModelRegistry) registerClientLocked(clientID, clientProvider string, mo
 		}
 	}
 
-	// Apply removals first to keep counters accurate.
+	// 先应用移除，以保持计数器准确。
 	for _, id := range removed {
 		oldCount := oldCounts[id]
 		for i := 0; i < oldCount; i++ {
@@ -634,7 +634,7 @@ func (r *ModelRegistry) registerClientLocked(clientID, clientProvider string, mo
 		}
 	}
 
-	// Apply additions.
+	// 应用新增。
 	for id, newCount := range newCounts {
 		oldCount := oldCounts[id]
 		if newCount <= oldCount {
@@ -647,7 +647,7 @@ func (r *ModelRegistry) registerClientLocked(clientID, clientProvider string, mo
 		}
 	}
 
-	// Update metadata for models that remain associated with the client.
+	// 更新仍与该客户端关联的模型的元数据。
 	addedSet := make(map[string]struct{}, len(added))
 	for _, id := range added {
 		addedSet[id] = struct{}{}
@@ -670,8 +670,8 @@ func (r *ModelRegistry) registerClientLocked(clientID, clientProvider string, mo
 				reg.InfoByProvider[oldProvider].SupportsWebSearch = r.hasClientSupportingWebSearchLocked(id, oldProvider, clientID)
 			}
 			reg.LastUpdated = now
-			// Only conditional replacements preserve scheduling state for retained
-			// bindings with the same provider. Ordinary registration starts fresh.
+			// 只有条件式替换才会为保留的
+			// 同供应商绑定保留调度状态。普通注册则从头开始。
 			if !preserveState || providerChanged || oldCounts[id] == 0 {
 				delete(reg.QuotaExceededClients, clientID)
 				delete(reg.SuspendedClients, clientID)
@@ -695,11 +695,11 @@ func (r *ModelRegistry) registerClientLocked(clientID, clientProvider string, mo
 		}
 	}
 
-	// Update client bookkeeping.
+	// 更新客户端台账。
 	if len(rawModelIDs) > 0 {
 		r.clientModels[clientID] = append([]string(nil), rawModelIDs...)
 	}
-	// Update client's own model infos
+	// 更新客户端自身的模型信息
 	clientInfos := make(map[string]*ModelInfo, len(newModels))
 	for id, m := range newModels {
 		clientInfos[id] = cloneModelInfo(m)
@@ -714,7 +714,7 @@ func (r *ModelRegistry) registerClientLocked(clientID, clientProvider string, mo
 	r.invalidateAvailableModelsCacheLocked()
 	r.triggerModelsRegistered(provider, clientID, models)
 	if len(added) == 0 && len(removed) == 0 && !providerChanged {
-		// Only metadata (e.g., display name) changed; keep no-op re-registration quiet.
+		// 仅元数据（例如显示名称）发生变化；保持空操作式重新注册的静默。
 		return
 	}
 
@@ -767,7 +767,7 @@ func (r *ModelRegistry) addModelRegistration(modelID, provider string, model *Mo
 	log.Debugf("Registered new model %s from provider %s", modelID, provider)
 }
 
-// removeModelRegistration may preserve state when only a duplicate binding is removed.
+// 当仅移除重复绑定时，removeModelRegistration 可能会保留状态。
 func (r *ModelRegistry) removeModelRegistration(clientID, modelID, provider string, now time.Time, preserveState bool) {
 	registration, exists := r.models[modelID]
 	if !exists {
@@ -872,9 +872,9 @@ func cloneModelInfosUnique(models []*ModelInfo) []*ModelInfo {
 	return cloned
 }
 
-// UnregisterClient removes a client and decrements counts for its models
-// Parameters:
-//   - clientID: Unique identifier for the client to remove
+// UnregisterClient 移除一个客户端并递减其模型的计数
+// 参数：
+//   - clientID：要移除的客户端的唯一标识符
 func (r *ModelRegistry) UnregisterClient(clientID string) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -882,7 +882,7 @@ func (r *ModelRegistry) UnregisterClient(clientID string) {
 	r.invalidateAvailableModelsCacheLocked()
 }
 
-// unregisterClientInternal performs the actual client unregistration (internal, no locking)
+// unregisterClientInternal 执行实际的客户端注销（内部使用，不加锁）
 func (r *ModelRegistry) unregisterClientInternal(clientID string) {
 	if r.clientGenerations == nil {
 		r.clientGenerations = make(map[string]uint64)
@@ -909,7 +909,7 @@ func (r *ModelRegistry) unregisterClientInternal(clientID string) {
 			registration.Count--
 			registration.LastUpdated = now
 
-			// Remove quota tracking for this client
+			// 移除该客户端的额度跟踪
 			delete(registration.QuotaExceededClients, clientID)
 			if registration.SuspendedClients != nil {
 				delete(registration.SuspendedClients, clientID)
@@ -930,7 +930,7 @@ func (r *ModelRegistry) unregisterClientInternal(clientID string) {
 
 			log.Debugf("Decremented count for model %s, now %d clients", modelID, registration.Count)
 
-			// Remove model if no clients remain
+			// 如果没有客户端剩余则移除该模型
 			if registration.Count <= 0 {
 				delete(r.models, modelID)
 				log.Debugf("Removed model %s as no clients remain", modelID)
@@ -951,15 +951,15 @@ func (r *ModelRegistry) unregisterClientInternal(clientID string) {
 		delete(r.clientProviders, clientID)
 	}
 	log.Debugf("Unregistered client %s", clientID)
-	// Separator line after completing client unregistration (after the summary line)
+	// 完成客户端注销后的分隔线（位于摘要行之后）
 	misc.LogCredentialSeparator()
 	r.triggerModelsUnregistered(provider, clientID)
 }
 
-// SetModelQuotaExceeded marks a model as quota exceeded for a specific client
-// Parameters:
-//   - clientID: The client that exceeded quota
-//   - modelID: The model that exceeded quota
+// SetModelQuotaExceeded 将某个模型标记为对特定客户端额度超限
+// 参数：
+//   - clientID：额度超限的客户端
+//   - modelID：额度超限的模型
 func (r *ModelRegistry) SetModelQuotaExceeded(clientID, modelID string) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -973,10 +973,10 @@ func (r *ModelRegistry) SetModelQuotaExceeded(clientID, modelID string) {
 	}
 }
 
-// ClearModelQuotaExceeded removes quota exceeded status for a model and client
-// Parameters:
-//   - clientID: The client to clear quota status for
-//   - modelID: The model to clear quota status for
+// ClearModelQuotaExceeded 清除某个模型与客户端的额度超限状态
+// 参数：
+//   - clientID：要清除额度状态的客户端
+//   - modelID：要清除额度状态的模型
 func (r *ModelRegistry) ClearModelQuotaExceeded(clientID, modelID string) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -989,7 +989,7 @@ func (r *ModelRegistry) ClearModelQuotaExceeded(clientID, modelID string) {
 	}
 }
 
-// ClientModelProjection describes the desired availability and quota state for a client's model.
+// ClientModelProjection 描述某客户端模型期望的可用性与额度状态。
 type ClientModelProjection struct {
 	ModelID       string
 	Suspended     bool
@@ -997,9 +997,9 @@ type ClientModelProjection struct {
 	QuotaExceeded bool
 }
 
-// ApplyClientModelProjections atomically applies model suspension and quota exceeded state for clientID
-// if the supplied epoch and generation are current. Stale or mismatched epoch (!= current client epoch) or stale generation
-// (< current client generation), or projections for unregistered clients/models are rejected.
+// ApplyClientModelProjections 若所给纪元与代数都是当前的，则原子地应用 clientID 的
+// 模型挂起与额度超限状态。过期或不匹配的纪元（!= 当前客户端纪元）、
+// 过期的代数（< 当前客户端代数），以及针对未注册客户端/模型的投影都会被拒绝。
 func (r *ModelRegistry) ApplyClientModelProjections(clientID string, epoch uint64, generation uint64, projections []ClientModelProjection) bool {
 	if r == nil {
 		return false
@@ -1076,7 +1076,7 @@ func (r *ModelRegistry) ApplyClientModelProjections(clientID string, epoch uint6
 			continue
 		}
 
-		// Update suspended state
+		// 更新挂起状态
 		if proj.Suspended {
 			if registration.SuspendedClients == nil {
 				registration.SuspendedClients = make(map[string]string)
@@ -1096,7 +1096,7 @@ func (r *ModelRegistry) ApplyClientModelProjections(clientID string, epoch uint6
 			}
 		}
 
-		// Update quota exceeded state
+		// 更新额度超限状态
 		if proj.QuotaExceeded {
 			if registration.QuotaExceededClients == nil {
 				registration.QuotaExceededClients = make(map[string]*time.Time)
@@ -1123,9 +1123,9 @@ func (r *ModelRegistry) ApplyClientModelProjections(clientID string, epoch uint6
 	return true
 }
 
-// ApplyClientModelCapabilities applies capability mutations to matching models of clientID
-// if the client is currently registered and its registration epoch matches expectedEpoch.
-// Returns true if applied, false if client is unregistered or epoch changed.
+// ApplyClientModelCapabilities 在客户端当前已注册且其注册纪元等于
+// expectedEpoch 时，将能力变更应用到 clientID 匹配的模型上。
+// 若已应用返回 true；若客户端未注册或纪元已变化则返回 false。
 func (r *ModelRegistry) ApplyClientModelCapabilities(clientID string, expectedEpoch uint64, mutate func(modelID string, info *ModelInfo)) bool {
 	if r == nil || mutate == nil {
 		return false
@@ -1179,11 +1179,11 @@ func (r *ModelRegistry) hasClientSupportingWebSearchLocked(modelID, provider, ex
 	return false
 }
 
-// SuspendClientModel marks a client's model as temporarily unavailable until explicitly resumed.
-// Parameters:
-//   - clientID: The client to suspend
-//   - modelID: The model affected by the suspension
-//   - reason: Optional description for observability
+// SuspendClientModel 将某客户端的模型标记为临时不可用，直到被显式恢复。
+// 参数：
+//   - clientID：要挂起的客户端
+//   - modelID：受该挂起影响的模型
+//   - reason：用于可观测性的可选描述
 func (r *ModelRegistry) SuspendClientModel(clientID, modelID, reason string) {
 	if clientID == "" || modelID == "" {
 		return
@@ -1212,10 +1212,10 @@ func (r *ModelRegistry) SuspendClientModel(clientID, modelID, reason string) {
 	}
 }
 
-// ResumeClientModel clears a previous suspension so the client counts toward availability again.
-// Parameters:
-//   - clientID: The client to resume
-//   - modelID: The model being resumed
+// ResumeClientModel 清除先前的挂起，使该客户端重新计入可用性。
+// 参数：
+//   - clientID：要恢复的客户端
+//   - modelID：正在被恢复的模型
 func (r *ModelRegistry) ResumeClientModel(clientID, modelID string) {
 	if clientID == "" || modelID == "" {
 		return
@@ -1237,7 +1237,7 @@ func (r *ModelRegistry) ResumeClientModel(clientID, modelID string) {
 	log.Debugf("Resumed client %s for model %s", clientID, modelID)
 }
 
-// ClientSupportsModel reports whether the client registered support for modelID.
+// ClientSupportsModel 报告该客户端是否注册了对 modelID 的支持。
 func (r *ModelRegistry) ClientSupportsModel(clientID, modelID string) bool {
 	clientID = strings.TrimSpace(clientID)
 	modelID = strings.TrimSpace(modelID)
@@ -1262,7 +1262,7 @@ func (r *ModelRegistry) ClientSupportsModel(clientID, modelID string) bool {
 	return false
 }
 
-// IsModelSuspendedForClient reports whether a model is currently suspended for a specific client.
+// IsModelSuspendedForClient 报告某模型当前是否对特定客户端挂起。
 func (r *ModelRegistry) IsModelSuspendedForClient(clientID, modelID string) bool {
 	clientID = strings.TrimSpace(clientID)
 	modelID = strings.TrimSpace(modelID)
@@ -1281,7 +1281,7 @@ func (r *ModelRegistry) IsModelSuspendedForClient(clientID, modelID string) bool
 	return suspended
 }
 
-// IsModelQuotaExceededForClient reports whether a model is currently marked quota exceeded for a specific client.
+// IsModelQuotaExceededForClient 报告某模型当前是否对特定客户端标记为额度超限。
 func (r *ModelRegistry) IsModelQuotaExceededForClient(clientID, modelID string) bool {
 	clientID = strings.TrimSpace(clientID)
 	modelID = strings.TrimSpace(modelID)
@@ -1300,12 +1300,12 @@ func (r *ModelRegistry) IsModelQuotaExceededForClient(clientID, modelID string) 
 	return exceeded
 }
 
-// GetAvailableModels returns all models that have at least one available client
-// Parameters:
-//   - handlerType: The handler type to filter models for (e.g., "openai", "claude")
+// GetAvailableModels 返回至少有一个可用客户端的所有模型
+// 参数：
+//   - handlerType：用于过滤模型的处理器类型（例如 "openai"、"claude"）
 //
-// Returns:
-//   - []map[string]any: List of available models in the requested format
+// 返回：
+//   - []map[string]any：按请求格式返回的可用模型列表
 func (r *ModelRegistry) GetAvailableModels(handlerType string) []map[string]any {
 	now := time.Now()
 
@@ -1334,12 +1334,12 @@ func (r *ModelRegistry) GetAvailableModels(handlerType string) []map[string]any 
 	return models
 }
 
-// isQuotaSuspension reports whether a suspension is a quota cooldown. A model in a
-// quota cooldown stays listed: the limit is temporary, and a request meanwhile gets a
-// 429 with its retry time instead of an unknown model. A credential-wide quota
-// ("credential_quota") suspends every model of that credential, so it is a quota
-// cooldown too; counting it as another failure hides all of them when no other
-// credential serves them.
+// isQuotaSuspension 报告某个挂起是否为额度冷却。处于额度冷却中的模型
+// 仍会保留在列表中：该限制是临时的，而一次请求在此期间会收到带重试
+// 时间的 429，而不是未知模型。凭据范围的额度（"credential_quota"）
+// 会挂起该凭据的所有模型，因此它同样是额度冷却；
+// 若没有其他凭据服务这些模型，把它算作另一种失败
+// 会把它们全部隐藏起来。
 func isQuotaSuspension(reason string) bool {
 	return strings.EqualFold(reason, "quota") || strings.EqualFold(reason, "credential_quota")
 }
@@ -1381,8 +1381,8 @@ func modelRegistrationAvailability(registration *ModelRegistration, now time.Tim
 		}
 	}
 
-	// A quota cooldown can mark the same client both quota-exceeded and
-	// suspended. Count that unavailable client only once.
+	// 一次额度冷却会把同一个客户端同时标记为额度超限与
+	// 挂起。该不可用客户端只计入一次。
 	effectiveClients := availableClients - expiredClients - cooldownSuspended - otherSuspended + quotaAndSuspended
 	if effectiveClients < 0 {
 		effectiveClients = 0
@@ -1392,7 +1392,7 @@ func modelRegistrationAvailability(registration *ModelRegistration, now time.Tim
 	return available, expiresAt
 }
 
-// GetAvailableModelInfos returns cloned metadata for all currently available models.
+// GetAvailableModelInfos 返回所有当前可用模型的克隆元数据。
 func (r *ModelRegistry) GetAvailableModelInfos() []*ModelInfo {
 	now := time.Now()
 	r.mutex.RLock()
@@ -1471,12 +1471,12 @@ func cloneModelMapValue(value any) any {
 	}
 }
 
-// GetAvailableModelsByProvider returns models available for the given provider identifier.
-// Parameters:
-//   - provider: Provider identifier (e.g., "codex", "antigravity")
+// GetAvailableModelsByProvider 返回给定供应商标识可用的模型。
+// 参数：
+//   - provider：供应商标识（例如 "codex"、"antigravity"）
 //
-// Returns:
-//   - []*ModelInfo: List of available models for the provider
+// 返回：
+//   - []*ModelInfo：该供应商的可用模型列表
 func (r *ModelRegistry) GetAvailableModelsByProvider(provider string) []*ModelInfo {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	if provider == "" {
@@ -1599,12 +1599,12 @@ func (r *ModelRegistry) GetAvailableModelsByProvider(provider string) []*ModelIn
 	return result
 }
 
-// GetModelCount returns the number of available clients for a specific model
-// Parameters:
-//   - modelID: The model ID to check
+// GetModelCount 返回特定模型的可用客户端数量
+// 参数：
+//   - modelID：要检查的模型 ID
 //
-// Returns:
-//   - int: Number of available clients for the model
+// 返回：
+//   - int：该模型的可用客户端数量
 func (r *ModelRegistry) GetModelCount(modelID string) int {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -1612,7 +1612,7 @@ func (r *ModelRegistry) GetModelCount(modelID string) int {
 	if registration, exists := r.models[modelID]; exists {
 		now := time.Now()
 
-		// Count clients that have exceeded quota but haven't recovered yet
+		// 统计已额度超限但尚未恢复的客户端
 		expiredClients := 0
 		for _, quotaTime := range registration.QuotaExceededClients {
 			if quotaTime != nil && now.Sub(*quotaTime) < modelQuotaExceededWindow {
@@ -1635,12 +1635,12 @@ func (r *ModelRegistry) GetModelCount(modelID string) int {
 	return 0
 }
 
-// GetModelProviders returns provider identifiers that currently supply the given model
-// Parameters:
-//   - modelID: The model ID to check
+// GetModelProviders 返回当前提供给定模型的供应商标识
+// 参数：
+//   - modelID：要检查的模型 ID
 //
-// Returns:
-//   - []string: Provider identifiers ordered by availability count (descending)
+// 返回：
+//   - []string：按可用性计数降序排列的供应商标识
 func (r *ModelRegistry) GetModelProviders(modelID string) []string {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -1692,12 +1692,12 @@ func (r *ModelRegistry) GetModelProviders(modelID string) []string {
 	return result
 }
 
-// GetModelInfo returns ModelInfo, prioritizing provider-specific definition if available.
+// GetModelInfo 返回 ModelInfo，若存在供应商特定的定义则优先使用。
 func (r *ModelRegistry) GetModelInfo(modelID, provider string) *ModelInfo {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	if reg, ok := r.models[modelID]; ok && reg != nil {
-		// Try provider specific definition first
+		// 先尝试供应商特定的定义
 		if provider != "" && reg.InfoByProvider != nil {
 			if reg.Providers != nil {
 				if count, ok := reg.Providers[provider]; ok && count > 0 {
@@ -1707,13 +1707,13 @@ func (r *ModelRegistry) GetModelInfo(modelID, provider string) *ModelInfo {
 				}
 			}
 		}
-		// Fallback to global info (last registered)
+		// 回退到全局信息（最后注册的）
 		return cloneModelInfo(reg.Info)
 	}
 	return nil
 }
 
-// convertModelToMap converts ModelInfo to the appropriate format for different handler types
+// convertModelToMap 将 ModelInfo 转换为适合不同处理器类型的格式
 func (r *ModelRegistry) convertModelToMap(model *ModelInfo, handlerType string) map[string]any {
 	if model == nil {
 		return nil
@@ -1783,7 +1783,7 @@ func (r *ModelRegistry) convertModelToMap(model *ModelInfo, handlerType string) 
 		return result
 
 	default:
-		// Generic format
+		// 通用格式
 		result := map[string]any{
 			"id":     model.ID,
 			"object": "model",
@@ -1801,7 +1801,7 @@ func (r *ModelRegistry) convertModelToMap(model *ModelInfo, handlerType string) 
 	}
 }
 
-// CleanupExpiredQuotas removes expired quota tracking entries
+// CleanupExpiredQuotas 移除已过期的额度跟踪条目
 func (r *ModelRegistry) CleanupExpiredQuotas() {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -1823,27 +1823,27 @@ func (r *ModelRegistry) CleanupExpiredQuotas() {
 	}
 }
 
-// GetFirstAvailableModel returns the first available model for the given handler type.
-// It prioritizes models by their creation timestamp (newest first) and checks if they have
-// available clients that are not suspended or over quota.
+// GetFirstAvailableModel 返回给定处理器类型的第一个可用模型。
+// 它按创建时间戳（最新优先）对模型排序，并检查它们是否有
+// 未被挂起或未超额的可用客户端。
 //
-// Parameters:
-//   - handlerType: The API handler type (e.g., "openai", "claude")
+// 参数：
+//   - handlerType：API 处理器类型（例如 "openai"、"claude"）
 //
-// Returns:
-//   - string: The model ID of the first available model, or empty string if none available
-//   - error: An error if no models are available
+// 返回：
+//   - string：第一个可用模型的模型 ID；若无可用模型则为空字符串
+//   - error：无可用模型时返回的错误
 func (r *ModelRegistry) GetFirstAvailableModel(handlerType string) (string, error) {
 
-	// Get all available models for this handler type
+	// 获取该处理器类型的所有可用模型
 	models := r.GetAvailableModels(handlerType)
 	if len(models) == 0 {
 		return "", fmt.Errorf("no models available for handler type: %s", handlerType)
 	}
 
-	// Sort models by creation timestamp (newest first)
+	// 按创建时间戳对模型排序（最新优先）
 	sort.Slice(models, func(i, j int) bool {
-		// Extract created timestamps from map
+		// 从 map 中提取 created 时间戳
 		createdI, okI := models[i]["created"].(int64)
 		createdJ, okJ := models[j]["created"].(int64)
 		if !okI || !okJ {
@@ -1852,7 +1852,7 @@ func (r *ModelRegistry) GetFirstAvailableModel(handlerType string) (string, erro
 		return createdI > createdJ
 	})
 
-	// Find the first model with available clients
+	// 找到第一个具有可用客户端的模型
 	for _, model := range models {
 		if modelID, ok := model["id"].(string); ok {
 			if count := r.GetModelCount(modelID); count > 0 {
@@ -1864,7 +1864,7 @@ func (r *ModelRegistry) GetFirstAvailableModel(handlerType string) (string, erro
 	return "", fmt.Errorf("no available clients for any model in handler type: %s", handlerType)
 }
 
-// GetModelsAndEpochForClient atomically returns the models registered for clientID along with the client's current registration epoch.
+// GetModelsAndEpochForClient 原子地返回为 clientID 注册的模型以及该客户端当前的注册纪元。
 func (r *ModelRegistry) GetModelsAndEpochForClient(clientID string) ([]*ModelInfo, uint64) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -1879,7 +1879,7 @@ func (r *ModelRegistry) GetModelsAndEpochForClient(clientID string) ([]*ModelInf
 		return nil, epoch
 	}
 
-	// Try to use client-specific model infos first
+	// 先尝试使用客户端特定的模型信息
 	clientInfos := r.clientModelInfos[clientID]
 
 	seen := make(map[string]struct{})
@@ -1890,14 +1890,14 @@ func (r *ModelRegistry) GetModelsAndEpochForClient(clientID string) ([]*ModelInf
 		}
 		seen[modelID] = struct{}{}
 
-		// Prefer client's own model info to preserve original type/owned_by
+		// 优先使用客户端自身的模型信息，以保留原始的 type/owned_by
 		if clientInfos != nil {
 			if info, okInfo := clientInfos[modelID]; okInfo && info != nil {
 				result = append(result, cloneModelInfo(info))
 				continue
 			}
 		}
-		// Fallback to global registry (for backwards compatibility)
+		// 回退到全局注册表（为向后兼容）
 		if reg, okReg := r.models[modelID]; okReg && reg.Info != nil {
 			result = append(result, cloneModelInfo(reg.Info))
 		}
@@ -1905,7 +1905,7 @@ func (r *ModelRegistry) GetModelsAndEpochForClient(clientID string) ([]*ModelInf
 	return result, epoch
 }
 
-// ClientRegistrationEpoch returns the current registration epoch for clientID.
+// ClientRegistrationEpoch 返回 clientID 当前的注册纪元。
 func (r *ModelRegistry) ClientRegistrationEpoch(clientID string) uint64 {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -1915,12 +1915,12 @@ func (r *ModelRegistry) ClientRegistrationEpoch(clientID string) uint64 {
 	return r.clientEpochs[clientID]
 }
 
-// GetModelsForClient returns the models registered for a specific client.
-// Parameters:
-//   - clientID: The client identifier (typically auth file name or auth ID)
+// GetModelsForClient 返回为特定客户端注册的模型。
+// 参数：
+//   - clientID：客户端标识符（通常是凭据文件名或凭据 ID）
 //
-// Returns:
-//   - []*ModelInfo: List of models registered for this client, nil if client not found
+// 返回：
+//   - []*ModelInfo：为该客户端注册的模型列表；若客户端不存在则为 nil
 func (r *ModelRegistry) GetModelsForClient(clientID string) []*ModelInfo {
 	models, _ := r.GetModelsAndEpochForClient(clientID)
 	return models

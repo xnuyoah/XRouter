@@ -270,7 +270,7 @@ func TestWriteClaudeErrorResponse_IncludesRetryAfterForModelCooldownDefaultSetti
 
 	cooldownErr := coreauth.NewManager(nil, nil, nil)
 	_ = cooldownErr
-	// Create mock model cooldown error
+	// 创建模拟的模型冷却错误
 	msg := &interfaces.ErrorMessage{
 		StatusCode: http.StatusTooManyRequests,
 		Error:      coreauth.NewModelCooldownError("claude-sonnet-4-6", "claude", 20*time.Second),

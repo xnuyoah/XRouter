@@ -48,21 +48,21 @@ var registerPluginExecutors = func(host *pluginhost.Host, manager *coreauth.Mana
 	host.RegisterExecutors(manager, registry.GetGlobalRegistry())
 }
 
-// modelRegistrationTaskHook, if set, runs after auth-update commits and before
-// model registration workers start. Tests use it to prove registration no longer
-// holds authUpdateMu.
+// modelRegistrationTaskHook 若已设置，会在认证更新提交之后、
+// 模型注册工作协程启动之前运行。测试用它证明注册过程不再
+// 持有 authUpdateMu。
 var modelRegistrationTaskHook func()
 
-// modelRegistrationTaskPostRunHook, if set, runs synchronously inside model registration
-// tasks after completeModelRegistrationForAuthWithCache completes. Tests use it to inject
-// concurrent auth updates before batch registration finishes.
+// modelRegistrationTaskPostRunHook 若已设置，会在模型注册任务内部同步运行，
+// 时机是 completeModelRegistrationForAuthWithCache 完成之后。测试用它注入
+// 批量注册完成前的并发认证更新。
 var modelRegistrationTaskPostRunHook func(authID string)
 
-// RegisterUsagePlugin registers a usage plugin on the global usage manager.
-// This allows external code to monitor API usage and token consumption.
+// RegisterUsagePlugin 在全局用量管理器上注册用量插件。
+// 这允许外部代码监控 API 用量与 token 消耗。
 //
-// Parameters:
-//   - plugin: The usage plugin to register
+// 参数：
+//   - plugin: 要注册的用量插件
 func (s *Service) RegisterUsagePlugin(plugin usage.Plugin) {
 	usage.RegisterPlugin(plugin)
 }
@@ -167,8 +167,8 @@ func (s *Service) refreshPluginModelRegistrations(ctx context.Context) {
 	if s == nil || s.pluginHost == nil || s.coreManager == nil {
 		return
 	}
-	// Native capability probes publish and refresh their scheduler entries
-	// asynchronously; startup and config updates must not wait for network I/O.
+	// 原生能力探测会异步地发布并刷新其调度器条目；
+	// 启动与配置更新绝不能等待网络 I/O。
 	s.registerModelsForAuthBatch(ctx, s.coreManager.List())
 }
 

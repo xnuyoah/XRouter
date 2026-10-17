@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/encoding/protowire"
 )
 
-// Generate the envelope at test time; no captured signature files are needed.
+// 在测试时生成信封；无需抓取到的签名文件。
 func antigravityCAQSFixture(t *testing.T) string {
 	t.Helper()
 	return signaturetest.AntigravityCAQS()
@@ -57,7 +57,7 @@ func TestAntigravityCAQSRejectsMalformedWrappers(t *testing.T) {
 	wrongVersion := append([]byte(nil), raw...)
 	wrongVersion[1] = 2
 	wrongInfra := append([]byte(nil), raw...)
-	// Locate the channel infrastructure field without touching the ciphertext.
+	// 定位通道基础设施字段而不触碰密文。
 	index := strings.Index(string(wrongInfra), string([]byte{8, 18, 16, 2, 24, 2}))
 	if index < 0 {
 		t.Fatal("fixture channel missing")
@@ -69,7 +69,7 @@ func TestAntigravityCAQSRejectsMalformedWrappers(t *testing.T) {
 	futureVersion[1] = 5
 	wrongChannel := append([]byte(nil), raw...)
 	wrongChannel[index+1] = 16
-	// Build an otherwise valid CAQS with its signature in the old channel slot.
+	// 构建一个其他方面有效、但签名位于旧通道槽位的 CAQS。
 	misplaced := defaultClaudeCAISParts("claude-opus-5-5")
 	misplaced.topEnvelope = 4
 	misplaced.channelID = 18
@@ -83,7 +83,7 @@ func TestAntigravityCAQSRejectsMalformedWrappers(t *testing.T) {
 	misplacedPayload := []byte{8, 4}
 	misplacedPayload = protowire.AppendTag(misplacedPayload, 2, protowire.BytesType)
 	misplacedPayload = protowire.AppendBytes(misplacedPayload, newContainer)
-	// Add a harmless unknown varint to make the inner encoding padded.
+	// 添加一个无害的未知 varint，使内层编码带填充。
 	paddedPayload := append(append([]byte(nil), raw...), 32, 0)
 	badPadding := []byte(base64.StdEncoding.EncodeToString(paddedPayload))
 	alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"

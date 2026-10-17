@@ -13,7 +13,7 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// schedulerStrategy identifies which built-in routing semantics the scheduler should apply.
+// schedulerStrategy 标识调度器应应用哪种内置路由语义。
 type schedulerStrategy int
 
 const (
@@ -24,7 +24,7 @@ const (
 	schedulerStrategyWeightedRoundRobin schedulerStrategy = 3
 )
 
-// scheduledState describes how an auth currently participates in a model shard.
+// scheduledState 描述某个 auth 当前如何参与某个模型分片。
 type scheduledState int
 
 const (
@@ -34,14 +34,14 @@ const (
 	scheduledStateDisabled
 )
 
-// scheduledGenerationMeta records the latest generation and timestamp processed for an auth ID.
+// scheduledGenerationMeta 记录某个 auth ID 已处理的最新 generation 和时间戳。
 type scheduledGenerationMeta struct {
 	epoch      uint64
 	generation uint64
 	updatedAt  time.Time
 }
 
-// authScheduler keeps the incremental provider/model scheduling state used by Manager.
+// authScheduler 保存 Manager 所使用的增量式供应商/模型调度状态。
 type authScheduler struct {
 	mu                  sync.Mutex
 	strategy            schedulerStrategy
@@ -52,14 +52,14 @@ type authScheduler struct {
 	mixedWeightedStates map[string]*smoothWeightedState
 }
 
-// providerScheduler stores auth metadata and model shards for a single provider.
+// providerScheduler 保存单个供应商的 auth 元数据和模型分片。
 type providerScheduler struct {
 	providerKey string
 	auths       map[string]*scheduledAuthMeta
 	modelShards map[string]*modelScheduler
 }
 
-// scheduledAuthMeta stores the immutable scheduling fields derived from an auth snapshot.
+// scheduledAuthMeta 保存由 auth 快照派生出的不可变调度字段。
 type scheduledAuthMeta struct {
 	auth              *Auth
 	providerKey       string
@@ -70,7 +70,7 @@ type scheduledAuthMeta struct {
 	registryEpoch     uint64
 }
 
-// modelScheduler tracks ready and blocked auths for one provider/model combination.
+// modelScheduler 跟踪某个供应商/模型组合下就绪和被阻止的 auth。
 type modelScheduler struct {
 	modelKey        string
 	entries         map[string]*scheduledAuth
@@ -79,7 +79,7 @@ type modelScheduler struct {
 	blocked         cooldownQueue
 }
 
-// scheduledAuth stores the runtime scheduling state for a single auth inside a model shard.
+// scheduledAuth 保存模型分片内单个 auth 的运行时调度状态。
 type scheduledAuth struct {
 	meta        *scheduledAuthMeta
 	auth        *Auth
@@ -87,20 +87,20 @@ type scheduledAuth struct {
 	nextRetryAt time.Time
 }
 
-// readyBucket keeps the ready views for one priority level.
+// readyBucket 保存单个优先级级别的就绪视图。
 type readyBucket struct {
 	all readyView
 	ws  readyView
 }
 
-// readyView holds the selection order for flat round-robin traversal.
+// readyView 保存扁平轮询遍历的选择顺序。
 type readyView struct {
 	flat          []*scheduledAuth
 	lastPicked    string
 	weightedState smoothWeightedState
 }
 
-// cooldownQueue is the blocked auth collection ordered by next retry time during rebuilds.
+// cooldownQueue 是按重建期间的下次重试时间排序的被阻止 auth 集合。
 type cooldownQueue []*scheduledAuth
 
 type readyViewCursorState struct {
@@ -151,7 +151,7 @@ func restoreReadyViewCursors(view *readyView, state readyViewCursorState) {
 	view.weightedState.weights = weights
 }
 
-// newAuthScheduler constructs an empty scheduler configured for the supplied selector strategy.
+// newAuthScheduler 构造一个按所给选择器策略配置的空调度器。
 func newAuthScheduler(selector Selector) *authScheduler {
 	return &authScheduler{
 		strategy:            selectorStrategy(selector),
@@ -163,7 +163,7 @@ func newAuthScheduler(selector Selector) *authScheduler {
 	}
 }
 
-// selectorStrategy maps a selector implementation to the scheduler semantics it should emulate.
+// selectorStrategy 把选择器实现映射到它应模拟的调度语义。
 func selectorStrategy(selector Selector) schedulerStrategy {
 	switch selector.(type) {
 	case *FillFirstSelector:
@@ -177,7 +177,7 @@ func selectorStrategy(selector Selector) schedulerStrategy {
 	}
 }
 
-// setSelector updates the active built-in strategy and resets mixed-provider cursors.
+// setSelector 更新当前生效的内置策略并重置混合供应商游标。
 func (s *authScheduler) setSelector(selector Selector) {
 	if s == nil {
 		return
@@ -189,8 +189,8 @@ func (s *authScheduler) setSelector(selector Selector) {
 	clear(s.mixedWeightedStates)
 }
 
-// isSchedulableAuth determines whether an auth can be scheduled by a provider scheduler,
-// returning its normalized ID and providerKey.
+// isSchedulableAuth 判断某个 auth 能否被供应商调度器调度，
+// 并返回其规范化后的 ID 和 providerKey。
 func isSchedulableAuth(auth *Auth) (string, string, bool) {
 	if auth == nil || auth.Disabled || auth.Status == StatusDisabled {
 		return "", "", false
@@ -206,8 +206,8 @@ func isSchedulableAuth(auth *Auth) (string, string, bool) {
 	return authID, providerKey, true
 }
 
-// needsSyncFromMap reports whether the scheduler state is missing auths or has outdated metadata/epochs,
-// reading directly from an in-memory auth map without cloning auth instances.
+// needsSyncFromMap 报告调度器状态是否缺少 auth 或元数据/epoch 已过期，
+// 它直接读取内存中的 auth map，而不克隆 auth 实例。
 func (s *authScheduler) needsSyncFromMap(auths map[string]*Auth) bool {
 	if s == nil {
 		return false
@@ -269,7 +269,7 @@ func (s *authScheduler) needsSyncFromMapLocked(auths map[string]*Auth) bool {
 	return false
 }
 
-// rebuild recreates the complete scheduler state from an auth snapshot.
+// rebuild 根据 auth 快照重建完整的调度器状态。
 func (s *authScheduler) rebuild(auths []*Auth) {
 	if s == nil {
 		return
@@ -277,8 +277,8 @@ func (s *authScheduler) rebuild(auths []*Auth) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Capture existing auth metadata so that in-flight MarkResult updates (which advanced
-	// Generation and updated cooldown/quota states) are preserved during rebuild.
+	// 捕获已有的 auth 元数据，以便重建期间保留进行中的 MarkResult 更新
+	// （这些更新推进了 Generation 并更新了冷却/额度状态）。
 	existingMetas := make(map[string]*scheduledAuthMeta)
 	for _, pState := range s.providers {
 		if pState == nil {
@@ -304,7 +304,7 @@ func (s *authScheduler) rebuild(auths []*Auth) {
 	}
 }
 
-// upsertAuth incrementally synchronizes one auth into the scheduler (lifecycle/update).
+// upsertAuth 将单个 auth 增量同步到调度器（生命周期/更新）。
 func (s *authScheduler) upsertAuth(auth *Auth) {
 	if s == nil {
 		return
@@ -314,9 +314,9 @@ func (s *authScheduler) upsertAuth(auth *Auth) {
 	s.upsertAuthLifecycleLocked(auth, time.Now())
 }
 
-// upsertAuthResult updates scheduler state after a request result.
-// It reuses cached supported models when available, and targets specific model shards
-// unless the result is credential-scoped, the auth became unavailable, or no target models are given.
+// upsertAuthResult 在请求结果之后更新调度器状态。
+// 它会在可用时复用缓存的支持模型，并针对特定的模型分片，
+// 除非结果的作用域是整个凭据、auth 变为不可用，或未给出目标模型。
 func (s *authScheduler) upsertAuthResult(auth *Auth, targetModels []string, credentialScoped bool) {
 	if s == nil {
 		return
@@ -326,7 +326,7 @@ func (s *authScheduler) upsertAuthResult(auth *Auth, targetModels []string, cred
 	s.upsertAuthResultLocked(auth, targetModels, credentialScoped, time.Now())
 }
 
-// RecordRemovalTombstone records a removal tombstone with the specified epoch and cleans up provider shards.
+// RecordRemovalTombstone 记录带有指定 epoch 的移除墓碑，并清理供应商分片。
 func (s *authScheduler) RecordRemovalTombstone(authID string, tombstoneEpoch uint64) {
 	if s == nil {
 		return
@@ -359,7 +359,7 @@ func (s *authScheduler) recordRemovalTombstoneLocked(authID string, tombstoneEpo
 	s.removeAuthFromProvidersLocked(authID)
 }
 
-// removeAuth deletes one auth from every scheduler shard that references it.
+// removeAuth 从所有引用了该 auth 的调度器分片中删除它。
 func (s *authScheduler) removeAuth(authID string) {
 	if s == nil {
 		return
@@ -373,7 +373,7 @@ func (s *authScheduler) removeAuth(authID string) {
 	s.removeAuthLocked(authID)
 }
 
-// ResetAuthGeneration clears recorded generation/tombstone metadata for authID.
+// ResetAuthGeneration 清除为 authID 记录的 generation/墓碑元数据。
 func (s *authScheduler) ResetAuthGeneration(authID string) {
 	if s == nil {
 		return
@@ -393,7 +393,7 @@ func (s *authScheduler) resetAuthGenerationLocked(authID string) {
 	}
 }
 
-// pickSingle returns the next auth for a single provider/model request using scheduler state.
+// pickSingle 使用调度器状态为单个供应商/模型请求返回下一个 auth。
 func (s *authScheduler) pickSingle(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, tried map[string]struct{}) (*Auth, error) {
 	return s.pickSingleWithStrategy(ctx, provider, model, opts, tried, schedulerStrategyCurrent)
 }
@@ -437,7 +437,7 @@ func providerPrefersWebsocketTransport(providerKey string) bool {
 	}
 }
 
-// pickMixed returns the next auth and provider for a mixed-provider request.
+// pickMixed 为混合供应商请求返回下一个 auth 和供应商。
 func (s *authScheduler) pickMixed(ctx context.Context, providers []string, model string, opts cliproxyexecutor.Options, tried map[string]struct{}) (*Auth, string, error) {
 	return s.pickMixedWithStrategy(ctx, providers, model, opts, tried, schedulerStrategyCurrent)
 }
@@ -451,8 +451,8 @@ func (s *authScheduler) pickMixedWithStrategy(ctx context.Context, providers []s
 		return nil, "", &Error{Code: "provider_not_found", Message: "no provider supplied"}
 	}
 	if len(normalized) == 1 {
-		// When a single provider is eligible, reuse pickSingle so provider-specific preferences
-		// (for example Codex websocket transport) are applied consistently.
+		// 当只有一个供应商符合条件时，复用 pickSingle，以便供应商特定的偏好
+		// （例如 Codex websocket 传输）被一致地应用。
 		providerKey := normalized[0]
 		picked, errPick := s.pickSingleWithStrategy(ctx, providerKey, model, opts, tried, strategy)
 		if errPick != nil {
@@ -623,7 +623,7 @@ func (s *authScheduler) pickMixedWithStrategy(ctx context.Context, providers []s
 	return nil, "", s.mixedUnavailableErrorLocked(normalized, model, predicate)
 }
 
-// mixedUnavailableErrorLocked synthesizes the mixed-provider cooldown or unavailable error.
+// mixedUnavailableErrorLocked 合成混合供应商的冷却或不可用错误。
 func (s *authScheduler) mixedUnavailableErrorLocked(providers []string, model string, predicate func(*scheduledAuth) bool) error {
 	now := time.Now()
 	total := 0
@@ -704,7 +704,7 @@ func (s *authScheduler) mixedUnavailableErrorLocked(providers []string, model st
 	return newAuthUnavailableErrorWithCause(earliest, now, lastCandidateErr)
 }
 
-// scheduledAuthPredicate filters request-ineligible auths before scheduler state advances.
+// scheduledAuthPredicate 在调度器状态推进之前过滤掉不符合请求条件的 auth。
 func scheduledAuthPredicate(eligibility authSelectionEligibility, tried map[string]struct{}, pinnedAuthID string, requirePositiveWeight bool) func(*scheduledAuth) bool {
 	return func(entry *scheduledAuth) bool {
 		if entry == nil || entry.auth == nil || !eligibility.allows(entry.auth) {
@@ -725,7 +725,7 @@ func scheduledAuthPredicate(eligibility authSelectionEligibility, tried map[stri
 	}
 }
 
-// normalizeProviderKeys lowercases, trims, and de-duplicates provider keys while preserving order.
+// normalizeProviderKeys 对供应商标识做小写化、去空白和去重，同时保持顺序。
 func normalizeProviderKeys(providers []string) []string {
 	seen := make(map[string]struct{}, len(providers))
 	out := make([]string, 0, len(providers))
@@ -743,7 +743,7 @@ func normalizeProviderKeys(providers []string) []string {
 	return out
 }
 
-// containsProvider reports whether provider is present in the normalized provider list.
+// containsProvider 报告 provider 是否存在于规范化后的供应商列表中。
 func containsProvider(providers []string, provider string) bool {
 	for _, candidate := range providers {
 		if candidate == provider {
@@ -773,16 +773,16 @@ func (s *authScheduler) isStaleScheduledAuth(authID string, incomingEpoch, incom
 	return false
 }
 
-// upsertAuthLocked updates one auth in-place while the scheduler mutex is held.
+// upsertAuthLocked 在持有调度器互斥锁时就地更新单个 auth。
 func (s *authScheduler) upsertAuthLocked(auth *Auth, now time.Time) {
 	s.upsertAuthLifecycleLocked(auth, now)
 }
 
-// upsertAuthRebuildLocked inserts an auth during a scheduler rebuild.
-// It respects removal tombstones (existing.epoch > incomingEpoch), but does not drop
-// an active credential simply because an in-flight MarkResult advanced its Generation.
-// When existing scheduler state contains a newer Generation than the rebuild snapshot,
-// the newer auth state (including updated cooldown/quota/error states) is preserved.
+// upsertAuthRebuildLocked 在调度器重建期间插入一个 auth。
+// 它尊重移除墓碑（existing.epoch > incomingEpoch），但不会仅因为
+// 进行中的 MarkResult 推进了其 Generation 就丢弃一个活跃凭据。
+// 当现有调度器状态包含比重建快照更新的 Generation 时，
+// 会保留更新的 auth 状态（包括已更新的冷却/额度/错误状态）。
 func (s *authScheduler) upsertAuthRebuildLocked(auth *Auth, existingMetas map[string]*scheduledAuthMeta, now time.Time) {
 	if auth == nil {
 		return
@@ -803,7 +803,7 @@ func (s *authScheduler) upsertAuthRebuildLocked(auth *Auth, existingMetas map[st
 	if existing, ok := s.authGenerations[authID]; ok && existing.epoch == auth.RegistrationEpoch && existing.generation > auth.Generation {
 		existingMeta := existingMetas[authID]
 		if existingMeta == nil || existingMeta.auth == nil || existingMeta.auth.Disabled || existingMeta.auth.Status == StatusDisabled {
-			// Newer state disabled or removed the auth from providers; do not resurrect with old enabled snapshot.
+			// 较新的状态已禁用该 auth 或将其从供应商中移除；不要用旧的已启用快照将其复活。
 			return
 		}
 		authToSchedule = existingMeta.auth
@@ -844,8 +844,8 @@ func (s *authScheduler) upsertAuthRebuildLocked(auth *Auth, existingMetas map[st
 	providerState.upsertAuthForModelsLocked(meta, nil, true, now)
 }
 
-// upsertAuthLifecycleLocked updates one auth in-place during lifecycle events (Register/Update/Rebuild),
-// refreshing registered models and updating all shards.
+// upsertAuthLifecycleLocked 在生命周期事件（Register/Update/Rebuild）期间就地更新单个 auth，
+// 刷新已注册模型并更新所有分片。
 func (s *authScheduler) upsertAuthLifecycleLocked(auth *Auth, now time.Time) {
 	if auth == nil {
 		return
@@ -883,7 +883,7 @@ func (s *authScheduler) upsertAuthLifecycleLocked(auth *Auth, now time.Time) {
 	providerState.upsertAuthForModelsLocked(meta, nil, true, now)
 }
 
-// isCredentialBlocked reports whether an auth is blocked at the credential level (affecting all models).
+// isCredentialBlocked 报告某个 auth 是否在凭据级别被阻止（影响所有模型）。
 func isCredentialBlocked(auth *Auth, supportedModelCount int, now time.Time) bool {
 	if auth == nil {
 		return true
@@ -903,8 +903,8 @@ func isCredentialBlocked(auth *Auth, supportedModelCount int, now time.Time) boo
 	return auth.Unavailable
 }
 
-// upsertAuthResultLocked updates one auth in-place after a request execution result,
-// reusing cached supported models and targeting specified shards.
+// upsertAuthResultLocked 在请求执行结果之后就地更新单个 auth，
+// 复用缓存的支持模型并针对指定分片。
 func (s *authScheduler) upsertAuthResultLocked(auth *Auth, targetModels []string, credentialScoped bool, now time.Time) {
 	if auth == nil {
 		return
@@ -916,12 +916,12 @@ func (s *authScheduler) upsertAuthResultLocked(auth *Auth, targetModels []string
 
 	providerKey := executorKeyFromAuth(auth)
 
-	// Staleness must be checked before any mutation or removal to prevent an expired snapshot
-	// from removing a newer re-enabled credential.
+	// 必须在任何变更或移除之前做陈旧性检查，以防止过期快照
+	// 移除较新的、已重新启用的凭据。
 	if s.isStaleScheduledAuth(authID, auth.RegistrationEpoch, auth.Generation, auth.UpdatedAt) {
-		// Even if the incoming snapshot generation is older than what was already scheduled
-		// (e.g. out-of-order completion across different models), ensure the result scope
-		// (targeted shards or all shards for credential-scoped results) is updated using the latest recorded state.
+		// 即使传入快照的 generation 比已调度的更旧（例如不同模型之间
+		// 乱序完成），也要确保使用最新记录的状态来更新结果作用域
+		// （定向分片，或凭据级结果的全部）。
 		if providerKey != "" {
 			if providerState := s.providers[providerKey]; providerState != nil {
 				if latestMeta := providerState.auths[authID]; latestMeta != nil {
@@ -963,8 +963,8 @@ func (s *authScheduler) upsertAuthResultLocked(auth *Auth, targetModels []string
 	meta := buildScheduledAuthMetaWithModelSet(auth, modelSet, currentRegEpoch)
 	s.authProviders[authID] = providerKey
 
-	// Check whether credential-level availability transitioned between blocked and unblocked.
-	// If credential-level availability changed, all model shards must be synchronized.
+	// 检查凭据级可用性是否在被阻止与未阻止之间发生了转换。
+	// 如果凭据级可用性发生变化，则必须同步所有模型分片。
 	modelCount := len(modelSet)
 	wasBlocked := false
 	if existingMeta != nil {
@@ -974,8 +974,8 @@ func (s *authScheduler) upsertAuthResultLocked(auth *Auth, targetModels []string
 	credentialAvailabilityChanged := wasBlocked != isBlocked
 
 	if modelSetChanged || credentialScoped || credentialAvailabilityChanged || len(targetModels) == 0 {
-		// Synchronize all shards when model sets change, when failures are credential-scoped,
-		// or when credential-level availability transitioned.
+		// 当模型集合变化、失败属于凭据级，或凭据级可用性发生转换时，
+		// 同步所有分片。
 		providerState.upsertAuthForModelsLocked(meta, nil, true, now)
 	} else {
 		providerState.upsertAuthForModelsLocked(meta, targetModels, credentialScoped, now)
@@ -991,7 +991,7 @@ func (s *authScheduler) removeAuthFromProvidersLocked(authID string) {
 	}
 }
 
-// removeAuthLocked removes one auth from the scheduler while the scheduler mutex is held.
+// removeAuthLocked 在持有调度器互斥锁时从调度器中移除单个 auth。
 func (s *authScheduler) removeAuthLocked(authID string) {
 	if authID == "" {
 		return
@@ -1012,7 +1012,7 @@ func (s *authScheduler) removeAuthLocked(authID string) {
 	s.removeAuthFromProvidersLocked(authID)
 }
 
-// ensureProviderLocked returns the provider scheduler for providerKey, creating it when needed.
+// ensureProviderLocked 返回 providerKey 的供应商调度器，必要时创建它。
 func (s *authScheduler) ensureProviderLocked(providerKey string) *providerScheduler {
 	if s.providers == nil {
 		s.providers = make(map[string]*providerScheduler)
@@ -1029,7 +1029,7 @@ func (s *authScheduler) ensureProviderLocked(providerKey string) *providerSchedu
 	return providerState
 }
 
-// buildScheduledAuthMeta extracts the scheduling metadata needed for shard bookkeeping.
+// buildScheduledAuthMeta 提取分片簿记所需的调度元数据。
 func buildScheduledAuthMeta(auth *Auth) *scheduledAuthMeta {
 	var authID string
 	if auth != nil {
@@ -1056,7 +1056,7 @@ func buildScheduledAuthMetaWithModelSet(auth *Auth, modelSet map[string]struct{}
 	}
 }
 
-// supportedModelSetForAuth snapshots the registry models currently registered for an auth.
+// supportedModelSetForAuth 快照当前为某个 auth 注册的注册表模型。
 func supportedModelSetForAuth(authID string) map[string]struct{} {
 	authID = strings.TrimSpace(authID)
 	if authID == "" {
@@ -1080,12 +1080,12 @@ func supportedModelSetForAuth(authID string) map[string]struct{} {
 	return set
 }
 
-// upsertAuthLocked updates every existing model shard that can reference the auth metadata.
+// upsertAuthLocked 更新所有可能引用该 auth 元数据的现有模型分片。
 func (p *providerScheduler) upsertAuthLocked(meta *scheduledAuthMeta, now time.Time) {
 	p.upsertAuthForModelsLocked(meta, nil, true, now)
 }
 
-// upsertAuthForModelsLocked updates one auth entry in specified model shards or all shards.
+// upsertAuthForModelsLocked 在指定模型分片或全部分片中更新一个 auth 条目。
 func (p *providerScheduler) upsertAuthForModelsLocked(meta *scheduledAuthMeta, targetModels []string, credentialScoped bool, now time.Time) {
 	if p == nil || meta == nil || meta.auth == nil {
 		return
@@ -1108,12 +1108,12 @@ func (p *providerScheduler) upsertAuthForModelsLocked(meta *scheduledAuthMeta, t
 	p.updateTargetShardsLocked(meta, targetModels, now)
 }
 
-// updateTargetShardsLocked updates entries for meta in targeted model shards, and in the empty-model shard if present.
+// updateTargetShardsLocked 在目标模型分片以及（若存在的）空模型分片中更新 meta 的条目。
 func (p *providerScheduler) updateTargetShardsLocked(meta *scheduledAuthMeta, targetModels []string, now time.Time) {
 	if p == nil || meta == nil || meta.auth == nil {
 		return
 	}
-	// Always maintain empty-model shard ("") if it exists, since it reflects credential-level availability.
+	// 始终维护空模型分片（""）（如果存在），因为它反映凭据级可用性。
 	if emptyShard := p.modelShards[""]; emptyShard != nil {
 		if !meta.supportsModel("") {
 			emptyShard.removeEntryLocked(meta.auth.ID)
@@ -1142,7 +1142,7 @@ func (p *providerScheduler) updateTargetShardsLocked(meta *scheduledAuthMeta, ta
 	}
 }
 
-// removeAuthLocked removes an auth from all model shards owned by the provider scheduler.
+// removeAuthLocked 从该供应商调度器拥有的所有模型分片中移除某个 auth。
 func (p *providerScheduler) removeAuthLocked(authID string) {
 	if p == nil || authID == "" {
 		return
@@ -1155,7 +1155,7 @@ func (p *providerScheduler) removeAuthLocked(authID string) {
 	}
 }
 
-// ensureModelLocked returns the shard for modelKey, building it lazily from provider auths.
+// ensureModelLocked 返回 modelKey 的分片，从供应商 auth 中惰性构建。
 func (p *providerScheduler) ensureModelLocked(modelKey string, now time.Time) *modelScheduler {
 	if p == nil {
 		return nil
@@ -1180,7 +1180,7 @@ func (p *providerScheduler) ensureModelLocked(modelKey string, now time.Time) *m
 	return shard
 }
 
-// supportsModel reports whether the auth metadata currently supports modelKey.
+// supportsModel 报告该 auth 元数据当前是否支持 modelKey。
 func (m *scheduledAuthMeta) supportsModel(modelKey string) bool {
 	modelKey = canonicalModelKey(modelKey)
 	if modelKey == "" {
@@ -1193,7 +1193,7 @@ func (m *scheduledAuthMeta) supportsModel(modelKey string) bool {
 	return ok
 }
 
-// upsertEntryLocked updates or inserts one auth entry and rebuilds indexes when ordering changes.
+// upsertEntryLocked 更新或插入一个 auth 条目，并在排序变化时重建索引。
 func (m *modelScheduler) upsertEntryLocked(meta *scheduledAuthMeta, now time.Time) {
 	if m == nil || meta == nil || meta.auth == nil {
 		return
@@ -1235,7 +1235,7 @@ func (m *modelScheduler) upsertEntryLocked(meta *scheduledAuthMeta, now time.Tim
 	m.rebuildIndexesLocked()
 }
 
-// removeEntryLocked deletes one auth entry and rebuilds the shard indexes if needed.
+// removeEntryLocked 删除一个 auth 条目，必要时重建分片索引。
 func (m *modelScheduler) removeEntryLocked(authID string) {
 	if m == nil || authID == "" {
 		return
@@ -1247,7 +1247,7 @@ func (m *modelScheduler) removeEntryLocked(authID string) {
 	m.rebuildIndexesLocked()
 }
 
-// demoteExpiredTokensLocked checks ready auths and demotes any whose access token has expired.
+// demoteExpiredTokensLocked 检查就绪的 auth，并降级任何访问令牌已过期的 auth。
 func (m *modelScheduler) demoteExpiredTokensLocked(now time.Time) bool {
 	if m == nil || len(m.entries) == 0 {
 		return false
@@ -1278,8 +1278,8 @@ func (m *modelScheduler) demoteExpiredTokensLocked(now time.Time) bool {
 	return changed
 }
 
-// promoteExpiredLocked reevaluates blocked auths whose retry time has elapsed
-// and demotes ready auths whose access token has expired.
+// promoteExpiredLocked 重新评估重试时间已过的被阻止 auth，
+// 并降级访问令牌已过期的就绪 auth。
 func (m *modelScheduler) promoteExpiredLocked(now time.Time) {
 	if m == nil {
 		return
@@ -1314,7 +1314,7 @@ func (m *modelScheduler) promoteExpiredLocked(now time.Time) {
 	}
 }
 
-// pickReadyLocked selects the next ready auth from the highest available priority bucket.
+// pickReadyLocked 从可用的最高优先级桶中选择下一个就绪 auth。
 func (m *modelScheduler) pickReadyLocked(preferWebsocket bool, strategy schedulerStrategy, predicate func(*scheduledAuth) bool) *Auth {
 	if m == nil {
 		return nil
@@ -1327,15 +1327,15 @@ func (m *modelScheduler) pickReadyLocked(preferWebsocket bool, strategy schedule
 	return m.pickReadyAtPriorityLocked(preferWebsocket, priorityReady, strategy, predicate)
 }
 
-// highestReadyPriorityLocked returns the highest priority bucket that still has a matching ready auth.
-// The caller must ensure expired entries are already promoted when needed.
+// highestReadyPriorityLocked 返回仍有匹配就绪 auth 的最高优先级桶。
+// 调用方必须确保在需要时过期条目已被提升。
 func (m *modelScheduler) highestReadyPriorityLocked(preferWebsocket bool, predicate func(*scheduledAuth) bool) (int, bool) {
 	if m == nil {
 		return 0, false
 	}
 	if preferWebsocket {
-		// When downstream is websocket and Codex supports websocket transport, prefer websocket-enabled
-		// credentials even if they are in a lower priority tier than HTTP-only credentials.
+		// 当下游是 websocket 且 Codex 支持 websocket 传输时，优先选择启用 websocket 的
+		// 凭据，即使它们处于比仅 HTTP 凭据更低的优先级层级。
 		for _, priority := range m.priorityOrder {
 			bucket := m.readyByPriority[priority]
 			if bucket == nil {
@@ -1358,8 +1358,8 @@ func (m *modelScheduler) highestReadyPriorityLocked(preferWebsocket bool, predic
 	return 0, false
 }
 
-// pickReadyAtPriorityLocked selects the next ready auth from a specific priority bucket.
-// The caller must ensure expired entries are already promoted when needed.
+// pickReadyAtPriorityLocked 从特定优先级桶中选择下一个就绪 auth。
+// 调用方必须确保在需要时过期条目已被提升。
 func (m *modelScheduler) pickReadyAtPriorityLocked(preferWebsocket bool, priority int, strategy schedulerStrategy, predicate func(*scheduledAuth) bool) *Auth {
 	if m == nil {
 		return nil
@@ -1408,7 +1408,7 @@ func (m *modelScheduler) readyCountAtPriorityLocked(preferWebsocket bool, priori
 	return count
 }
 
-// unavailableErrorLocked returns the correct unavailable or cooldown error for the shard.
+// unavailableErrorLocked 为该分片返回正确的不可用或冷却错误。
 func (m *modelScheduler) unavailableErrorLocked(provider, model string, predicate func(*scheduledAuth) bool) error {
 	now := time.Now()
 	total, cooldownCount, unauthorizedCount, earliest := m.availabilitySummaryLocked(predicate)
@@ -1521,7 +1521,7 @@ func (m *modelScheduler) candidateErrorsLocked(model string, predicate func(*sch
 	return modelErr, modelTime, modelAuthID, authErr, authTime, authAuthID
 }
 
-// availabilitySummaryLocked summarizes total candidates, cooldown count, and earliest retry time.
+// availabilitySummaryLocked 汇总候选总数、冷却数量和最早重试时间。
 func (m *modelScheduler) availabilitySummaryLocked(predicate func(*scheduledAuth) bool) (int, int, int, time.Time) {
 	if m == nil {
 		return 0, 0, 0, time.Time{}
@@ -1551,7 +1551,7 @@ func (m *modelScheduler) availabilitySummaryLocked(predicate func(*scheduledAuth
 	return total, cooldownCount, unauthorizedCount, earliest
 }
 
-// rebuildIndexesLocked reconstructs ready and blocked views from the current entry map.
+// rebuildIndexesLocked 根据当前条目 map 重建就绪和已阻止视图。
 func (m *modelScheduler) rebuildIndexesLocked() {
 	cursorStates := make(map[int]readyBucketCursorState, len(m.readyByPriority))
 	for priority, bucket := range m.readyByPriority {
@@ -1614,7 +1614,7 @@ func (m *modelScheduler) rebuildIndexesLocked() {
 	})
 }
 
-// buildReadyBucket prepares the general and websocket-only ready views for one priority bucket.
+// buildReadyBucket 为单个优先级桶准备通用视图和仅 websocket 的就绪视图。
 func buildReadyBucket(entries []*scheduledAuth) *readyBucket {
 	bucket := &readyBucket{}
 	bucket.all = buildReadyView(entries)
@@ -1628,12 +1628,12 @@ func buildReadyBucket(entries []*scheduledAuth) *readyBucket {
 	return bucket
 }
 
-// buildReadyView creates a flat view for rotation.
+// buildReadyView 创建一个用于轮转的扁平视图。
 func buildReadyView(entries []*scheduledAuth) readyView {
 	return readyView{flat: append([]*scheduledAuth(nil), entries...)}
 }
 
-// pickFirst returns the first ready entry that satisfies predicate without advancing cursors.
+// pickFirst 返回第一个满足 predicate 的就绪条目，且不推进游标。
 func (v *readyView) pickFirst(predicate func(*scheduledAuth) bool) *scheduledAuth {
 	for _, entry := range v.flat {
 		if predicate == nil || predicate(entry) {
@@ -1643,7 +1643,7 @@ func (v *readyView) pickFirst(predicate func(*scheduledAuth) bool) *scheduledAut
 	return nil
 }
 
-// pickRoundRobin returns the next ready entry using flat round-robin traversal.
+// pickRoundRobin 使用扁平轮询遍历返回下一个就绪条目。
 func (v *readyView) pickRoundRobin(predicate func(*scheduledAuth) bool) *scheduledAuth {
 	if len(v.flat) == 0 {
 		return nil
@@ -1664,8 +1664,8 @@ func (v *readyView) pickRoundRobin(predicate func(*scheduledAuth) bool) *schedul
 	return nil
 }
 
-// scheduledSuccessorIndex returns the index of the first scheduled candidate ordered after
-// lastID, wrapping to the start of the ring. Candidates in readyView arrive sorted by auth ID.
+// scheduledSuccessorIndex 返回排在 lastID 之后的第一个已调度候选的索引，
+// 并回绕到环的起点。readyView 中的候选按 auth ID 排序传入。
 func scheduledSuccessorIndex(entries []*scheduledAuth, lastID string) int {
 	if lastID == "" {
 		return 0
@@ -1679,7 +1679,7 @@ func scheduledSuccessorIndex(entries []*scheduledAuth, lastID string) int {
 	return index
 }
 
-// pickWeighted returns the next ready entry using smooth weighted round-robin.
+// pickWeighted 使用平滑加权轮询返回下一个就绪条目。
 func (v *readyView) pickWeighted(predicate func(*scheduledAuth) bool) *scheduledAuth {
 	if v == nil || len(v.flat) == 0 {
 		return nil

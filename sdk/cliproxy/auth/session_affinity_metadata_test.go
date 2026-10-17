@@ -81,7 +81,7 @@ func TestManagerSessionAffinityMixedPoolNilMetadataPropagatesFailureCleanup(t *t
 			ID:       auth1ID,
 			Provider: p1,
 			Status:   StatusActive,
-			Metadata: map[string]any{"disable_cooling": true}, // Disable cooling so availability remains active, relying on session affinity unbind
+			Metadata: map[string]any{"disable_cooling": true}, // 禁用冷却，使可用性保持激活，转而依赖会话亲和性解绑
 		},
 		{
 			ID:       auth2ID,
@@ -97,7 +97,7 @@ func TestManagerSessionAffinityMixedPoolNilMetadataPropagatesFailureCleanup(t *t
 		t.Cleanup(func() { registry.GetGlobalRegistry().UnregisterClient(auth.ID) })
 	}
 
-	// Inbound request with explicitly nil Metadata, only session header
+	// 入站请求显式带 nil Metadata，仅有会话请求头
 	req := cliproxyexecutor.Request{Model: model}
 	opts := cliproxyexecutor.Options{
 		Headers: http.Header{"X-Session-Id": []string{"sess-mixed-1"}},
@@ -106,8 +106,8 @@ func TestManagerSessionAffinityMixedPoolNilMetadataPropagatesFailureCleanup(t *t
 		t.Fatalf("expected test initial opts.Metadata to be nil")
 	}
 
-	// 1. Execute request: auth-1 is selected, fails, Result carries propagated "mixed" affinity namespace,
-	// MarkResult unbinds "mixed::sess-mixed-1::test-model", and execution falls over to auth-2 which succeeds.
+	// 1. 执行请求：选中 auth-1，失败，Result 携带传播的 "mixed" 亲和性命名空间，
+	// MarkResult 解绑 "mixed::sess-mixed-1::test-model"，执行回退到成功的 auth-2。
 	resp, errExec := manager.Execute(ctx, []string{p1, p2}, req, opts)
 	if errExec != nil {
 		t.Fatalf("first Execute failed: %v", errExec)
@@ -122,7 +122,7 @@ func TestManagerSessionAffinityMixedPoolNilMetadataPropagatesFailureCleanup(t *t
 		t.Fatalf("expected succExec called 1 time, got %d", succExec.calls.Load())
 	}
 
-	// Verify the affinity cache has auth-2 bound under the "mixed" namespace
+	// 验证亲和性缓存中 "mixed" 命名空间下绑定了 auth-2
 	cachedAuthID, ok := affinity.cache.Get("mixed::header:sess-mixed-1::" + model)
 	if !ok {
 		t.Fatalf("expected mixed cache key to be bound to auth-2, but not found in cache")
@@ -131,12 +131,12 @@ func TestManagerSessionAffinityMixedPoolNilMetadataPropagatesFailureCleanup(t *t
 		t.Fatalf("expected mixed cache key to be bound to %q, got %q", auth2ID, cachedAuthID)
 	}
 
-	// Verify mismatched provider cache key was NOT used
+	// 验证未使用不匹配的供应商缓存键
 	if _, okP1 := affinity.cache.Get("affinity-p1::header:sess-mixed-1::" + model); okP1 {
 		t.Fatalf("unexpected p1 provider cache key created")
 	}
 
-	// 2. Second Execute call with fresh request and nil Metadata for the SAME session
+	// 2. 对同一会话使用全新请求和 nil Metadata 发起第二次 Execute 调用
 	opts2 := cliproxyexecutor.Options{
 		Headers: http.Header{"X-Session-Id": []string{"sess-mixed-1"}},
 	}
@@ -147,7 +147,7 @@ func TestManagerSessionAffinityMixedPoolNilMetadataPropagatesFailureCleanup(t *t
 	if string(resp2.Payload) != `{"ok":true}` {
 		t.Fatalf("second Execute payload = %s, want ok", string(resp2.Payload))
 	}
-	// failExec call count must remain 1 because session affinity directly picked auth-2
+	// failExec 调用次数必须保持为 1，因为会话亲和性直接选中了 auth-2
 	if failExec.calls.Load() != 1 {
 		t.Fatalf("expected failExec to not be called on second request, call count = %d", failExec.calls.Load())
 	}
@@ -162,29 +162,29 @@ func TestSessionAffinityAtomicCompareAndDeleteProtectsReboundSession(t *testing.
 
 	sessionKey := "mixed::sess-rebound::model-x"
 
-	// 1. Initial binding to auth-A
+	// 1. 初始绑定到 auth-A
 	cache.Set(sessionKey, "auth-A")
 	if got, ok := cache.Get(sessionKey); !ok || got != "auth-A" {
 		t.Fatalf("Get() = %q, %v; want %q, true", got, ok, "auth-A")
 	}
 
-	// 2. Session rebinds to auth-B
+	// 2. 会话重新绑定到 auth-B
 	cache.Set(sessionKey, "auth-B")
 	if got, ok := cache.Get(sessionKey); !ok || got != "auth-B" {
 		t.Fatalf("Get() = %q, %v; want %q, true", got, ok, "auth-B")
 	}
 
-	// 3. Stale failure for auth-A tries to delete
+	// 3. auth-A 的过期失败尝试删除
 	deleted := cache.CompareAndDelete(sessionKey, "auth-A")
 	if deleted {
 		t.Fatalf("CompareAndDelete with stale auth-A unexpectedly returned true")
 	}
-	// Session must still be bound to auth-B
+	// 会话必须仍然绑定到 auth-B
 	if got, ok := cache.Get(sessionKey); !ok || got != "auth-B" {
 		t.Fatalf("Get() after stale delete attempt = %q, %v; want %q, true", got, ok, "auth-B")
 	}
 
-	// 4. Valid failure for auth-B deletes
+	// 4. auth-B 的有效失败执行删除
 	deletedValid := cache.CompareAndDelete(sessionKey, "auth-B")
 	if !deletedValid {
 		t.Fatalf("CompareAndDelete with active auth-B returned false")
@@ -203,13 +203,13 @@ func TestSessionAffinityDelayedSuccessDoesNotOverwriteReboundAuth(t *testing.T) 
 
 	sessionKey := "mixed::header:sess-delay-success::model-x"
 
-	// 1. Initially auth-A is bound
+	// 1. 初始时绑定 auth-A
 	affinity.cache.Set(sessionKey, "auth-A")
 
-	// 2. Session rebinds to auth-B
+	// 2. 会话重新绑定到 auth-B
 	affinity.cache.Set(sessionKey, "auth-B")
 
-	// 3. A delayed success for auth-A arrives
+	// 3. auth-A 的延迟成功到达
 	opts := cliproxyexecutor.Options{
 		Headers: http.Header{"X-Session-Id": []string{"sess-delay-success"}},
 		Metadata: map[string]any{
@@ -225,7 +225,7 @@ func TestSessionAffinityDelayedSuccessDoesNotOverwriteReboundAuth(t *testing.T) 
 		Options:  opts,
 	})
 
-	// 4. Cache must remain bound to auth-B, not overwritten by auth-A
+	// 4. 缓存必须仍绑定到 auth-B，不被 auth-A 覆盖
 	got, ok := affinity.cache.Get(sessionKey)
 	if !ok || got != "auth-B" {
 		t.Fatalf("cache binding = %q, %v; want auth-B, true (delayed success of auth-A must not overwrite auth-B)", got, ok)
@@ -243,14 +243,14 @@ func TestSessionAffinityOnResultWithMismatchedNamespaceFailsToUnbind(t *testing.
 	model := "test-model"
 	authID := "auth-1"
 
-	// Bind under "mixed" namespace
+	// 在 "mixed" 命名空间下绑定
 	mixedKey := "mixed::" + sessionID + "::" + model
 	affinity.cache.Set(mixedKey, authID)
 
-	// Call OnResult with options carrying the propagated "mixed" namespace
+	// 使用携带传播的 "mixed" 命名空间的选项调用 OnResult
 	res := Result{
 		AuthID:   authID,
-		Provider: "openai", // actual provider
+		Provider: "openai", // 实际供应商
 		Model:    model,
 		Success:  false,
 		Error:    &Error{HTTPStatus: http.StatusInternalServerError},
@@ -265,7 +265,7 @@ func TestSessionAffinityOnResultWithMismatchedNamespaceFailsToUnbind(t *testing.
 
 	affinity.OnResult(res)
 
-	// Verify mixedKey is cleanly removed
+	// 验证 mixedKey 被干净地移除
 	if _, ok := affinity.cache.Get(mixedKey); ok {
 		t.Fatalf("expected mixed key to be removed after OnResult with propagated namespace")
 	}

@@ -8,9 +8,9 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// Basic tool-call: system + user + assistant(tool_calls, no content) + tool result.
-// Expects developer msg + user msg + function_call + function_call_output.
-// No empty assistant message should appear between user and function_call.
+// 基础工具调用：system + user + assistant(tool_calls, 无 content) + 工具结果。
+// 期望得到 developer 消息 + user 消息 + function_call + function_call_output。
+// user 与 function_call 之间不应出现空的 assistant 消息。
 func TestToolCallSimple(t *testing.T) {
 	input := []byte(`{
 		"model": "gpt-4o",
@@ -73,7 +73,7 @@ func TestToolCallSimple(t *testing.T) {
 		t.Errorf("item 1: expected role 'user', got '%s'", items[1].Get("role").String())
 	}
 
-	// function_call, not an empty assistant msg
+	// function_call，而不是空的 assistant 消息
 	if items[2].Get("type").String() != "function_call" {
 		t.Errorf("item 2: expected type 'function_call', got '%s'", items[2].Get("type").String())
 	}
@@ -99,8 +99,8 @@ func TestToolCallSimple(t *testing.T) {
 	}
 }
 
-// Assistant has both text content and tool_calls — the message should
-// be emitted (non-empty content), followed by function_call items.
+// assistant 同时带有文本 content 和 tool_calls —— 该消息应当
+// 被发出（content 非空），其后跟随 function_call 条目。
 func TestToolCallWithContent(t *testing.T) {
 	input := []byte(`{
 		"model": "gpt-4o",
@@ -142,7 +142,7 @@ func TestToolCallWithContent(t *testing.T) {
 	result := string(out)
 
 	items := gjson.Get(result, "input").Array()
-	// user + assistant(with content) + function_call + function_call_output
+	// user + assistant（带 content）+ function_call + function_call_output
 	if len(items) != 4 {
 		t.Fatalf("expected 4 input items, got %d: %s", len(items), gjson.Get(result, "input").Raw)
 	}
@@ -151,7 +151,7 @@ func TestToolCallWithContent(t *testing.T) {
 		t.Errorf("item 0: expected role 'user', got '%s'", items[0].Get("role").String())
 	}
 
-	// assistant with content — should be kept
+	// 带 content 的 assistant —— 应当被保留
 	if items[1].Get("type").String() != "message" {
 		t.Errorf("item 1: expected type 'message', got '%s'", items[1].Get("type").String())
 	}
@@ -507,8 +507,8 @@ func TestConvertOpenAIRequestToCodexPreservesInputAudio(t *testing.T) {
 	}
 }
 
-// Parallel tool calls: assistant invokes 3 tools at once, all call_ids
-// and outputs must be translated and paired correctly.
+// 并行工具调用：assistant 一次调用 3 个工具，所有 call_id
+// 与 output 都必须被正确转换并配对。
 func TestMultipleToolCalls(t *testing.T) {
 	input := []byte(`{
 		"model": "gpt-4o",
@@ -599,8 +599,8 @@ func TestMultipleToolCalls(t *testing.T) {
 	}
 }
 
-// Regression test for #2132: tool-call-only assistant messages (content:null)
-// must not produce an empty message item in the translated output.
+// #2132 的回归测试：仅含工具调用的 assistant 消息（content:null）
+// 不得在转换后的输出中产生空的 message 条目。
 func TestNoSpuriousEmptyAssistantMessage(t *testing.T) {
 	input := []byte(`{
 		"model": "gpt-4o",
@@ -647,7 +647,7 @@ func TestNoSpuriousEmptyAssistantMessage(t *testing.T) {
 		}
 	}
 
-	// should be exactly: user + function_call + function_call_output
+	// 应当恰好为：user + function_call + function_call_output
 	if len(items) != 3 {
 		t.Fatalf("expected 3 input items (user + function_call + function_call_output), got %d: %s", len(items), gjson.Get(result, "input").Raw)
 	}
@@ -662,7 +662,7 @@ func TestNoSpuriousEmptyAssistantMessage(t *testing.T) {
 	}
 }
 
-// Two rounds of tool calling in one conversation, with a text reply in between.
+// 一次对话中的两轮工具调用，中间夹着一次文本回复。
 func TestMultiTurnToolCalling(t *testing.T) {
 	input := []byte(`{
 		"model": "gpt-4o",
@@ -699,7 +699,7 @@ func TestMultiTurnToolCalling(t *testing.T) {
 	result := string(out)
 
 	items := gjson.Get(result, "input").Array()
-	// user, func_call(r1), func_output(r1), assistant text, user, func_call(r2), func_output(r2)
+	// user、func_call(r1)、func_output(r1)、assistant 文本、user、func_call(r2)、func_output(r2)
 	if len(items) != 7 {
 		t.Fatalf("expected 7 input items, got %d: %s", len(items), gjson.Get(result, "input").Raw)
 	}
@@ -712,7 +712,7 @@ func TestMultiTurnToolCalling(t *testing.T) {
 		}
 	}
 
-	// round 1
+	// 第 1 轮
 	if items[1].Get("type").String() != "function_call" {
 		t.Errorf("item 1: expected function_call, got %s", items[1].Get("type").String())
 	}
@@ -723,12 +723,12 @@ func TestMultiTurnToolCalling(t *testing.T) {
 		t.Errorf("item 2: expected function_call_output, got %s", items[2].Get("type").String())
 	}
 
-	// text reply between rounds
+	// 两轮之间的文本回复
 	if items[3].Get("type").String() != "message" || items[3].Get("role").String() != "assistant" {
 		t.Errorf("item 3: expected assistant message, got type=%s role=%s", items[3].Get("type").String(), items[3].Get("role").String())
 	}
 
-	// round 2
+	// 第 2 轮
 	if items[5].Get("type").String() != "function_call" {
 		t.Errorf("item 5: expected function_call, got %s", items[5].Get("type").String())
 	}
@@ -740,7 +740,7 @@ func TestMultiTurnToolCalling(t *testing.T) {
 	}
 }
 
-// Tool names over 64 chars get shortened, call_id stays the same.
+// 超过 64 个字符的工具名会被缩短，call_id 保持不变。
 func TestToolNameShortening(t *testing.T) {
 	longName := "a_very_long_tool_name_that_exceeds_sixty_four_characters_limit_here_test"
 	if len(longName) <= 64 {
@@ -784,7 +784,7 @@ func TestToolNameShortening(t *testing.T) {
 
 	items := gjson.Get(result, "input").Array()
 
-	// find function_call
+	// 查找 function_call
 	var funcCallItem gjson.Result
 	for _, item := range items {
 		if item.Get("type").String() == "function_call" {
@@ -797,12 +797,12 @@ func TestToolNameShortening(t *testing.T) {
 		t.Fatal("no function_call item found in output")
 	}
 
-	// call_id unchanged
+	// call_id 保持不变
 	if funcCallItem.Get("call_id").String() != "call_long" {
 		t.Errorf("call_id changed: expected 'call_long', got '%s'", funcCallItem.Get("call_id").String())
 	}
 
-	// name must be truncated
+	// name 必须被截断
 	translatedName := funcCallItem.Get("name").String()
 	if translatedName == longName {
 		t.Errorf("tool name was NOT shortened: still '%s'", translatedName)
@@ -931,7 +931,7 @@ func TestSameNameCustomAndFunctionDefaultsToFunctionFamily(t *testing.T) {
 	}
 }
 
-// content:"" (empty string, not null) should be treated the same as null.
+// content:""（空字符串，而非 null）应与 null 同等处理。
 func TestEmptyStringContent(t *testing.T) {
 	input := []byte(`{
 		"model": "gpt-4o",
@@ -981,7 +981,7 @@ func TestEmptyStringContent(t *testing.T) {
 	}
 }
 
-// Every function_call_output must have a matching function_call by call_id.
+// 每个 function_call_output 都必须有一个按 call_id 配对的 function_call。
 func TestCallIDsMatchBetweenCallAndOutput(t *testing.T) {
 	input := []byte(`{
 		"model": "gpt-4o",
@@ -1009,7 +1009,7 @@ func TestCallIDsMatchBetweenCallAndOutput(t *testing.T) {
 
 	items := gjson.Get(result, "input").Array()
 
-	// collect call_ids from function_call items
+	// 从 function_call 条目中收集 call_id
 	callIDs := make(map[string]bool)
 	for _, item := range items {
 		if item.Get("type").String() == "function_call" {
@@ -1026,7 +1026,7 @@ func TestCallIDsMatchBetweenCallAndOutput(t *testing.T) {
 		}
 	}
 
-	// 2 calls, 2 outputs
+	// 2 个调用，2 个输出
 	funcCallCount := 0
 	funcOutputCount := 0
 	for _, item := range items {
@@ -1371,7 +1371,7 @@ func TestOrphanAndDuplicateToolCallOutputsAreDropped(t *testing.T) {
 	}
 }
 
-// Tools array should carry over to the Responses format output.
+// Tools 数组应当被带到 Responses 格式的输出中。
 func TestToolsDefinitionTranslated(t *testing.T) {
 	input := []byte(`{
 		"model": "gpt-4o",
@@ -1625,7 +1625,7 @@ func TestHistoricalToolCallCollisionWithDeclaredTool(t *testing.T) {
 		t.Fatalf("expected historical tool name and declared tool name not to collide, both got %q", toolDeclared)
 	}
 
-	// Verify reverse mapping in response restores both
+	// 验证响应中的反向映射能同时还原两者
 	rev := buildReverseMapFromOriginalOpenAI(input)
 	if got := rev[toolDeclared]; got != declaredName {
 		t.Fatalf("expected reverse map for declared %q to be %q, got %q", toolDeclared, declaredName, got)
@@ -1745,8 +1745,8 @@ func TestApplyPatchChatHistoryBoundary(t *testing.T) {
 	}
 }
 
-// Codex rejects call_id values longer than 64 characters, so over-length client
-// IDs must be shortened consistently for calls and their outputs.
+// Codex 拒绝长度超过 64 个字符的 call_id 值，因此超长的客户端
+// ID 必须对调用及其输出做一致地缩短。
 func TestOverLengthToolCallIDsAreShortenedConsistently(t *testing.T) {
 	sharedPrefix := strings.Repeat("a", 70)
 	longA := sharedPrefix + "_A"
@@ -1800,8 +1800,8 @@ func TestOverLengthToolCallIDsAreShortenedConsistently(t *testing.T) {
 	}
 }
 
-// A legal 64-character client ID may equal the shortened form of another
-// over-length ID; results must still reach their own calls.
+// 一个合法的 64 字符客户端 ID 可能等于另一个超长 ID 缩短后的
+// 形式；结果仍必须回到各自的调用。
 func TestShortenedToolCallIDCollisionWithLegalIDKeepsResultsMatched(t *testing.T) {
 	longA := strings.Repeat("a", 70) + "_A"
 	idB := shortenCodexCallIDIfNeeded(longA)

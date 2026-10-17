@@ -1,4 +1,4 @@
-// Package credentialweight defines shared credential weight validation and parsing.
+// Package credentialweight 定义共享的凭据权重校验与解析。
 package credentialweight
 
 import (
@@ -10,14 +10,14 @@ import (
 )
 
 const (
-	// Default is used when a credential does not define a weight.
+	// Default 在凭据未定义权重时使用。
 	Default int64 = 1
-	// Max bounds scheduler arithmetic while allowing practical proportional routing.
+	// Max 限制调度器运算范围，同时允许实用的按比例路由。
 	Max int64 = 1_000_000
 )
 
-// Normalize validates and normalizes an explicit weight. Non-positive values are
-// valid and normalize to zero, which excludes the credential from weighted routing.
+// Normalize 校验并规范化显式权重。非正数值
+// 有效并规范化为零，这会将凭据排除在加权路由之外。
 func Normalize(weight int64) (int64, error) {
 	if weight <= 0 {
 		return 0, nil
@@ -28,7 +28,7 @@ func Normalize(weight int64) (int64, error) {
 	return weight, nil
 }
 
-// ParseString parses a scheduler attribute. An empty value uses the default weight.
+// ParseString 解析调度器属性。空值使用默认权重。
 func ParseString(raw string) (int64, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -41,7 +41,7 @@ func ParseString(raw string) (int64, error) {
 	return Normalize(weight)
 }
 
-// ParseValue parses a JSON-compatible auth-file metadata value.
+// ParseValue 解析 JSON 兼容的认证文件元数据值。
 func ParseValue(value any) (int64, error) {
 	switch typed := value.(type) {
 	case int:

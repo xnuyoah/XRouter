@@ -8,7 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// SanitizePayloadRules validates raw JSON payload rule params and drops invalid rules.
+// SanitizePayloadRules 校验原始 JSON 载荷规则参数并丢弃无效规则。
 func (cfg *Config) SanitizePayloadRules() {
 	if cfg == nil {
 		return
@@ -63,14 +63,14 @@ func payloadRawString(value any) ([]byte, bool) {
 	}
 }
 
-// looksLikeBcrypt returns true if the provided string appears to be a bcrypt hash.
+// looksLikeBcrypt 在给定字符串看起来是 bcrypt 哈希时返回 true。
 func looksLikeBcrypt(s string) bool {
 	return len(s) > 4 && (s[:4] == "$2a$" || s[:4] == "$2b$" || s[:4] == "$2y$")
 }
 
-// hashSecret hashes the given secret using bcrypt.
+// hashSecret 使用 bcrypt 对给定密钥进行哈希。
 func hashSecret(secret string) (string, error) {
-	// Use default cost for simplicity.
+	// 为简单起见使用默认 cost。
 	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(secret), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err

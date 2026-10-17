@@ -12,14 +12,14 @@ import (
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
-// Manager aggregates authenticators and coordinates persistence via a token store.
+// Manager 聚合认证器，并通过令牌存储协调持久化。
 type Manager struct {
 	authenticators map[string]Authenticator
 	store          coreauth.Store
 }
 
-// NewManager constructs a manager with the provided token store and authenticators.
-// If store is nil, the caller must set it later using SetStore.
+// NewManager 使用给定的令牌存储和认证器构造管理器。
+// 若 store 为 nil，调用方必须稍后通过 SetStore 设置它。
 func NewManager(store coreauth.Store, authenticators ...Authenticator) *Manager {
 	mgr := &Manager{
 		authenticators: make(map[string]Authenticator),
@@ -31,7 +31,7 @@ func NewManager(store coreauth.Store, authenticators ...Authenticator) *Manager 
 	return mgr
 }
 
-// Register adds or replaces an authenticator keyed by its provider identifier.
+// Register 按供应商标识添加或替换认证器。
 func (m *Manager) Register(a Authenticator) {
 	if a == nil {
 		return
@@ -42,12 +42,12 @@ func (m *Manager) Register(a Authenticator) {
 	m.authenticators[a.Provider()] = a
 }
 
-// SetStore updates the token store used for persistence.
+// SetStore 更新用于持久化的令牌存储。
 func (m *Manager) SetStore(store coreauth.Store) {
 	m.store = store
 }
 
-// Login executes the provider login flow and persists the resulting auth record.
+// Login 执行供应商登录流程并持久化生成的 auth 记录。
 func (m *Manager) Login(ctx context.Context, provider string, cfg *config.Config, opts *LoginOptions) (*coreauth.Auth, string, error) {
 	auth, ok := m.authenticators[provider]
 	if !ok {

@@ -9,32 +9,32 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/registry"
 )
 
-// ValidateConfig validates a thinking configuration against model capabilities.
+// ValidateConfig 依据模型能力校验 thinking 配置。
 //
-// This function performs comprehensive validation:
-//   - Checks if the model supports thinking
-//   - Auto-converts between Budget and Level formats based on model capability
-//   - Validates that requested level is in the model's supported levels list
-//   - Clamps budget values to model's allowed range
-//   - When converting Budget -> Level for level-only models, clamps the derived standard level to the nearest supported level
-//     (special values none/auto are preserved)
-//   - When config comes from a model suffix, strict budget validation is disabled (we clamp instead of error)
+// 本函数执行完整校验：
+//   - 检查模型是否支持 thinking
+//   - 依据模型能力在 Budget 与 Level 两种格式之间自动转换
+//   - 校验请求的等级是否在模型支持的等级列表中
+//   - 将预算值裁剪到模型允许的范围内
+//   - 对仅支持等级的模型做 Budget -> Level 转换时，把推导出的标准等级裁剪到最接近的支持等级
+//     （特殊值 none/auto 会保留）
+//   - 当配置来自模型后缀时，禁用严格的预算校验（改为裁剪而非报错）
 //
-// Parameters:
-//   - config: The thinking configuration to validate
-//   - support: Model's ThinkingSupport properties (nil means no thinking support)
-//   - fromFormat: Source provider format (used to determine strict validation rules)
-//   - toFormat: Target provider format
-//   - fromSuffix: Whether config was sourced from model suffix
+// 参数：
+//   - config: 待校验的 thinking 配置
+//   - support: 模型的 ThinkingSupport 属性（nil 表示不支持 thinking）
+//   - fromFormat: 来源供应商格式（用于确定严格校验规则）
+//   - toFormat: 目标供应商格式
+//   - fromSuffix: 配置是否来自模型后缀
 //
-// Returns:
-//   - Normalized ThinkingConfig with clamped values
-//   - ThinkingError if validation fails (ErrThinkingNotSupported, ErrLevelNotSupported, etc.)
+// 返回：
+//   - 裁剪后的规范化 ThinkingConfig
+//   - 校验失败时的 ThinkingError（ErrThinkingNotSupported、ErrLevelNotSupported 等）
 //
-// Auto-conversion behavior:
-//   - Budget-only model + Level config → Level converted to Budget
-//   - Level-only model + Budget config → Budget converted to Level
-//   - Hybrid model → preserve original format
+// 自动转换行为：
+//   - 仅预算模型 + Level 配置 → Level 转换为 Budget
+//   - 仅等级模型 + Budget 配置 → Budget 转换为 Level
+//   - 混合模型 → 保留原始格式
 func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFormat, toFormat string, fromSuffix bool) (*ThinkingConfig, error) {
 	fromFormat, toFormat = strings.ToLower(strings.TrimSpace(fromFormat)), strings.ToLower(strings.TrimSpace(toFormat))
 	model := "unknown"
@@ -53,15 +53,15 @@ func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFo
 		return &config, nil
 	}
 
-	// allowClampUnsupported determines whether to clamp unsupported levels instead of returning an error.
-	// This applies when crossing provider families (e.g., openai→claude, codex→claude) and the target
-	// model supports discrete levels. Same-family conversions require strict validation.
+	// allowClampUnsupported 决定是否将不支持的等级裁剪而非返回错误。
+	// 当跨越供应商族（例如 openai→claude、codex→claude）且目标
+	// 模型支持离散等级时适用。同族转换要求严格校验。
 	//
-	// modelFamilyMismatch covers providers that reuse another protocol on the wire
-	// (e.g. Kimi serving Claude-compatible /v1/messages). In that path fromFormat and
-	// toFormat both look like "claude", but the model itself is not Claude-family, so
-	// unsupported levels such as "max" should clamp to the nearest supported level
-	// (typically "high") instead of failing validation.
+	// modelFamilyMismatch 覆盖了在线路上复用另一套协议的供应商
+	// （例如 Kimi 提供兼容 Claude 的 /v1/messages）。在该路径下 fromFormat 与
+	// toFormat 看起来都是 "claude"，但模型本身并非 Claude 族，因此
+	// 诸如 "max" 这类不支持的等级应裁剪到最接近的支持等级
+	// （通常是 "high"），而不是校验失败。
 	toCapability := detectModelCapability(modelInfo)
 	toHasLevelSupport := toCapability == CapabilityLevelOnly || toCapability == CapabilityHybrid
 	modelFamilyMismatch := false
@@ -76,10 +76,10 @@ func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFo
 	}
 	allowClampUnsupported := toHasLevelSupport && (!isSameProviderFamily(fromFormat, toFormat) || modelFamilyMismatch)
 
-	// strictBudget determines whether to enforce strict budget range validation.
-	// This applies when: (1) config comes from request body (not suffix), (2) source format is known,
-	// and (3) source and target are in the same provider family. Cross-family or suffix-based configs
-	// are clamped instead of rejected to improve interoperability.
+	// strictBudget 决定是否执行严格的预算范围校验。
+	// 满足以下条件时适用：(1) 配置来自请求体（不是后缀），(2) 来源格式已知，
+	// 且 (3) 来源与目标属于同一供应商族。跨族或基于后缀的配置
+	// 采用裁剪而非拒绝，以提升互操作性。
 	strictBudget := !fromSuffix && fromFormat != "" && isSameProviderFamily(fromFormat, toFormat) && !modelFamilyMismatch
 	budgetDerivedFromLevel := false
 
@@ -105,8 +105,8 @@ func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFo
 			if !ok {
 				return nil, NewThinkingError(ErrUnknownLevel, fmt.Sprintf("budget %d cannot be converted to a valid level", config.Budget))
 			}
-			// When converting Budget -> Level for level-only models, clamp the derived standard level
-			// to the nearest supported level. Special values (none/auto) are preserved.
+			// 对仅支持等级的模型做 Budget -> Level 转换时，把推导出的标准等级
+			// 裁剪到最接近的支持等级。特殊值（none/auto）会保留。
 			config.Mode = ModeLevel
 			config.Level = clampLevel(ThinkingLevel(level), modelInfo, toFormat)
 			config.Budget = 0
@@ -135,8 +135,8 @@ func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFo
 				config.Level = clampLevel(config.Level, modelInfo, toFormat)
 			}
 			if !isLevelSupported(string(config.Level), support.Levels) {
-				// User explicitly specified an unsupported level - return error
-				// (budget-derived levels may be clamped based on source format)
+				// 用户显式指定了不支持的等级——返回错误
+				// （基于预算推导出的等级可能会根据来源格式被裁剪）
 				validLevels := normalizeLevels(support.Levels)
 				message := fmt.Sprintf("level %q not supported, valid levels: %s", strings.ToLower(string(config.Level)), strings.Join(validLevels, ", "))
 				return nil, NewThinkingError(ErrLevelNotSupported, message)
@@ -154,13 +154,13 @@ func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFo
 		}
 	}
 
-	// Convert ModeAuto to mid-range if dynamic not allowed
+	// 若不允许动态模式，则把 ModeAuto 转换为中间范围值
 	if config.Mode == ModeAuto && !support.DynamicAllowed {
 		config = convertAutoToMidRange(config, support, toFormat, model)
-		// The canonical mid-range level may not be present in a model's discrete
-		// level subset (for example, Levels=[low, high]). Clamp the generated
-		// fallback just like a budget-derived level so providers never receive an
-		// unsupported value.
+		// 规范化的中间等级可能不在模型的离散等级子集中
+		// （例如 Levels=[low, high]）。像处理基于预算推导出的等级那样
+		// 裁剪生成的兜底值，避免供应商收到
+		// 不支持的值。
 		if config.Mode == ModeLevel && len(support.Levels) > 0 && !isLevelSupported(string(config.Level), support.Levels) {
 			config.Level = clampLevel(config.Level, modelInfo, toFormat)
 		}
@@ -171,10 +171,10 @@ func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFo
 		config.Budget = clampBudget(config.Budget, modelInfo, toFormat)
 	}
 
-	// ModeNone for a model that cannot be disabled falls back to the lowest
-	// supported level. Budget-capable models reach this path with Budget > 0;
-	// level-only models need the capability flags checked explicitly because
-	// their Min/Max range is zero.
+	// 对无法禁用的模型，ModeNone 会回退到最低
+	// 支持等级。支持预算的模型以 Budget > 0 走到此分支；
+	// 仅支持等级的模型需要显式检查能力标志，因为
+	// 它们的 Min/Max 范围为零。
 	cannotDisableLevelModel := !support.ZeroAllowed && !isLevelSupported(string(LevelNone), support.Levels)
 	if config.Mode == ModeNone && len(support.Levels) > 0 && (config.Budget > 0 || cannotDisableLevelModel) {
 		config.Level = ThinkingLevel(support.Levels[0])
@@ -183,18 +183,18 @@ func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFo
 	return &config, nil
 }
 
-// convertAutoToMidRange converts ModeAuto to a mid-range value when dynamic is not allowed.
+// convertAutoToMidRange 在不允许动态模式时把 ModeAuto 转换为中间范围值。
 //
-// This function handles the case where a model does not support dynamic/auto thinking.
-// The auto mode is silently converted to a fixed value based on model capability:
-//   - Level-only models: convert to ModeLevel with LevelMedium
-//   - Budget models: convert to ModeBudget with mid = (Min + Max) / 2
+// 本函数处理模型不支持动态/自动 thinking 的情况。
+// auto 模式会依据模型能力被静默转换为固定值：
+//   - 仅等级模型：转换为带 LevelMedium 的 ModeLevel
+//   - 预算模型：转换为 ModeBudget，mid = (Min + Max) / 2
 //
-// Logging:
-//   - Debug level when conversion occurs
-//   - Fields: original_mode, clamped_to, reason
+// 日志：
+//   - 发生转换时使用 Debug 级别
+//   - 字段：original_mode、clamped_to、reason
 func convertAutoToMidRange(config ThinkingConfig, support *registry.ThinkingSupport, provider, model string) ThinkingConfig {
-	// For level-only models (has Levels but no Min/Max range), use ModeLevel with medium
+	// 对仅等级模型（有 Levels 但无 Min/Max 范围），使用带 medium 的 ModeLevel
 	if len(support.Levels) > 0 && support.Min == 0 && support.Max == 0 {
 		config.Mode = ModeLevel
 		config.Level = LevelMedium
@@ -208,7 +208,7 @@ func convertAutoToMidRange(config ThinkingConfig, support *registry.ThinkingSupp
 		return config
 	}
 
-	// For budget models, use mid-range budget
+	// 对预算模型，使用中间范围的预算
 	mid := (support.Min + support.Max) / 2
 	if mid <= 0 && support.ZeroAllowed {
 		config.Mode = ModeNone
@@ -229,11 +229,11 @@ func convertAutoToMidRange(config ThinkingConfig, support *registry.ThinkingSupp
 	return config
 }
 
-// standardLevelOrder defines the canonical ordering of thinking levels from lowest to highest.
+// standardLevelOrder 定义 thinking 等级从低到高的规范顺序。
 var standardLevelOrder = []ThinkingLevel{LevelMinimal, LevelLow, LevelMedium, LevelHigh, LevelXHigh, LevelMax}
 
-// clampLevel clamps the given level to the nearest supported level.
-// On tie, prefers the lower level.
+// clampLevel 把给定等级裁剪到最接近的支持等级。
+// 距离相同时优先选择较低的等级。
 func clampLevel(level ThinkingLevel, modelInfo *registry.ModelInfo, provider string) ThinkingLevel {
 	model := "unknown"
 	var supported []string
@@ -277,7 +277,7 @@ func clampLevel(level ThinkingLevel, modelInfo *registry.ModelInfo, provider str
 	return level
 }
 
-// clampBudget clamps a budget value to the model's supported range.
+// clampBudget 把预算值裁剪到模型支持的范围内。
 func clampBudget(value int, modelInfo *registry.ModelInfo, provider string) int {
 	model := "unknown"
 	support := (*registry.ThinkingSupport)(nil)
@@ -291,7 +291,7 @@ func clampBudget(value int, modelInfo *registry.ModelInfo, provider string) int 
 		return value
 	}
 
-	// Auto value (-1) passes through without clamping.
+	// Auto 值（-1）直接透传，不做裁剪。
 	if value == -1 {
 		return value
 	}
@@ -309,7 +309,7 @@ func clampBudget(value int, modelInfo *registry.ModelInfo, provider string) int 
 		return min
 	}
 
-	// Some models are level-only and do not define numeric budget ranges.
+	// 部分模型仅支持等级，未定义数值预算范围。
 	if min == 0 && max == 0 {
 		return value
 	}

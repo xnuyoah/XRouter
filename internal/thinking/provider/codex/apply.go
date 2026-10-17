@@ -1,9 +1,9 @@
-// Package codex implements thinking configuration for Codex (OpenAI Responses API) models.
+// Package codex 为 Codex（OpenAI Responses API）模型实现思考配置。
 //
-// Codex models use the reasoning.effort format with discrete levels
-// (low/medium/high). This is similar to OpenAI but uses nested field
-// "reasoning.effort" instead of "reasoning_effort".
-// See: _bmad-output/planning-artifacts/architecture.md#Epic-8
+// Codex 模型使用 reasoning.effort 格式，具有离散级别
+// （low/medium/high）。这与 OpenAI 类似，但使用嵌套字段
+// "reasoning.effort" 而非 "reasoning_effort"。
+// 参见：_bmad-output/planning-artifacts/architecture.md#Epic-8
 package codex
 
 import (
@@ -13,17 +13,17 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/thinking"
 )
 
-// Applier implements thinking.ProviderApplier for Codex models.
+// Applier 为 Codex 模型实现 thinking.ProviderApplier。
 //
-// Codex-specific behavior:
-//   - Output format: reasoning.effort (string: low/medium/high/xhigh)
-//   - Level-only mode: no numeric budget support
-//   - Some models support ZeroAllowed (gpt-5.1, gpt-5.2)
+// Codex 特定行为：
+//   - 输出格式：reasoning.effort（字符串：low/medium/high/xhigh）
+//   - 仅级别模式：不支持数值预算
+//   - 部分模型支持 ZeroAllowed（gpt-5.1、gpt-5.2）
 type Applier struct{}
 
 var _ thinking.ProviderApplier = (*Applier)(nil)
 
-// NewApplier creates a new Codex thinking applier.
+// NewApplier 创建一个新的 Codex 思考应用器。
 func NewApplier() *Applier {
 	return &Applier{}
 }
@@ -32,9 +32,9 @@ func init() {
 	thinking.RegisterProvider("codex", NewApplier())
 }
 
-// Apply applies thinking configuration to Codex request body.
+// Apply 将思考配置应用到 Codex 请求体。
 //
-// Expected output format:
+// 期望的输出格式：
 //
 //	{
 //	  "reasoning": {
@@ -49,7 +49,7 @@ func (a *Applier) Apply(body []byte, config thinking.ThinkingConfig, modelInfo *
 		return body, nil
 	}
 
-	// Only handle ModeLevel and ModeNone; other modes pass through unchanged.
+	// 仅处理 ModeLevel 和 ModeNone；其他模式原样透传。
 	if config.Mode != thinking.ModeLevel && config.Mode != thinking.ModeNone {
 		return body, nil
 	}
@@ -102,10 +102,10 @@ func applyCompatibleCodex(body []byte, config thinking.ThinkingConfig) ([]byte, 
 			effort = string(config.Level)
 		}
 	case thinking.ModeAuto:
-		// Auto mode for user-defined models: pass through as "auto"
+		// 用户自定义模型的自动模式：以 "auto" 透传
 		effort = string(thinking.LevelAuto)
 	case thinking.ModeBudget:
-		// Budget mode: convert budget to level using threshold mapping
+		// 预算模式：使用阈值映射将预算转换为级别
 		level, ok := thinking.ConvertBudgetToLevel(config.Budget)
 		if !ok {
 			return body, nil

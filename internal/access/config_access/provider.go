@@ -9,7 +9,7 @@ import (
 	sdkconfig "github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
-// Register ensures the config-access provider is available to the access manager.
+// Register 确保 config-access 供应商对访问管理器可用。
 func Register(cfg *sdkconfig.SDKConfig) {
 	if cfg == nil {
 		sdkaccess.UnregisterProvider(sdkaccess.AccessProviderTypeConfigAPIKey)

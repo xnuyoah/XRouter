@@ -27,13 +27,13 @@ import (
 )
 
 const (
-	// gcInterval defines minimum time between garbage collection runs.
+	// gcInterval 定义两次垃圾回收运行之间的最短时间。
 	gcInterval = 5 * time.Minute
-	// gcPruneGracePeriod keeps recently orphaned objects available for recovery.
+	// gcPruneGracePeriod 让最近变成孤儿的对象保持可恢复。
 	gcPruneGracePeriod = 24 * time.Hour
 )
 
-// GitTokenStore persists token records and auth metadata using git as the backing storage.
+// GitTokenStore 以 git 作为后端存储来持久化令牌记录和 auth 元数据。
 type GitTokenStore struct {
 	mu        sync.Mutex
 	dirLock   sync.RWMutex
@@ -54,9 +54,9 @@ type resolvedRemoteBranch struct {
 	hash plumbing.Hash
 }
 
-// NewGitTokenStore creates a token store that saves credentials to disk through the
-// TokenStorage implementation embedded in the token record.
-// When branch is non-empty, clone/pull/push operations target that branch instead of the remote default.
+// NewGitTokenStore 创建一个令牌存储，它通过令牌记录中内嵌的
+// TokenStorage 实现把凭据保存到磁盘。
+// 当 branch 非空时，clone/pull/push 操作针对该分支而非远程默认分支。
 func NewGitTokenStore(remote, username, password, branch string) *GitTokenStore {
 	return &GitTokenStore{
 		remote:   remote,
@@ -66,7 +66,7 @@ func NewGitTokenStore(remote, username, password, branch string) *GitTokenStore 
 	}
 }
 
-// SetBaseDir updates the default directory used for auth JSON persistence when no explicit path is provided.
+// SetBaseDir 更新在未提供显式路径时用于 auth JSON 持久化的默认目录。
 func (s *GitTokenStore) SetBaseDir(dir string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -95,12 +95,12 @@ func (s *GitTokenStore) SetBaseDir(dir string) {
 	s.dirLock.Unlock()
 }
 
-// AuthDir returns the directory used for auth persistence.
+// AuthDir 返回用于 auth 持久化的目录。
 func (s *GitTokenStore) AuthDir() string {
 	return s.baseDirSnapshot()
 }
 
-// ConfigPath returns the managed config file path.
+// ConfigPath 返回受管理的配置文件路径。
 func (s *GitTokenStore) ConfigPath() string {
 	s.dirLock.RLock()
 	defer s.dirLock.RUnlock()
@@ -110,7 +110,7 @@ func (s *GitTokenStore) ConfigPath() string {
 	return filepath.Join(s.configDir, "config.yaml")
 }
 
-// EnsureRepository prepares the local git working tree by cloning or opening the repository.
+// EnsureRepository 通过克隆或打开仓库来准备本地 git 工作树。
 func (s *GitTokenStore) EnsureRepository() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -280,7 +280,7 @@ func (s *GitTokenStore) ensureRepositoryContextLocked(ctx context.Context) (errR
 				return errCheckout
 			}
 		} else {
-			// When branch is unset, ensure the working tree follows the remote default branch
+			// 当未设置 branch 时，确保工作树跟随远程默认分支
 			if err := checkoutRemoteDefaultBranch(ctx, repo, worktree, authMethod); err != nil {
 				if !shouldFallbackToCurrentBranch(repo, err) {
 					s.dirLock.Unlock()
@@ -358,13 +358,13 @@ func (s *GitTokenStore) ensureRepositoryContextLocked(ctx context.Context) (errR
 				}
 			case errors.Is(errPull, transport.ErrAuthenticationRequired),
 				errors.Is(errPull, transport.ErrEmptyRemoteRepository):
-				// Ignore authentication prompts and empty remote references on initial sync.
+				// 在初始同步时忽略认证提示和空的远程引用。
 			case errors.Is(errPull, plumbing.ErrReferenceNotFound):
 				if s.branch != "" {
 					s.dirLock.Unlock()
 					return fmt.Errorf("git token store: pull: %w", errPull)
 				}
-				// Ignore missing references only when following the remote default branch.
+				// 仅在跟随远程默认分支时才忽略缺失的引用。
 			case isRepositoryCorruptionError(errPull):
 				errRecover := s.recoverRepositoryContextLocked(ctx, repoDir, authMethod, repo, prePullTree, dirtyPaths, (*git.Repository).Close, os.Rename)
 				repo = nil
@@ -421,7 +421,7 @@ func (s *GitTokenStore) ensureRepositoryContextLocked(ctx context.Context) (errR
 	return nil
 }
 
-// Save persists token storage and metadata to the resolved auth file path.
+// Save 把令牌存储和元数据持久化到解析出的 auth 文件路径。
 func (s *GitTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (string, error) {
 	if auth == nil {
 		return "", fmt.Errorf("auth filestore: auth is nil")
@@ -442,9 +442,9 @@ func (s *GitTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (stri
 		return "", fmt.Errorf("auth filestore: missing file path attribute for %s", auth.ID)
 	}
 
-	// Runtime updates must not recreate a disabled credential whose source file
-	// was deliberately removed. Login and migration callers explicitly mark the
-	// save when creating a missing disabled credential is intentional.
+	// 运行时更新不得重建一个源文件已被有意移除的
+	// 已禁用凭据。当创建缺失的已禁用凭据是有意为之，
+	// 登录和迁移调用方会显式标记该保存。
 	if auth.Disabled && !cliproxyauth.HasAuthCreationIntent(ctx) {
 		if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
 			return "", nil
@@ -522,7 +522,7 @@ func (s *GitTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (stri
 	return path, nil
 }
 
-// List enumerates all auth JSON files under the configured directory.
+// List 枚举所配置目录下的所有 auth JSON 文件。
 func (s *GitTokenStore) List(_ context.Context) ([]*cliproxyauth.Auth, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -560,7 +560,7 @@ func (s *GitTokenStore) List(_ context.Context) ([]*cliproxyauth.Auth, error) {
 	return entries, nil
 }
 
-// Delete removes the auth file.
+// Delete 移除该 auth 文件。
 func (s *GitTokenStore) Delete(_ context.Context, id string) error {
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -591,8 +591,8 @@ func (s *GitTokenStore) Delete(_ context.Context, id string) error {
 	return nil
 }
 
-// PersistAuthFiles commits and pushes the provided paths to the remote repository.
-// It no-ops when the store is not fully configured or when there are no paths.
+// PersistAuthFiles 把所提供的路径提交并推送到远程仓库。
+// 当存储未完全配置或没有路径时它不做任何操作。
 func (s *GitTokenStore) PersistAuthFiles(_ context.Context, message string, paths ...string) error {
 	if len(paths) == 0 {
 		return nil
@@ -620,8 +620,8 @@ func (s *GitTokenStore) PersistAuthFiles(_ context.Context, message string, path
 		message = "Sync watcher updates"
 	}
 
-	// Inspect watcher removals before EnsureRepository restores missing tracked
-	// files so an unexpected filesystem event remains distinguishable from Delete.
+	// 在 EnsureRepository 恢复缺失的被跟踪文件之前先检查监听器
+	// 移除，这样意外的文件系统事件仍能与 Delete 区分开。
 	if _, errStat := os.Stat(filepath.Join(s.repoDirSnapshot(), ".git")); errStat == nil {
 		if handled, errGuard := s.guardWatcherAuthRemovalLocked(message, filtered); handled || errGuard != nil {
 			return errGuard
@@ -696,8 +696,8 @@ func (s *GitTokenStore) guardWatcherAuthRemovalLocked(message string, relPaths [
 	if hasExistingPath {
 		return false, nil
 	}
-	// Explicit GitTokenStore.Delete already removed the path from HEAD. The
-	// subsequent filesystem watcher event is therefore redundant and safe to ignore.
+	// 显式的 GitTokenStore.Delete 已从 HEAD 中移除了该路径。因此
+	// 随后的文件系统监听器事件是冗余的，可以安全忽略。
 	return true, nil
 }
 
@@ -955,8 +955,8 @@ func syncRemoteReferences(ctx context.Context, repo *git.Repository, authMethod 
 	return nil
 }
 
-// resolveRemoteDefaultBranch queries the origin remote to determine the remote's default branch
-// (the target of HEAD) and returns the corresponding local branch reference name (e.g. refs/heads/master).
+// resolveRemoteDefaultBranch 查询 origin 远程以确定远程的默认分支
+// （HEAD 的目标），并返回对应的本地分支引用名（例如 refs/heads/master）。
 func resolveRemoteDefaultBranch(ctx context.Context, repo *git.Repository, authMethod []client.Option) (resolvedRemoteBranch, error) {
 	if err := syncRemoteReferences(ctx, repo, authMethod); err != nil {
 		return resolvedRemoteBranch{}, fmt.Errorf("resolve remote default: sync remote refs: %w", err)
@@ -1097,8 +1097,8 @@ func reconcileRemoteWorktree(repo *git.Repository, worktree *git.Worktree, repoD
 		}
 	}
 
-	// Pull moves HEAD before reporting unstaged changes. Return to the pre-pull
-	// tree before applying only remote changes that do not overlap local edits.
+	// Pull 会在报告未暂存更改之前移动 HEAD。先回到拉取前的
+	// 树，再只应用不与本地编辑重叠的远程更改。
 	if errRestore := restoreHeadAndIndex(repo, worktree, baseRef); errRestore != nil {
 		return fmt.Errorf("restore pre-pull head: %w", errRestore)
 	}
@@ -1623,28 +1623,28 @@ func shouldFallbackToCurrentBranch(repo *git.Repository, err error) bool {
 	return headErr == nil
 }
 
-// checkoutRemoteDefaultBranch ensures the working tree is checked out to the remote's default branch
-// (the branch target of origin/HEAD). If the local branch does not exist it will be created to track
-// the remote branch.
+// checkoutRemoteDefaultBranch 确保工作树被检出到远程的默认分支
+// （origin/HEAD 的分支目标）。如果本地分支不存在，将创建它
+// 以跟踪远程分支。
 func checkoutRemoteDefaultBranch(ctx context.Context, repo *git.Repository, worktree *git.Worktree, authMethod []client.Option) error {
 	resolved, err := resolveRemoteDefaultBranch(ctx, repo, authMethod)
 	if err != nil {
 		return err
 	}
 	branchRefName := resolved.name
-	// If HEAD already points to the desired branch, nothing to do.
+	// 如果 HEAD 已指向所需分支，则无需操作。
 	headRef, errHead := repo.Head()
 	if errHead == nil && headRef.Name() == branchRefName {
 		return nil
 	}
-	// If local branch exists, attempt a checkout
+	// 如果本地分支存在，尝试检出
 	if _, err := repo.Reference(branchRefName, true); err == nil {
 		if err := worktree.Checkout(&git.CheckoutOptions{Branch: branchRefName}); err != nil {
 			return fmt.Errorf("checkout branch %s: %w", branchRefName.String(), err)
 		}
 		return nil
 	}
-	// Try to find the corresponding remote tracking ref (refs/remotes/origin/<name>)
+	// 尝试找到对应的远程跟踪引用（refs/remotes/origin/<name>）
 	branchShort := strings.TrimPrefix(branchRefName.String(), "refs/heads/")
 	remoteRefName := plumbing.ReferenceName("refs/remotes/origin/" + branchShort)
 	hash := resolved.hash
@@ -1911,7 +1911,7 @@ func (s *GitTokenStore) pushRepositoryLocked(ctx context.Context, repo *git.Repo
 	case errRemote == nil:
 		pushOpts.ForceWithLease = &git.ForceWithLease{RefName: branchName, Hash: remoteRef.Hash()}
 	case errors.Is(errRemote, plumbing.ErrReferenceNotFound) && allowMissingRemote:
-		// A normal branch-creation push fails if another initializer wins the race.
+		// 如果另一个初始化器赢得竞争，正常的分支创建推送会失败。
 	case errors.Is(errRemote, plumbing.ErrReferenceNotFound):
 		return fmt.Errorf("git token store: remote tracking branch %s not found", remoteName)
 	default:
@@ -1935,7 +1935,7 @@ func (s *GitTokenStore) pushRepositoryLocked(ctx context.Context, repo *git.Repo
 	return nil
 }
 
-// rewriteHeadAsSingleCommit rewrites the current branch tip to a single-parentless commit and leaves history squashed.
+// rewriteHeadAsSingleCommit 把当前分支顶端重写为一个无父提交，并使历史被压缩。
 func (s *GitTokenStore) rewriteHeadAsSingleCommit(repo *git.Repository, branch plumbing.ReferenceName, commitHash plumbing.Hash, message string, signature *object.Signature) error {
 	commitObj, err := repo.CommitObject(commitHash)
 	if err != nil {
@@ -1993,7 +1993,7 @@ func (s *GitTokenStore) maybeRunGC(repoDir string) {
 	_ = repo.RepackObjects(&git.RepackConfig{})
 }
 
-// PersistConfig commits and pushes configuration changes to git.
+// PersistConfig 把配置更改提交并推送到 git。
 func (s *GitTokenStore) PersistConfig(_ context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

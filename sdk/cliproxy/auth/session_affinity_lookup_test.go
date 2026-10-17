@@ -38,7 +38,7 @@ func TestSessionAffinitySelector_LookupAffinity(t *testing.T) {
 		}
 		originalExpiresAt := initialEntry.expiresAt
 
-		// Perform multiple lookups
+		// 执行多次查找
 		for i := 0; i < 10; i++ {
 			authID, status := selector.LookupAffinity("anthropic", "claude-3-7-sonnet", "sess-alpha")
 			if status != "bound" || authID != authA.ID {
@@ -60,7 +60,7 @@ func TestSessionAffinitySelector_LookupAffinity(t *testing.T) {
 
 	t.Run("expired binding returns unbound", func(t *testing.T) {
 		cacheKey := "anthropic::claude:sess-alpha::claude-3-7-sonnet"
-		// Simulate expiration by adjusting expiresAt into the past
+		// 通过将 expiresAt 调整到过去来模拟过期
 		selector.cache.mu.Lock()
 		if entry, ok := selector.cache.entries[cacheKey]; ok {
 			entry.expiresAt = time.Now().Add(-time.Hour)
@@ -97,16 +97,16 @@ func TestManager_LookupSessionAffinity_RemovedAuth(t *testing.T) {
 	}
 	selector.Pick(context.Background(), "anthropic", "claude-3-7-sonnet", opts, []*Auth{authA})
 
-	// Lookup when auth exists
+	// 在 auth 存在时查找
 	found, status := manager.LookupSessionAffinity("anthropic", "claude-3-7-sonnet", "sess-remove")
 	if status != "bound" || found == nil || found.ID != authA.ID {
 		t.Fatalf("expected bound, got status=%s found=%v", status, found)
 	}
 
-	// Remove auth from manager
+	// 从管理器移除 auth
 	manager.Remove(context.Background(), authA.ID)
 
-	// Lookup after auth removal returns unbound
+	// auth 移除后查找返回未绑定
 	foundAfter, statusAfter := manager.LookupSessionAffinity("anthropic", "claude-3-7-sonnet", "sess-remove")
 	if statusAfter != "unbound" || foundAfter != nil {
 		t.Fatalf("expected unbound after removal, got status=%s found=%v", statusAfter, foundAfter)
@@ -136,20 +136,20 @@ func TestSessionAffinitySelector_LookupAffinity_LCP(t *testing.T) {
 		t.Fatalf("expected LCPAffinitySessionIDMetadataKey in opts.Metadata, got %#v", opts.Metadata)
 	}
 
-	// 1. Lookup with published LCP session ID
+	// 1. 使用已发布的 LCP 会话 ID 查找
 	authID, status := selector.LookupAffinity("openai", "gpt-4o", lcpSessionID)
 	if status != "bound" || authID != authA.ID {
 		t.Fatalf("LCP lookup failed: status=%s authID=%s, want bound %s", status, authID, authA.ID)
 	}
 
-	// 2. Lookup with bare hash (without lcp:v1: prefix)
+	// 2. 使用裸哈希查找（不带 lcp:v1: 前缀）
 	bareHash := strings.TrimPrefix(lcpSessionID, "lcp:v1:")
 	authIDBare, statusBare := selector.LookupAffinity("openai", "gpt-4o", bareHash)
 	if statusBare != "bound" || authIDBare != authA.ID {
 		t.Fatalf("LCP bare hash lookup failed: status=%s authID=%s, want bound %s", statusBare, authIDBare, authA.ID)
 	}
 
-	// 3. TTL non-refresh on LCP lookup: repeated reads do not change expiresAt
+	// 3. LCP 查找不刷新 TTL：重复读取不改变 expiresAt
 	for i := 0; i < 5; i++ {
 		aID, st := selector.LookupAffinity("openai", "gpt-4o", lcpSessionID)
 		if st != "bound" || aID != authA.ID {
@@ -157,8 +157,8 @@ func TestSessionAffinitySelector_LookupAffinity_LCP(t *testing.T) {
 		}
 	}
 
-	// 4. Multi-trajectory conversation growth sharing same session ID:
-	// Grown conversation must be deterministically observed across 100 iterations.
+	// 4. 共享同一会话 ID 的多轨迹对话增长：
+	// 增长后的对话必须在 100 次迭代中都能被确定性地观察到。
 	optsGrown := cliproxyexecutor.Options{
 		OriginalRequest: []byte(`{"messages":[{"role":"system","content":"test-lcp-sys"},{"role":"user","content":"test-lcp-user"},{"role":"assistant","content":"reply"},{"role":"user","content":"turn2"}]}`),
 		Metadata: map[string]any{
@@ -201,13 +201,13 @@ func TestSessionAffinitySelector_LookupAffinity_ExactCaseModel(t *testing.T) {
 	}
 	lcpSessionID := opts.Metadata[cliproxyexecutor.LCPAffinitySessionIDMetadataKey].(string)
 
-	// Exact case matches
+	// 大小写完全匹配
 	authID, status := selector.LookupAffinity("openai", "ModelA", lcpSessionID)
 	if status != "bound" || authID != authA.ID {
 		t.Fatalf("exact case ModelA failed: status=%s auth=%s, want bound %s", status, authID, authA.ID)
 	}
 
-	// Lowercase model does NOT match case-sensitive model binding
+	// 小写模型不会匹配大小写敏感的模型绑定
 	authIDLower, statusLower := selector.LookupAffinity("openai", "modela", lcpSessionID)
 	if statusLower != "unbound" || authIDLower != "" {
 		t.Fatalf("different case modela unexpectedly matched: status=%s auth=%s, want unbound", statusLower, authIDLower)
@@ -235,13 +235,13 @@ func TestManager_LookupSessionAffinity_CrossProviderMixedIsolation(t *testing.T)
 	sessionID := "cross-prov-session"
 	model := "gpt-4o"
 
-	// Bind openai directly to authOpenAI
+	// 将 openai 直接绑定到 authOpenAI
 	selector.cache.Set("openai::header:"+sessionID+"::"+model, authOpenAI.ID)
-	// Bind mixed to authAnthropic (an anthropic credential in mixed pool)
+	// 将 mixed 绑定到 authAnthropic（mixed 池中的一个 anthropic 凭据）
 	selector.cache.Set("mixed::header:"+sessionID+"::"+model, authAnthropic.ID)
 
-	// When querying for provider "openai", the anthropic binding under mixed must be filtered out
-	// and NOT trigger false ambiguity. It must return authOpenAI.
+	// 查询供应商 "openai" 时，mixed 下的 anthropic 绑定必须被过滤掉，
+	// 且不触发虚假歧义。它必须返回 authOpenAI。
 	found, status := manager.LookupSessionAffinity("openai", model, sessionID)
 	if status != "bound" || found == nil || found.ID != authOpenAI.ID {
 		t.Fatalf("expected bound to authOpenAI, got status=%s found=%v", status, found)
@@ -267,13 +267,13 @@ func TestSessionAffinitySelector_LookupAffinity_ModelWithColons(t *testing.T) {
 	}
 	lcpSessionID := opts.Metadata[cliproxyexecutor.LCPAffinitySessionIDMetadataKey].(string)
 
-	// 1. Query actual model "team::ModelA" -> returns bound
+	// 1. 查询实际模型 "team::ModelA" -> 返回已绑定
 	authID, status := selector.LookupAffinity("openai", "team::ModelA", lcpSessionID)
 	if status != "bound" || authID != authA.ID {
 		t.Fatalf("team::ModelA lookup failed: status=%s auth=%s, want bound %s", status, authID, authA.ID)
 	}
 
-	// 2. Query other model "team" -> returns unbound
+	// 2. 查询其他模型 "team" -> 返回未绑定
 	authIDOther, statusOther := selector.LookupAffinity("openai", "team", lcpSessionID)
 	if statusOther != "unbound" || authIDOther != "" {
 		t.Fatalf("team lookup unexpectedly matched: status=%s auth=%s, want unbound", statusOther, authIDOther)

@@ -1,7 +1,7 @@
-// Package config provides the public SDK configuration API.
+// Package config 提供公开的 SDK 配置 API。
 //
-// It re-exports the server configuration types and helpers so external projects can
-// embed XRouter without importing internal packages.
+// 它重新导出服务器配置类型与辅助函数，使外部项目可以
+// 在不导入 internal 包的情况下嵌入 XRouter。
 package config
 
 import internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
@@ -35,8 +35,8 @@ type OpenAICompatibilityModel = internalconfig.OpenAICompatibilityModel
 
 type TLS = internalconfig.TLSConfig
 
-// NativeAPIProviderDefaults, NativeAPIEffectiveModels and NativeAPIEffectiveBaseURL
-// expose the built-in defaults for the native OpenAI-wire provider families.
+// NativeAPIProviderDefaults、NativeAPIEffectiveModels 和 NativeAPIEffectiveBaseURL
+// 暴露原生 OpenAI 线路供应商族的内置默认值。
 type NativeAPIProviderDefaults = internalconfig.NativeAPIProviderDefaults
 
 func NativeAPIProviderDefaultsFor(provider string) NativeAPIProviderDefaults {

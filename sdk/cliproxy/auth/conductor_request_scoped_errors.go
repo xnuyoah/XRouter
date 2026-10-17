@@ -10,7 +10,7 @@ import (
 	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
-// Request-scoped error actions.
+// 请求级错误动作。
 const (
 	RequestScopedActionStop                = "stop"
 	RequestScopedActionStopAndCooldown     = "stop-and-cooldown"
@@ -64,7 +64,7 @@ func (m *Manager) runtimeConfigSnapshot() *internalconfig.Config {
 	return cfg
 }
 
-// extractRequestScopedErrorRules retrieves the configured RequestScopedErrorRule list for an auth.
+// extractRequestScopedErrorRules 获取某个 auth 配置的 RequestScopedErrorRule 列表。
 func extractRequestScopedErrorRules(auth *Auth, cfg *internalconfig.Config) []internalconfig.RequestScopedErrorRule {
 	if auth != nil && auth.Metadata != nil {
 		raw, ok := auth.Metadata["request_scoped_errors"]
@@ -172,9 +172,9 @@ func extractErrorBody(err error) string {
 	return err.Error()
 }
 
-// matchRequestScopedErrorAction evaluates an error against the auth's RequestScopedErrors rules.
-// If a rule matches, it returns (action, true).
-// If no rule matches, it returns ("", false).
+// matchRequestScopedErrorAction 依据该 auth 的 RequestScopedErrors 规则评估错误。
+// 若某条规则匹配，则返回 (action, true)。
+// 若无规则匹配，则返回 ("", false)。
 func matchRequestScopedErrorAction(auth *Auth, err error, cfg *internalconfig.Config) (string, bool) {
 	if err == nil {
 		return "", false

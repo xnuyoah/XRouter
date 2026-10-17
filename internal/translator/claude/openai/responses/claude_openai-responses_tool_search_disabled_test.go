@@ -13,9 +13,9 @@ import (
 	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
-// The dev golden was produced by running renderToolSearchGolden against the
-// translator at origin/dev d739485df, before Codex tool_search support. With
-// upstream.claude.tool-search off the translator must reproduce it exactly.
+// 该 dev golden 是通过在 origin/dev d739485df 处对
+// 转换器运行 renderToolSearchGolden 生成的，当时尚不支持 Codex tool_search。当
+// upstream.claude.tool-search 关闭时，转换器必须精确复现它。
 type toolSearchGoldenCase struct {
 	Name    string          `json:"name"`
 	Request json.RawMessage `json:"request"`
@@ -35,8 +35,8 @@ type toolSearchGoldenOutput struct {
 
 var toolSearchGoldenCreatedAt = regexp.MustCompile(`"created_at":\d+`)
 
-// renderToolSearchGolden runs one fixture through the request translator and
-// both response translators, masking the wall-clock created_at field.
+// renderToolSearchGolden 将一个 fixture 送入请求转换器和
+// 两个响应转换器，并屏蔽挂钟时间字段 created_at。
 func renderToolSearchGolden(fixtures toolSearchGoldenFixtures, c toolSearchGoldenCase) toolSearchGoldenOutput {
 	normalize := func(raw []byte) string {
 		return toolSearchGoldenCreatedAt.ReplaceAllString(string(raw), `"created_at":0`)
@@ -99,8 +99,8 @@ func TestToolSearchDisabledMatchesDevGolden(t *testing.T) {
 	}
 }
 
-// With the switch on, the same fixtures must take the tool_search paths, so
-// the golden comparison above cannot pass by accident.
+// 开关打开时，同样的 fixture 必须走 tool_search 路径，因此
+// 上面的 golden 对比不可能偶然通过。
 func TestToolSearchEnabledDiffersFromDevGolden(t *testing.T) {
 	setClientToolSearchEnabledForTest(t, true)
 	fixtures, golden := loadToolSearchGolden(t)
@@ -116,9 +116,9 @@ func TestToolSearchEnabledDiffersFromDevGolden(t *testing.T) {
 	t.Fatal("codex_session fixture missing")
 }
 
-// A value pinned in the request context wins over the process switch for the
-// request translation and for both response translators, so a config reload
-// while a request runs cannot mix the two behaviors.
+// 在请求上下文中固定的值优先于进程级开关，
+// 对请求转换和两个响应转换器都是如此，因此请求运行期间
+// 配置重载不会混用两种行为。
 func TestToolSearchPinnedContextWinsOverSwitch(t *testing.T) {
 	fixtures, golden := loadToolSearchGolden(t)
 	var session toolSearchGoldenCase
@@ -181,7 +181,7 @@ func TestToolSearchPinnedContextWinsOverSwitch(t *testing.T) {
 	}
 }
 
-// sseData returns the JSON payload of one translated SSE event.
+// sseData 返回一个已转换 SSE 事件的 JSON 载荷。
 func sseData(event []byte) []byte {
 	for _, line := range strings.Split(string(event), "\n") {
 		if strings.HasPrefix(line, "data: ") {
@@ -191,8 +191,8 @@ func sseData(event []byte) []byte {
 	return nil
 }
 
-// The compatibility entry point used for API-key compat models follows the
-// pinned value too.
+// 用于 API-key 兼容模型的兼容入口同样
+// 遵循该固定值。
 func TestToolSearchCompatContextFollowsPin(t *testing.T) {
 	request := codexToolSearchRequest(codexUserTurn, codexSearchCall1, codexSearchOutput1)
 	for _, tc := range []struct {

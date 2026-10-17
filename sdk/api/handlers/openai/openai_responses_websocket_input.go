@@ -19,8 +19,8 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// responsesLocalInterrupt cancels an in-flight HTTP turn. A websocket upstream
-// does not use it; that interrupt is written to the existing socket instead.
+// responsesLocalInterrupt 取消正在进行的 HTTP 轮次。WebSocket 上游
+// 不使用它；那种中断会改为写入现有套接字。
 type responsesLocalInterrupt struct {
 	mu     sync.Mutex
 	active bool
@@ -76,9 +76,9 @@ func (s *responsesLocalInterrupt) framesChan() <-chan []byte {
 	return s.frames
 }
 
-// readResponsesWebsocketInput is the only downstream reader. Interrupts are
-// handled immediately so they are not queued behind an active response.
-// The bounded queue backpressures clients instead of retaining unlimited input.
+// readResponsesWebsocketInput 是唯一的下游读取方。中断会被
+// 立即处理，因此不会被排在一个活跃响应之后。
+// 有界队列会对客户端施加背压，而不是无限保留输入。
 func readResponsesWebsocketInput(ctx context.Context, cancel context.CancelCauseFunc, conn *websocket.Conn, interrupt func([]byte) error, local *responsesLocalInterrupt, writer *responsesWebsocketWriter, timeline websocketTimelineAppender) (<-chan cliproxyexecutor.WebsocketInput, <-chan struct{}) {
 	input := make(chan cliproxyexecutor.WebsocketInput, 16)
 	done := make(chan struct{})
@@ -94,8 +94,8 @@ func readResponsesWebsocketInput(ctx context.Context, cancel context.CancelCause
 			if kind != websocket.TextMessage && kind != websocket.BinaryMessage {
 				continue
 			}
-			// Control frames bypass response.create normalization. The original
-			// response_id, mode, and extension fields must reach upstream unchanged.
+			// 控制帧绕过 response.create 归一化。原始的
+			// response_id、mode 与扩展字段必须原样到达上游。
 			if json.Valid(payload) && gjson.GetBytes(payload, "type").String() == "response.interrupt" {
 				appendResponsesInterruptDiagnostic(timeline, payload, "")
 				errInterrupt := interrupt(payload)
@@ -108,8 +108,8 @@ func readResponsesWebsocketInput(ctx context.Context, cancel context.CancelCause
 					continue
 				default:
 					appendResponsesInterruptDiagnostic(timeline, payload, "rejected")
-					// The sanitized outcome replaces raw error logging here: errors
-					// from transport dependencies may contain credentials or URLs.
+					// 此处用脱敏后的结果替代原始错误日志：来自传输层
+					// 依赖的错误可能包含凭据或 URL。
 					_, errWrite := writeResponsesWebsocketError(writer, nil, &interfaces.ErrorMessage{
 						StatusCode: http.StatusBadRequest,
 						Error:      errInterrupt,
@@ -135,8 +135,8 @@ func appendResponsesInterruptDiagnostic(timeline websocketTimelineAppender, payl
 	if timeline == nil {
 		return
 	}
-	// Hash client-controlled IDs and omit all arbitrary fields, including mode.
-	// Only correlation metadata is needed to diagnose control-frame timing.
+	// 对客户端可控的 ID 做哈希，并省略所有任意字段，包括 mode。
+	// 诊断控制帧时序只需要关联元数据。
 	idHash := sha256.Sum256([]byte(gjson.GetBytes(payload, "response_id").String()))
 	diagnostic := struct {
 		Type           string `json:"type"`
@@ -173,7 +173,7 @@ func (h *OpenAIResponsesAPIHandler) forwardResponsesWebsocketInterrupt(ctx conte
 		return fmt.Errorf("upstream executor does not support response.interrupt")
 	}
 	ctx = cliproxyexecutor.WithWebsocketAuthCheck(ctx, func(authID string) bool {
-		// Home runtime credentials live on the execution session, not in the global map.
+		// Home 运行时凭据位于执行会话上，而不是全局映射中。
 		auth, found := h.AuthManager.GetByID(authID)
 		if !found || auth == nil {
 			auth, found = h.AuthManager.GetExecutionSessionAuthByID(sessionID, authID)

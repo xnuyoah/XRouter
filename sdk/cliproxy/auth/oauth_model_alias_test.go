@@ -301,13 +301,13 @@ func TestApplyOAuthModelAlias_ForceMappingFork(t *testing.T) {
 		t.Errorf("applyOAuthModelAlias() model = %q, want %q", resolvedModel, "codex/claude-fable-5-1")
 	}
 
-	// Suffix preservation with thinking effort
+	// 带 thinking effort 的后缀保留
 	suffixed := mgr.applyOAuthModelAlias(auth, "fable-5-1(max)")
 	if suffixed != "codex/claude-fable-5-1(max)" {
 		t.Errorf("applyOAuthModelAlias() suffixed model = %q, want %q", suffixed, "codex/claude-fable-5-1(max)")
 	}
 
-	// Force mapping result
+	// 强制映射结果
 	result := mgr.applyOAuthModelAliasWithResult(auth, "fable-5-1(max)")
 	if result.UpstreamModel != "codex/claude-fable-5-1(max)" {
 		t.Errorf("UpstreamModel = %q, want %q", result.UpstreamModel, "codex/claude-fable-5-1(max)")
@@ -338,7 +338,7 @@ func TestApplyOAuthModelAlias_MintedAPIKey(t *testing.T) {
 	mgr.SetConfig(&internalconfig.Config{})
 	mgr.SetOAuthModelAlias(aliases)
 
-	// OAuth credentials may carry a minted API key; aliases must still apply.
+	// OAuth 凭据可能携带铸造出的 API key；别名仍须生效。
 	auth := &Auth{
 		ID:       "codex-auth",
 		Provider: "codex",

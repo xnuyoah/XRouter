@@ -8,9 +8,9 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// When every credential is exhausted by overload rejections the caller must receive a real
-// error carrying 503, not a committed 200 stream. This is what lets the downstream client and
-// any upstream proxy see the true capacity signal.
+// 当每个凭据都因过载拒绝而被耗尽时，调用方必须收到携带 503 的真实
+// 错误，而不是已提交的 200 流。这样才能让下游客户端和
+// 任何上游代理看到真实的容量信号。
 func TestExecuteStream_AllCredentialsOverloaded_ReturnsStatusError(t *testing.T) {
 	previous := quotaCooldownDisabled.Load()
 	quotaCooldownDisabled.Store(false)
@@ -23,8 +23,8 @@ func TestExecuteStream_AllCredentialsOverloaded_ReturnsStatusError(t *testing.T)
 	m.RegisterExecutor(&customStreamMockExecutor{
 		identifier: "codex",
 		streamFn: func(_ context.Context, _ *Auth, _ cliproxyexecutor.Request, _ cliproxyexecutor.Options) (*cliproxyexecutor.StreamResult, error) {
-			// Mirrors the buffering-enabled codex executor: the rejection is returned
-			// synchronously, before any downstream chunk is committed.
+			// 对应启用缓冲的 codex 执行器：拒绝会被
+			// 同步返回，且在任何下游分块被提交之前。
 			return nil, overloadStatusError()
 		},
 	})
@@ -44,8 +44,8 @@ func TestExecuteStream_AllCredentialsOverloaded_ReturnsStatusError(t *testing.T)
 	}
 }
 
-// Contrast: the unbuffered path commits response.created first, so the rejection can only be
-// relayed inside an already-successful stream. The caller gets no error at all.
+// 对比：未缓冲路径会先提交 response.created，因此拒绝只能
+// 在一个已经成功的流内部转发。调用方完全收不到错误。
 func TestExecuteStream_UnbufferedOverload_StaysCommittedStream(t *testing.T) {
 	previous := quotaCooldownDisabled.Load()
 	quotaCooldownDisabled.Store(false)
@@ -88,10 +88,10 @@ func TestExecuteStream_UnbufferedOverload_StaysCommittedStream(t *testing.T) {
 	}
 }
 
-// Critical distinction: if an executor surfaces the rejection as the *first* stream chunk instead
-// of returning it synchronously, the conductor downgrades it to a committed stream carrying the
-// error (streamErrorResult), and the caller again observes no error. Returning synchronously is
-// therefore required to preserve the 503 status semantics.
+// 关键区别：如果执行器把拒绝作为*第一个*流分块抛出，而不是
+// 同步返回，那么协调器会将其降级为携带该错误的已提交流
+// （streamErrorResult），调用方同样观察不到错误。因此必须同步
+// 返回，才能保留 503 状态语义。
 func TestExecuteStream_ErrorAsFirstChunk_IsDowngradedToCommittedStream(t *testing.T) {
 	previous := quotaCooldownDisabled.Load()
 	quotaCooldownDisabled.Store(false)

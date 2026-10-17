@@ -57,7 +57,7 @@ func TestPatchAuthFileFields_DeletesPluginFields(t *testing.T) {
 	cfg := &config.Config{AuthDir: authDir}
 	h := NewHandlerWithoutConfigFilePath(cfg, manager)
 
-	// Patch weight: null to delete weight
+	// 将 weight 打补丁为 null 以删除 weight
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	body := `{"name":"plugin-auth.json","weight":null}`

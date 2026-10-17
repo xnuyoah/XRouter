@@ -17,28 +17,28 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-// Mode describes how a proxy setting should be interpreted.
+// Mode 描述代理设置应如何解释。
 type Mode int
 
 const (
-	// ModeInherit means no explicit proxy behavior was configured.
+	// ModeInherit 表示未配置显式代理行为。
 	ModeInherit Mode = iota
-	// ModeDirect means outbound requests must bypass proxies explicitly.
+	// ModeDirect 表示出站请求必须显式绕过代理。
 	ModeDirect
-	// ModeProxy means a concrete proxy URL was configured.
+	// ModeProxy 表示配置了具体的代理 URL。
 	ModeProxy
-	// ModeInvalid means the proxy setting is present but malformed or unsupported.
+	// ModeInvalid 表示代理设置存在，但格式错误或不受支持。
 	ModeInvalid
 )
 
-// Setting is the normalized interpretation of a proxy configuration value.
+// Setting 是对代理配置值归一化后的解释结果。
 type Setting struct {
 	Raw  string
 	Mode Mode
 	URL  *url.URL
 }
 
-// Parse normalizes a proxy configuration value into inherit, direct, or proxy modes.
+// Parse 将代理配置值归一化为 inherit、direct 或 proxy 模式。
 func Parse(raw string) (Setting, error) {
 	trimmed := strings.TrimSpace(raw)
 	setting := Setting{Raw: trimmed}
@@ -74,8 +74,8 @@ func Parse(raw string) (Setting, error) {
 	}
 }
 
-// ValidRequestProxy reports whether raw is a concrete execution proxy override.
-// The host must be present, and an explicit port must be in the range 1-65535.
+// ValidRequestProxy 报告 raw 是否为具体的执行代理覆盖值。
+// 主机必须存在，且显式端口必须在 1-65535 范围内。
 func ValidRequestProxy(raw string) bool {
 	setting, errParse := Parse(raw)
 	if errParse != nil || setting.Mode != ModeProxy || setting.URL == nil {
@@ -99,14 +99,14 @@ func cloneDefaultTransport() *http.Transport {
 	return &http.Transport{}
 }
 
-// NewDirectTransport returns a transport that bypasses environment proxies.
+// NewDirectTransport 返回一个绕过环境代理的 transport。
 func NewDirectTransport() *http.Transport {
 	clone := cloneDefaultTransport()
 	clone.Proxy = nil
 	return clone
 }
 
-// BuildHTTPTransport constructs an HTTP transport for the provided proxy setting.
+// BuildHTTPTransport 为给定的代理设置构建 HTTP transport。
 func BuildHTTPTransport(raw string) (*http.Transport, Mode, error) {
 	setting, errParse := Parse(raw)
 	if errParse != nil {
@@ -202,7 +202,7 @@ func buildHTTPSProxyDialTLSContext(
 	}
 }
 
-// BuildDialer constructs a proxy dialer for settings that operate at the connection layer.
+// BuildDialer 为作用于连接层的设置构建代理拨号器。
 func BuildDialer(raw string) (proxy.Dialer, Mode, error) {
 	setting, errParse := Parse(raw)
 	if errParse != nil {
@@ -348,7 +348,7 @@ func proxyAuthorization(user *url.Userinfo) string {
 	return "Basic " + encoded
 }
 
-// Redact returns a log-safe proxy URL with credentials and path-like data removed.
+// Redact 返回可安全记录日志的代理 URL，其中的凭据与类路径数据已被移除。
 func Redact(raw string) string {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {

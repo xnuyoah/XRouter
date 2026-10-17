@@ -380,7 +380,7 @@ func TestForwardResponsesStreamErrorEventPreservesNestedError(t *testing.T) {
 }
 
 func TestResponsesSSEFramerRepairErrorPayloadCalculatesCorrectSequenceNumber(t *testing.T) {
-	// Case 1: First frame is an error without sequence_number -> should be 0
+	// 情况 1：第一帧是不带 sequence_number 的错误 -> 应为 0
 	framer1 := &responsesSSEFramer{}
 	var out1 bytes.Buffer
 	framer1.WriteChunk(&out1, []byte("event: error\ndata: {\"error\":{\"code\":\"bad_request\"}}\n\n"))
@@ -397,7 +397,7 @@ func TestResponsesSSEFramerRepairErrorPayloadCalculatesCorrectSequenceNumber(t *
 		t.Fatalf("first frame error sequence_number = %d, want 0", p1.SequenceNumber)
 	}
 
-	// Case 2: Two data frames then an error frame without sequence_number -> should be 2
+	// 情况 2：两个数据帧之后是一个不带 sequence_number 的错误帧 -> 应为 2
 	framer2 := &responsesSSEFramer{}
 	var out2 bytes.Buffer
 	framer2.WriteChunk(&out2, []byte("event: response.created\ndata: {\"type\":\"response.created\",\"sequence_number\":0}\n\n"))
@@ -499,7 +499,7 @@ func TestResponsesStreamErrorTextPreservesTokenCountersAndLargeInts(t *testing.T
 	}
 	out := responsesStreamErrorText(errMsg, http.StatusBadRequest)
 
-	// Verify exact raw representation doesn't lose precision for 9007199254740993
+	// 校验精确的原始表示不会对 9007199254740993 丢失精度
 	if !strings.Contains(out, "9007199254740993") {
 		t.Fatalf("large integer precision was lost: %s", out)
 	}
@@ -626,23 +626,23 @@ func TestResponsesSSEFramer_FiltersDataOnlyPrivateEventsAndNonJSON(t *testing.T)
 	var output bytes.Buffer
 	framer := &responsesSSEFramer{failureEvent: "error"}
 
-	// Data-only frame with private type
+	// 仅含 data 且带私有类型的帧
 	dataOnlyPrivateFrame := []byte("data: {\"type\":\"codex.rate_limits\",\"rate_limits\":{\"primary\":{\"used_percent\":42}}}\n\n")
 	framer.WriteChunk(&output, dataOnlyPrivateFrame)
 
-	// Non-JSON payload with private event line
+	// 带私有 event 行的非 JSON 载荷
 	nonJSONPrivateFrame := []byte("event: codex.rate_limits\ndata: not-json-data\n\n")
 	framer.WriteChunk(&output, nonJSONPrivateFrame)
 
-	// Event-only frame without data
+	// 仅含 event 且不带 data 的帧
 	eventOnlyPrivateFrame := []byte("event: codex.response.metadata\n\n")
 	framer.WriteChunk(&output, eventOnlyPrivateFrame)
 
-	// Standard response.created
+	// 标准的 response.created
 	createdFrame := []byte("event: response.created\ndata: {\"type\":\"response.created\",\"response\":{\"id\":\"resp-1\"}}\n\n")
 	framer.WriteChunk(&output, createdFrame)
 
-	// Standard response.completed
+	// 标准的 response.completed
 	completedFrame := []byte("event: response.completed\ndata: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp-1\",\"status\":\"completed\"}}\n\n")
 	framer.WriteChunk(&output, completedFrame)
 

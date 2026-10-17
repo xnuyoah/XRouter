@@ -14,30 +14,30 @@ import (
 	homekv "github.com/xnuyoah/XRouter/v8/internal/home"
 )
 
-// SignatureEntry holds a cached thinking signature with timestamp
+// SignatureEntry 保存带时间戳的已缓存思考签名
 type SignatureEntry struct {
 	Signature string
 	Timestamp time.Time
 }
 
 const (
-	// SignatureCacheTTL is how long signatures are valid
+	// SignatureCacheTTL 是签名保持有效的时长
 	SignatureCacheTTL = 3 * time.Hour
 
-	// SignatureTextHashLen is the length of the hash key (16 hex chars = 64-bit key space)
+	// SignatureTextHashLen 是哈希 key 的长度（16 个十六进制字符 = 64 位 key 空间）
 	SignatureTextHashLen = 16
 
-	// MinValidSignatureLen is the minimum length for a signature to be considered valid
+	// MinValidSignatureLen 是签名被视为有效所需的最小长度
 	MinValidSignatureLen = 50
 
-	// CacheCleanupInterval controls how often stale entries are purged
+	// CacheCleanupInterval 控制清理过期条目的频率
 	CacheCleanupInterval = 10 * time.Minute
 )
 
-// signatureCache stores signatures by model group -> textHash -> SignatureEntry
+// signatureCache 按 模型组 -> textHash -> SignatureEntry 存储签名
 var signatureCache sync.Map
 
-// cacheCleanupOnce ensures the background cleanup goroutine starts only once
+// cacheCleanupOnce 确保后台清理 goroutine 只启动一次
 var cacheCleanupOnce sync.Once
 
 type signatureKVClient interface {
@@ -51,21 +51,21 @@ var currentSignatureKVClient = func() (signatureKVClient, bool, error) {
 	return homekv.CurrentKVClient()
 }
 
-// groupCache is the inner map type
+// groupCache 是内层 map 类型
 type groupCache struct {
 	mu      sync.RWMutex
 	entries map[string]SignatureEntry
 }
 
-// hashText creates a stable, Unicode-safe key from text content
+// hashText 从文本内容创建一个稳定的、Unicode 安全的 key
 func hashText(text string) string {
 	h := sha256.Sum256([]byte(text))
 	return hex.EncodeToString(h[:])[:SignatureTextHashLen]
 }
 
-// getOrCreateGroupCache gets or creates a cache bucket for a model group
+// getOrCreateGroupCache 获取或创建某个模型组的缓存桶
 func getOrCreateGroupCache(groupKey string) *groupCache {
-	// Start background cleanup on first access
+	// 首次访问时启动后台清理
 	cacheCleanupOnce.Do(startCacheCleanup)
 
 	if val, ok := signatureCache.Load(groupKey); ok {
@@ -76,8 +76,8 @@ func getOrCreateGroupCache(groupKey string) *groupCache {
 	return actual.(*groupCache)
 }
 
-// startCacheCleanup launches a background goroutine that periodically
-// removes caches where all entries have expired.
+// startCacheCleanup 启动一个后台 goroutine，定期
+// 移除所有条目都已过期的缓存。
 func startCacheCleanup() {
 	go func() {
 		ticker := time.NewTicker(CacheCleanupInterval)
@@ -88,13 +88,13 @@ func startCacheCleanup() {
 	}()
 }
 
-// purgeExpiredCaches removes caches with no valid (non-expired) entries.
+// purgeExpiredCaches 移除没有有效（未过期）条目的缓存。
 func purgeExpiredCaches() {
 	now := time.Now()
 	signatureCache.Range(func(key, value any) bool {
 		sc := value.(*groupCache)
 		sc.mu.Lock()
-		// Remove expired entries
+		// 移除已过期的条目
 		for k, entry := range sc.entries {
 			if now.Sub(entry.Timestamp) > SignatureCacheTTL {
 				delete(sc.entries, k)
@@ -102,7 +102,7 @@ func purgeExpiredCaches() {
 		}
 		isEmpty := len(sc.entries) == 0
 		sc.mu.Unlock()
-		// Remove cache bucket if empty
+		// 如果缓存桶为空则移除它
 		if isEmpty {
 			signatureCache.Delete(key)
 		}
@@ -111,13 +111,13 @@ func purgeExpiredCaches() {
 	purgeExpiredReasoningReplayCache(now)
 }
 
-// CacheSignature stores a thinking signature for a given model group and text.
-// Used for Claude models that require signed thinking blocks in multi-turn conversations.
+// CacheSignature 为给定的模型组和文本存储一个思考签名。
+// 用于在多轮对话中需要签名思考块的 Claude 模型。
 func CacheSignature(modelName, text, signature string) {
 	CacheSignatureBestEffort(context.Background(), modelName, text, signature)
 }
 
-// CacheSignatureBestEffort stores a thinking signature for completed response paths.
+// CacheSignatureBestEffort 为已完成的响应路径存储思考签名。
 func CacheSignatureBestEffort(ctx context.Context, modelName, text, signature string) bool {
 	if text == "" || signature == "" {
 		return false
@@ -152,8 +152,8 @@ func CacheSignatureBestEffort(ctx context.Context, modelName, text, signature st
 	return true
 }
 
-// GetCachedSignature retrieves a cached signature for a given model group and text.
-// Returns empty string if not found or expired.
+// GetCachedSignature 获取给定模型组和文本的已缓存签名。
+// 如果未找到或已过期则返回空字符串。
 func GetCachedSignature(modelName, text string) string {
 	signature, errSignature := GetCachedSignatureRequired(context.Background(), modelName, text)
 	if errSignature != nil {
@@ -162,7 +162,7 @@ func GetCachedSignature(modelName, text string) string {
 	return signature
 }
 
-// GetCachedSignatureRequired retrieves a cached signature for request-time paths.
+// GetCachedSignatureRequired 为请求时路径获取已缓存签名。
 func GetCachedSignatureRequired(ctx context.Context, modelName, text string) (string, error) {
 	groupKey := GetModelGroup(modelName)
 
@@ -210,7 +210,7 @@ func GetCachedSignatureRequired(ctx context.Context, modelName, text string) (st
 		return "", nil
 	}
 
-	// Refresh TTL on access (sliding expiration).
+	// 访问时刷新 TTL（滑动过期）。
 	entry.Timestamp = now
 	sc.entries[textHash] = entry
 	sc.mu.Unlock()
@@ -218,7 +218,7 @@ func GetCachedSignatureRequired(ctx context.Context, modelName, text string) (st
 	return entry.Signature, nil
 }
 
-// ClearSignatureCache clears signature cache for a specific model group or all groups.
+// ClearSignatureCache 清除特定模型组或所有组的签名缓存。
 func ClearSignatureCache(modelName string) {
 	if modelName == "" {
 		signatureCache.Range(func(key, _ any) bool {
@@ -231,7 +231,7 @@ func ClearSignatureCache(modelName string) {
 	signatureCache.Delete(groupKey)
 }
 
-// DeleteCachedSignatureRequired removes one exact cached signature.
+// DeleteCachedSignatureRequired 移除一个精确匹配的已缓存签名。
 func DeleteCachedSignatureRequired(ctx context.Context, modelName, text string) error {
 	if text == "" {
 		return nil
@@ -260,7 +260,7 @@ func DeleteCachedSignatureRequired(ctx context.Context, modelName, text string) 
 	return nil
 }
 
-// HasValidSignature checks if a signature is valid (non-empty and long enough)
+// HasValidSignature 检查签名是否有效（非空且长度足够）
 func HasValidSignature(modelName, signature string) bool {
 	return signature != "" && len(signature) >= MinValidSignatureLen
 }
@@ -286,7 +286,7 @@ func init() {
 	signatureBypassStrictMode.Store(false)
 }
 
-// SetSignatureCacheEnabled switches Antigravity signature handling between cache mode and bypass mode.
+// SetSignatureCacheEnabled 在缓存模式与绕过模式之间切换 Antigravity 签名处理。
 func SetSignatureCacheEnabled(enabled bool) {
 	previous := signatureCacheEnabled.Swap(enabled)
 	if previous == enabled {
@@ -297,12 +297,12 @@ func SetSignatureCacheEnabled(enabled bool) {
 	}
 }
 
-// SignatureCacheEnabled returns whether signature cache validation is enabled.
+// SignatureCacheEnabled 返回是否启用了签名缓存校验。
 func SignatureCacheEnabled() bool {
 	return signatureCacheEnabled.Load()
 }
 
-// SetSignatureBypassStrictMode controls whether bypass mode uses strict protobuf-tree validation.
+// SetSignatureBypassStrictMode 控制绕过模式是否使用严格的 protobuf 树校验。
 func SetSignatureBypassStrictMode(strict bool) {
 	previous := signatureBypassStrictMode.Swap(strict)
 	if previous == strict {
@@ -315,7 +315,7 @@ func SetSignatureBypassStrictMode(strict bool) {
 	}
 }
 
-// SignatureBypassStrictMode returns whether bypass mode uses strict protobuf-tree validation.
+// SignatureBypassStrictMode 返回绕过模式是否使用严格的 protobuf 树校验。
 func SignatureBypassStrictMode() bool {
 	return signatureBypassStrictMode.Load()
 }

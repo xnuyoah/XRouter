@@ -23,7 +23,7 @@ import (
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
-// PatchAuthFileStatus toggles the disabled state of an auth file
+// PatchAuthFileStatus 切换认证文件的禁用状态
 func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 	if h.authManager == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "core auth manager unavailable"})
@@ -67,8 +67,8 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 		return
 	}
 	if coreauth.IsPluginVirtualAuth(targetAuth) {
-		// Allow status changes only when targeting the source auth file name, matching delete semantics.
-		// Expanded virtual project auths still cannot be modified independently.
+		// 仅在针对源认证文件名时允许状态变更，与删除语义保持一致。
+		// 展开后的虚拟项目认证仍不能被独立修改。
 		if !isPluginVirtualSourceDelete(name, targetAuth) {
 			c.JSON(http.StatusConflict, gin.H{"error": errPluginVirtualAuth.Error()})
 			return
@@ -145,8 +145,8 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok", "disabled": *req.Disabled})
 }
 
-// patchPluginVirtualSourceStatus toggles disabled on a plugin multi-auth source file and all
-// runtime auths expanded from it. Virtual project children cannot be toggled independently.
+// patchPluginVirtualSourceStatus 在插件多认证源文件以及由其展开的
+// 所有运行时认证上切换 disabled。虚拟项目子项不能被独立切换。
 func (h *Handler) patchPluginVirtualSourceStatus(ctx context.Context, targetAuth *coreauth.Auth, disabled bool) ([]*coreauth.Auth, error) {
 	if h == nil || h.authManager == nil || targetAuth == nil {
 		return nil, fmt.Errorf("core auth manager unavailable")
@@ -253,7 +253,7 @@ func applyAuthDisabledState(auth *coreauth.Auth, disabled bool) {
 	auth.Metadata["disabled"] = disabled
 }
 
-// PatchAuthFileFields updates arbitrary metadata fields of an auth file.
+// PatchAuthFileFields 更新认证文件的任意元数据字段。
 func (h *Handler) PatchAuthFileFields(c *gin.Context) {
 	if h.authManager == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "core auth manager unavailable"})
@@ -303,7 +303,7 @@ func (h *Handler) PatchAuthFileFields(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
-	// Find auth by name or ID
+	// 按名称或 ID 查找认证
 	var targetAuth *coreauth.Auth
 	if auth, ok := h.authManager.GetByID(name); ok {
 		targetAuth = auth

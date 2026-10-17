@@ -78,10 +78,10 @@ func TestRegisterModelsForAuthBatch_StaleSnapshot_Issue6453(t *testing.T) {
 		reg.UnregisterClient(allowedID)
 	})
 
-	// Capture a stale snapshot of auths before excluded_models is configured on authID
+	// 在 authID 上配置 excluded_models 之前捕获 auths 的陈旧快照
 	staleSnapshot := manager.List()
 
-	// Update the auth in coreManager to exclude gpt-6-astra and gpt-6.1-sol
+	// 更新 coreManager 中的 auth 以排除 gpt-6-astra 与 gpt-6.1-sol
 	updatedAuth := auth.Clone()
 	updatedAuth.Attributes = map[string]string{
 		"auth_kind":       "oauth",
@@ -92,10 +92,10 @@ func TestRegisterModelsForAuthBatch_StaleSnapshot_Issue6453(t *testing.T) {
 		t.Fatalf("failed to update auth: %v", errUpdate)
 	}
 
-	// Run batch registration with the stale snapshot
+	// 用陈旧快照运行批量注册
 	service.registerModelsForAuthBatch(ctx, staleSnapshot)
 
-	// Verify that the excluded models are not supported for this client
+	// 验证该客户端不支持被排除的模型
 	if reg.ClientSupportsModel(authID, "nemotron-3-ultra") {
 		t.Errorf("expected gpt-6-astra to be excluded for %s, but registry supports it", authID)
 	}
@@ -110,7 +110,7 @@ func TestRegisterModelsForAuthBatch_StaleSnapshot_Issue6453(t *testing.T) {
 		}
 	}
 
-	// Verify scheduler selection picks the allowed account and never the masked account
+	// 验证调度器选择会选中被允许的账号，而绝不会选中被屏蔽的账号
 	selected, errSelect := manager.SelectAuth(ctx, "nvidia", "nemotron-3-ultra", cliproxyexecutor.Options{})
 	if errSelect != nil {
 		t.Fatalf("failed to select auth for gpt-6-astra: %v", errSelect)
@@ -181,10 +181,10 @@ func TestRegisterModelsForAuthBatch_ConcurrentUpdateDuringBatch_Issue6453(t *tes
 		}
 	}
 
-	// Run batch registration with the initial snapshot
+	// 用初始快照运行批量注册
 	service.registerModelsForAuthBatch(ctx, manager.List())
 
-	// Verify that the excluded models are not supported for this client after batch registration completes
+	// 验证批量注册完成后该客户端不支持被排除的模型
 	if reg.ClientSupportsModel(authID, "nemotron-3-ultra") {
 		t.Errorf("expected gpt-6-astra to be excluded for %s, but registry supports it", authID)
 	}
@@ -199,7 +199,7 @@ func TestRegisterModelsForAuthBatch_ConcurrentUpdateDuringBatch_Issue6453(t *tes
 		}
 	}
 
-	// Verify scheduler selection picks the allowed account and never the masked account
+	// 验证调度器选择会选中被允许的账号，而绝不会选中被屏蔽的账号
 	selected, errSelect := manager.SelectAuth(ctx, "nvidia", "nemotron-3-ultra", cliproxyexecutor.Options{})
 	if errSelect != nil {
 		t.Fatalf("failed to select auth for gpt-6-astra: %v", errSelect)
@@ -258,9 +258,9 @@ func TestRegisterModelsForAuthBatch_PostBatchReconciliation_Issue6453(t *testing
 	var updateTriggered atomic.Bool
 	modelRegistrationTaskPostRunHook = func(id string) {
 		if id == authID && updateTriggered.CompareAndSwap(false, true) {
-			// After the initial task ran completeModelRegistrationForAuthWithCache with Generation 1,
-			// update coreManager to Generation 2 with excluded_models before the batch loop finishes.
-			// This tests that post-batch reconciliation catches the newer generation and re-registers.
+			// 在初始任务以 Generation 1 运行 completeModelRegistrationForAuthWithCache 之后，
+			// 在批量循环结束前将 coreManager 更新为带 excluded_models 的 Generation 2。
+			// 这测试批量后的对账能捕获更新的 generation 并重新注册。
 			updatedAuth := auth.Clone()
 			updatedAuth.Attributes = map[string]string{
 				"auth_kind":       "oauth",
@@ -273,14 +273,14 @@ func TestRegisterModelsForAuthBatch_PostBatchReconciliation_Issue6453(t *testing
 		}
 	}
 
-	// Run batch registration with the initial snapshot.
+	// 用初始快照运行批量注册。
 	service.registerModelsForAuthBatch(ctx, manager.List())
 
 	if !updateTriggered.Load() {
 		t.Fatal("expected post-run hook to trigger during batch registration")
 	}
 
-	// Verify that the post-batch reconciliation corrected the model list so excluded models are not supported
+	// 验证批量后的对账已修正模型列表，因此被排除的模型不再受支持
 	if reg.ClientSupportsModel(authID, "nemotron-3-ultra") {
 		t.Errorf("expected gpt-6-astra to be excluded for %s after reconciliation, but registry supports it", authID)
 	}
@@ -295,7 +295,7 @@ func TestRegisterModelsForAuthBatch_PostBatchReconciliation_Issue6453(t *testing
 		}
 	}
 
-	// Verify scheduler selection picks the allowed account and never the masked account
+	// 验证调度器选择会选中被允许的账号，而绝不会选中被屏蔽的账号
 	selected, errSelect := manager.SelectAuth(ctx, "nvidia", "nemotron-3-ultra", cliproxyexecutor.Options{})
 	if errSelect != nil {
 		t.Fatalf("failed to select auth for gpt-6-astra: %v", errSelect)

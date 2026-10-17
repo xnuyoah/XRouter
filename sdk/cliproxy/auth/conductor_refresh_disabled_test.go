@@ -61,7 +61,7 @@ func TestRefreshAuthForRequest_NormalDisabledAuth_RefreshesTokenSuccessfully(t *
 	executor := &mockOAuthErrorExecutor{id: "test-provider"}
 	manager.RegisterExecutor(executor)
 
-	// Normal disabled auth without invalid_grant should refresh tokens normally (expected behavior)
+	// 不含 invalid_grant 的普通禁用认证应正常刷新令牌（预期行为）
 	auth := &Auth{
 		ID:       "normal-disabled-auth",
 		Provider: "test-provider",
@@ -115,7 +115,7 @@ func TestRefreshAuthForRequest_DisabledAuth_InvalidGrant_NeverRetries(t *testing
 		t.Fatalf("Register error: %v", err)
 	}
 
-	// 1st call encounters invalid_grant
+	// 第 1 次调用遇到 invalid_grant
 	_, errRefresh := manager.refreshAuthForRequest(ctx, auth.ID, "")
 	if errRefresh == nil {
 		t.Fatalf("expected refresh error, got nil")
@@ -128,7 +128,7 @@ func TestRefreshAuthForRequest_DisabledAuth_InvalidGrant_NeverRetries(t *testing
 	if current == nil {
 		t.Fatalf("auth not found in manager")
 	}
-	// Disabled + invalid_grant must never schedule retry
+	// 禁用 + invalid_grant 绝不能安排重试
 	if current.Status != StatusDisabled {
 		t.Fatalf("auth status = %v, want StatusDisabled", current.Status)
 	}
@@ -136,7 +136,7 @@ func TestRefreshAuthForRequest_DisabledAuth_InvalidGrant_NeverRetries(t *testing
 		t.Fatalf("NextRefreshAfter = %v, want zero time (never refresh)", current.NextRefreshAfter)
 	}
 
-	// 2nd call should be blocked immediately without calling executor
+	// 第 2 次调用应立即被阻塞，且不调用执行器
 	callsBefore := executor.refreshCalls.Load()
 	_, errSecond := manager.refreshAuthForRequest(ctx, auth.ID, "")
 	if errSecond == nil {
@@ -177,7 +177,7 @@ func TestRefreshAuthForRequest_EnabledAuth_InvalidGrant_ExponentialBackoff(t *te
 		t.Fatalf("Register error: %v", err)
 	}
 
-	// 1st failure: backoff 1m
+	// 第 1 次失败：退避 1m
 	t1 := time.Now()
 	_, _ = manager.refreshAuthForRequest(ctx, auth.ID, "")
 	manager.mu.RLock()
@@ -194,7 +194,7 @@ func TestRefreshAuthForRequest_EnabledAuth_InvalidGrant_ExponentialBackoff(t *te
 		t.Fatalf("attempt 1: backoff diff = %v, want ~1m", diff1)
 	}
 
-	// 2nd failure: backoff 2m
+	// 第 2 次失败：退避 2m
 	t2 := time.Now()
 	_, _ = manager.refreshAuthForRequest(ctx, auth.ID, "")
 	manager.mu.RLock()
@@ -208,7 +208,7 @@ func TestRefreshAuthForRequest_EnabledAuth_InvalidGrant_ExponentialBackoff(t *te
 		t.Fatalf("attempt 2: backoff diff = %v, want ~2m", diff2)
 	}
 
-	// 3rd failure: backoff 4m
+	// 第 3 次失败：退避 4m
 	t3 := time.Now()
 	_, _ = manager.refreshAuthForRequest(ctx, auth.ID, "")
 	manager.mu.RLock()
@@ -255,7 +255,7 @@ func TestManager_AutoRefreshLoop_DisabledAuthWithInvalidGrantNeverRefreshes(t *t
 	manager.StartAutoRefresh(ctx, 10*time.Millisecond)
 	defer manager.StopAutoRefresh()
 
-	// Wait 100ms to allow refresh loop cycles
+	// 等待 100ms 以允许刷新循环运行若干周期
 	time.Sleep(100 * time.Millisecond)
 
 	if calls := executor.refreshCalls.Load(); calls != 0 {
@@ -266,7 +266,7 @@ func TestManager_AutoRefreshLoop_DisabledAuthWithInvalidGrantNeverRefreshes(t *t
 func TestRefreshAuthForRequest_RawFmtError_RecognizesInvalidGrant(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
-	// Error created via fmt.Errorf without implementing StatusCode()
+	// 通过 fmt.Errorf 创建的错误，未实现 StatusCode()
 	rawErr := fmt.Errorf("oauth token refresh failed: invalid_grant: account checkpoint required")
 	executor := &mockOAuthErrorExecutor{
 		id:          "test-provider",

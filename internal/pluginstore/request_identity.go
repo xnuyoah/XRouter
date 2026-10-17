@@ -16,15 +16,15 @@ type preparedPluginStoreAuth struct {
 	authenticated bool
 }
 
-// LatestReleaseCacheKey identifies a repository under the effective credentials
-// and network scope, without retaining credential material in the key.
+// LatestReleaseCacheKey 在有效凭据和网络作用域下
+// 标识一个仓库，且不在键中保留凭据材料。
 func (c Client) LatestReleaseCacheKey(plugin Plugin) (string, error) {
 	_, key, errPrepare := c.PrepareLatestRelease(plugin)
 	return key, errPrepare
 }
 
-// PrepareLatestRelease binds the cache identity and initial release request to
-// the same credential snapshot, even when environment values change in a queue.
+// PrepareLatestRelease 将缓存标识与初始发布请求绑定到
+// 同一凭据快照，即使环境值在排队过程中发生变化。
 func (c Client) PrepareLatestRelease(plugin Plugin) (Client, string, error) {
 	owner, repo, errRepository := GitHubRepositoryParts(plugin.Repository)
 	if errRepository != nil {
@@ -58,7 +58,7 @@ func requestIdentity(networkScope string, headers http.Header, authenticated boo
 	hash := sha256.New()
 	_, _ = fmt.Fprintf(hash, "%s\x00%t\x00", networkScope, authenticated)
 	if authenticated {
-		// Header.Write sorts header names, making equivalent auth rules share a key.
+		// Header.Write 会对头部名称排序，使等价的 auth 规则共享同一个键。
 		_ = headers.Write(hash)
 	}
 	return fmt.Sprintf("%x", hash.Sum(nil))

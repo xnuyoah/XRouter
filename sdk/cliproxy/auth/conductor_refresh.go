@@ -17,7 +17,7 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// RefreshEvaluator allows runtime state to override refresh decisions.
+// RefreshEvaluator 允许运行时状态覆盖刷新决策。
 type RefreshEvaluator interface {
 	ShouldRefresh(now time.Time, auth *Auth) bool
 }
@@ -29,10 +29,10 @@ const (
 	refreshFailureBackoff   = 5 * time.Minute
 	invalidGrantBackoffBase = time.Minute
 	invalidGrantBackoffMax  = 30 * time.Minute
-	// refreshIneffectiveBackoff throttles refresh attempts when an executor returns
-	// success but the auth still evaluates as needing refresh (e.g. token expiry
-	// wasn't updated). Without this guard, the auto-refresh loop can tight-loop and
-	// burn CPU at idle.
+	// refreshIneffectiveBackoff 在执行器返回成功、
+	// 但认证仍被评估为需要刷新时（例如令牌过期时间
+	// 未更新）限制刷新尝试的频率。没有这道防线，自动刷新循环会紧密地空转并
+	// 在空闲时烧掉 CPU。
 	refreshIneffectiveBackoff = 30 * time.Second
 	quotaBackoffBase          = time.Second
 	quotaBackoffMax           = 30 * time.Minute
@@ -40,9 +40,9 @@ const (
 	transientErrorCooldown    = time.Minute
 )
 
-// StartAutoRefresh launches a background loop that evaluates auth freshness
-// every few seconds and triggers refresh operations when required.
-// Only one loop is kept alive; starting a new one cancels the previous run.
+// StartAutoRefresh 启动一个后台循环，每隔几秒评估一次认证的
+// 新鲜度，并在需要时触发刷新操作。
+// 只保留一个循环存活；启动新的会取消上一次运行。
 func (m *Manager) StartAutoRefresh(parent context.Context, interval time.Duration) {
 	if interval <= 0 {
 		interval = refreshCheckInterval
@@ -70,8 +70,8 @@ func (m *Manager) StartAutoRefresh(parent context.Context, interval time.Duratio
 	go loop.run(ctx)
 }
 
-// StopAutoRefresh cancels the background refresh loop, if running.
-// It also stops the selector if it implements StoppableSelector.
+// StopAutoRefresh 取消后台刷新循环（若正在运行）。
+// 如果选择器实现了 StoppableSelector，也会停止它。
 func (m *Manager) StopAutoRefresh() {
 	m.mu.Lock()
 	cancel := m.refreshCancel
@@ -81,7 +81,7 @@ func (m *Manager) StopAutoRefresh() {
 	if cancel != nil {
 		cancel()
 	}
-	// Stop selector if it implements StoppableSelector (e.g., SessionAffinitySelector)
+	// 如果选择器实现了 StoppableSelector（例如 SessionAffinitySelector），就停止它
 	sel := m.Selector()
 	if stoppable, ok := sel.(StoppableSelector); ok && stoppable != nil {
 		stoppable.Stop()
@@ -381,13 +381,13 @@ func (m *Manager) finishRefreshJob(job *authRefreshJob, retryAt time.Time, queue
 	}
 	delete(m.refreshJobs, job.id)
 	if auth := m.auths[job.id]; auth != nil && auth.RegistrationEpoch == job.registrationEpoch && auth.NextRefreshAfter.Equal(job.pendingUntil) {
-		// Clear only this job's pending marker, preserving newer refresh outcomes.
+		// 只清除本任务的待处理标记，保留更新的刷新结果。
 		auth.NextRefreshAfter = retryAt
 		auth.Generation++
 		auth.UpdatedAt = time.Now()
 	}
 	m.mu.Unlock()
-	// Notify the current loop, which may differ from the job's original loop.
+	// 通知当前循环，它可能与任务最初的循环不同。
 	m.queueRefreshReschedule(job.id)
 }
 
@@ -426,13 +426,13 @@ func authHasRefreshCredential(auth *Auth) bool {
 	if _, hasSIWC, _ := CodexSIWCNeedsRefresh(auth, time.Now()); hasSIWC {
 		return true
 	}
-	// Meta exchanges its device token for a replacement API key after a 401.
+	// Meta 在收到 401 后用其设备令牌换取替代的 API 密钥。
 	return auth != nil && strings.EqualFold(strings.TrimSpace(auth.Provider), "meta") &&
 		(authMetadataString(auth, "dca_token") != "" || strings.TrimSpace(auth.Attributes["dca_token"]) != "")
 }
 
-// CredentialsChanged reports whether authentication credentials (tokens or API keys)
-// differ between two Auth records.
+// CredentialsChanged 报告两条 Auth 记录之间的认证凭据
+// （令牌或 API 密钥）是否不同。
 func CredentialsChanged(existing, incoming *Auth) bool {
 	if existing == nil || incoming == nil {
 		return false
@@ -497,7 +497,7 @@ func authSIWCTokenField(auth *Auth, key string) string {
 	return strings.TrimSpace(val)
 }
 
-// ClearUnauthorizedModelStates resets model states whose last error was an unauthorized failure.
+// ClearUnauthorizedModelStates 重置最后一个错误为未授权失败的模型状态。
 func ClearUnauthorizedModelStates(auth *Auth, now time.Time) []string {
 	return clearUnauthorizedModelStates(auth, now)
 }
@@ -542,8 +542,8 @@ func clearUnauthorizedModelStates(auth *Auth, now time.Time) []string {
 	return resumed
 }
 
-// RefreshHomeSelectionAfterUnauthorized only reuses a newer snapshot already
-// installed by Home. It never refreshes or mutates Home-owned credentials.
+// RefreshHomeSelectionAfterUnauthorized 只复用 Home 已安装的
+// 较新快照。它从不刷新或改动 Home 拥有的凭据。
 func (m *Manager) RefreshHomeSelectionAfterUnauthorized(_ context.Context, selection *HomeDispatchSelection, failedAuth *Auth) (*Auth, bool, error) {
 	if m == nil || selection == nil {
 		return nil, false, nil
@@ -562,14 +562,14 @@ func (m *Manager) RefreshHomeSelectionAfterUnauthorized(_ context.Context, selec
 	return current, false, nil
 }
 
-// tryRefreshAfterUnauthorized refreshes local OAuth credentials once after a
-// 401 so the current auth can be retried before fallback/suspend.
+// tryRefreshAfterUnauthorized 在 401 之后刷新一次本地 OAuth 凭据，
+// 使当前认证能在回退/暂停之前被重试。
 func (m *Manager) tryRefreshAfterUnauthorized(ctx context.Context, auth *Auth, execErr error, alreadyTried bool) (*Auth, bool) {
 	if m == nil || auth == nil || alreadyTried || execErr == nil {
 		return auth, false
 	}
-	// Request-scoped failures describe this request, not stale credentials.
-	// Refreshing would turn a direct error response into an implicit retry.
+	// 请求作用域的失败描述的是本次请求，而非过期的凭据。
+	// 刷新会把一个直接的错误响应变成隐式重试。
 	if isRequestScopedError(execErr) {
 		return auth, false
 	}
@@ -607,16 +607,16 @@ func (m *Manager) refreshAuth(ctx context.Context, id string) {
 	_, _ = m.refreshAuthForRequest(ctx, id, "")
 }
 
-// refreshAuthForRequest performs a synchronous credential refresh for the given auth.
-// failedAccessToken lets concurrent callers reuse a refresh that already replaced the
-// access token that produced the unauthorized response.
+// refreshAuthForRequest 为给定认证执行一次同步的凭据刷新。
+// failedAccessToken 让并发调用方复用一次已经替换掉
+// 产生未授权响应的访问令牌的刷新。
 func (m *Manager) refreshAuthForRequest(ctx context.Context, id, failedAccessToken string) (*Auth, error) {
 	return m.refreshAuthForRequestAtEpoch(ctx, id, failedAccessToken, 0)
 }
 
 type forceRefreshContextKey struct{}
 
-// WithForceRefresh marks ctx as an explicit forced credential refresh.
+// WithForceRefresh 把 ctx 标记为一次显式强制的凭据刷新。
 func WithForceRefresh(ctx context.Context) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -624,7 +624,7 @@ func WithForceRefresh(ctx context.Context) context.Context {
 	return context.WithValue(ctx, forceRefreshContextKey{}, true)
 }
 
-// IsForceRefreshContext reports whether ctx carries an explicit forced credential refresh marker.
+// IsForceRefreshContext 报告 ctx 是否携带显式强制凭据刷新的标记。
 func IsForceRefreshContext(ctx context.Context) bool {
 	if ctx == nil {
 		return false
@@ -695,8 +695,8 @@ func (m *Manager) refreshAuthForRequestAtEpoch(ctx context.Context, id, failedAc
 	auth := m.auths[id].Clone()
 	var exec ProviderExecutor
 	if auth != nil {
-		// Use the same effective provider key as request execution so OpenAI-compat
-		// auths registered under namespaced keys still resolve for refresh.
+		// 使用与请求执行相同的有效供应商键，这样注册在带命名空间
+		// 键下的 OpenAI 兼容认证在刷新时仍能解析。
 		exec, _ = m.executorLocked(executorKeyFromAuth(auth))
 	}
 	m.mu.RUnlock()
@@ -713,7 +713,7 @@ func (m *Manager) refreshAuthForRequestAtEpoch(ctx context.Context, id, failedAc
 		return nil, errors.New("auth is unauthorized")
 	}
 
-	// Another request may already have refreshed this credential.
+	// 另一个请求可能已经刷新过此凭据。
 	if failedAccessToken != "" {
 		if currentToken := authAccessToken(auth); currentToken != "" && currentToken != failedAccessToken {
 			return auth.Clone(), nil
@@ -782,8 +782,8 @@ func (m *Manager) refreshAuthForRequestAtEpoch(ctx context.Context, id, failedAc
 
 			isDisabled = current.Disabled || current.Status == StatusDisabled
 			hasValidAccessToken := current.HasValidAccessToken(now)
-			// failedAccessToken is set only when upstream rejected this exact access
-			// token. Its expiry time no longer proves it is usable.
+			// failedAccessToken 仅在上游拒绝了这同一个访问
+			// 令牌时才有值。它的过期时间不再能证明其可用。
 			accessTokenRejected := failedAccessToken != "" && authAccessToken(current) == failedAccessToken
 			if isDisabled && invalidGrant {
 				current.Unavailable = true
@@ -801,9 +801,9 @@ func (m *Manager) refreshAuthForRequestAtEpoch(ctx context.Context, id, failedAc
 				}
 				shouldReschedule = true
 			} else if accessTokenRejected && invalidGrant {
-				// Neither token can recover without a new login. Stop selecting the
-				// credential until its tokens change instead of retrying it after
-				// every cooldown and returning the same 401 to clients.
+				// 没有新的登录，两个令牌都无法恢复。停止选取该
+				// 凭据，直到其令牌发生变化，而不是在每次
+				// 冷却后重试它并把同样的 401 返回给客户端。
 				current.Unavailable = true
 				current.Status = StatusError
 				current.NextRefreshAfter = time.Time{}
@@ -832,7 +832,7 @@ func (m *Manager) refreshAuthForRequestAtEpoch(ctx context.Context, id, failedAc
 					shouldReschedule = true
 				}
 			} else {
-				// Access token remains valid. Preserve current in-flight/cooldown status without overwrite.
+				// 访问令牌仍然有效。保留当前的进行中/冷却状态而不覆盖。
 				nextRetry := now.Add(refreshFailureBackoff)
 				if invalidGrant {
 					current.RefreshFailures++
@@ -866,8 +866,8 @@ func (m *Manager) refreshAuthForRequestAtEpoch(ctx context.Context, id, failedAc
 	if updated == nil {
 		updated = base.Clone()
 	}
-	// Preserve runtime created by the executor during Refresh.
-	// If executor didn't set one, fall back to the previous runtime.
+	// 保留执行器在 Refresh 期间创建的 runtime。
+	// 如果执行器没有设置，就回退到之前的 runtime。
 	if updated.Runtime == nil {
 		updated.Runtime = auth.Runtime
 	}
@@ -886,11 +886,11 @@ func (m *Manager) refreshAuthForRequestAtEpoch(ctx context.Context, id, failedAc
 	if m.shouldRefresh(updated, now) {
 		updated.NextRefreshAfter = now.Add(refreshIneffectiveBackoff)
 	}
-	// A successful refresh may have rotated upstream tokens after cancellation.
-	// Commit its result with context values intact; keep epoch checks and save ordering.
+	// 一次成功的刷新可能在取消之后轮换了上游令牌。
+	// 在上下文值保持不变的情况下提交其结果；保留代次检查和保存顺序。
 	saved, errUpdate := m.UpdateRefreshedAuth(context.WithoutCancel(ctx), base, updated)
 	if errUpdate != nil {
-		// Warn, not debug: a restart after a lost persist fails with invalid_grant.
+		// 用 Warn 而非 debug：持久化丢失后重启会以 invalid_grant 失败。
 		log.WithFields(log.Fields{"auth_id": auth.ID, "credential": auth.ID, "provider": auth.Provider}).Warnf("persist refreshed auth %s (%s) failed: %v", auth.Provider, auth.ID, errUpdate)
 		return nil, errUpdate
 	}
@@ -912,7 +912,7 @@ func (m *Manager) refreshAuthForRequestAtEpoch(ctx context.Context, id, failedAc
 	return saved.Clone(), nil
 }
 
-// ForceRefreshAuth triggers an immediate synchronous refresh for the credential.
+// ForceRefreshAuth 对该凭据触发一次立即的同步刷新。
 func (m *Manager) ForceRefreshAuth(ctx context.Context, id string) (*Auth, error) {
 	if m == nil {
 		return nil, errors.New("auth manager is nil")
@@ -934,14 +934,14 @@ func (m *Manager) refreshWorkers() int {
 	return workers
 }
 
-// ForceRefreshResult records the outcome of a forced refresh for one credential.
+// ForceRefreshResult 记录一次针对单个凭据的强制刷新的结果。
 type ForceRefreshResult struct {
 	ID      string `json:"id"`
 	Success bool   `json:"success"`
 	Error   string `json:"error,omitempty"`
 }
 
-// ForceRefreshAll triggers an immediate refresh for all credentials that have refresh tokens or custom refresh evaluators.
+// ForceRefreshAll 对所有拥有刷新令牌或自定义刷新评估器的凭据触发一次立即刷新。
 func (m *Manager) ForceRefreshAll(ctx context.Context) []ForceRefreshResult {
 	if m == nil {
 		return nil

@@ -6,8 +6,8 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// claudeAssistantBlockTypes returns the content block types of the last Claude
-// assistant message produced by the Responses -> Claude request translator.
+// claudeAssistantBlockTypes 返回 Responses -> Claude 请求转换器
+// 生成的最新 Claude assistant 消息的内容块类型。
 func claudeAssistantBlockTypes(t *testing.T, claudeReq []byte) []string {
 	t.Helper()
 	var kinds []string

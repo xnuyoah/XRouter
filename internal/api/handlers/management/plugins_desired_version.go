@@ -8,9 +8,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Desired-version helpers for installed plugins. They read the "store" section
-// of a plugin instance config (written when the plugin was installed) so the
-// plugin list can report update availability.
+// 已安装插件的期望版本辅助函数。它们读取插件实例配置中的 "store" 段
+// （在插件安装时写入），从而让插件列表
+// 能够报告可更新状态。
 
 func pluginStoreDesiredVersions(configs map[string]config.PluginInstanceConfig) map[string]string {
 	if len(configs) == 0 {

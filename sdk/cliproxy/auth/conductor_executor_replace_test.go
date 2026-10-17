@@ -201,7 +201,7 @@ func TestManagerSchedulerFastPath(t *testing.T) {
 		t.Fatal("expected HasProviderAuth(openai-compatibility) to be false when only openai is registered")
 	}
 
-	// 1. Single provider fast-path pickNext
+	// 1. 单供应商快速路径 pickNext
 	pickedAuth, exec, errPick := manager.pickNext(context.Background(), "openai", "", cliproxyexecutor.Options{}, nil)
 	if errPick != nil {
 		t.Fatalf("pickNext(openai) error = %v", errPick)
@@ -213,7 +213,7 @@ func TestManagerSchedulerFastPath(t *testing.T) {
 		t.Fatalf("pickNext(openai) exec = %v, want %v", exec, openAIExec)
 	}
 
-	// 2. Mixed provider fast-path pickNextMixed
+	// 2. 混合供应商快速路径 pickNextMixed
 	pickedMixed, execMixed, providerKey, errMixed := manager.pickNextMixed(context.Background(), []string{"openai"}, "", cliproxyexecutor.Options{}, nil)
 	if errMixed != nil {
 		t.Fatalf("pickNextMixed([openai]) error = %v", errMixed)
@@ -228,7 +228,7 @@ func TestManagerSchedulerFastPath(t *testing.T) {
 		t.Fatalf("pickNextMixed([openai]) providerKey = %q, want openai", providerKey)
 	}
 
-	// 3. Pinned auth fast-path
+	// 3. 固定 auth 的快速路径
 	pinnedOpts := cliproxyexecutor.Options{
 		Metadata: map[string]any{
 			cliproxyexecutor.PinnedAuthMetadataKey: auth.ID,
@@ -242,14 +242,14 @@ func TestManagerSchedulerFastPath(t *testing.T) {
 		t.Fatalf("pickNextMixed pinned auth = %v, want ID %s", pickedPinned, auth.ID)
 	}
 
-	// 4. Non-streaming Execute via manager
+	// 4. 经管理器的非流式 Execute
 	resp, errExec := manager.Execute(context.Background(), []string{"openai"}, cliproxyexecutor.Request{Model: "openai-fastpath-model"}, cliproxyexecutor.Options{})
 	if errExec != nil {
 		t.Fatalf("manager.Execute([openai]) error = %v", errExec)
 	}
 	_ = resp
 
-	// 5. Streaming ExecuteStream via manager
+	// 5. 经管理器的流式 ExecuteStream
 	streamRes, errStream := manager.ExecuteStream(context.Background(), []string{"openai"}, cliproxyexecutor.Request{Model: "openai-fastpath-model"}, cliproxyexecutor.Options{})
 	if errStream != nil {
 		t.Fatalf("manager.ExecuteStream([openai]) error = %v", errStream)

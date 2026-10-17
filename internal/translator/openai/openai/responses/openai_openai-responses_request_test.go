@@ -1304,13 +1304,13 @@ func TestSplitResponsesQualifiedFunctionCallFromRequest_FirstDeclarationWins(t *
 		wantName      string
 		wantNamespace string
 	}{
-		// The flat tool is the one that survives merging, so it must stay flat.
+		// 平铺工具是合并后存活下来的那个，因此它必须保持平铺。
 		{"flat declared first", flatFirst, "editor__apply_patch", "editor__apply_patch", ""},
-		// The namespace child survives here, so the call splits back into it.
+		// 这里命名空间子项存活下来，因此调用会重新拆分回它。
 		{"namespace declared first", namespaceFirst, "editor__apply_patch", "apply_patch", "editor"},
-		// No collision: unchanged behaviour.
+		// 无冲突：行为不变。
 		{"namespace only", namespaceOnly, "mcp__github__get_me", "get_me", "mcp__github"},
-		// Unknown name falls through untouched.
+		// 未知名称会原样透传。
 		{"unknown name", flatFirst, "something_else", "something_else", ""},
 	}
 
@@ -1326,7 +1326,7 @@ func TestSplitResponsesQualifiedFunctionCallFromRequest_FirstDeclarationWins(t *
 }
 
 func TestSplitResponsesQualifiedFunctionCallFromRequest_MatchesMergedToolIdentity(t *testing.T) {
-	// Whatever survives the merge must be what reverse translation reports.
+	// 合并后存活下来的必须就是反向转换所报告的内容。
 	raw := []byte(`{
 		"tools": [
 			{"type":"function","name":"editor__apply_patch","parameters":{"type":"object"}},
@@ -1350,11 +1350,11 @@ func TestSplitResponsesQualifiedFunctionCallFromRequest_MatchesMergedToolIdentit
 }
 
 func TestResponsesCustomToolNames_FollowsMergedDeclaration(t *testing.T) {
-	// Declarations delivered through the two channels may differ in type: a
-	// top-level function and an "additional_tools" custom tool can flatten to
-	// the same Chat Completions name. Only the winner may decide whether the
-	// tool is freeform, otherwise a plain function call comes back as a
-	// custom_tool_call with unwrapped arguments.
+	// 通过两条渠道下发的声明类型可能不同：一个
+	// 顶层函数和一个 "additional_tools" custom 工具可能展平为
+	// 同一个 Chat Completions 名称。只有胜出者才能决定该
+	// 工具是否为自由形式，否则普通的函数调用会以
+	// 解包参数后的 custom_tool_call 形式返回。
 	functionFirst := []byte(`{
 		"input": [
 			{"type":"additional_tools","tools":[{"type":"custom","name":"exec","description":"copy"}]}
@@ -1387,7 +1387,7 @@ func TestResponsesCustomToolNames_FollowsMergedDeclaration(t *testing.T) {
 			if len(merged) != 1 {
 				t.Fatalf("merged tool count = %d, want 1", len(merged))
 			}
-			// Freeform tools are the ones converted to the single-string shape.
+			// 自由形式工具就是那些被转换为单字符串形态的工具。
 			mergedIsCustom := gjson.GetBytes(merged[0], "function.parameters.properties.input").Exists()
 			if mergedIsCustom != tt.wantCustom {
 				t.Fatalf("merged tool custom = %v, want %v", mergedIsCustom, tt.wantCustom)
@@ -1409,8 +1409,8 @@ func TestResponsesCustomToolNames_FollowsMergedDeclaration(t *testing.T) {
 }
 
 func TestResponsesCustomToolNames_OnlyReportsMergedTools(t *testing.T) {
-	// Nested namespaces are not converted, so their children never reach the
-	// upstream request and must not be classified as freeform tools either.
+	// 嵌套命名空间不会被转换，因此其子项永远不会到达
+	// 上游请求，也不得被归类为自由形式工具。
 	raw := []byte(`{
 		"tools": [
 			{"type":"namespace","name":"outer","tools":[
@@ -1490,13 +1490,13 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_FunctionCallOutput
 				t.Fatalf("expected 2 messages (assistant, tool), got %d; output=%s", len(messages), string(out))
 			}
 
-			// Assistant message has tool_calls with id call_123
+			// 助手消息带有 id 为 call_123 的 tool_calls
 			toolCallID := messages[0].Get("tool_calls.0.id").String()
 			if toolCallID != "call_123" {
 				t.Fatalf("tool_calls.0.id = %q, want call_123", toolCallID)
 			}
 
-			// Tool message has tool_call_id matching call_123
+			// 工具消息的 tool_call_id 与 call_123 匹配
 			toolMessage := messages[1]
 			if toolMessage.Get("role").String() != "tool" {
 				t.Fatalf("expected role tool, got %s", toolMessage.Raw)
@@ -1512,10 +1512,10 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_FunctionCallOutput
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_MixedMissingAndExplicitParallelOutputs(t *testing.T) {
-	// Call A, Call B.
-	// Output 1 has NO ID (result B).
-	// Output 2 explicitly has call_id: call_a (result A).
-	// Call A must NOT be stolen by Output 1; Output 1 must get Call B.
+	// 调用 A、调用 B。
+	// 输出 1 没有 ID（结果 B）。
+	// 输出 2 显式带有 call_id: call_a（结果 A）。
+	// 调用 A 不得被输出 1 夺走；输出 1 必须得到调用 B。
 	inputJSON := []byte(`{
 		"model": "deepseek-v4-flash",
 		"input": [
@@ -1546,8 +1546,8 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_MixedMissingAndExp
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DefersMessageUntilMissingIDToolOutput(t *testing.T) {
-	// Call A -> intervening user message -> Output with missing call_id
-	// The user message must be deferred until AFTER the tool output!
+	// 调用 A -> 夹在中间的用户消息 -> 缺少 call_id 的输出
+	// 该用户消息必须被推迟到工具输出之后！
 	inputJSON := []byte(`{
 		"model": "deepseek-v4-flash",
 		"input": [
@@ -1563,18 +1563,18 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DefersMessageUntil
 		t.Fatalf("expected 3 messages (assistant, tool, user), got %d; output=%s", len(messages), string(out))
 	}
 
-	// Message 0: assistant with tool_call
+	// 消息 0：带有 tool_call 的助手消息
 	if got := messages[0].Get("role").String(); got != "assistant" {
 		t.Fatalf("messages[0].role = %q, want assistant", got)
 	}
-	// Message 1: tool response for call_a (strictly adjacent to assistant tool_calls!)
+	// 消息 1：针对 call_a 的工具响应（紧邻助手的 tool_calls！）
 	if got := messages[1].Get("role").String(); got != "tool" {
 		t.Fatalf("messages[1].role = %q, want tool (user message was not deferred!)", got)
 	}
 	if got := messages[1].Get("tool_call_id").String(); got != "call_a" {
 		t.Fatalf("messages[1].tool_call_id = %q, want call_a", got)
 	}
-	// Message 2: deferred user message
+	// 消息 2：被推迟的用户消息
 	if got := messages[2].Get("role").String(); got != "user" {
 		t.Fatalf("messages[2].role = %q, want user", got)
 	}
@@ -1584,11 +1584,11 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DefersMessageUntil
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_MixedMissingAndExplicitParallelOutputsAcrossUserMessage(t *testing.T) {
-	// Call A, Call B.
-	// Output 1 has NO ID (result B).
-	// Intervening user message.
-	// Output 2 explicitly has call_id: call_a (result A).
-	// Call A must NOT be stolen by Output 1; Output 1 must get Call B.
+	// 调用 A、调用 B。
+	// 输出 1 没有 ID（结果 B）。
+	// 夹在中间的用户消息。
+	// 输出 2 显式带有 call_id: call_a（结果 A）。
+	// 调用 A 不得被输出 1 夺走；输出 1 必须得到调用 B。
 	inputJSON := []byte(`{
 		"model": "deepseek-v4-flash",
 		"input": [
@@ -1737,9 +1737,9 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_CapsLongNamespaceT
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DisambiguatesTruncationCollisions(t *testing.T) {
-	// Two distinct namespace tools whose qualified names both truncate to the
-	// same 64-char tail must survive as two usable chat tools, not be merged
-	// or silently dropped by the first-wins deduplication.
+	// 两个不同命名空间工具的限定名都截断到
+	// 相同的 64 字符尾部时，必须作为两个可用的 chat 工具存活下来，不能被
+	// 先到先得的去重合并或静默丢弃。
 	filler := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	raw := []byte(`{
 		"input": [
@@ -1775,8 +1775,8 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DisambiguatesTrunc
 		}
 	}
 
-	// A replayed call to the renamed declaration must resolve to the renamed
-	// chat name so the assistant history matches the tools array.
+	// 对重命名后声明的重放调用必须解析到重命名后的
+	// chat 名称，这样助手历史才能与 tools 数组一致。
 	merged := []byte(`{
 		"input": [
 			{"type":"custom_tool_call","namespace":"mcp__server_two__` + filler + `","name":"_same_tail_tool_name","call_id":"call_1","input":"x"},
@@ -1808,10 +1808,10 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DisambiguatesTrunc
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_LongDeclarationDoesNotDisplaceShortOriginal(t *testing.T) {
-	// A long namespace declaration whose capped tail equals a later flat
-	// declaration's original name must take the suffix itself: the flat tool's
-	// original name is what replayed calls and tool_choice carry, so
-	// displacing it would dispatch those calls to the wrong tool.
+	// 某条长命名空间声明截断后的尾部若等于之后某条平铺
+	// 声明的原始名称，就必须自己取后缀：平铺工具的
+	// 原始名称正是重放调用和 tool_choice 所携带的内容，因此
+	// 取代它会把那些调用派发到错误的工具。
 	longNamespace := "mcp__a__" + strings.Repeat("b", 60)
 	longChild := "child_tool"
 	qualified := longNamespace + "__" + longChild
@@ -1850,9 +1850,9 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_LongDeclarationDoe
 		}
 	}
 
-	// Replayed calls and tool_choice for the flat tool carry its original
-	// name; they must resolve to the flat declaration, not to the long
-	// declaration that caps onto it.
+	// 针对平铺工具的重放调用和 tool_choice 携带其原始
+	// 名称；它们必须解析到平铺声明，而不是解析到截断后
+	// 落在它上面的长声明。
 	replay := []byte(`{
 		"input": [
 			{"type":"function_call","call_id":"call_1","name":"` + flatName + `","arguments":"{}"},
@@ -1878,10 +1878,10 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_LongDeclarationDoe
 		t.Fatalf("tool_choice for the flat tool resolved to %q, want %q; output=%s", got, flatName, forcedOut)
 	}
 
-	// A replayed call carrying the long declaration's fully-qualified
-	// uncapped name (history from an older build or a foreign client that
-	// flattened the name itself) must resolve to the suffixed chat name,
-	// not to the capped tail that now belongs to the flat tool.
+	// 携带长声明未经截断的完整限定名的重放调用
+	// （来自旧构建或自行展平了名称的外部客户端的历史记录）
+	// 必须解析到带后缀的 chat 名称，
+	// 而不是解析到现在属于平铺工具的截断尾部。
 	longReplay := []byte(`{
 		"input": [
 			{"type":"function_call","call_id":"call_2","name":"` + qualified + `","arguments":"{}"},
@@ -1900,10 +1900,10 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_LongDeclarationDoe
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_AmbiguousLongLocalNameStaysUnresolved(t *testing.T) {
-	// Two namespace declarations sharing the same >64-byte local name, with a
-	// replayed call that omits the namespace: resolution is ambiguous, and the
-	// capped fallback must not land on either declaration's alias, or the call
-	// would silently invoke that namespace's tool.
+	// 两条命名空间声明共享同一个超过 64 字节的本地名称，而
+	// 重放的调用省略了命名空间：解析存在歧义，且
+	// 截断后的回退不得落在任一声明的别名上，否则该调用
+	// 会静默调用那个命名空间的工具。
 	longLocal := "shared_" + strings.Repeat("x", 60)
 	toolsJSON := `[
 		{
@@ -1949,19 +1949,19 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_AmbiguousLongLocal
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_LongAliasDoesNotDisplaceNamespacedLocalName(t *testing.T) {
-	// A long declaration's capped alias must not occupy the (<=64-char) local
-	// name of a namespaced declaration whose qualified identity exceeds the
-	// cap: replayed calls and tool_choice that omit the namespace carry the
-	// bare local name, and local-name recovery must resolve them to the
-	// namespaced tool instead of to the earlier long declaration's alias.
-	localName := "l" + strings.Repeat("m", 63) // 64 chars
+	// 长声明截断后的别名不得占用某条带命名空间声明的
+	// （<=64 字符）本地名称，而该声明的限定身份已超过
+	// 上限：省略命名空间的重放调用和 tool_choice 携带的是
+	// 裸本地名称，本地名称还原必须把它们解析到
+	// 带命名空间的工具，而不是解析到更早那条长声明的别名。
+	localName := "l" + strings.Repeat("m", 63) // 64 个字符
 	longFlatName := strings.Repeat("n", 11) + localName
 	if len(longFlatName) <= 64 || capResponsesChatToolName(longFlatName) != localName {
 		t.Fatalf("fixture drift: cap(%q) = %q, want %q", longFlatName, capResponsesChatToolName(longFlatName), localName)
 	}
-	// mcp__beta__localName is 75 chars, so the namespaced declaration is long
-	// too, and its 11-char prefix is exactly what the cap drops: its alias is
-	// localName itself unless the reservation keeps the flat tool off it.
+	// mcp__beta__localName 是 75 个字符，因此该带命名空间的声明也很长，
+	// 其 11 个字符的前缀恰好是被截断丢弃的部分：除非保留操作
+	// 让平铺工具避开它，否则它的别名就是 localName 本身。
 	toolsJSON := `[
 		{"type":"function","name":"` + longFlatName + `","parameters":{"type":"object"}},
 		{
@@ -1989,8 +1989,8 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_LongAliasDoesNotDi
 		}
 	}
 
-	// A replayed call omitting the namespace carries the bare local name and
-	// must resolve to the namespaced declaration's alias, not the long one.
+	// 省略命名空间的重放调用携带裸本地名称，
+	// 必须解析到带命名空间声明的别名，而不是那条长声明的别名。
 	replay := []byte(`{
 		"input": [
 			{"type":"function_call","call_id":"call_1","name":"` + localName + `","arguments":"{}"},
@@ -2007,7 +2007,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_LongAliasDoesNotDi
 		}
 	}
 
-	// tool_choice carrying the bare local name must resolve the same way.
+	// 携带裸本地名称的 tool_choice 必须以同样的方式解析。
 	forcedOut, _ := ConvertOpenAIResponsesRequestToOpenAIChatCompletions("z-ai/glm-5.3-free", []byte(`{
 		"input": [{"role":"user","content":"hi"}],
 		"tools": `+toolsJSON+`,
@@ -2019,15 +2019,15 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_LongAliasDoesNotDi
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_SharedLocalNameIsNeverEmitted(t *testing.T) {
-	// Two namespaces declaring the same 64-byte local name: both qualified
-	// identities exceed the cap and their tails are exactly that bare local
-	// name, so the name is ambiguous for any namespace-less call yet also the
-	// natural capped alias of both declarations. Reserving it for the first
-	// declaration alone would make it emit the ambiguous name verbatim, where
-	// the exact-emitted-alias match attributes every namespace-less call and
-	// tool_choice to that namespace. The name must be burned instead, leaving
-	// both declarations on distinct aliases.
-	sharedLocal := "s" + strings.Repeat("t", 63) // exactly 64 chars
+	// 两个命名空间声明同一个 64 字节的本地名称：两个限定
+	// 身份都超过上限，且它们的尾部恰好就是这个裸本地
+	// 名称，因此该名称对任何无命名空间调用都有歧义，同时也
+	// 是两条声明天然的截断别名。只把它保留给第一条
+	// 声明会让它逐字生成这个有歧义的名称，而在
+	// 精确已生成别名匹配中，这会把每个无命名空间调用和
+	// tool_choice 都归到该命名空间。因此必须烧掉该名称，
+	// 让两条声明各自使用不同的别名。
+	sharedLocal := "s" + strings.Repeat("t", 63) // 恰好 64 个字符
 	for _, namespace := range []string{"mcp__alpha", "mcp__beta"} {
 		if got := capResponsesChatToolName(rawResponsesNamespaceQualifiedName(namespace, sharedLocal)); got != sharedLocal {
 			t.Fatalf("fixture drift: %s alias = %q, want the ambiguous bare name %q", namespace, got, sharedLocal)
@@ -2071,7 +2071,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_SharedLocalNameIsN
 	alphaAlias := emitted[0].Get("function.name").String()
 	betaAlias := emitted[1].Get("function.name").String()
 
-	// Each namespace still reaches its own declaration.
+	// 每个命名空间仍然能到达自己的声明。
 	for _, tc := range []struct {
 		namespace string
 		want      string
@@ -2097,8 +2097,8 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_SharedLocalNameIsN
 		}
 	}
 
-	// A namespace-less replayed call or tool_choice carrying the ambiguous
-	// bare name must stay unresolved rather than pick a winner.
+	// 携带该有歧义裸名称的无命名空间重放调用或
+	// tool_choice 必须保持未解析，而不是挑出一个胜出者。
 	bareOut, _ := ConvertOpenAIResponsesRequestToOpenAIChatCompletions("z-ai/glm-5.3-free", []byte(`{
 		"input": [
 			{"type":"function_call","call_id":"call_1","name":"`+sharedLocal+`","arguments":"{}"},
@@ -2137,12 +2137,12 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_SharedLocalNameIsN
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_QualifiedIdentityOutranksForeignLocalName(t *testing.T) {
-	// A replayed call or tool_choice carrying a fully-qualified uncapped name
-	// can match two things: the declaration whose qualified identity it is (A),
-	// and a different namespace's child that literally uses that whole
-	// qualified string as its own name (B). Local-name recovery runs on a bare
-	// name and is a guess about the namespace, so it must not outrank the
-	// identity match, or the call gets dispatched to B's tool.
+	// 携带未经截断的完整限定名的重放调用或 tool_choice
+	// 可能匹配两样东西：其限定身份正是该名称的声明（A），
+	// 以及另一个命名空间中字面使用整个
+	// 限定字符串作为自身名称的子项（B）。本地名称还原基于裸
+	// 名称运行，是对命名空间的猜测，因此它不得优先于
+	// 身份匹配，否则该调用会被派发到 B 的工具。
 	longChild := "read_" + strings.Repeat("f", 60)
 	qualified := rawResponsesNamespaceQualifiedName("alpha_ns", longChild)
 	if len(qualified) <= responsesChatToolNameLimit {
@@ -2185,7 +2185,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_QualifiedIdentityO
 		}
 	}
 
-	// Bare qualified name: provenance points at the alpha declaration.
+	// 裸限定名：溯源指向 alpha 声明。
 	bareOut, _ := ConvertOpenAIResponsesRequestToOpenAIChatCompletions("z-ai/glm-5.3-free", []byte(`{
 		"input": [
 			{"type":"function_call","call_id":"call_1","name":"`+qualified+`","arguments":"{}"},
@@ -2210,7 +2210,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_QualifiedIdentityO
 		t.Fatalf("tool_choice bare qualified name resolved to %q, want %q; output=%s", got, alphaAlias, bareForced)
 	}
 
-	// Both namespaces stay individually reachable when the namespace is present.
+	// 当命名空间存在时，两个命名空间都各自可达。
 	for _, tc := range []struct {
 		namespace string
 		name      string
@@ -2239,9 +2239,9 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_QualifiedIdentityO
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_IncompleteToolCallsDoNotDeferMessages(t *testing.T) {
-	// If assistant issues function_call(a) and function_call(b), but only function_call_output(a)
-	// arrives, the history is incomplete. Intervening messages (e.g. user reminder) must NOT
-	// be deferred; original order must be preserved.
+	// 如果助手发出 function_call(a) 和 function_call(b)，但只到达 function_call_output(a)，
+	// 则历史不完整。夹在中间的消息（例如用户提醒）不得
+	// 被推迟；必须保持原始顺序。
 	inputJSON := []byte(`{
 		"model": "deepseek-v4.1-flash",
 		"input": [
@@ -2260,7 +2260,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_IncompleteToolCall
 		roles = append(roles, m.Get("role").String())
 	}
 
-	// Incomplete history must stay untouched:
+	// 不完整的历史必须保持不变：
 	// messages[0]: assistant (tool_calls [call_a, call_b])
 	// messages[1]: user ("reminder before results")
 	// messages[2]: tool (tool_call_id: call_a)
@@ -2273,9 +2273,9 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_IncompleteToolCall
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_CompleteToolCallsDoPairMessages(t *testing.T) {
-	// If assistant issues function_call(a) and function_call(b), and both function_call_output(a)
-	// and function_call_output(b) arrive, with an intervening user reminder, the tool outputs
-	// must be paired immediately following the assistant tool_calls message.
+	// 如果助手发出 function_call(a) 和 function_call(b)，且 function_call_output(a)
+	// 和 function_call_output(b) 都到达，中间还夹着一条用户提醒，那么工具输出
+	// 必须紧接在助手的 tool_calls 消息之后配对。
 	inputJSON := []byte(`{
 		"model": "deepseek-v4.1-flash",
 		"input": [
@@ -2295,7 +2295,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_CompleteToolCallsD
 		roles = append(roles, m.Get("role").String())
 	}
 
-	// Expected:
+	// 预期：
 	// messages[0]: assistant (tool_calls [call_a, call_b])
 	// messages[1]: tool
 	// messages[2]: tool
@@ -2316,7 +2316,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_CompleteToolCallsD
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_MixedEmptyIDDoesNotReorder(t *testing.T) {
-	// Mixed empty call_id and valid call_a: incomplete/ambiguous history must remain untouched
+	// 混合了空 call_id 和有效的 call_a：不完整/有歧义的历史必须保持原样
 	inputJSON := []byte(`{
 		"model": "deepseek-v4.1-flash",
 		"input": [
@@ -2335,7 +2335,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_MixedEmptyIDDoesNo
 		roles = append(roles, m.Get("role").String())
 	}
 
-	// Must stay in natural input order: assistant -> user -> tool
+	// 必须保持自然的输入顺序：assistant -> user -> tool
 	if len(messages) != 3 {
 		t.Fatalf("expected 3 messages, got %d: %s", len(messages), out)
 	}
@@ -2345,7 +2345,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_MixedEmptyIDDoesNo
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DuplicateCallIDDoesNotReorder(t *testing.T) {
-	// Duplicate call_id: ambiguous history must remain untouched
+	// 重复的 call_id：有歧义的历史必须保持原样
 	inputJSON := []byte(`{
 		"model": "deepseek-v4.1-flash",
 		"input": [
@@ -2364,7 +2364,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DuplicateCallIDDoe
 		roles = append(roles, m.Get("role").String())
 	}
 
-	// Must stay in natural input order: assistant -> user -> tool
+	// 必须保持自然的输入顺序：assistant -> user -> tool
 	if len(messages) != 3 {
 		t.Fatalf("expected 3 messages, got %d: %s", len(messages), out)
 	}
@@ -2374,7 +2374,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DuplicateCallIDDoe
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DuplicateOutputCallIDDoesNotReorder(t *testing.T) {
-	// Duplicate function_call_output for the same call_id: ambiguous results must not be prematurely reordered
+	// 同一 call_id 出现重复的 function_call_output：有歧义的结果不得被提前重排
 	inputJSON := []byte(`{
 		"model": "deepseek-v4.1-flash",
 		"input": [
@@ -2393,7 +2393,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DuplicateOutputCal
 		roles = append(roles, m.Get("role").String())
 	}
 
-	// Must stay in natural input order: assistant -> user ("reminder before results") -> tool/user
+	// 必须保持自然的输入顺序：assistant -> user ("reminder before results") -> tool/user
 	if len(messages) != 4 {
 		t.Fatalf("expected 4 messages, got %d: %s", len(messages), out)
 	}
@@ -2406,7 +2406,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DuplicateOutputCal
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DuplicateCustomOutputCallIDDoesNotReorder(t *testing.T) {
-	// Duplicate custom_tool_call_output for the same call_id: ambiguous results must not be prematurely reordered
+	// 同一 call_id 出现重复的 custom_tool_call_output：有歧义的结果不得被提前重排
 	inputJSON := []byte(`{
 		"model": "deepseek-v4.1-flash",
 		"input": [
@@ -2425,7 +2425,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DuplicateCustomOut
 		roles = append(roles, m.Get("role").String())
 	}
 
-	// Must stay in natural input order: assistant -> user ("reminder before custom results") -> tool/user
+	// 必须保持自然的输入顺序：assistant -> user ("reminder before custom results") -> tool/user
 	if len(messages) != 4 {
 		t.Fatalf("expected 4 messages, got %d: %s", len(messages), out)
 	}
@@ -2438,8 +2438,8 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_DuplicateCustomOut
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_MultipleOutputsWithoutIDDoNotGuessOrReorder(t *testing.T) {
-	// If assistant issues function_call(a) and function_call(b), and multiple outputs arrive
-	// without call_ids, the assignment is a non-unique guess. The history must stay untouched!
+	// 如果助手发出 function_call(a) 和 function_call(b)，而有多个输出到达
+	// 却没有 call_ids，则其归属是非唯一的猜测。历史必须保持原样！
 	inputJSON := []byte(`{
 		"model": "deepseek-v4.1-flash",
 		"input": [
@@ -2459,8 +2459,8 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_MultipleOutputsWit
 		roles = append(roles, m.Get("role").String())
 	}
 
-	// Must stay in natural input order: assistant -> user ("reminder before results") -> user ("output X") -> user ("output Y")
-	// Crucially, outputs X and Y must NOT be given guessed tool_call_id "a" or "b" and must NOT be fabricated as tool messages.
+	// 必须保持自然的输入顺序：assistant -> user ("reminder before results") -> user ("output X") -> user ("output Y")
+	// 关键的是，输出 X 和 Y 不得被赋予猜测的 tool_call_id "a" 或 "b"，也不得被伪造为工具消息。
 	if len(messages) != 4 {
 		t.Fatalf("expected 4 messages, got %d: %s", len(messages), out)
 	}
@@ -2473,7 +2473,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_MultipleOutputsWit
 	if messages[2].Get("content").String() != "output X" || messages[3].Get("content").String() != "output Y" {
 		t.Fatalf("expected outputs X and Y as standalone user messages, got msg2=%s msg3=%s", messages[2].Raw, messages[3].Raw)
 	}
-	// Verify no tool messages were created with guessed call IDs
+	// 验证没有使用猜测的调用 ID 创建工具消息
 	for _, m := range messages {
 		if m.Get("role").String() == "tool" {
 			t.Fatalf("unexpected tool message created via guessing: %s", m.Raw)
@@ -2482,12 +2482,12 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_MultipleOutputsWit
 }
 
 func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_MultipleOutputsWithoutIDAndOrphanOutputDoNotGuessOrReorder(t *testing.T) {
-	// Call A, Call B.
-	// User reminder.
-	// Output 1 has NO ID (X).
-	// Output 2 has NO ID (Y).
-	// Output 3 has orphan explicit ID (Z).
-	// The presence of orphan_id must NOT cause X/Y to be guessed and reordered before the reminder!
+	// 调用 A、调用 B。
+	// 用户提醒。
+	// 输出 1 没有 ID（X）。
+	// 输出 2 没有 ID（Y）。
+	// 输出 3 带有孤立的显式 ID（Z）。
+	// 存在 orphan_id 不得导致 X/Y 被猜测并重排到提醒之前！
 	inputJSON := []byte(`{
 		"model": "deepseek-v4.1-flash",
 		"input": [
@@ -2508,8 +2508,8 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_MultipleOutputsWit
 		roles = append(roles, m.Get("role").String())
 	}
 
-	// Must stay in natural input order: assistant -> user ("reminder before results") -> user (X) -> user (Y) -> user (Z)
-	// Outputs X and Y must NOT be guessed as tool calls "a" and "b" and must NOT be moved before reminder!
+	// 必须保持自然的输入顺序：assistant -> user ("reminder before results") -> user (X) -> user (Y) -> user (Z)
+	// 输出 X 和 Y 不得被猜测为工具调用 "a" 和 "b"，也不得被移到提醒之前！
 	if len(messages) != 5 {
 		t.Fatalf("expected 5 messages, got %d: %s", len(messages), out)
 	}
@@ -2519,7 +2519,7 @@ func TestConvertOpenAIResponsesRequestToOpenAIChatCompletions_MultipleOutputsWit
 	if messages[1].Get("content").String() != "reminder before results" {
 		t.Fatalf("expected message[1] to be reminder, got: %s", messages[1].Raw)
 	}
-	// Verify no tool messages were created with guessed call IDs
+	// 验证没有使用猜测的调用 ID 创建工具消息
 	for _, m := range messages {
 		if m.Get("role").String() == "tool" {
 			t.Fatalf("unexpected tool message created via guessing: %s", m.Raw)

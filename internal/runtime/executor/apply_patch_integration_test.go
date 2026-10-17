@@ -303,7 +303,7 @@ func TestApplyPatchHTTPGatewayErrorMatrix(t *testing.T) {
 	}
 }
 
-// task6DrainUsage synchronizes the asynchronous dispatcher before changing observers.
+// task6DrainUsage 在更换观察者之前同步异步分发器。
 func task6DrainUsage(t *testing.T) {
 	t.Helper()
 	id := "task6-drain-" + t.Name()
@@ -372,7 +372,7 @@ func TestApplyPatchFailureStopsConsumptionAndNextAttemptIsFresh(t *testing.T) {
 }
 
 func TestApplyPatchNonStreamNativeNilWithoutErrorIs502(t *testing.T) {
-	// Preserve the built-in request transform and restore the exact response transforms.
+	// 保留内置的请求变换，并恢复精确的响应变换。
 	sdktranslator.Register(sdktranslator.FormatOpenAIResponse, sdktranslator.FormatOpenAI, nil, sdktranslator.ResponseTransform{
 		Stream:    chatresponses.ConvertOpenAIChatCompletionsResponseToOpenAIResponses,
 		NonStream: func(context.Context, string, []byte, []byte, []byte, *any) []byte { return nil },

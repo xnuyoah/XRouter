@@ -27,7 +27,7 @@ const (
 	defaultConfigKey     = "config"
 )
 
-// PostgresStoreConfig captures configuration required to initialize a Postgres-backed store.
+// PostgresStoreConfig 保存初始化 Postgres 支持的存储所需的配置。
 type PostgresStoreConfig struct {
 	DSN           string
 	Schema        string
@@ -37,8 +37,8 @@ type PostgresStoreConfig struct {
 	SpoolDir      string
 }
 
-// PostgresStore persists configuration and authentication metadata using PostgreSQL as backend
-// while mirroring data to a local workspace so existing file-based workflows continue to operate.
+// PostgresStore 使用 PostgreSQL 作为后端持久化配置和认证元数据，
+// 同时将数据镜像到本地工作区，以便现有的基于文件的工作流继续运作。
 type PostgresStore struct {
 	db            *sql.DB
 	cfg           PostgresStoreConfig
@@ -50,7 +50,7 @@ type PostgresStore struct {
 	persistAuthFn func(ctx context.Context, relID string, data []byte) error
 }
 
-// NewPostgresStore establishes a connection to PostgreSQL and prepares the local workspace.
+// NewPostgresStore 建立到 PostgreSQL 的连接并准备本地工作区。
 func NewPostgresStore(ctx context.Context, cfg PostgresStoreConfig) (*PostgresStore, error) {
 	trimmedDSN := strings.TrimSpace(cfg.DSN)
 	if trimmedDSN == "" {
@@ -108,7 +108,7 @@ func NewPostgresStore(ctx context.Context, cfg PostgresStoreConfig) (*PostgresSt
 	return store, nil
 }
 
-// Close releases the underlying database connection.
+// Close 释放底层数据库连接。
 func (s *PostgresStore) Close() error {
 	if s == nil || s.db == nil {
 		return nil
@@ -116,7 +116,7 @@ func (s *PostgresStore) Close() error {
 	return s.db.Close()
 }
 
-// EnsureSchema creates the required tables (and schema when provided).
+// EnsureSchema 创建所需的表（以及在提供时创建 schema）。
 func (s *PostgresStore) EnsureSchema(ctx context.Context) error {
 	if s == nil || s.db == nil {
 		return fmt.Errorf("postgres store: not initialized")
@@ -166,7 +166,7 @@ func (s *PostgresStore) EnsureSchema(ctx context.Context) error {
 	return nil
 }
 
-// Bootstrap synchronizes configuration and auth records between PostgreSQL and the local workspace.
+// Bootstrap 在 PostgreSQL 与本地工作区之间同步配置和 auth 记录。
 func (s *PostgresStore) Bootstrap(ctx context.Context, exampleConfigPath string) error {
 	if err := s.EnsureSchema(ctx); err != nil {
 		return err
@@ -180,7 +180,7 @@ func (s *PostgresStore) Bootstrap(ctx context.Context, exampleConfigPath string)
 	return nil
 }
 
-// ConfigPath returns the managed configuration file path inside the spool directory.
+// ConfigPath 返回 spool 目录内受管理的配置文件路径。
 func (s *PostgresStore) ConfigPath() string {
 	if s == nil {
 		return ""
@@ -188,7 +188,7 @@ func (s *PostgresStore) ConfigPath() string {
 	return s.configPath
 }
 
-// AuthDir returns the local directory containing mirrored auth files.
+// AuthDir 返回包含镜像 auth 文件的本地目录。
 func (s *PostgresStore) AuthDir() string {
 	if s == nil {
 		return ""
@@ -196,7 +196,7 @@ func (s *PostgresStore) AuthDir() string {
 	return s.authDir
 }
 
-// WorkDir exposes the root spool directory used for mirroring.
+// WorkDir 暴露用于镜像的根 spool 目录。
 func (s *PostgresStore) WorkDir() string {
 	if s == nil {
 		return ""
@@ -204,11 +204,11 @@ func (s *PostgresStore) WorkDir() string {
 	return s.spoolRoot
 }
 
-// SetBaseDir implements the optional interface used by authenticators; it is a no-op because
-// the Postgres-backed store controls its own workspace.
+// SetBaseDir 实现认证器使用的可选接口；由于 Postgres 支持的
+// 存储自行控制其工作区，因此它是空操作。
 func (s *PostgresStore) SetBaseDir(string) {}
 
-// Save persists authentication metadata to disk and PostgreSQL.
+// Save 将认证元数据持久化到磁盘和 PostgreSQL。
 func (s *PostgresStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (string, error) {
 	if auth == nil {
 		return "", fmt.Errorf("postgres store: auth is nil")
@@ -226,9 +226,9 @@ func (s *PostgresStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (stri
 		return "", fmt.Errorf("postgres store: missing file path attribute for %s", auth.ID)
 	}
 
-	// Runtime updates must not recreate a disabled credential whose source file
-	// was deliberately removed. Login and migration callers explicitly mark the
-	// save when creating a missing disabled credential is intentional.
+	// 运行时更新不得重建源文件已被有意删除的禁用凭据。
+	// 登录和迁移调用方在有意创建缺失的禁用凭据时
+	// 会显式标记该保存操作。
 	if auth.Disabled && !cliproxyauth.HasAuthCreationIntent(ctx) {
 		if _, statErr := os.Stat(path); errors.Is(statErr, fs.ErrNotExist) {
 			return "", nil
@@ -301,7 +301,7 @@ func (s *PostgresStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (stri
 	return path, nil
 }
 
-// List enumerates all auth records stored in PostgreSQL.
+// List 枚举存储在 PostgreSQL 中的所有 auth 记录。
 func (s *PostgresStore) List(ctx context.Context) ([]*cliproxyauth.Auth, error) {
 	query := fmt.Sprintf("SELECT id, content, created_at, updated_at FROM %s ORDER BY id", s.fullTableName(s.cfg.AuthTable))
 	rows, err := s.db.QueryContext(ctx, query)
@@ -373,7 +373,7 @@ func (s *PostgresStore) List(ctx context.Context) ([]*cliproxyauth.Auth, error) 
 	return auths, nil
 }
 
-// Delete removes an auth file and the corresponding database record.
+// Delete 删除一个 auth 文件及对应的数据库记录。
 func (s *PostgresStore) Delete(ctx context.Context, id string) error {
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -397,7 +397,7 @@ func (s *PostgresStore) Delete(ctx context.Context, id string) error {
 	return s.deleteAuthRecord(ctx, relID)
 }
 
-// PersistAuthFiles stores the provided auth file changes in PostgreSQL.
+// PersistAuthFiles 将给定的 auth 文件变更存储到 PostgreSQL。
 func (s *PostgresStore) PersistAuthFiles(ctx context.Context, _ string, paths ...string) error {
 	if len(paths) == 0 {
 		return nil
@@ -412,7 +412,7 @@ func (s *PostgresStore) PersistAuthFiles(ctx context.Context, _ string, paths ..
 		}
 		relID, err := s.relativeAuthID(trimmed)
 		if err != nil {
-			// Attempt to resolve absolute path under authDir.
+			// 尝试在 authDir 下解析绝对路径。
 			abs := trimmed
 			if !filepath.IsAbs(abs) {
 				abs = filepath.Join(s.authDir, trimmed)
@@ -431,7 +431,7 @@ func (s *PostgresStore) PersistAuthFiles(ctx context.Context, _ string, paths ..
 	return nil
 }
 
-// PersistConfig mirrors the local configuration file to PostgreSQL.
+// PersistConfig 将本地配置文件镜像到 PostgreSQL。
 func (s *PostgresStore) PersistConfig(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -446,7 +446,7 @@ func (s *PostgresStore) PersistConfig(ctx context.Context) error {
 	return s.persistConfig(ctx, data)
 }
 
-// syncConfigFromDatabase writes the database-stored config to disk or seeds the database from template.
+// syncConfigFromDatabase 将数据库中的配置写入磁盘，或从模板为数据库播种。
 func (s *PostgresStore) syncConfigFromDatabase(ctx context.Context, exampleConfigPath string) error {
 	query := fmt.Sprintf("SELECT content FROM %s WHERE id = $1", s.fullTableName(s.cfg.ConfigTable))
 	var content string
@@ -467,9 +467,9 @@ func (s *PostgresStore) syncConfigFromDatabase(ctx context.Context, exampleConfi
 				}
 			}
 		}
-		// Seed the database with the file the startup load leaves behind, so a plaintext
-		// management secret never reaches it. Fail instead of skipping: the startup load
-		// could turn a refused file into one that a later start would upload.
+		// 用启动加载留下的文件为数据库播种，这样明文
+		// 管理密钥永远不会进入其中。失败而非跳过：启动加载
+		// 可能把一个被拒绝的文件变成后续启动会上传的文件。
 		if errPrepare := config.PrepareConfigFileForUpload(s.configPath); errPrepare != nil {
 			return fmt.Errorf("postgres store: prepare local config for seeding: %w", errPrepare)
 		}
@@ -494,7 +494,7 @@ func (s *PostgresStore) syncConfigFromDatabase(ctx context.Context, exampleConfi
 	return nil
 }
 
-// syncAuthFromDatabase populates the local auth directory from PostgreSQL data.
+// syncAuthFromDatabase 使用 PostgreSQL 数据填充本地 auth 目录。
 func (s *PostgresStore) syncAuthFromDatabase(ctx context.Context) error {
 	query := fmt.Sprintf("SELECT id, content FROM %s", s.fullTableName(s.cfg.AuthTable))
 	rows, err := s.db.QueryContext(ctx, query)

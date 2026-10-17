@@ -1,12 +1,12 @@
 package auth
 
-// ApplyPatchSupport optionally advertises the actual executor's tool contract.
-// It does not change ProviderExecutor or the plugin ABI.
+// ApplyPatchSupport 可选地对外声明实际执行器的工具契约。
+// 它不会改变 ProviderExecutor 或插件 ABI。
 type ApplyPatchSupport interface {
 	SupportsApplyPatch() bool
 }
 
-// SupportsApplyPatchForProviders requires support from every routing candidate.
+// SupportsApplyPatchForProviders 要求每个路由候选都支持。
 func (m *Manager) SupportsApplyPatchForProviders(providers []string) bool {
 	if m == nil || len(providers) == 0 {
 		return false

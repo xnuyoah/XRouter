@@ -12,10 +12,10 @@ import (
 	sdkaccess "github.com/xnuyoah/XRouter/v8/sdk/access"
 )
 
-// ReconcileProviders builds the desired provider list by reusing existing providers when possible
-// and creating or removing providers only when their configuration changed. It returns the final
-// ordered provider slice along with the identifiers of providers that were added, updated, or
-// removed compared to the previous configuration.
+// ReconcileProviders 尽可能复用现有供应商来构建目标供应商列表，
+// 仅在配置发生变化时才创建或移除供应商。它返回最终的
+// 有序供应商切片，以及相对于先前配置被新增、更新或
+// 移除的供应商标识符。
 func ReconcileProviders(oldCfg, newCfg *config.Config, existing []sdkaccess.Provider) (result []sdkaccess.Provider, added, updated, removed []string, err error) {
 	_ = oldCfg
 	if newCfg == nil {
@@ -76,9 +76,9 @@ func ReconcileProviders(oldCfg, newCfg *config.Config, existing []sdkaccess.Prov
 	return result, added, updated, removed, nil
 }
 
-// ApplyAccessProviders reconciles the configured access providers against the
-// currently registered providers and updates the manager. It logs a concise
-// summary of the detected changes and returns whether any provider changed.
+// ApplyAccessProviders 将配置的访问供应商与当前
+// 已注册的供应商进行协调，并更新管理器。它会记录一份简洁的
+// 检测到的变更摘要，并返回是否有任何供应商发生变化。
 func ApplyAccessProviders(manager *sdkaccess.Manager, oldCfg, newCfg *config.Config) (bool, error) {
 	if manager == nil || newCfg == nil {
 		return false, nil

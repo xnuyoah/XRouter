@@ -1,4 +1,4 @@
-// Package thinking provides unified thinking configuration processing.
+// Package thinking 提供统一的 thinking 配置处理。
 package thinking
 
 import (
@@ -18,17 +18,17 @@ type pluginProviderApplier struct {
 
 var providerAppliersMu sync.RWMutex
 
-// nativeProviderAppliers maps built-in provider names to their implementations.
+// nativeProviderAppliers 将内置供应商名映射到其实现。
 var nativeProviderAppliers = map[string]ProviderApplier{
 	"openai": nil,
 	"codex":  nil,
 }
 
-// pluginProviderAppliers maps plugin-owned provider names to their implementations.
+// pluginProviderAppliers 将插件自有的供应商名映射到其实现。
 var pluginProviderAppliers = map[string]pluginProviderApplier{}
 
-// GetProviderApplier returns the ProviderApplier for the given provider name.
-// Returns nil if the provider is not registered.
+// GetProviderApplier 返回给定供应商名的 ProviderApplier。
+// 若该供应商未注册则返回 nil。
 func GetProviderApplier(provider string) ProviderApplier {
 	provider = normalizedProviderName(provider)
 	if provider == "" {
@@ -42,7 +42,7 @@ func GetProviderApplier(provider string) ProviderApplier {
 	return pluginProviderAppliers[provider].applier
 }
 
-// RegisterProvider registers a provider applier by name.
+// RegisterProvider 按名称注册供应商 applier。
 func RegisterProvider(name string, applier ProviderApplier) {
 	name = normalizedProviderName(name)
 	if name == "" {
@@ -53,7 +53,7 @@ func RegisterProvider(name string, applier ProviderApplier) {
 	nativeProviderAppliers[name] = applier
 }
 
-// RegisterPluginProvider registers a plugin-owned provider applier.
+// RegisterPluginProvider 注册插件自有的供应商 applier。
 func RegisterPluginProvider(owner string, name string, priority int, applier ProviderApplier) bool {
 	owner = strings.TrimSpace(owner)
 	name = normalizedProviderName(name)
@@ -77,7 +77,7 @@ func RegisterPluginProvider(owner string, name string, priority int, applier Pro
 	return true
 }
 
-// UnregisterPluginProviders removes all provider appliers owned by one plugin.
+// UnregisterPluginProviders 移除某个插件所拥有的全部供应商 applier。
 func UnregisterPluginProviders(owner string) {
 	owner = strings.TrimSpace(owner)
 	if owner == "" {
@@ -92,7 +92,7 @@ func UnregisterPluginProviders(owner string) {
 	}
 }
 
-// ClearPluginProviders removes all plugin-owned provider appliers.
+// ClearPluginProviders 移除全部插件自有的供应商 applier。
 func ClearPluginProviders() {
 	providerAppliersMu.Lock()
 	defer providerAppliersMu.Unlock()
@@ -103,15 +103,15 @@ func normalizedProviderName(provider string) string {
 	return strings.ToLower(strings.TrimSpace(provider))
 }
 
-// IsUserDefinedModel reports whether the model is a user-defined model that should
-// have thinking configuration passed through without validation.
+// IsUserDefinedModel 报告该模型是否为用户自定义模型，此类模型
+// 的 thinking 配置应不经校验直接透传。
 //
-// User-defined models are configured via config file's models[] array
-// (e.g., openai-compatibility.*.models[], *-api-key.models[]). These models
-// are marked with UserDefined=true at registration time.
+// 用户自定义模型通过配置文件的 models[] 数组配置
+// （例如 openai-compatibility.*.models[]、*-api-key.models[]）。这些模型
+// 在注册时被标记为 UserDefined=true。
 //
-// User-defined models should have their thinking configuration applied directly,
-// letting the upstream service validate the configuration.
+// 用户自定义模型的 thinking 配置应直接应用，
+// 由上游服务来校验该配置。
 func IsUserDefinedModel(modelInfo *registry.ModelInfo) bool {
 	if modelInfo == nil {
 		return true
@@ -119,67 +119,67 @@ func IsUserDefinedModel(modelInfo *registry.ModelInfo) bool {
 	return modelInfo.UserDefined
 }
 
-// ApplyThinking applies thinking configuration to a request body.
+// ApplyThinking 将 thinking 配置应用到请求体。
 //
-// This is the unified entry point for all providers. It follows the processing
-// order defined in FR25: route check → model capability query → config extraction
-// → validation → application.
+// 这是所有供应商的统一入口。它遵循 FR25 中定义的处理
+// 顺序：路由检查 → 模型能力查询 → 配置提取
+// → 校验 → 应用。
 //
-// Suffix Priority: When the model name includes a thinking suffix (e.g., "claude-sonnet-4-5(8192)"),
-// the suffix configuration takes priority over any thinking parameters in the request body.
-// This enables users to override thinking settings via the model name without modifying their
-// request payload.
+// 后缀优先级：当模型名包含 thinking 后缀（例如 "claude-sonnet-4-5(8192)"）时，
+// 后缀配置优先于请求体中的任何 thinking 参数。
+// 这让用户可以通过模型名覆盖 thinking 设置，而无需修改
+// 请求载荷。
 //
-// Parameters:
-//   - body: Original request body JSON
-//   - model: Model name, optionally with thinking suffix (e.g., "claude-sonnet-4-5(16384)")
-//   - fromFormat: Source request format (e.g., openai, codex, claude)
-//   - toFormat: Target provider format for the request body (claude, openai, codex)
-//   - providerKey: Provider identifier used for registry model lookups (may differ from toFormat, e.g., openrouter -> openai)
+// 参数：
+//   - body：原始请求体 JSON
+//   - model：模型名，可选地带 thinking 后缀（例如 "claude-sonnet-4-5(16384)"）
+//   - fromFormat：源请求格式（例如 openai、codex、claude）
+//   - toFormat：请求体的目标供应商格式（claude、openai、codex）
+//   - providerKey：用于注册表模型查找的供应商标识（可能与 toFormat 不同，例如 openrouter -> openai）
 //
-// Returns:
-//   - Modified request body JSON with thinking configuration applied
-//   - Error if validation fails (ThinkingError). On error, a non-nil target
-//     body is returned (with unsupported updates already removed).
+// 返回：
+//   - 已应用 thinking 配置的修改后请求体 JSON
+//   - 校验失败时的错误（ThinkingError）。出错时会返回非 nil 的目标
+//     body（不受支持的更新项已被移除）。
 //
-// Passthrough behavior (returns original body without error):
-//   - Unknown provider (not in providerAppliers map)
-//   - modelInfo.Thinking is nil (model doesn't support thinking)
+// 透传行为（返回原始 body 且无错误）：
+//   - 未知供应商（不在 providerAppliers map 中）
+//   - modelInfo.Thinking 为 nil（模型不支持 thinking）
 //
-// Note: Unknown models (modelInfo is nil) are treated as user-defined models: we skip
-// validation and still apply the thinking config so the upstream can validate it.
+// 注意：未知模型（modelInfo 为 nil）按用户自定义模型处理：我们跳过
+// 校验，但仍应用 thinking 配置，以便上游进行校验。
 //
-// Example:
+// 示例：
 //
-//	// With suffix - suffix config takes priority
+//	// 带后缀 - 后缀配置优先
 //	result, err := thinking.ApplyThinking(body, "claude-sonnet-4-5(8192)", "claude", "claude", "claude")
 //
-//	// Without suffix - uses body config
+//	// 不带后缀 - 使用 body 配置
 //	result, err := thinking.ApplyThinking(body, "claude-sonnet-4-5", "claude", "claude", "claude")
 func ApplyThinking(body []byte, model string, fromFormat string, toFormat string, providerKey string) ([]byte, error) {
 	summaryConfig := ExtractSummaryConfig(body, toFormat)
 	return applyThinking(body, nil, model, fromFormat, toFormat, providerKey, nil, false, summaryConfig)
 }
 
-// ApplyThinkingWithSummary applies canonical thinking effort while preserving
-// summary visibility extracted from the original source request. Callers that
-// translate before applying thinking must pass the source config explicitly:
-// a target Claude body can temporarily lack display while disabled thinking is
-// being rewritten by a model suffix.
+// ApplyThinkingWithSummary 应用规范化的 thinking effort，同时保留
+// 从原始源请求中提取的 summary 可见性。在应用 thinking 之前先做转换的
+// 调用方必须显式传入源配置：
+// 当被禁用的 thinking 正被模型后缀重写时，
+// 目标 Claude body 可能暂时缺少 display。
 func ApplyThinkingWithSummary(body []byte, model string, fromFormat string, toFormat string, providerKey string, summaryConfig SummaryConfig) ([]byte, error) {
 	return applyThinking(body, nil, model, fromFormat, toFormat, providerKey, nil, false, summaryConfig)
 }
 
-// ApplyThinkingWithSourceAndSummary applies thinking using the original source
-// request when translation has already changed the target protocol. Without a
-// bound model definition, an unknown model has no configuration update support.
+// ApplyThinkingWithSourceAndSummary 在转换已改变目标协议时，使用原始源
+// 请求来应用 thinking。若没有绑定的模型定义，
+// 未知模型不支持配置更新。
 func ApplyThinkingWithSourceAndSummary(body, sourceBody []byte, model, fromFormat, toFormat, providerKey string, summaryConfig SummaryConfig, normalizedUpdatesChanged ...bool) ([]byte, error) {
 	return applyThinking(body, sourceBody, model, fromFormat, toFormat, providerKey, nil, false, summaryConfig, normalizedUpdatesChanged...)
 }
 
-// ApplyThinkingWithModelInfo applies thinking with the exact configured model
-// definition selected for an API-key execution attempt while preserving summary
-// visibility from the original source body.
+// ApplyThinkingWithModelInfo 使用为 API-key 执行尝试选定的确切配置模型
+// 定义来应用 thinking，同时保留来自原始源 body 的 summary
+// 可见性。
 func ApplyThinkingWithModelInfo(body, sourceBody []byte, model string, fromFormat string, toFormat string, providerKey string, modelInfo *registry.ModelInfo) ([]byte, error) {
 	summaryConfig := ExtractSummaryConfig(sourceBody, fromFormat)
 	if len(sourceBody) == 0 {
@@ -188,9 +188,9 @@ func ApplyThinkingWithModelInfo(body, sourceBody []byte, model string, fromForma
 	return ApplyThinkingWithModelInfoAndSummary(body, sourceBody, model, fromFormat, toFormat, providerKey, modelInfo, summaryConfig)
 }
 
-// ApplyThinkingWithModelInfoAndSummary applies the exact configured model
-// definition with a summary intent already resolved across source translation
-// and plugin normalization.
+// ApplyThinkingWithModelInfoAndSummary 使用确切的配置模型
+// 定义来应用，其 summary 意图已在源转换
+// 与插件归一化过程中解析完毕。
 func ApplyThinkingWithModelInfoAndSummary(body, sourceBody []byte, model string, fromFormat string, toFormat string, providerKey string, modelInfo *registry.ModelInfo, summaryConfig SummaryConfig, normalizedUpdatesChanged ...bool) ([]byte, error) {
 	return applyThinking(body, sourceBody, model, fromFormat, toFormat, providerKey, modelInfo, true, summaryConfig, normalizedUpdatesChanged...)
 }
@@ -208,19 +208,19 @@ func applyThinking(body, sourceBody []byte, model string, fromFormat string, toF
 	if fromFormat == "" {
 		fromFormat = providerFormat
 	}
-	// Summary visibility is orthogonal to thinking effort. Keep the original
-	// source intent before a suffix-specific applier rewrites provider fields,
-	// then restore it after the canonical effort has been applied.
-	// 1. Parse suffix and get modelInfo
+	// summary 可见性与 thinking effort 是正交的。在后缀相关的 applier 重写
+	// 供应商字段之前保留原始源意图，
+	// 并在应用规范化 effort 之后将其恢复。
+	// 1. 解析后缀并获取 modelInfo
 	suffixResult := ParseSuffix(model)
 	baseModel := suffixResult.ModelName
-	// Use provider-specific lookup to handle capability differences across providers.
+	// 使用供应商相关的查找来处理不同供应商之间的能力差异。
 	modelInfo := resolvedModelInfo
 	if !modelInfoResolved {
 		modelInfo = registry.LookupModelInfo(baseModel, providerKey)
 	}
 
-	// Resolve source intent before stripping unsupported target input items.
+	// 在剥离目标不支持的输入项之前先解析源意图。
 	updatesChanged := len(normalizedUpdatesChanged) > 0 && normalizedUpdatesChanged[0]
 	var sourceConfig ThinkingConfig
 	if isResponsesFormat(fromFormat) {
@@ -239,7 +239,7 @@ func applyThinking(body, sourceBody []byte, model string, fromFormat string, toF
 	}
 	nativeResponses := responseTarget && isResponsesFormat(fromFormat) && supportsUpdates
 
-	// 2. Route check: Get provider applier after target cleanup.
+	// 2. 路由检查：在目标清理之后再获取供应商 applier。
 	applier := GetProviderApplier(providerFormat)
 	if applier == nil {
 		log.WithFields(log.Fields{
@@ -249,16 +249,16 @@ func applyThinking(body, sourceBody []byte, model string, fromFormat string, toF
 		return body, nil
 	}
 
-	// 3. Model capability check
-	// Unknown models are treated as user-defined so thinking config can still be applied.
-	// The upstream service is responsible for validating the configuration.
+	// 3. 模型能力检查
+	// 未知模型按用户自定义处理，因此仍可应用 thinking 配置。
+	// 由上游服务负责校验该配置。
 	if !suffixResult.HasSuffix && len(sourceBody) > 0 && isResponsesFormat(fromFormat) && !gjson.ValidBytes(body) && hasThinkingConfig(extractConfigurationUpdateConfig(sourceBody)) {
-		// Do not rebuild a malformed target from a separate source update.
+		// 不要用另一个源更新来重建格式错误的目标。
 		return body, nil
 	}
 	if nativeResponses && !suffixResult.HasSuffix {
-		// Native Responses keeps the top-level baseline and in-turn updates as-is.
-		// Log the effective effort without validating or rewriting the payload.
+		// Native Responses 按原样保留顶层基线与轮内更新。
+		// 记录生效的 effort，但不校验或重写载荷。
 		if log.IsLevelEnabled(log.DebugLevel) && (modelInfo.Thinking != nil || modelInfo.UserDefined) {
 			if config := extractCodexUsageConfig(body); hasThinkingConfig(config) {
 				fields := log.Fields{
@@ -300,7 +300,7 @@ func applyThinking(body, sourceBody []byte, model string, fromFormat string, toF
 		return body, nil
 	}
 
-	// 4. Get config: suffix priority over body
+	// 4. 获取配置：后缀优先于 body
 	var config ThinkingConfig
 	if suffixResult.HasSuffix {
 		config = parseSuffixToConfig(suffixResult.RawSuffix, providerFormat, model)
@@ -344,7 +344,7 @@ func applyThinking(body, sourceBody []byte, model string, fromFormat string, toF
 		config.Level = mapConfiguredHighIntent(config.Level, modelInfo)
 	}
 
-	// 5. Validate and normalize configuration
+	// 5. 校验并归一化配置
 	validated, err := ValidateConfig(config, modelInfo, fromFormat, providerFormat, suffixResult.HasSuffix)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -352,12 +352,12 @@ func applyThinking(body, sourceBody []byte, model string, fromFormat string, toF
 			"model":    modelInfo.ID,
 			"error":    err.Error(),
 		}).Warn("thinking: validation failed |")
-		// Return the target body on validation failure (defensive programming).
-		// Unsupported update items were already removed before validation.
+		// 校验失败时返回目标 body（防御性编程）。
+		// 不受支持的更新项已在校验前移除。
 		return body, err
 	}
 
-	// Defensive check: ValidateConfig should never return (nil, nil)
+	// 防御性检查：ValidateConfig 不应返回 (nil, nil)
 	if validated == nil {
 		log.WithFields(log.Fields{
 			"provider": providerFormat,
@@ -374,15 +374,15 @@ func applyThinking(body, sourceBody []byte, model string, fromFormat string, toF
 		"level":    validated.Level,
 	}).Debug("thinking: processed config to apply |")
 
-	// 6. Apply configuration using provider-specific applier, then restore the
-	// target summary intent that was explicit before suffix processing.
+	// 6. 使用供应商相关的 applier 应用配置，然后恢复后缀处理之前
+	// 显式的目标 summary 意图。
 	applied, err := applier.Apply(body, *validated, modelInfo)
 	if err != nil {
 		return applied, err
 	}
-	// A fully disabled amount takes precedence over visibility. Re-applying a
-	// summary-only field can recreate an otherwise removed provider config and
-	// make a default-on model think again.
+	// 完全禁用优先于可见性。重新应用仅 summary 的
+	// 字段可能会重建本已移除的供应商配置，
+	// 让默认开启 thinking 的模型再次思考。
 	if thinkingIsFullyDisabled(*validated) || nativeResponses {
 		return applied, nil
 	}
@@ -436,16 +436,16 @@ func extractSourceThinkingConfig(body []byte, provider string) ThinkingConfig {
 	return extractThinkingConfig(body, provider)
 }
 
-// parseSuffixToConfig converts a raw suffix string to ThinkingConfig.
+// parseSuffixToConfig 将原始后缀字符串转换为 ThinkingConfig。
 //
-// Parsing priority:
-//  1. Special values: "none" → ModeNone, "auto"/"-1" → ModeAuto
-//  2. Level names: "minimal", "low", "medium", "high", "xhigh" → ModeLevel
-//  3. Numeric values: positive integers → ModeBudget, 0 → ModeNone
+// 解析优先级：
+//  1. 特殊值："none" → ModeNone，"auto"/"-1" → ModeAuto
+//  2. 级别名："minimal"、"low"、"medium"、"high"、"xhigh" → ModeLevel
+//  3. 数值：正整数 → ModeBudget，0 → ModeNone
 //
-// If none of the above match, returns empty ThinkingConfig (treated as no config).
+// 若以上都不匹配，则返回空的 ThinkingConfig（视为无配置）。
 func parseSuffixToConfig(rawSuffix, provider, model string) ThinkingConfig {
-	// 1. Try special values first (none, auto, -1)
+	// 1. 先尝试特殊值（none、auto、-1）
 	if mode, ok := ParseSpecialSuffix(rawSuffix); ok {
 		switch mode {
 		case ModeNone:
@@ -455,12 +455,12 @@ func parseSuffixToConfig(rawSuffix, provider, model string) ThinkingConfig {
 		}
 	}
 
-	// 2. Try level parsing (minimal, low, medium, high, xhigh)
+	// 2. 尝试级别解析（minimal、low、medium、high、xhigh）
 	if level, ok := ParseLevelSuffix(rawSuffix); ok {
 		return ThinkingConfig{Mode: ModeLevel, Level: level}
 	}
 
-	// 3. Try numeric parsing
+	// 3. 尝试数值解析
 	if budget, ok := ParseNumericSuffix(rawSuffix); ok {
 		if budget == 0 {
 			return ThinkingConfig{Mode: ModeNone, Budget: 0}
@@ -468,7 +468,7 @@ func parseSuffixToConfig(rawSuffix, provider, model string) ThinkingConfig {
 		return ThinkingConfig{Mode: ModeBudget, Budget: budget}
 	}
 
-	// Unknown suffix format - return empty config
+	// 未知后缀格式 - 返回空配置
 	log.WithFields(log.Fields{
 		"provider":   provider,
 		"model":      model,
@@ -477,10 +477,10 @@ func parseSuffixToConfig(rawSuffix, provider, model string) ThinkingConfig {
 	return ThinkingConfig{}
 }
 
-// applyUserDefinedModel applies thinking configuration for user-defined models
-// without ThinkingSupport validation.
+// applyUserDefinedModel 为用户自定义模型应用 thinking 配置，
+// 不做 ThinkingSupport 校验。
 func applyUserDefinedModel(body []byte, modelInfo *registry.ModelInfo, fromFormat, toFormat, providerKey string, suffixResult SuffixResult, sourceConfig ThinkingConfig, nativeResponses bool, summaryConfig SummaryConfig) ([]byte, error) {
-	// Get model ID for logging
+	// 获取 model ID 用于日志
 	modelID := ""
 	if modelInfo != nil {
 		modelID = modelInfo.ID
@@ -488,7 +488,7 @@ func applyUserDefinedModel(body []byte, modelInfo *registry.ModelInfo, fromForma
 		modelID = suffixResult.ModelName
 	}
 
-	// Get config: suffix priority over body
+	// 获取配置：后缀优先于 body
 	var config ThinkingConfig
 	if suffixResult.HasSuffix {
 		config = parseSuffixToConfig(suffixResult.RawSuffix, toFormat, modelID)
@@ -552,7 +552,7 @@ func applyUserDefinedModel(body []byte, modelInfo *registry.ModelInfo, fromForma
 	return applySummaryConfigForProvider(applied, toFormat, modelID, providerKey, modelInfo, summaryConfig), nil
 }
 
-// extractThinkingConfig extracts provider-specific thinking config from request body.
+// extractThinkingConfig 从请求体中提取供应商相关的 thinking 配置。
 func extractThinkingConfig(body []byte, provider string) ThinkingConfig {
 	if len(body) == 0 || !gjson.ValidBytes(body) {
 		return ThinkingConfig{}
@@ -574,10 +574,10 @@ func hasThinkingConfig(config ThinkingConfig) bool {
 	return config.Mode != ModeBudget || config.Budget != 0 || config.Level != ""
 }
 
-// ExtractReasoningEffort returns the source request's thinking setting as a
-// canonical reasoning_effort label for usage logging. Responses updates take
-// precedence over a suffix because they describe the source turn's intent;
-// otherwise a valid suffix overrides the top-level setting.
+// ExtractReasoningEffort 将源请求的 thinking 设置作为
+// 规范化的 reasoning_effort 标签返回，用于用量日志。Responses 更新
+// 优先于后缀，因为它们描述的是源轮次的意图；
+// 否则有效的后缀会覆盖顶层设置。
 func ExtractReasoningEffort(body []byte, provider, model string) string {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	if isResponsesFormat(provider) {
@@ -601,8 +601,8 @@ func ExtractReasoningEffort(body []byte, provider, model string) string {
 	return reasoningEffortFromConfig(config)
 }
 
-// ExtractTranslatedReasoningEffort returns the final provider payload's thinking
-// setting as a canonical reasoning_effort label for usage logging.
+// ExtractTranslatedReasoningEffort 将最终供应商载荷的 thinking
+// 设置作为规范化的 reasoning_effort 标签返回，用于用量日志。
 func ExtractTranslatedReasoningEffort(body []byte, provider string) string {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	config := extractThinkingConfigForUsage(body, provider)
@@ -656,26 +656,26 @@ func reasoningEffortFromConfig(config ThinkingConfig) string {
 	}
 }
 
-// extractClaudeConfig extracts thinking configuration from Claude format request body.
+// extractClaudeConfig 从 Claude 格式的请求体中提取 thinking 配置。
 //
-// Claude API format:
-//   - thinking.type: "enabled", "adaptive", "auto", or "disabled"
-//   - thinking.budget_tokens: integer (-1=auto, 0=disabled, >0=budget)
-//   - output_config.effort: string ("none", "auto", "low", "medium", "high", "max")
+// Claude API 格式：
+//   - thinking.type："enabled"、"adaptive"、"auto" 或 "disabled"
+//   - thinking.budget_tokens：整数（-1=auto，0=disabled，>0=budget）
+//   - output_config.effort：字符串（"none"、"auto"、"low"、"medium"、"high"、"max"）
 //
-// Priority: thinking.type="disabled" takes precedence over budget_tokens.
-// When type="enabled", budget_tokens takes precedence over output_config.effort.
-// When type="enabled" without budget_tokens, output_config.effort is preserved if present;
-// otherwise returns ModeAuto to indicate the user wants thinking enabled with default budget.
+// 优先级：thinking.type="disabled" 优先于 budget_tokens。
+// 当 type="enabled" 时，budget_tokens 优先于 output_config.effort。
+// 当 type="enabled" 且没有 budget_tokens 时，若存在 output_config.effort 则保留；
+// 否则返回 ModeAuto，表示用户希望启用 thinking 并使用默认 budget。
 func extractClaudeConfig(body []byte) ThinkingConfig {
 	thinkingType := gjson.GetBytes(body, "thinking.type").String()
 	if thinkingType == "disabled" {
 		return ThinkingConfig{Mode: ModeNone, Budget: 0}
 	}
 	if thinkingType == "adaptive" || thinkingType == "auto" {
-		// Claude adaptive thinking uses output_config.effort (low/medium/high/max).
-		// We only treat it as a thinking config when effort is explicitly present;
-		// otherwise we passthrough and let upstream defaults apply.
+		// Claude 自适应 thinking 使用 output_config.effort（low/medium/high/max）。
+		// 仅在 effort 显式存在时才将其视为 thinking 配置；
+		// 否则透传，让上游默认值生效。
 		if effort := gjson.GetBytes(body, "output_config.effort"); effort.Exists() && effort.Type == gjson.String {
 			value := strings.ToLower(strings.TrimSpace(effort.String()))
 			if value == "" {
@@ -693,7 +693,7 @@ func extractClaudeConfig(body []byte) ThinkingConfig {
 		return ThinkingConfig{}
 	}
 
-	// Check budget_tokens
+	// 检查 budget_tokens
 	if budget := gjson.GetBytes(body, "thinking.budget_tokens"); budget.Exists() {
 		value := int(budget.Int())
 		switch value {
@@ -706,7 +706,7 @@ func extractClaudeConfig(body []byte) ThinkingConfig {
 		}
 	}
 
-	// If type="enabled", check output_config.effort before falling back to auto
+	// 若 type="enabled"，先检查 output_config.effort，再回退到 auto
 	if thinkingType == "enabled" {
 		if effort := gjson.GetBytes(body, "output_config.effort"); effort.Exists() && effort.Type == gjson.String {
 			value := strings.ToLower(strings.TrimSpace(effort.String()))
@@ -727,15 +727,15 @@ func extractClaudeConfig(body []byte) ThinkingConfig {
 	return ThinkingConfig{}
 }
 
-// extractOpenAIConfig extracts thinking configuration from OpenAI format request body.
+// extractOpenAIConfig 从 OpenAI 格式的请求体中提取 thinking 配置。
 //
-// OpenAI API format:
-//   - reasoning_effort: "none", "low", "medium", "high" (discrete levels)
+// OpenAI API 格式：
+//   - reasoning_effort："none"、"low"、"medium"、"high"（离散级别）
 //
-// OpenAI uses level-based thinking configuration only, no numeric budget support.
-// The "none" value is treated specially to return ModeNone.
+// OpenAI 仅使用基于级别的 thinking 配置，不支持数值 budget。
+// "none" 值会被特殊处理，返回 ModeNone。
 func extractOpenAIConfig(body []byte) ThinkingConfig {
-	// Check reasoning_effort (OpenAI Chat Completions format)
+	// 检查 reasoning_effort（OpenAI Chat Completions 格式）
 	if effort := gjson.GetBytes(body, "reasoning_effort"); effort.Exists() {
 		value := effort.String()
 		if value == "none" {
@@ -747,14 +747,14 @@ func extractOpenAIConfig(body []byte) ThinkingConfig {
 	return ThinkingConfig{}
 }
 
-// extractCodexConfig extracts thinking configuration from Codex format request body.
+// extractCodexConfig 从 Codex 格式的请求体中提取 thinking 配置。
 //
-// Codex API format (OpenAI Responses API):
-//   - reasoning.effort: "none", "low", "medium", "high"
+// Codex API 格式（OpenAI Responses API）：
+//   - reasoning.effort："none"、"low"、"medium"、"high"
 //
-// This is similar to OpenAI but uses nested field "reasoning.effort" instead of "reasoning_effort".
+// 这与 OpenAI 类似，但使用嵌套字段 "reasoning.effort" 而非 "reasoning_effort"。
 func extractCodexConfig(body []byte) ThinkingConfig {
-	// Check reasoning.effort (Codex / OpenAI Responses API format)
+	// 检查 reasoning.effort（Codex / OpenAI Responses API 格式）
 	if effort := gjson.GetBytes(body, "reasoning.effort"); effort.Exists() {
 		value := effort.String()
 		if value == "none" {
@@ -766,8 +766,8 @@ func extractCodexConfig(body []byte) ThinkingConfig {
 	return ThinkingConfig{}
 }
 
-// extractCodexUsageConfig returns the last effective Responses update for usage
-// reporting, falling back to the top-level effort when no update applies.
+// extractCodexUsageConfig 返回用于用量上报的最后一次生效的 Responses 更新，
+// 当没有更新生效时回退到顶层 effort。
 func extractCodexUsageConfig(body []byte) ThinkingConfig {
 	if len(body) == 0 || !gjson.ValidBytes(body) {
 		return ThinkingConfig{}

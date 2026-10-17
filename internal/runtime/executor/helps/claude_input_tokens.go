@@ -22,7 +22,7 @@ var (
 	claudeInputTokenizerErr   error
 )
 
-// ClaudeInputTokenState tracks the one-time input token update for a translated Claude stream.
+// ClaudeInputTokenState 跟踪已转换 Claude 流的一次性输入 token 更新。
 type ClaudeInputTokenState struct {
 	upstreamFormat  sdktranslator.Format
 	responseFormat  sdktranslator.Format
@@ -31,7 +31,7 @@ type ClaudeInputTokenState struct {
 	handled         bool
 }
 
-// NewClaudeInputTokenState creates request-scoped state for translated Claude input token usage.
+// NewClaudeInputTokenState 为已转换 Claude 的输入 token 用量创建请求级状态。
 func NewClaudeInputTokenState(sourceFormat, upstreamFormat, responseFormat sdktranslator.Format, originalRequest []byte) *ClaudeInputTokenState {
 	enabled := sourceFormat == sdktranslator.FormatClaude &&
 		upstreamFormat != sdktranslator.FormatClaude &&
@@ -44,7 +44,7 @@ func NewClaudeInputTokenState(sourceFormat, upstreamFormat, responseFormat sdktr
 	}
 }
 
-// TranslateStreamWithClaudeInputTokens translates a stream chunk and estimates Claude message_start input usage once.
+// TranslateStreamWithClaudeInputTokens 转换一个流式分块，并仅估算一次 Claude message_start 的输入用量。
 func TranslateStreamWithClaudeInputTokens(
 	ctx context.Context,
 	upstreamFormat, responseFormat sdktranslator.Format,
@@ -84,7 +84,7 @@ func claudeInputTokenizer() (tokenizer.Codec, error) {
 	return claudeInputTokenizerCodec, claudeInputTokenizerErr
 }
 
-// CountClaudeInputTokens estimates tokens for a Claude request with the O200kBase tokenizer.
+// CountClaudeInputTokens 使用 O200kBase 分词器估算 Claude 请求的 token 数。
 func CountClaudeInputTokens(payload []byte) (int64, error) {
 	enc, err := claudeInputTokenizer()
 	if err != nil {

@@ -343,8 +343,8 @@ func TestClaudeMetadataIdentitiesNormalizesAgentID(t *testing.T) {
 func TestEnrich_ExplicitSessionPreferredOverExecutionSession(t *testing.T) {
 	t.Parallel()
 
-	// Scenario 1: Responses WebSocket provides ExecutionSessionMetadataKey for transport reuse,
-	// but the client payload carries an explicit conversation/session identity.
+	// 场景 1：Responses WebSocket 为传输复用提供 ExecutionSessionMetadataKey，
+	// 但客户端载荷携带了显式的会话/对话身份。
 	wsPayload := []byte(`{"session_id":"explicit-ws-session"}`)
 	req1 := cliproxyexecutor.Request{
 		Payload: wsPayload,
@@ -367,7 +367,7 @@ func TestEnrich_ExplicitSessionPreferredOverExecutionSession(t *testing.T) {
 	}
 	_ = enrichedReq1
 
-	// Scenario 2: Only ExecutionSessionMetadataKey exists (no explicit session headers or payload).
+	// 场景 2：仅存在 ExecutionSessionMetadataKey（没有显式的会话请求头或载荷）。
 	req2 := cliproxyexecutor.Request{
 		Payload: []byte(`{"model":"test"}`),
 	}
@@ -390,8 +390,8 @@ func TestEnrich_ExplicitSessionPreferredOverExecutionSession(t *testing.T) {
 func TestEnrich_MetadataOnlyCanonicalAndParentSessionPreserved(t *testing.T) {
 	t.Parallel()
 
-	// Embeddable SDK caller provides explicit canonical and parent session in Options.Metadata
-	// without HTTP session headers or body session fields.
+	// 可嵌入 SDK 的调用方在 Options.Metadata 中提供显式的规范会话和父会话，
+	// 且没有 HTTP 会话请求头或 body 会话字段。
 	req := cliproxyexecutor.Request{
 		Payload: []byte(`{"model":"gpt-5.4"}`),
 	}
@@ -412,7 +412,7 @@ func TestEnrich_MetadataOnlyCanonicalAndParentSessionPreserved(t *testing.T) {
 		t.Fatalf("parent session = %q (ok=%v), want session:sdk-parent-999", parent, okParent)
 	}
 
-	// Self-loop elimination in metadata-only mode
+	// 仅元数据模式下的自环消除
 	optsLoop := cliproxyexecutor.Options{
 		Metadata: map[string]any{
 			cliproxyexecutor.CanonicalSessionIDMetadataKey: "session:same-loop",
@@ -428,7 +428,7 @@ func TestEnrich_MetadataOnlyCanonicalAndParentSessionPreserved(t *testing.T) {
 func TestNormalizeToCanonicalUUID(t *testing.T) {
 	t.Parallel()
 
-	// 1. Empty, whitespace, and bare/empty prefixes
+	// 1. 空值、纯空白以及裸/空前缀
 	if got := NormalizeToCanonicalUUID(""); got != "" {
 		t.Fatalf("NormalizeToCanonicalUUID(\"\") = %q, want empty", got)
 	}
@@ -453,7 +453,7 @@ func TestNormalizeToCanonicalUUID(t *testing.T) {
 		}
 	}
 
-	// 2. Native UUIDs (v4 and v7, various casings)
+	// 2. 原生 UUID（v4 和 v7，多种大小写）
 	rawUUIDv4 := "b2839f64-668d-4dc3-a42a-64da829d1e33"
 	if got := NormalizeToCanonicalUUID(rawUUIDv4); got != rawUUIDv4 {
 		t.Fatalf("NormalizeToCanonicalUUID(rawUUIDv4) = %q, want %q", got, rawUUIDv4)
@@ -467,7 +467,7 @@ func TestNormalizeToCanonicalUUID(t *testing.T) {
 		t.Fatalf("NormalizeToCanonicalUUID(rawUUIDv7) = %q, want %q", got, rawUUIDv7)
 	}
 
-	// 3. Known prefixes with UUIDs
+	// 3. 带 UUID 的已知前缀
 	prefixedCases := map[string]string{
 		"codex:01a07e72-c84d-7fd3-8207-d217b41cc649":         "01a07e72-c84d-7fd3-8207-d217b41cc649",
 		"claude:b2839f64-668d-4dc3-a42a-64da829d1e33":        "b2839f64-668d-4dc3-a42a-64da829d1e33",
@@ -483,7 +483,7 @@ func TestNormalizeToCanonicalUUID(t *testing.T) {
 		}
 	}
 
-	// 4. LCP 64-hex and non-UUID inputs projected to RFC 9562 UUIDv8
+	// 4. LCP 64 位十六进制及非 UUID 输入映射为 RFC 9562 UUIDv8
 	nonUUIDCases := []string{
 		"lcp:v1:c28621bab78eacdb3ae128c0f6aaa0147842f063fda10ae9dc5473cc81d58985",
 		"lcp:c28621bab78eacdb3ae128c0f6aaa0147842f063fda10ae9dc5473cc81d58985",
@@ -503,22 +503,22 @@ func TestNormalizeToCanonicalUUID(t *testing.T) {
 		if !canonicalUUIDPattern.MatchString(got) {
 			t.Errorf("NormalizeToCanonicalUUID(%q) = %q, does not match UUID pattern", input, got)
 		}
-		// Verify RFC 9562 Version 8 (13th char is '8', index 14)
+		// 验证 RFC 9562 版本 8（第 13 个字符为 '8'，索引 14）
 		if got[14] != '8' {
 			t.Errorf("NormalizeToCanonicalUUID(%q) = %q, version char is %c, want '8'", input, got, got[14])
 		}
-		// Verify RFC 4122 Variant (17th char is '8', '9', 'a', or 'b', index 19)
+		// 验证 RFC 4122 变体（第 17 个字符为 '8'、'9'、'a' 或 'b'，索引 19）
 		variantChar := got[19]
 		if variantChar != '8' && variantChar != '9' && variantChar != 'a' && variantChar != 'b' {
 			t.Errorf("NormalizeToCanonicalUUID(%q) = %q, variant char is %c, want 8/9/a/b", input, got, variantChar)
 		}
-		// Verify Idempotency
+		// 验证幂等性
 		if reGot := NormalizeToCanonicalUUID(got); reGot != got {
 			t.Errorf("NormalizeToCanonicalUUID is not idempotent: first=%q, second=%q", got, reGot)
 		}
 	}
 
-	// 5. Uniqueness and determinism
+	// 5. 唯一性与确定性
 	id1 := NormalizeToCanonicalUUID("lcp:v1:hash-A")
 	id1Again := NormalizeToCanonicalUUID("lcp:v1:hash-A")
 	id2 := NormalizeToCanonicalUUID("lcp:v1:hash-B")
@@ -529,7 +529,7 @@ func TestNormalizeToCanonicalUUID(t *testing.T) {
 		t.Fatalf("NormalizeToCanonicalUUID collided for different inputs: %q == %q", id1, id2)
 	}
 
-	// 6. Same content with or without "lcp:v1:" prefix produces identical UUID
+	// 6. 相同内容无论是否带 "lcp:v1:" 前缀都产生相同 UUID
 	lcpPrefixed := "lcp:v1:c28621bab78eacdb3ae128c0f6aaa0147842f063fda10ae9dc5473cc81d58985"
 	lcpBare := "c28621bab78eacdb3ae128c0f6aaa0147842f063fda10ae9dc5473cc81d58985"
 	if NormalizeToCanonicalUUID(lcpPrefixed) != NormalizeToCanonicalUUID(lcpBare) {
@@ -537,7 +537,7 @@ func TestNormalizeToCanonicalUUID(t *testing.T) {
 			NormalizeToCanonicalUUID(lcpPrefixed), NormalizeToCanonicalUUID(lcpBare))
 	}
 
-	// 7. Same content with or without "ctx:v1:" / "ctx:" prefix produces identical UUID
+	// 7. 相同内容无论是否带 "ctx:v1:" / "ctx:" 前缀都产生相同 UUID
 	ctxV1Prefixed := "ctx:v1:c28621bab78eacdb3ae128c0f6aaa0147842f063fda10ae9dc5473cc81d58985"
 	ctxShortPrefixed := "ctx:c28621bab78eacdb3ae128c0f6aaa0147842f063fda10ae9dc5473cc81d58985"
 	if NormalizeToCanonicalUUID(ctxV1Prefixed) != NormalizeToCanonicalUUID(lcpBare) {
@@ -548,20 +548,20 @@ func TestNormalizeToCanonicalUUID(t *testing.T) {
 		t.Fatalf("ctx: prefixed (%q) and bare (%q) produced different UUIDs: %q vs %q",
 			ctxShortPrefixed, lcpBare, NormalizeToCanonicalUUID(ctxShortPrefixed), NormalizeToCanonicalUUID(lcpBare))
 	}
-	// Fixed Golden UUIDv8 check
+	// 固定的黄金 UUIDv8 校验
 	const wantGoldenUUID = "2ad1939c-98ca-81da-8b69-3d084d5614c4"
 	if got := NormalizeToCanonicalUUID(lcpBare); got != wantGoldenUUID {
 		t.Fatalf("NormalizeToCanonicalUUID(lcpBare) = %q, want golden %q", got, wantGoldenUUID)
 	}
 
-	// 8. Chained prefixes (e.g. "derived:ctx:v1:") are stripped iteratively
+	// 8. 链式前缀（例如 "derived:ctx:v1:"）会被迭代剥离
 	derivedCtxPrefixed := "derived:ctx:v1:c28621bab78eacdb3ae128c0f6aaa0147842f063fda10ae9dc5473cc81d58985"
 	if got := NormalizeToCanonicalUUID(derivedCtxPrefixed); got != NormalizeToCanonicalUUID(lcpBare) {
 		t.Fatalf("derived:ctx:v1: prefixed (%q) produced %q, want %q",
 			derivedCtxPrefixed, got, NormalizeToCanonicalUUID(lcpBare))
 	}
 
-	// 9. Chained prefixes with standard UUID
+	// 9. 链式前缀搭配标准 UUID
 	derivedUUID := "derived:ctx:v1:01a07e72-c84d-7fd3-8207-d217b41cc649"
 	if got := NormalizeToCanonicalUUID(derivedUUID); got != "01a07e72-c84d-7fd3-8207-d217b41cc649" {
 		t.Fatalf("NormalizeToCanonicalUUID(%q) = %q, want 01a07e72-c84d-7fd3-8207-d217b41cc649", derivedUUID, got)
@@ -583,7 +583,7 @@ func TestEnrich_DoesNotClonePayloadWhenPopulatingOriginalRequest_Issue6101(t *te
 		t.Fatal("Enrich allocated a new copy of Payload instead of reusing the slice reference for OriginalRequest")
 	}
 
-	// When caller explicitly provides an independent OriginalRequest, Enrich preserves it
+	// 当调用方显式提供独立的 OriginalRequest 时，Enrich 会保留它
 	independentOriginal := []byte(`{"messages":[{"role":"user","content":"original"}]}`)
 	optsWithOriginal := cliproxyexecutor.Options{
 		OriginalRequest: independentOriginal,

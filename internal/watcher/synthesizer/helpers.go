@@ -12,20 +12,20 @@ import (
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
-// StableIDGenerator generates stable, deterministic IDs for auth entries.
-// It uses SHA256 hashing with collision handling via counters.
-// It is not safe for concurrent use.
+// StableIDGenerator 为 auth 条目生成稳定、确定性的 ID。
+// 它使用 SHA256 哈希，并通过计数器处理冲突。
+// 它不支持并发使用。
 type StableIDGenerator struct {
 	counters map[string]int
 }
 
-// NewStableIDGenerator creates a new StableIDGenerator instance.
+// NewStableIDGenerator 创建一个新的 StableIDGenerator 实例。
 func NewStableIDGenerator() *StableIDGenerator {
 	return &StableIDGenerator{counters: make(map[string]int)}
 }
 
-// Next generates a stable ID based on the kind and parts.
-// Returns the full ID (kind:hash) and the short hash portion.
+// Next 根据 kind 和各部分生成一个稳定的 ID。
+// 返回完整 ID（kind:hash）以及短哈希部分。
 func (g *StableIDGenerator) Next(kind string, parts ...string) (string, string) {
 	if g == nil {
 		return kind + ":000000000000", "000000000000"
@@ -51,10 +51,10 @@ func (g *StableIDGenerator) Next(kind string, parts ...string) (string, string) 
 	return fmt.Sprintf("%s:%s", kind, short), short
 }
 
-// ApplyAuthExcludedModelsMeta applies excluded models metadata to an auth entry.
-// It computes a hash of excluded models and sets the auth_kind attribute.
-// For OAuth entries, perKey (from the JSON file's excluded-models field) is merged
-// with the global oauth-excluded-models config for the provider.
+// ApplyAuthExcludedModelsMeta 将排除模型元数据应用到 auth 条目。
+// 它计算排除模型的哈希并设置 auth_kind 属性。
+// 对于 OAuth 条目，perKey（来自 JSON 文件的 excluded-models 字段）会与该供应商的
+// 全局 oauth-excluded-models 配置合并。
 func ApplyAuthExcludedModelsMeta(auth *coreauth.Auth, cfg *config.Config, perKey []string, authKind string) {
 	if auth == nil || cfg == nil {
 		return
@@ -75,7 +75,7 @@ func ApplyAuthExcludedModelsMeta(auth *coreauth.Auth, cfg *config.Config, perKey
 	if authKindKey == "apikey" {
 		add(perKey)
 	} else {
-		// For OAuth: merge per-account excluded models with global provider-level exclusions
+		// 对于 OAuth：将按账号的排除模型与供应商级别的全局排除项合并
 		add(perKey)
 		if cfg.OAuthExcludedModels != nil {
 			providerKey := strings.ToLower(strings.TrimSpace(auth.Provider))
@@ -94,7 +94,7 @@ func ApplyAuthExcludedModelsMeta(auth *coreauth.Auth, cfg *config.Config, perKey
 	if hash != "" {
 		auth.Attributes["excluded_models_hash"] = hash
 	}
-	// Store the combined excluded models list so that routing can read it at runtime
+	// 存储合并后的排除模型列表，以便路由在运行时读取
 	if len(combined) > 0 {
 		auth.Attributes["excluded_models"] = strings.Join(combined, ",")
 	}
@@ -103,8 +103,8 @@ func ApplyAuthExcludedModelsMeta(auth *coreauth.Auth, cfg *config.Config, perKey
 	}
 }
 
-// addRequestRetryToMetadata copies a per-credential request-retry override into metadata.
-// Nil or negative values are treated as unset and are not written.
+// addRequestRetryToMetadata 将按凭据的请求重试覆盖项复制到元数据中。
+// nil 或负值视为未设置，不会写入。
 func addRequestRetryToMetadata(requestRetry *int, metadata map[string]any) {
 	if requestRetry == nil || *requestRetry < 0 || metadata == nil {
 		return
@@ -112,7 +112,7 @@ func addRequestRetryToMetadata(requestRetry *int, metadata map[string]any) {
 	metadata["request_retry"] = *requestRetry
 }
 
-// addRequestScopedErrorsToMetadata copies per-credential request-scoped error rules into metadata.
+// addRequestScopedErrorsToMetadata 将按凭据的请求级错误规则复制到元数据中。
 func addRequestScopedErrorsToMetadata(rules []config.RequestScopedErrorRule, metadata map[string]any) {
 	if len(rules) == 0 || metadata == nil {
 		return
@@ -133,9 +133,9 @@ func fingerprintProfileFromMetadata(metadata map[string]any) string {
 	return ""
 }
 
-// applyFingerprintProfileAttribute copies fingerprint-profile from an OAuth JSON
-// file (Kimi, Claude, etc.) onto auth attributes so Claude Messages opt-in works
-// the same way as claude-api-key config.
+// applyFingerprintProfileAttribute 把 OAuth JSON 文件（Kimi、Claude 等）中的
+// fingerprint-profile 复制到 auth 属性上，使 Claude Messages 的选用
+// 与 claude-api-key 配置一致。
 func applyFingerprintProfileAttribute(auth *coreauth.Auth, metadata map[string]any) {
 	if auth == nil {
 		return
@@ -150,8 +150,8 @@ func applyFingerprintProfileAttribute(auth *coreauth.Auth, metadata map[string]a
 	auth.Attributes["fingerprint_profile"] = profile
 }
 
-// addConfigHeadersToAttrs adds header configuration to auth attributes.
-// Headers are prefixed with "header:" in the attributes map.
+// addConfigHeadersToAttrs 将请求头配置添加到 auth 属性。
+// 在属性映射中，请求头以 "header:" 为前缀。
 func addConfigHeadersToAttrs(headers map[string]string, attrs map[string]string) {
 	if len(headers) == 0 || attrs == nil {
 		return

@@ -291,8 +291,8 @@ func TestClaudeCodeTLSClientHelloSpecMatches220Capture(t *testing.T) {
 func TestClaudeCodeTLSResumptionIsWireSafe(t *testing.T) {
 	t.Parallel()
 
-	// RFC 8446 4.2.11 requires pre_shared_key to be the final extension, after
-	// the padding extension.
+	// RFC 8446 4.2.11 要求 pre_shared_key 作为最后一个扩展，位于
+	// padding 扩展之后。
 	spec := claudeCodeTLSClientHelloSpec()
 	last := spec.Extensions[len(spec.Extensions)-1]
 	if _, ok := last.(*tls.UtlsPreSharedKeyExtension); !ok {
@@ -302,8 +302,8 @@ func TestClaudeCodeTLSResumptionIsWireSafe(t *testing.T) {
 		t.Fatalf("extension before pre_shared_key = %T, want *tls.UtlsPaddingExtension", spec.Extensions[len(spec.Extensions)-2])
 	}
 
-	// Without OmitEmptyPsk uTLS refuses to marshal an empty PSK, and without
-	// PreferSkipResumptionOnNilExtension a HelloCustom resumption attempt panics.
+	// 缺少 OmitEmptyPsk 时 uTLS 拒绝编组空 PSK，缺少
+	// PreferSkipResumptionOnNilExtension 时 HelloCustom 恢复尝试会 panic。
 	cfg := newClaudeCodeTLSConfig("api.anthropic.com", tls.NewLRUClientSessionCache(claudeCodeSessionCacheCapacity))
 	if cfg.ClientSessionCache == nil {
 		t.Fatal("ClientSessionCache = nil, want a session cache so resumption is possible")
@@ -492,8 +492,8 @@ func captureClaudeCodeClientHello(t *testing.T) []byte {
 			t.Errorf("close server pipe: %v", errClose)
 		}
 	})
-	// Use the production config so the captured bytes reflect the real dial path,
-	// including the resumption settings.
+	// 使用生产配置，使捕获的字节反映真实的拨号路径，
+	// 包括恢复设置。
 	cfg := newClaudeCodeTLSConfig("api.anthropic.com", tls.NewLRUClientSessionCache(claudeCodeSessionCacheCapacity))
 	tlsConn := tls.UClient(clientConn, cfg, tls.HelloCustom)
 	if errPreset := tlsConn.ApplyPreset(claudeCodeTLSClientHelloSpec()); errPreset != nil {

@@ -324,7 +324,7 @@ func (h *Handler) lookupAuthFile(name string, authIndex string) (*coreauth.Auth,
 	return nil, false
 }
 
-// GetAuthFileModels returns the models supported by a specific auth file
+// GetAuthFileModels 返回特定 auth 文件所支持的模型
 func (h *Handler) GetAuthFileModels(c *gin.Context) {
 	name := c.Query("name")
 	if name == "" {
@@ -332,7 +332,7 @@ func (h *Handler) GetAuthFileModels(c *gin.Context) {
 		return
 	}
 
-	// Try to find auth ID via authManager
+	// 尝试通过 authManager 查找 auth ID
 	var authID string
 	if h.authManager != nil {
 		auths := h.authManager.List()
@@ -345,10 +345,10 @@ func (h *Handler) GetAuthFileModels(c *gin.Context) {
 	}
 
 	if authID == "" {
-		authID = name // fallback to filename as ID
+		authID = name // 回退到用文件名作为 ID
 	}
 
-	// Get models from registry
+	// 从注册表获取模型
 	reg := registry.GetGlobalRegistry()
 	models := reg.GetModelsForClient(authID)
 
@@ -372,7 +372,7 @@ func (h *Handler) GetAuthFileModels(c *gin.Context) {
 	c.JSON(200, gin.H{"models": result})
 }
 
-// List auth files from disk when the auth manager is unavailable.
+// 当 auth 管理器不可用时从磁盘列出 auth 文件。
 func (h *Handler) listAuthFilesFromDisk(c *gin.Context, pagination authFilesPagination) {
 	observedAt := time.Now().UTC()
 	nameFilter := strings.TrimSpace(c.Query("name"))
@@ -412,7 +412,7 @@ func (h *Handler) listAuthFilesFromDisk(c *gin.Context, pagination authFilesPagi
 		name := candidate.entry.Name()
 		fileData := gin.H{"name": name, "size": candidate.info.Size(), "modtime": candidate.info.ModTime(), "cooldowns": nil}
 
-		// Read file to get type field
+		// 读取文件以获取 type 字段
 		full := filepath.Join(h.cfg.AuthDir, name)
 		if data, errRead := os.ReadFile(full); errRead == nil {
 			typeValue := gjson.GetBytes(data, "type").String()
@@ -473,12 +473,12 @@ func (h *Handler) listAuthFilesFromDisk(c *gin.Context, pagination authFilesPagi
 	c.JSON(200, authFilesListResponse(observedAt, files, pagination, total, end))
 }
 
-// authFileQuotaContext carries request-scoped quota capability data for auth file entries.
+// authFileQuotaContext 携带针对 auth 文件条目的请求级额度能力数据。
 type authFileQuotaContext struct {
-	// pluginIDs maps normalized provider keys to the quota plugin selected for them.
-	// A nil map means no quota plugins are available.
+	// pluginIDs 将规范化后的供应商 key 映射到为其选中的额度插件。
+	// nil map 表示没有可用的额度插件。
 	pluginIDs map[string]string
-	// v8 hides declarative quota_probe support because v8 only serves plugin quota routes.
+	// v8 隐藏声明式 quota_probe 支持，因为 v8 只提供插件额度路由。
 	v8 bool
 }
 
@@ -492,15 +492,15 @@ func isPersistentAuthFailure(auth *coreauth.Auth, now time.Time) bool {
 	if auth == nil {
 		return false
 	}
-	// Terminal unauthorized failure with no refresh scheduled.
+	// 终结性的未授权失败，且未安排刷新。
 	if coreauth.HasUnauthorizedAuthFailure(auth) {
 		return true
 	}
-	// An OAuth credential whose access token is expired cannot be used to serve requests.
+	// 访问令牌已过期的 OAuth 凭据无法用于服务请求。
 	if exp, ok := auth.AccessTokenExpirationTime(); ok && !exp.IsZero() && !exp.After(now) {
 		return true
 	}
-	// An explicit token expiration status.
+	// 明确的令牌过期状态。
 	if strings.EqualFold(strings.TrimSpace(auth.StatusMessage), "token expired") {
 		return true
 	}
@@ -545,7 +545,7 @@ func reconcileAuthFileCooldownState(auth *coreauth.Auth, now time.Time) (unavail
 		return unavailable, coreauth.StatusDisabled, statusMessage, nextRetry
 	}
 
-	// Never reconcile an active authentication or token failure to active.
+	// 绝不要把生效中的认证或令牌失败调和对齐为 active。
 	if isPersistentAuthFailure(auth, now) {
 		if !nextRetry.IsZero() && !nextRetry.After(now) {
 			nextRetry = time.Time{}
@@ -553,9 +553,9 @@ func reconcileAuthFileCooldownState(auth *coreauth.Auth, now time.Time) (unavail
 		return true, coreauth.StatusError, statusMessage, nextRetry
 	}
 
-	// Check if there is an active credential-level cooldown.
-	// Matching selector.availabilityBlock: if neither Unavailable nor Quota.Exceeded is true,
-	// an inactive timestamp does not block the credential.
+	// 检查是否存在生效中的凭据级冷却。
+	// 与 selector.availabilityBlock 保持一致：如果 Unavailable 和 Quota.Exceeded 都不是 true，
+	// 那么一个不活跃的时间戳不会阻塞该凭据。
 	hasActiveCredCooldown := false
 	if auth.Unavailable || auth.Quota.Exceeded {
 		if !auth.NextRetryAfter.IsZero() && auth.NextRetryAfter.After(now) {
@@ -569,7 +569,7 @@ func reconcileAuthFileCooldownState(auth *coreauth.Auth, now time.Time) (unavail
 		}
 	}
 
-	// Check per-model states.
+	// 检查各模型的状态。
 	hasSchedulableModels := false
 	allSchedulableBlocked := true
 	hasActiveModelCooldown := false
@@ -598,8 +598,8 @@ func reconcileAuthFileCooldownState(auth *coreauth.Auth, now time.Time) (unavail
 		(auth.Quota.Exceeded && !auth.Quota.NextRecoverAt.IsZero()) ||
 		hadAnyModelCooldown
 
-	// If there is an active credential cooldown, keep unavailable/error.
-	// If all recorded models are blocked and the credential itself was marked unavailable, keep unavailable/error.
+	// 如果存在生效中的凭据冷却，则保持 unavailable/error。
+	// 如果所有已记录的模型都被阻塞且凭据本身被标记为不可用，则保持 unavailable/error。
 	if hasActiveCredCooldown || (hasSchedulableModels && allSchedulableBlocked && auth.Unavailable) {
 		if !nextRetry.IsZero() && !nextRetry.After(now) {
 			nextRetry = time.Time{}
@@ -607,7 +607,7 @@ func reconcileAuthFileCooldownState(auth *coreauth.Auth, now time.Time) (unavail
 		return true, coreauth.StatusError, statusMessage, nextRetry
 	}
 
-	// If the credential was not marked unavailable and has no active credential cooldown, keep unavailable=false.
+	// 如果凭据未被标记为不可用且没有生效中的凭据冷却，则保持 unavailable=false。
 	if !auth.Unavailable && !hasActiveCredCooldown {
 		if status == coreauth.StatusError && hasSchedulableModels && !allSchedulableBlocked {
 			status = coreauth.StatusActive
@@ -616,12 +616,12 @@ func reconcileAuthFileCooldownState(auth *coreauth.Auth, now time.Time) (unavail
 		return false, status, statusMessage, time.Time{}
 	}
 
-	// If a cooldown was recorded but has expired (and no active model cooldown blocks all models):
+	// 如果记录过冷却但已过期（且没有生效中的模型冷却阻塞所有模型）：
 	if hadCooldown && !hasActiveCredCooldown && !hasActiveModelCooldown {
 		return false, coreauth.StatusActive, "", time.Time{}
 	}
 
-	// If partial models are still cooling, the credential as a whole remains available for other models.
+	// 如果部分模型仍在冷却中，该凭据整体上对其他模型仍然可用。
 	if hadCooldown && hasSchedulableModels && !allSchedulableBlocked {
 		if status == coreauth.StatusError && !hasActiveCredCooldown {
 			status = coreauth.StatusActive
@@ -630,7 +630,7 @@ func reconcileAuthFileCooldownState(auth *coreauth.Auth, now time.Time) (unavail
 		return false, status, statusMessage, time.Time{}
 	}
 
-	// If nextRetry is in the past, do not expose a past retry deadline.
+	// 如果 nextRetry 已过去，则不要暴露一个已过去的重试截止时间。
 	if !nextRetry.IsZero() && !nextRetry.After(now) {
 		nextRetry = time.Time{}
 	}
@@ -685,7 +685,7 @@ func (h *Handler) buildAuthFileEntryLocked(auth *coreauth.Auth, quota authFileQu
 			entry["quota_plugin_id"] = pluginID
 		}
 	}
-	// Declarative quota_probe is only executed by the v0 quota/fetch route.
+	// 声明式 quota_probe 仅由 v0 的 quota/fetch 路由执行。
 	if !quota.v8 && auth.Metadata != nil {
 		if probe, okProbe := auth.Metadata["quota_probe"]; okProbe && probe != nil {
 			entry["supports_quota"] = true
@@ -726,7 +726,7 @@ func (h *Handler) buildAuthFileEntryLocked(auth *coreauth.Auth, quota authFileQu
 			entry["size"] = info.Size()
 			entry["modtime"] = info.ModTime()
 		} else if os.IsNotExist(err) {
-			// Hide credentials removed from disk but still lingering in memory.
+			// 隐藏已从磁盘移除但仍残留在内存中的凭据。
 			if !runtimeOnly && (auth.Disabled || auth.Status == coreauth.StatusDisabled || strings.EqualFold(strings.TrimSpace(auth.StatusMessage), "removed via management api")) {
 				return nil
 			}
@@ -735,8 +735,8 @@ func (h *Handler) buildAuthFileEntryLocked(auth *coreauth.Auth, quota authFileQu
 			log.WithError(err).Warnf("failed to stat auth file %s", path)
 		}
 	}
-	// Expose priority from Attributes (set by synthesizer from JSON "priority" field).
-	// Fall back to Metadata for auths registered via UploadAuthFile (no synthesizer).
+	// 从 Attributes 暴露 priority（由合成器从 JSON 的 "priority" 字段设置）。
+	// 对于通过 UploadAuthFile 注册的 auth（无合成器）回退到 Metadata。
 	if p := strings.TrimSpace(authAttribute(auth, "priority")); p != "" {
 		if parsed, err := strconv.Atoi(p); err == nil {
 			entry["priority"] = parsed
@@ -755,8 +755,8 @@ func (h *Handler) buildAuthFileEntryLocked(auth *coreauth.Auth, quota authFileQu
 			}
 		}
 	}
-	// Expose note from Attributes (set by synthesizer from JSON "note" field).
-	// Fall back to Metadata for auths registered via UploadAuthFile (no synthesizer).
+	// 从 Attributes 暴露 note（由合成器从 JSON 的 "note" 字段设置）。
+	// 对于通过 UploadAuthFile 注册的 auth（无合成器）回退到 Metadata。
 	if note := strings.TrimSpace(authAttribute(auth, "note")); note != "" {
 		entry["note"] = note
 	} else if auth.Metadata != nil {
@@ -786,9 +786,9 @@ func authFileRequestRetryFromJSON(data []byte) (int, bool) {
 	return (&coreauth.Auth{Metadata: metadata}).RequestRetryOverride()
 }
 
-// quotaObservationPayload exposes only passive provider observations. Cooldown
-// fields are intentionally excluded so this management response cannot be
-// mistaken for scheduler state or influence scheduling behavior.
+// quotaObservationPayload 只暴露被动的供应商观测数据。冷却
+// 字段被有意排除，因此该管理响应不会被
+// 误认为是调度器状态或影响调度行为。
 func quotaObservationPayloadForProvider(provider string, quota coreauth.QuotaState) gin.H {
 	if !coreauth.ProviderSupportsQuotaObservation(provider) {
 		return quotaObservationPayload(coreauth.QuotaState{})

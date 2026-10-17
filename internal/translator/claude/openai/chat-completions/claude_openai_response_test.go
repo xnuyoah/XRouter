@@ -276,7 +276,7 @@ func TestConvertClaudeResponseToOpenAI_StreamAndNonStreamParity(t *testing.T) {
 		[]byte(`data: {"type":"message_stop"}`),
 	}
 
-	// 1. Process via streaming
+	// 1. 通过流式处理
 	ctx := context.Background()
 	var param any
 	var streamReasoning string
@@ -298,7 +298,7 @@ func TestConvertClaudeResponseToOpenAI_StreamAndNonStreamParity(t *testing.T) {
 		}
 	}
 
-	// 2. Process via non-stream
+	// 2. 通过非流式处理
 	var rawBuffer []byte
 	for _, ev := range events {
 		rawBuffer = append(rawBuffer, ev...)
@@ -341,7 +341,7 @@ func TestConvertClaudeResponseToOpenAI_RedactedThinkingIgnored(t *testing.T) {
 		[]byte(`data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"input_tokens":10,"output_tokens":20}}`),
 	}
 
-	// Non-stream check
+	// 非流式检查
 	var rawJSON []byte
 	for _, ev := range events {
 		rawJSON = append(rawJSON, ev...)
@@ -359,7 +359,7 @@ func TestConvertClaudeResponseToOpenAI_RedactedThinkingIgnored(t *testing.T) {
 		t.Fatalf("content = %q, want %q", gotContent, "Visible reply.")
 	}
 
-	// Stream check
+	// 流式检查
 	ctx := context.Background()
 	var param any
 	var streamContent string
@@ -453,7 +453,7 @@ func TestConvertClaudeResponseToOpenAI_StreamEmitsTrailingUsageChunkWithCacheDet
 		[]byte(`data: {"type":"content_block_stop","index":0}`),
 		[]byte(`data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":15}}`),
 		[]byte(`data: {"type":"message_stop"}`),
-		[]byte(`data: {"type":"message_stop"}`), // Duplicate message_stop should be ignored via TrailingUsageSent
+		[]byte(`data: {"type":"message_stop"}`), // 重复的 message_stop 应通过 TrailingUsageSent 被忽略
 	}
 
 	var allChunks [][]byte
@@ -462,7 +462,7 @@ func TestConvertClaudeResponseToOpenAI_StreamEmitsTrailingUsageChunkWithCacheDet
 		allChunks = append(allChunks, chunks...)
 	}
 
-	// Verify exactly one trailing usage chunk with empty choices array exists as expected by OpenAI streaming spec and LiteLLM
+	// 验证存在恰好一个带有空 choices 数组的尾部 usage 分块，符合 OpenAI 流式规范与 LiteLLM 的预期
 	var trailingUsageChunk []byte
 	var trailingUsageChunkIndex = -1
 	var finishReasonChunkIndex = -1

@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ZeroconfAdvertiser wraps libp2p/zeroconf/v2 Server with defensive lifecycle management.
+// ZeroconfAdvertiser 包装 libp2p/zeroconf/v2 Server，并提供防御性的生命周期管理。
 type ZeroconfAdvertiser struct {
 	mu       sync.Mutex
 	server   *zeroconf.Server
@@ -20,13 +20,13 @@ type ZeroconfAdvertiser struct {
 	closed   bool
 }
 
-// NewZeroconfAdvertiser returns a new ZeroconfAdvertiser.
+// NewZeroconfAdvertiser 返回一个新的 ZeroconfAdvertiser。
 func NewZeroconfAdvertiser() *ZeroconfAdvertiser {
 	return &ZeroconfAdvertiser{}
 }
 
-// extractCleanHost returns bare hostname without any .local suffix
-// to prevent libp2p/zeroconf/v2 from appending a duplicate .local. (e.g. on macOS).
+// extractCleanHost 返回不含任何 .local 后缀的裸主机名，
+// 以防止 libp2p/zeroconf/v2 追加重复的 .local。（例如在 macOS 上）。
 func extractCleanHost() string {
 	h, err := os.Hostname()
 	if err != nil || h == "" {
@@ -42,7 +42,7 @@ func extractCleanHost() string {
 	return h
 }
 
-// extractInterfaceIPs collects non-loopback IP addresses from the selected interfaces.
+// extractInterfaceIPs 从选定的网卡收集非回环 IP 地址。
 func extractInterfaceIPs(ifaces []net.Interface) []string {
 	var ips []string
 	for _, iface := range ifaces {
@@ -67,8 +67,8 @@ func extractInterfaceIPs(ifaces []net.Interface) []string {
 	return ips
 }
 
-// Start registers and starts mDNS advertisement for the primary service type
-// and any configured API protocol subtypes.
+// Start 为主服务类型以及任何已配置的 API 协议子类型
+// 注册并启动 mDNS 广播。
 func (a *ZeroconfAdvertiser) Start(ctx context.Context, spec ServiceSpec) (err error) {
 	if ctx != nil && ctx.Err() != nil {
 		return ctx.Err()
@@ -173,7 +173,7 @@ func (a *ZeroconfAdvertiser) Start(ctx context.Context, spec ServiceSpec) (err e
 	return nil
 }
 
-// Stop shuts down the mDNS advertisement server and sends goodbye packets.
+// Stop 关闭 mDNS 广播服务器并发送 goodbye 数据包。
 func (a *ZeroconfAdvertiser) Stop() error {
 	a.mu.Lock()
 	a.closed = true
@@ -192,12 +192,12 @@ func (a *ZeroconfAdvertiser) Stop() error {
 	return nil
 }
 
-// ZeroconfBrowser provides DNS-SD browsing with fallback support.
+// ZeroconfBrowser 提供带回退支持的 DNS-SD 浏览。
 type ZeroconfBrowser struct {
 	options []zeroconf.ClientOption
 }
 
-// NewZeroconfBrowser creates a new ZeroconfBrowser.
+// NewZeroconfBrowser 创建一个新的 ZeroconfBrowser。
 func NewZeroconfBrowser(ifaces ...net.Interface) *ZeroconfBrowser {
 	var opts []zeroconf.ClientOption
 	if len(ifaces) > 0 {
@@ -233,7 +233,7 @@ func browseEntryWithinLimits(entry *zeroconf.ServiceEntry) bool {
 	return true
 }
 
-// Browse performs a standard mDNS browse query for the given service type.
+// Browse 对给定服务类型执行标准的 mDNS 浏览查询。
 func (b *ZeroconfBrowser) Browse(ctx context.Context, serviceType, domain string) ([]DiscoveredService, error) {
 	if ctx == nil {
 		ctx = context.TODO()
@@ -253,9 +253,9 @@ func (b *ZeroconfBrowser) Browse(ctx context.Context, serviceType, domain string
 	var mu sync.Mutex
 	seen := make(map[string]int)
 
-	// Stop the underlying zeroconf client after a bounded number of entries. This
-	// is separate from the caller's context so a LAN flood cannot grow the
-	// dependency's internal sentEntries cache for the full browse lifetime.
+	// 在条目数量达到上限后停止底层 zeroconf 客户端。这
+	// 与调用方的 context 分离，因此局域网内的洪流无法在
+	// 整个浏览生命周期内撑大该依赖内部的 sentEntries 缓存。
 	doneCh := make(chan struct{})
 	go func() {
 		defer close(doneCh)
@@ -289,7 +289,7 @@ func (b *ZeroconfBrowser) Browse(ctx context.Context, serviceType, domain string
 
 	errBrowse := zeroconf.Browse(browseCtx, serviceType, domain, entries, b.options...)
 	if errBrowse != nil {
-		// zeroconf may already have closed entries after a runtime error.
+		// 运行期错误后 zeroconf 可能已经关闭了条目。
 		closeBrowseEntries(entries)
 		<-doneCh
 		return nil, fmt.Errorf("discovery: browse query failed: %w", errBrowse)
@@ -442,12 +442,12 @@ func parseTXTList(value string) []string {
 	return result
 }
 
-// BrowseWithFallback discovers all AI gateways on the LAN (_ai-gateway._tcp) and prioritizes CPA instances.
+// BrowseWithFallback 发现局域网内所有 AI 网关（_ai-gateway._tcp）并优先选择 CPA 实例。
 func (b *ZeroconfBrowser) BrowseWithFallback(ctx context.Context) ([]DiscoveredService, error) {
 	return b.BrowseWithFallbackServiceType(ctx, DefaultServiceType)
 }
 
-// BrowseWithFallbackServiceType discovers services of the requested type and prioritizes CPA instances.
+// BrowseWithFallbackServiceType 发现所请求类型的服务并优先选择 CPA 实例。
 func (b *ZeroconfBrowser) BrowseWithFallbackServiceType(ctx context.Context, serviceType string) ([]DiscoveredService, error) {
 	if strings.TrimSpace(serviceType) == "" {
 		serviceType = DefaultServiceType
@@ -457,7 +457,7 @@ func (b *ZeroconfBrowser) BrowseWithFallbackServiceType(ctx context.Context, ser
 		return nil, errMain
 	}
 
-	// Partition: prioritize CPA instances first, then other standard AI gateways
+	// 分区：优先选择 CPA 实例，其次是其他标准 AI 网关
 	var cpaGateways []DiscoveredService
 	var otherGateways []DiscoveredService
 	for _, gw := range allGateways {
@@ -471,8 +471,8 @@ func (b *ZeroconfBrowser) BrowseWithFallbackServiceType(ctx context.Context, ser
 	return append(cpaGateways, otherGateways...), nil
 }
 
-// sanitizeEndpointPath validates that an endpoint path is a safe relative API path
-// starting with '/' and containing no scheme, domain, protocol-relative prefixes, or traversal elements.
+// sanitizeEndpointPath 校验端点路径是安全的相对 API 路径，
+// 以 '/' 开头且不包含 scheme、域名、协议相对前缀或路径穿越元素。
 func sanitizeEndpointPath(p string) string {
 	p = strings.TrimSpace(p)
 	if !strings.HasPrefix(p, "/") || strings.HasPrefix(p, "//") || strings.Contains(p, `\`) || strings.Contains(p, "://") || strings.Contains(p, "..") {

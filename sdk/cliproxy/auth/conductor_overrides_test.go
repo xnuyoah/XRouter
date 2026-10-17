@@ -593,7 +593,7 @@ func newCredentialRetryLimitTestManager(t *testing.T, maxRetryCredentials int) (
 	auth1 := &Auth{ID: baseID + "-auth-1", Provider: "claude"}
 	auth2 := &Auth{ID: baseID + "-auth-2", Provider: "claude"}
 
-	// Auth selection requires that the global model registry knows each credential supports the model.
+	// Auth 选择要求全局模型注册表知道每个凭据支持该模型。
 	reg := registry.GetGlobalRegistry()
 	reg.RegisterClient(auth1.ID, "claude", []*registry.ModelInfo{{ID: "test-model"}})
 	reg.RegisterClient(auth2.ID, "claude", []*registry.ModelInfo{{ID: "test-model"}})
@@ -1254,8 +1254,8 @@ func TestManager_MarkResult_CloudflareChallenge_On403(t *testing.T) {
 		t.Fatalf("expected StatusMessage to be 'cloudflare challenge', got %s", state.StatusMessage)
 	}
 
-	// Cloudflare Challenge sets Unavailable and NextRetryAfter on ModelState,
-	// so the model SHOULD be suspended in the global registry for this client.
+	// Cloudflare Challenge 会在 ModelState 上设置 Unavailable 与 NextRetryAfter，
+	// 因此该模型应在此客户端的全局注册表中被挂起。
 	if !reg.IsModelSuspendedForClient(auth.ID, model) {
 		t.Fatalf("expected model to be suspended in registry for cloudflare challenge")
 	}
@@ -1453,8 +1453,8 @@ func TestManager_RequestScopedErrorStopsCredentialFallbackWithoutSuspendingAuth(
 		HTTPStatus: http.StatusBadGateway,
 		Message:    `{"error":{"type":"invalid_request","code":"cyber_policy","message":"This content was flagged for possible cybersecurity risk."}}`,
 	}
-	// A frame/payload that exceeds the upstream size limit fails identically on
-	// every credential, so it must not rotate or punish the pool.
+	// 超过上游大小限制的帧/载荷在每个凭据上都会同样失败，
+	// 因此不应触发轮换或惩罚连接池。
 	tooLargeErr := &Error{
 		HTTPStatus: http.StatusRequestEntityTooLarge,
 		Message:    `{"error":{"code":"message_too_big","message":"upstream websocket message too big"}}`,
@@ -1475,7 +1475,7 @@ func TestManager_RequestScopedErrorStopsCredentialFallbackWithoutSuspendingAuth(
 		HTTPStatus: http.StatusBadGateway,
 		Message:    `{"body":{"error":{"type":"invalid_request","message":"invalid input"}}}`,
 	}
-	// Upstream sends this one as plain text rather than a JSON error body.
+	// 上游会将其作为纯文本发送，而不是 JSON 错误体。
 	itemNotPersistedErr := &Error{
 		HTTPStatus: http.StatusNotFound,
 		Message:    requestScopedNotFoundMessage,
@@ -1788,11 +1788,11 @@ func TestManager_DeepSeekCredentialFailuresRotateCredential(t *testing.T) {
 	}
 }
 
-// TestManager_UnknownUpstreamErrorRotatesAndPenalizesModelOnly pins the upstream
-// 500 "status":"UNKNOWN" contract. It is an upstream internal failure, not a
-// request fault, so the request must fall through to the next credential. The
-// cooldown that follows must land on the (credential, model) pair only: sibling
-// models on the same credential stay selectable.
+// TestManager_UnknownUpstreamErrorRotatesAndPenalizesModelOnly 固定上游
+// 500 "status":"UNKNOWN" 约定。这是上游内部故障，而非
+// 请求侧错误，因此请求必须继续落到下一个凭据。
+// 随后的冷却只能落在 (凭据, 模型) 组合上：
+// 同一凭据上的同级模型仍可被选中。
 func TestManager_UnknownUpstreamErrorRotatesAndPenalizesModelOnly(t *testing.T) {
 	m := NewManager(nil, nil, nil)
 	m.SetRetryConfig(3, 30*time.Second, 0)
@@ -2351,7 +2351,7 @@ func TestManager_MarkResult_RequestFaultBodyDoesNotCooldownModelOrAuth(t *testin
 	}
 
 	model := "deepseek-chat"
-	// SDK consumer reports a 401 request-fault body directly without knowing the internal requestScopedErrorCode.
+	// SDK 使用方直接上报 401 请求侧错误体，而不知道内部的 requestScopedErrorCode。
 	m.MarkResult(context.Background(), Result{
 		AuthID:   auth.ID,
 		Provider: auth.Provider,
@@ -2377,7 +2377,7 @@ func TestManager_MarkResult_RequestFaultBodyDoesNotCooldownModelOrAuth(t *testin
 		t.Fatalf("expected request-scoped 401 to avoid model cooldown state, got %#v", state)
 	}
 
-	// SDK consumer uses NewRequestScopedError or MarkRequestScoped explicitly.
+	// SDK 使用方显式使用 NewRequestScopedError 或 MarkRequestScoped。
 	explicitReqErr := NewRequestScopedError("explicit request fault", http.StatusUnauthorized)
 	if !explicitReqErr.IsRequestScoped() || explicitReqErr.Code != ErrorCodeRequestScoped {
 		t.Fatalf("NewRequestScopedError code = %q, want %q", explicitReqErr.Code, ErrorCodeRequestScoped)
@@ -2411,7 +2411,7 @@ func TestManager_MarkResult_RequestFaultBodyDoesNotCooldownModelOrAuth(t *testin
 		t.Fatalf("expected MarkRequestScoped error to keep auth available")
 	}
 
-	// Custom non-empty Code with request-fault message payload.
+	// 自定义的非空 Code 搭配请求侧错误消息载荷。
 	m.MarkResult(context.Background(), Result{
 		AuthID:   auth.ID,
 		Provider: auth.Provider,
@@ -2428,7 +2428,7 @@ func TestManager_MarkResult_RequestFaultBodyDoesNotCooldownModelOrAuth(t *testin
 		t.Fatalf("expected custom code with request-fault message to keep auth available")
 	}
 
-	// Auth-level request-fault error (empty Model) must also avoid cooling auth.
+	// 凭据级请求侧错误（Model 为空）也必须避免冷却 auth。
 	authEmptyModel := &Auth{
 		ID:       "auth-empty-model",
 		Provider: "deepseek",
@@ -2454,7 +2454,7 @@ func TestManager_MarkResult_RequestFaultBodyDoesNotCooldownModelOrAuth(t *testin
 		t.Fatalf("expected auth-level request-fault 401 to keep auth available")
 	}
 
-	// Real authentication error must still trigger cooldown.
+	// 真正的认证错误仍必须触发冷却。
 	authFail := &Auth{
 		ID:       "auth-real-fail",
 		Provider: "deepseek",

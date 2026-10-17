@@ -1,9 +1,9 @@
-// Package claude provides response translation functionality for Codex to Claude Code API compatibility.
-// This package handles the conversion of Codex API responses into Claude Code-compatible
-// Server-Sent Events (SSE) format, implementing a sophisticated state machine that manages
-// different response types including text content, thinking processes, and function calls.
-// The translation ensures proper sequencing of SSE events and maintains state across
-// multiple response chunks to provide a seamless streaming experience.
+// Package claude 提供 Codex 到 Claude Code API 兼容性的响应转换功能。
+// 本包处理把 Codex API 响应转换为 Claude Code 兼容的
+// Server-Sent Events（SSE）格式，实现了一个复杂的状态机来管理
+// 不同的响应类型，包括文本内容、思考过程和函数调用。
+// 该转换确保 SSE 事件的正确顺序，并在多个响应分块之间
+// 维持状态，以提供无缝的流式体验。
 package claude
 
 import (
@@ -22,11 +22,11 @@ var (
 	dataTag = []byte("data:")
 )
 
-// codexThinkingSummaryPartSeparator joins consecutive reasoning summary parts inside
-// the single thinking block that represents one Codex reasoning item.
+// codexThinkingSummaryPartSeparator 在代表单个 Codex 推理条目的
+// 那一个 thinking 块内部，拼接连续的推理摘要部分。
 const codexThinkingSummaryPartSeparator = "\n\n"
 
-// ConvertCodexResponseToClaudeParams holds parameters for response conversion.
+// ConvertCodexResponseToClaudeParams 保存响应转换的参数。
 type ConvertCodexResponseToClaudeParams struct {
 	HasEmittedToolUse      bool
 	BlockIndex             int
@@ -58,22 +58,22 @@ type codexFunctionCallStream struct {
 	Closed                    bool
 }
 
-// ConvertCodexResponseToClaude performs sophisticated streaming response format conversion.
-// This function implements a complex state machine that translates Codex API responses
-// into Claude Code-compatible Server-Sent Events (SSE) format. It manages different response types
-// and handles state transitions between content blocks, thinking processes, and function calls.
+// ConvertCodexResponseToClaude 执行复杂的流式响应格式转换。
+// 此函数实现了一个复杂的状态机，把 Codex API 响应
+// 转换为 Claude Code 兼容的 Server-Sent Events（SSE）格式。它管理不同的响应类型
+// 并处理内容块、思考过程和函数调用之间的状态转换。
 //
-// Response type states: 0=none, 1=content, 2=thinking, 3=function
-// The function maintains state across multiple calls to ensure proper SSE event sequencing.
+// 响应类型状态：0=none, 1=content, 2=thinking, 3=function
+// 该函数在多次调用之间维持状态，以确保 SSE 事件的正确顺序。
 //
-// Parameters:
-//   - ctx: The context for the request, used for cancellation and timeout handling
-//   - modelName: The name of the model being used for the response (unused in current implementation)
-//   - rawJSON: The raw JSON response from the Codex API
-//   - param: A pointer to a parameter object for maintaining state between calls
+// 参数：
+//   - ctx: 请求的上下文，用于取消和超时处理
+//   - modelName: 响应所用模型的名称（当前实现中未使用）
+//   - rawJSON: 来自 Codex API 的原始 JSON 响应
+//   - param: 指向参数对象的指针，用于在调用之间维持状态
 //
-// Returns:
-//   - [][]byte: A slice of Claude Code-compatible JSON responses
+// 返回：
+//   - [][]byte: Claude Code 兼容的 JSON 响应切片
 func ConvertCodexResponseToClaude(_ context.Context, _ string, originalRequestRawJSON, _ []byte, rawJSON []byte, param *any) [][]byte {
 	if *param == nil {
 		*param = &ConvertCodexResponseToClaudeParams{
@@ -110,10 +110,10 @@ func ConvertCodexResponseToClaude(_ context.Context, _ string, originalRequestRa
 		output = translatorcommon.AppendSSEEventBytes(output, "message_start", template, 2)
 	case "response.reasoning_summary_part.added":
 		output = append(output, stopCodexTextBlock(params)...)
-		// Codex splits a single reasoning item into several summary parts, but only
-		// output_item.done carries that item's final encrypted_content. Keep one
-		// thinking block open for the whole item and separate the parts with a blank
-		// line, so the only signature ever emitted is the final one.
+		// Codex 会把单个推理条目拆成若干个摘要部分，但只有
+		// output_item.done 携带该条目最终的 encrypted_content。为整个条目
+		// 保持一个 thinking 块打开，并用空行分隔各部分，
+		// 这样唯一被发出的签名就是最终的那个。
 		if params.ThinkingBlockOpen {
 			output = append(output, appendCodexThinkingDelta(params, codexThinkingSummaryPartSeparator)...)
 		} else {
@@ -125,8 +125,8 @@ func ConvertCodexResponseToClaude(_ context.Context, _ string, originalRequestRa
 		output = append(output, startCodexThinkingBlock(params)...)
 		output = append(output, appendCodexThinkingDelta(params, rootResult.Get("delta").String())...)
 	case "response.reasoning_summary_part.done":
-		// Intentionally does not close the thinking block: it stays open until
-		// output_item.done delivers the reasoning item's final encrypted_content.
+		// 有意不关闭该 thinking 块：它会保持打开，直到
+		// output_item.done 送达该推理条目最终的 encrypted_content。
 	case "response.content_part.added":
 		output = append(output, finalizeCodexThinkingBlock(params)...)
 		if rootResult.Get("part.type").String() == "output_text" {
@@ -146,7 +146,7 @@ func ConvertCodexResponseToClaude(_ context.Context, _ string, originalRequestRa
 			output = append(output, stopCodexTextBlock(params)...)
 		}
 	case "response.web_search_call.searching", "response.web_search_call.completed", "response.web_search_call.in_progress":
-		// Wait for populated web_search_call items on output_item.done.
+		// 等待 output_item.done 上带有内容的 web_search_call 条目。
 	case "response.completed", "response.incomplete":
 		template = []byte(`{"type":"message_delta","delta":{"stop_reason":"tool_use","stop_sequence":null},"usage":{"input_tokens":0,"output_tokens":0}}`)
 		responseData := rootResult.Get("response")
@@ -187,15 +187,15 @@ func ConvertCodexResponseToClaude(_ context.Context, _ string, originalRequestRa
 			output = appendCodexFunctionCallQueue(output, params, originalRequestRawJSON)
 		case "reasoning":
 			output = append(output, stopCodexTextBlock(params)...)
-			// A previous reasoning item that never reported output_item.done must not
-			// leak its still-open block into this one.
+			// 一个从未报告 output_item.done 的前序推理条目，
+			// 不得把它仍打开的块泄漏到当前这个条目里。
 			output = append(output, finalizeCodexThinkingBlock(params)...)
 			params.ThinkingSummarySeen = false
-			// Kept only as a fallback for streams whose output_item.done omits
-			// encrypted_content; it is a pre-content snapshot, never the final value.
+			// 仅作为其 output_item.done 省略 encrypted_content 的流的
+			// 回退保留；它是内容之前的快照，绝不是最终值。
 			params.ThinkingSignature = itemResult.Get("encrypted_content").String()
 		case "web_search_call":
-			// Defer server_tool_use until output_item.done carries action/query.
+			// 推迟 server_tool_use，直到 output_item.done 携带 action/query。
 		}
 	case "response.output_item.done":
 		itemResult := rootResult.Get("item")
@@ -345,10 +345,10 @@ func codexStreamErrorToClaudeError(rootResult gjson.Result) []byte {
 	return translatorcommon.AppendSSEEventBytes(nil, "error", out, 2)
 }
 
-// ConvertCodexResponseToClaudeNonStream converts a non-streaming Codex response to a non-streaming Claude Code response.
-// This function processes the complete Codex response and transforms it into a single Claude Code-compatible
-// JSON response. It handles message content, tool calls, reasoning content, and usage metadata, combining all
-// the information into a single response that matches the Claude Code API format.
+// ConvertCodexResponseToClaudeNonStream 把非流式的 Codex 响应转换为非流式的 Claude Code 响应。
+// 此函数处理完整的 Codex 响应，并把它转换为单个 Claude Code 兼容的
+// JSON 响应。它处理消息内容、工具调用、推理内容和用量元数据，把所有
+// 信息合并为一个符合 Claude Code API 格式的响应。
 func ConvertCodexResponseToClaudeNonStream(_ context.Context, _ string, originalRequestRawJSON, _ []byte, rawJSON []byte, _ *any) []byte {
 	revNames := buildReverseMapFromClaudeOriginalShortToOriginal(originalRequestRawJSON)
 
@@ -864,7 +864,7 @@ func setClaudeReasoningUsage(out []byte, usage gjson.Result) []byte {
 	return updated
 }
 
-// buildReverseMapFromClaudeOriginalShortToOriginal builds a map[short]original from original Claude request tools.
+// buildReverseMapFromClaudeOriginalShortToOriginal 从原始 Claude 请求工具构建 map[short]original。
 func buildReverseMapFromClaudeOriginalShortToOriginal(original []byte) map[string]string {
 	tools := gjson.GetBytes(original, "tools")
 	rev := map[string]string{}
@@ -929,7 +929,7 @@ func startCodexThinkingBlock(params *ConvertCodexResponseToClaudeParams) []byte 
 	return translatorcommon.AppendSSEEventBytes(nil, "content_block_start", template, 2)
 }
 
-// appendCodexThinkingDelta emits a thinking_delta for the currently open thinking block.
+// appendCodexThinkingDelta 为当前打开的 thinking 块发出一个 thinking_delta。
 func appendCodexThinkingDelta(params *ConvertCodexResponseToClaudeParams, text string) []byte {
 	if text == "" {
 		return nil

@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Healthy providers remain discoverable throughout quota windows and refreshes.
+// 健康供应商在额度窗口和刷新期间始终可被发现。
 func TestCredentialQuotaKeepsHealthyCatalogAcrossRefresh(t *testing.T) {
 	base := time.Date(2026, 9, 22, 8, 53, 19, 0, time.UTC)
 	registration := &ModelRegistration{
@@ -26,8 +26,8 @@ func TestCredentialQuotaKeepsHealthyCatalogAcrossRefresh(t *testing.T) {
 			t.Fatalf("at %v: listed=%v, want %v", tc.offset, available, tc.want)
 		}
 	}
-	// A registry refresh clears the old quota timestamp; reapplying an active
-	// cooldown starts the five-minute window again without another upstream 429.
+	// 注册表刷新会清除旧的额度时间戳；重新应用活动中的
+	// 冷却会重新开始五分钟窗口，且无需再次触发上游 429。
 	r := newTestModelRegistry()
 	models := []*ModelInfo{{ID: "audit-luna", OwnedBy: "openai"}}
 	r.RegisterClient("healthy", "codex", models)
@@ -46,8 +46,8 @@ func TestCredentialQuotaKeepsHealthyCatalogAcrossRefresh(t *testing.T) {
 	}
 	old := time.Now().Add(-6 * time.Minute)
 	r.models["audit-luna"].QuotaExceededClients["oauth"] = &old
-	// Advance the observed timestamps instead of sleeping. Let the actual
-	// public listing path detect the expired cache without manual invalidation.
+	// 推进观测到的时间戳而非休眠。让真实的
+	// 公开列表路径无需手动失效即可检测到过期缓存。
 	cached.expiresAt = time.Now().Add(-time.Second)
 	r.availableModelsCache["openai"] = cached
 	if got := len(r.GetAvailableModels("openai")); got != 1 {

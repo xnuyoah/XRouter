@@ -11,8 +11,8 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
-// NormalizeApplyPatchResponsesRequest adapts declarations and explicit custom patch history.
-// Winners are collected before rewriting: normalization must not change declaration precedence.
+// NormalizeApplyPatchResponsesRequest 会调整声明以及显式的自定义补丁历史。
+// 在重写之前先收集胜出者：规范化不得改变声明的优先级。
 func NormalizeApplyPatchResponsesRequest(raw []byte) ([]byte, error) {
 	if !gjson.ValidBytes(raw) {
 		return raw, errors.New("invalid Responses request JSON")
@@ -121,9 +121,9 @@ type responsesPatchRecord struct {
 	evidence                                 error
 }
 
-// ApplyPatchResponsesBridge handles JSON event payloads, without SSE framing.
-// Identity evidence is retained even before a call receives its name.
-// A bridge is local to one response and must not be shared between goroutines.
+// ApplyPatchResponsesBridge 处理 JSON 事件载荷，不含 SSE 分帧。
+// 即使某个调用尚未获得其名称，也会保留身份证据。
+// 一个桥接器只属于一个响应，不得在多个 goroutine 之间共享。
 type ApplyPatchResponsesBridge struct {
 	ApplyPatchErrorState
 	tools                               map[string]util.ResponsesToolDescriptor
@@ -136,7 +136,7 @@ type ApplyPatchResponsesBridge struct {
 	failed, terminal, active, converted bool
 }
 
-// NewApplyPatchResponsesBridge resolves original declarations before any normalization.
+// NewApplyPatchResponsesBridge 在任何规范化之前解析原始声明。
 func NewApplyPatchResponsesBridge(originalRequest []byte) *ApplyPatchResponsesBridge {
 	b := &ApplyPatchResponsesBridge{tools: util.CollectResponsesToolWinners(gjson.ParseBytes(originalRequest)), byItemID: map[string]*responsesPatchRecord{}, byCallID: map[string]*responsesPatchRecord{}, byOutputIndex: map[int]*responsesPatchRecord{}}
 	for _, d := range b.tools {
@@ -157,7 +157,7 @@ func (b *ApplyPatchResponsesBridge) failure(err error) ([][]byte, error) {
 	return [][]byte{ApplyPatchFailure(b.responseID, b.next())}, err
 }
 
-// Fail terminates an executor-owned bridge with the same one-shot failure contract.
+// Fail 以相同的单次失败契约终止由执行器持有的桥接器。
 func (b *ApplyPatchResponsesBridge) Fail(err error) ([][]byte, error) { return b.failure(err) }
 
 func (b *ApplyPatchResponsesBridge) descriptor(item gjson.Result) (util.ResponsesToolDescriptor, bool) {
@@ -166,8 +166,8 @@ func (b *ApplyPatchResponsesBridge) descriptor(item gjson.Result) (util.Response
 	return d, ok
 }
 
-// resolve checks every supplied identity, not just the first usable key. Conflicting
-// unmatched keys and multiple matched records retain evidence until patch provenance is known.
+// resolve 会检查每一个提供的身份，而不只是第一个可用的键。冲突的未匹配键
+// 以及多个匹配的记录都会保留证据，直到补丁来源明确为止。
 func (b *ApplyPatchResponsesBridge) resolve(event, item gjson.Result) (*responsesPatchRecord, error) {
 	ids := []string{event.Get("item_id").String(), item.Get("id").String()}
 	calls := []string{event.Get("call_id").String(), item.Get("call_id").String()}
@@ -230,8 +230,8 @@ func (b *ApplyPatchResponsesBridge) resolve(event, item gjson.Result) (*response
 				incomingPatch = true
 			}
 		}
-		// Keep aliases for unmatched conflicting keys, too. Their later patch provenance
-		// must not create a fresh record and erase the earlier contradiction.
+		// 也保留未匹配的冲突键的别名。它们后续的补丁来源信息
+		// 不得创建一个新的记录并抹去先前的不一致。
 		for _, id := range ids {
 			if id != "" && b.byItemID[id] == nil {
 				b.byItemID[id] = r
@@ -302,8 +302,8 @@ func (b *ApplyPatchResponsesBridge) resolve(event, item gjson.Result) (*response
 	return r, nil
 }
 
-// CheckIdentity retains every supplied key before a folded dispatcher reveals its child.
-// Names are deliberately withheld: a dispatcher name is not the selected child name.
+// CheckIdentity 在折叠式分发器暴露其子项之前保留每一个提供的键。
+// 名称被有意不参与：分发器的名称并非所选子项的名称。
 func (b *ApplyPatchResponsesBridge) CheckIdentity(event []byte) error {
 	root := gjson.ParseBytes(event)
 	item := root.Get("item")
@@ -478,7 +478,7 @@ func (b *ApplyPatchResponsesBridge) transformItemEvent(raw []byte) ([][]byte, er
 	root := gjson.ParseBytes(raw)
 	item := root.Get("item")
 	if !item.Exists() && root.Get("name").Exists() {
-		// Arguments events can supply late names and identities at the root.
+		// 参数事件可能在根层级提供迟到的名称和身份。
 		identity := []byte(`{"type":"function_call"}`)
 		for _, key := range []string{"name", "namespace", "call_id"} {
 			if value := root.Get(key); value.Exists() {
@@ -491,8 +491,8 @@ func (b *ApplyPatchResponsesBridge) transformItemEvent(raw []byte) ([][]byte, er
 	if errResolve != nil {
 		return nil, errResolve
 	}
-	// A known name is provenance, not readiness. Retain the real source events
-	// until both upstream IDs and the output index can identify every emitted event.
+	// 已知名称只是来源信息，并不代表已就绪。保留真实的源事件，
+	// 直到上游 ID 与输出索引都能标识每一个发出的事件。
 	if (!r.named && (r.kind == "" || r.kind == "function_call")) || (r.patch && !r.identityReady()) {
 		if r.patch {
 			arguments := root.Get("arguments")
@@ -544,7 +544,7 @@ func (b *ApplyPatchResponsesBridge) envelope(raw []byte, stream bool) ([]byte, [
 	var items [][]byte
 	for i, item := range response.Get("output").Array() {
 		index := i
-		// A terminal snapshot may omit earlier completed items: array position is not identity.
+		// 终止快照可能省略先前已完成的项：数组位置并非身份。
 		known := b.byItemID[item.Get("id").String()]
 		if known == nil {
 			known = b.byCallID[item.Get("call_id").String()]
@@ -632,7 +632,7 @@ func patchEnvelopeItem(index int, item gjson.Result) []byte {
 	return out
 }
 
-// Transform converts one payload. A failure is terminal and is emitted only once.
+// Transform 转换一个载荷。失败是终止性的，且只会发出一次。
 func (b *ApplyPatchResponsesBridge) Transform(event []byte) ([][]byte, error) {
 	if b.failed || b.terminal {
 		return nil, nil
@@ -671,8 +671,8 @@ func (b *ApplyPatchResponsesBridge) Transform(event []byte) ([][]byte, error) {
 	}
 	for i, event := range out {
 		seq := int(gjson.GetBytes(event, "sequence_number").Int())
-		// Native custom payloads are opaque. Only a stream that acquired a function
-		// patch call needs resequencing of its other compatibility events.
+		// 原生自定义载荷是不透明的。只有已获得函数补丁调用的流
+		// 才需要对其其他兼容性事件重新排序。
 		nativeCustom := strings.HasPrefix(kind, "response.custom_tool_call_input.") || root.Get("item.type").String() == "custom_tool_call"
 		if b.converted && !nativeCustom && seq <= b.lastSequence {
 			seq = b.next()
@@ -685,7 +685,7 @@ func (b *ApplyPatchResponsesBridge) Transform(event []byte) ([][]byte, error) {
 	return out, nil
 }
 
-// TransformNonStream accepts either a bare response or a terminal event envelope.
+// TransformNonStream 接受裸响应或终止事件信封。
 func (b *ApplyPatchResponsesBridge) TransformNonStream(response []byte) ([]byte, error) {
 	if !b.active {
 		return response, nil
@@ -699,7 +699,7 @@ func (b *ApplyPatchResponsesBridge) TransformNonStream(response []byte) ([]byte,
 	return out, nil
 }
 
-// Finish rejects acquired calls whose final arguments have not been validated.
+// Finish 拒绝已获取其最终参数尚未验证的调用。
 func (b *ApplyPatchResponsesBridge) Finish() error {
 	if b.ToolInputError() != nil {
 		return b.ToolInputError()

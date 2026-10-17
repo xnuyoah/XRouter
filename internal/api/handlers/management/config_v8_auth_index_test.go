@@ -153,7 +153,7 @@ api-keys:
 		t.Fatalf("deepseek key auth_index = %q, want %q", got, expectedIndexes["deepseek:sk-deepseek-1"])
 	}
 
-	// Verify keyless openai-compatibility group has group-level auth_index
+	// 验证无 key 的 openai-compatibility 组具有组级 auth_index
 	compatVal, ok := allAPIKeys["openai-compatibility"].([]any)
 	if !ok || len(compatVal) != 2 {
 		t.Fatalf("expected 2 openai-compatibility groups, got %#v", allAPIKeys["openai-compatibility"])
@@ -183,7 +183,7 @@ api-keys:
 		t.Fatalf("root config openai auth_index = %q, want %q", got, expectedIndexes["openai:sk-openai-1"])
 	}
 
-	// 4. GET /v8/management/config.yaml should not contain auth_index
+	// 4. GET /v8/management/config.yaml 不应包含 auth_index
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/v8/management/config.yaml", nil)
 	router.ServeHTTP(rec, req)
@@ -194,7 +194,7 @@ api-keys:
 		t.Fatal("config.yaml output must not contain auth_index")
 	}
 
-	// 5. PUT round-trip with payload containing auth_index
+	// 5. 使用包含 auth_index 的载荷进行 PUT 往返
 	openaiJSON, _ := json.Marshal(openaiGroups)
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPut, "/v8/management/config/api-keys/openai", strings.NewReader(string(openaiJSON)))
@@ -204,7 +204,7 @@ api-keys:
 		t.Fatalf("PUT /v8/management/config/api-keys/openai with auth_index: status=%d body=%s", rec.Code, rec.Body.String())
 	}
 
-	// Verify disk config does not have auth_index
+	// 验证磁盘上的配置不含 auth_index
 	saved, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -213,7 +213,7 @@ api-keys:
 		t.Fatal("saved config.yaml must not contain auth_index")
 	}
 
-	// 6. PATCH on root containing auth_index in api-keys
+	// 6. 对根执行 PATCH，在 api-keys 中包含 auth_index
 	patchBody := `{"api-keys":{"deepseek":[{"name":"deepseek-group","base-url":"https://api.deepseek.invalid","keys":[{"api-key":"sk-deepseek-1","auth_index":"arbitrary-ignore"}]}]}}`
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPatch, "/v8/management/config", strings.NewReader(patchBody))
@@ -231,7 +231,7 @@ api-keys:
 		t.Fatal("saved config.yaml after PATCH must not contain auth_index")
 	}
 
-	// 7. Fallback when authManager is nil
+	// 7. authManager 为 nil 时的回退
 	hNoManager := &Handler{cfg: cfg, configFilePath: path, authManager: nil}
 	routerNoManager := gin.New()
 	routerNoManager.GET("/v8/management/config/*path", hNoManager.ConfigV8)
@@ -251,7 +251,7 @@ api-keys:
 		t.Fatalf("fallback auth_index = %q, want %q", got, expectedIndexes["openai:sk-openai-1"])
 	}
 
-	// 8. Nvidia provider with omitted base-url defaults to https://integrate.api.nvidia.com/v1 matching runtime
+	// 8. 省略 base-url 的 Nvidia 供应商默认使用 https://integrate.api.nvidia.com/v1，与运行时一致
 	nvidiaYAML := `config-version: 8
 port: 11016
 api-keys:
@@ -301,7 +301,7 @@ api-keys:
 		t.Fatalf("nvidia key auth_index = %q, want %q", got, expectedNvidiaIndex)
 	}
 
-	// 9. Explicit empty proxy-url on key overrides group proxy-url
+	// 9. key 上显式的空 proxy-url 会覆盖组的 proxy-url
 	proxyYAML := `config-version: 8
 port: 11016
 api-keys:
@@ -361,7 +361,7 @@ api-keys:
 		t.Fatalf("openai key 1 auth_index = %q, want %q", got, wantExplicitEmptyIndex)
 	}
 
-	// 10. Plugin options and headers retaining auth_index outside of credential level
+	// 10. 插件选项和头部在凭据级别之外保留 auth_index
 	pluginYAML := `config-version: 8
 port: 11016
 plugins:
@@ -394,7 +394,7 @@ api-keys:
 	routerPlugin.GET("/v8/management/config/*path", hPlugin.ConfigV8)
 	routerPlugin.PUT("/v8/management/config/*path", hPlugin.ConfigV8)
 
-	// Fetch openai keys with auth_index injected
+	// 获取注入了 auth_index 的 openai keys
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/v8/management/config/api-keys/openai", nil)
 	routerPlugin.ServeHTTP(rec, req)
@@ -406,7 +406,7 @@ api-keys:
 		t.Fatal(errDecode)
 	}
 
-	// PUT openai keys back (round-trip with auth_index)
+	// 将 openai keys PUT 回去（带 auth_index 的往返）
 	openaiBytes, _ := json.Marshal(pluginOpenAIGroups)
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPut, "/v8/management/config/api-keys/openai", strings.NewReader(string(openaiBytes)))
@@ -416,7 +416,7 @@ api-keys:
 		t.Fatalf("PUT openai: status=%d body=%s", rec.Code, rec.Body.String())
 	}
 
-	// Read saved config on disk: plugin option auth_index and headers auth_index MUST be intact!
+	// 读取磁盘上保存的配置：插件选项 auth_index 与头部 auth_index 必须完好无损！
 	savedPluginData, errRead := os.ReadFile(pluginPath)
 	if errRead != nil {
 		t.Fatal(errRead)
@@ -432,7 +432,7 @@ api-keys:
 		t.Fatalf("key header auth_index was stripped! saved config:\n%s", savedPluginStr)
 	}
 
-	// 11. Unnormalized prefix (prefix: /team/) matches live credential with normalized prefix
+	// 11. 未规范化的前缀（prefix: /team/）能匹配前缀已规范化的实时凭据
 	unnormalizedPrefixYAML := `config-version: 8
 port: 11016
 api-keys:
@@ -484,7 +484,7 @@ api-keys:
 		t.Fatalf("prefix key auth_index = %q, want %q", got, expectedPrefixIndex)
 	}
 
-	// 12. OpenAI-compatible with [empty_key, B] and invalid group without base-url
+	// 12. OpenAI 兼容，含 [empty_key, B] 以及一个没有 base-url 的无效组
 	compatMixedYAML := `config-version: 8
 port: 11016
 api-keys:
@@ -545,12 +545,12 @@ api-keys:
 	if errDecode := json.Unmarshal(rec.Body.Bytes(), &mixedGroups); errDecode != nil {
 		t.Fatal(errDecode)
 	}
-	// Group 0 had no base-url, so its key has no auth_index
+	// 组 0 没有 base-url，因此其 key 没有 auth_index
 	invalidKeys := mixedGroups[0]["keys"].([]any)
 	if gotInvalid := invalidKeys[0].(map[string]any)["auth_index"]; gotInvalid != nil {
 		t.Fatalf("invalid group key auth_index = %v, want nil", gotInvalid)
 	}
-	// Group 1 has [empty_key, B]
+	// 组 1 含有 [empty_key, B]
 	validKeys := mixedGroups[1]["keys"].([]any)
 	if gotEmpty := validKeys[0].(map[string]any)["auth_index"]; gotEmpty != wantEmptyKeyIndex {
 		t.Fatalf("empty key auth_index = %q, want %q", gotEmpty, wantEmptyKeyIndex)
@@ -559,7 +559,7 @@ api-keys:
 		t.Fatalf("key B auth_index = %q, want %q", gotB, wantKeyBIndex)
 	}
 
-	// 13. Empty API key with valid base-url produces non-empty auth_index
+	// 13. 带有效 base-url 的空 API key 会产生非空的 auth_index
 	emptyKeyYAML := `config-version: 8
 port: 11016
 api-keys:
@@ -608,7 +608,7 @@ api-keys:
 		t.Fatalf("emulator auth_index = %q, want %q", got, wantEmulatorIndex)
 	}
 
-	// 14. Multiple OpenAI-compatible empty-key entries with different proxy-url
+	// 14. 多个带不同 proxy-url 的 OpenAI 兼容空 key 条目
 	compatMultiEmptyYAML := `config-version: 8
 port: 11016
 api-keys:
@@ -668,7 +668,7 @@ api-keys:
 		t.Fatalf("multi key 2 auth_index = %q, want %q", got2, wantMultiIdx2)
 	}
 
-	// 15. Native family with empty API keys and proxies [P1, P1, P2]: key 0 and 1 get P1, key 2 gets P2
+	// 15. 原生族使用空 API key 和代理 [P1, P1, P2]：key 0 和 1 得到 P1，key 2 得到 P2
 	proxyDupYAML := `config-version: 8
 port: 11016
 api-keys:
@@ -705,8 +705,8 @@ api-keys:
 			t.Fatal(errReg)
 		}
 	}
-	// Each YAML key consumes the next matching synthesized credential, so the
-	// repeated key 1 stays aligned with its own credential instead of drifting.
+	// 每个 YAML key 都会消费下一个匹配的合成凭据，因此
+	// 重复出现的 key 1 与它自己的凭据保持对齐，而不会错位。
 	wantProxyDup1 := proxyDupAuths[0].EnsureIndex()
 	wantProxyDup1Dup := proxyDupAuths[1].EnsureIndex()
 	wantProxyDup2 := proxyDupAuths[2].EnsureIndex()
@@ -743,7 +743,7 @@ api-keys:
 		t.Fatalf("key 2 auth_index = %q, want %q", got2, wantProxyDup2)
 	}
 
-	// 16. Two OpenAI-compatible groups with identical name and base-url: no cross-group collision
+	// 16. 两个名称和 base-url 完全相同的 OpenAI 兼容组：不会跨组冲突
 	compatDupGroupYAML := `config-version: 8
 port: 11016
 api-keys:
@@ -813,7 +813,7 @@ api-keys:
 		t.Fatalf("group 1 key auth_index = %q, want %q", gotGroup1KeyIndex, wantGroup1Index)
 	}
 
-	// 17. Native family with empty API keys and different prefixes [A, A, B]: key 0 and 1 get A, key 2 gets B
+	// 17. 原生族使用空 API key 和不同前缀 [A, A, B]：key 0 和 1 得到 A，key 2 得到 B
 	prefixDupYAML := `config-version: 8
 port: 11016
 api-keys:
@@ -850,8 +850,8 @@ api-keys:
 			t.Fatal(errReg)
 		}
 	}
-	// Each YAML key consumes the next matching synthesized credential, so the
-	// repeated key 1 stays aligned with its own credential instead of drifting.
+	// 每个 YAML key 都会消费下一个匹配的合成凭据，因此
+	// 重复出现的 key 1 与它自己的凭据保持对齐，而不会错位。
 	wantPrefixDupA := prefixDupAuths[0].EnsureIndex()
 	wantPrefixDupADup := prefixDupAuths[1].EnsureIndex()
 	wantPrefixDupB := prefixDupAuths[2].EnsureIndex()
@@ -888,7 +888,7 @@ api-keys:
 		t.Fatalf("key 2 auth_index = %q, want %q", got2, wantPrefixDupB)
 	}
 
-	// 18. Unnamed OpenAI-compatible groups (name omitted) expose correct auth_index
+	// 18. 未命名的 OpenAI 兼容组（省略 name）会暴露正确的 auth_index
 	unnamedCompatYAML := `config-version: 8
 port: 11016
 api-keys:
@@ -952,7 +952,7 @@ api-keys:
 		t.Fatalf("unnamed keyed auth_index = %q, want %q", gotKeyed, wantUnnamedKeyed)
 	}
 
-	// 19. OpenAI with multiple empty API keys in the same group with different models (non-deduplicated)
+	// 19. OpenAI 在同一组中使用多个空 API key 且模型不同（不做去重）
 	openaiEmptyKeysYAML := `config-version: 8
 port: 11016
 api-keys:

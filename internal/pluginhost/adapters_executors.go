@@ -350,7 +350,7 @@ func (h *Host) HasExecutorCandidateProvider(provider string) bool {
 	return false
 }
 
-// OwnsExecutor reports whether executor is an adapter managed by this host.
+// OwnsExecutor 报告 executor 是否为本宿主管理的适配器。
 func (h *Host) OwnsExecutor(executor coreauth.ProviderExecutor) bool {
 	return h.ownsExecutor(executor)
 }
@@ -627,9 +627,9 @@ func executorStreamTranslationFellBack(prepared preparedExecutorCall, payload []
 	if len(frames) != 1 || !bytes.Equal(frames[0], payload) {
 		return false
 	}
-	// A plugin executor only reaches this path after host-side response translation
-	// has been selected. An unchanged single frame is the SDK registry fallback,
-	// not a valid translated frame to send to the client.
+	// 插件执行器只有在宿主侧响应转换
+	// 被选中后才会走到此路径。未发生变化的单帧是 SDK 注册表回退，
+	// 不是可发送给客户端的有效已转换帧。
 	return executorNativeStreamResponseTranslatorExists(prepared.outputFormat, prepared.requestedFormat)
 }
 

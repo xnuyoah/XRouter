@@ -7,7 +7,7 @@ import (
 
 	_ "github.com/xnuyoah/XRouter/v8/internal/translator"
 
-	// Import provider packages to trigger init() registration of ProviderAppliers
+	// 导入供应商包以触发 ProviderAppliers 的 init() 注册
 	_ "github.com/xnuyoah/XRouter/v8/internal/thinking/provider/codex"
 	_ "github.com/xnuyoah/XRouter/v8/internal/thinking/provider/openai"
 
@@ -18,7 +18,7 @@ import (
 	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
-// thinkingTestCase represents a common test case structure for both suffix and body tests.
+// thinkingTestCase 表示后缀测试和请求体测试共用的测试用例结构。
 type thinkingTestCase struct {
 	name            string
 	from            string
@@ -36,9 +36,9 @@ type thinkingTestCase struct {
 	expectErr       bool
 }
 
-// TestThinkingE2EMatrix_Suffix tests the thinking configuration transformation using model name suffix.
-// Data flow: Input JSON → TranslateRequest → ApplyThinking → Validate Output
-// No helper functions are used; all test data is inline.
+// TestThinkingE2EMatrix_Suffix 测试使用模型名后缀的 thinking 配置转换。
+// 数据流：输入 JSON → TranslateRequest → ApplyThinking → 验证输出
+// 不使用辅助函数；所有测试数据均内联。
 func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 	reg := registry.GetGlobalRegistry()
 	uid := fmt.Sprintf("thinking-e2e-suffix-%d", time.Now().UnixNano())
@@ -47,9 +47,9 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 	defer reg.UnregisterClient(uid)
 
 	cases := []thinkingTestCase{
-		// level-model (Levels=minimal/low/medium/high, ZeroAllowed=false, DynamicAllowed=false)
+		// level-model（Levels=minimal/low/medium/high, ZeroAllowed=false, DynamicAllowed=false）
 
-		// Case 1: No suffix → injected default → medium
+		// 用例 1：无后缀 → 注入默认值 → medium
 		{
 			name:        "1",
 			from:        "openai",
@@ -60,7 +60,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 2: Specified medium → medium
+		// 用例 2：指定 medium → medium
 		{
 			name:        "2",
 			from:        "openai",
@@ -71,7 +71,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 3: Specified xhigh → out of range error
+		// 用例 3：指定 xhigh → 超出范围错误
 		{
 			name:        "3",
 			from:        "openai",
@@ -81,7 +81,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectField: "",
 			expectErr:   true,
 		},
-		// Case 4: Level none → clamped to minimal (ZeroAllowed=false)
+		// 用例 4：级别 none → 钳制为 minimal（ZeroAllowed=false）
 		{
 			name:        "4",
 			from:        "openai",
@@ -92,7 +92,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "minimal",
 			expectErr:   false,
 		},
-		// Case 5: Level auto → DynamicAllowed=false → medium (mid-range)
+		// 用例 5：级别 auto → DynamicAllowed=false → medium（中间档）
 		{
 			name:        "5",
 			from:        "openai",
@@ -103,12 +103,12 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 6: No suffix from gemini → injected default → medium
-		// Case 7: Budget 8192 → medium
-		// Case 8: Budget 64000 → clamped to high
-		// Case 9: Budget 0 → clamped to minimal (ZeroAllowed=false)
-		// Case 10: Budget -1 → auto → DynamicAllowed=false → medium (mid-range)
-		// Case 11: Claude source no suffix → passthrough (no thinking)
+		// 用例 6：来自 gemini 无后缀 → 注入默认值 → medium
+		// 用例 7：预算 8192 → medium
+		// 用例 8：预算 64000 → 钳制为 high
+		// 用例 9：预算 0 → 钳制为 minimal（ZeroAllowed=false）
+		// 用例 10：预算 -1 → auto → DynamicAllowed=false → medium（中间档）
+		// 用例 11：Claude 来源无后缀 → 直通（无 thinking）
 		{
 			name:        "11",
 			from:        "claude",
@@ -118,7 +118,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectField: "",
 			expectErr:   false,
 		},
-		// Case 12: Budget 8192 → medium
+		// 用例 12：预算 8192 → medium
 		{
 			name:        "12",
 			from:        "claude",
@@ -129,7 +129,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 13: Budget 64000 → clamped to high
+		// 用例 13：预算 64000 → 钳制为 high
 		{
 			name:        "13",
 			from:        "claude",
@@ -140,7 +140,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "high",
 			expectErr:   false,
 		},
-		// Case 14: Budget 0 → clamped to minimal (ZeroAllowed=false)
+		// 用例 14：预算 0 → 钳制为 minimal（ZeroAllowed=false）
 		{
 			name:        "14",
 			from:        "claude",
@@ -151,7 +151,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "minimal",
 			expectErr:   false,
 		},
-		// Case 15: Budget -1 → auto → DynamicAllowed=false → medium (mid-range)
+		// 用例 15：预算 -1 → auto → DynamicAllowed=false → medium（中间档）
 		{
 			name:        "15",
 			from:        "claude",
@@ -163,11 +163,11 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectErr:   false,
 		},
 
-		// level-subset-model (Levels=low/high, ZeroAllowed=false, DynamicAllowed=false)
+		// level-subset-model（Levels=low/high, ZeroAllowed=false, DynamicAllowed=false）
 
-		// Case 16: Budget 8192 → medium → rounded down to low
-		// Case 17: Budget 1 → minimal → clamped to low (min supported)
-		// Case 17A: auto → medium → clamped to low when low/high are equally close
+		// 用例 16：预算 8192 → medium → 向下取整为 low
+		// 用例 17：预算 1 → minimal → 钳制为 low（支持的最小值）
+		// 用例 17A：auto → medium → 当 low/high 距离相等时钳制为 low
 		{
 			name:        "17A",
 			from:        "openai",
@@ -179,63 +179,63 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectErr:   false,
 		},
 
-		// gemini-budget-model (Min=128, Max=20000, ZeroAllowed=false, DynamicAllowed=true)
+		// gemini-budget-model（Min=128, Max=20000, ZeroAllowed=false, DynamicAllowed=true）
 
-		// Case 18: No suffix → passthrough
-		// Case 19: Effort medium → 8192
-		// Case 20: Effort xhigh → clamped to 20000 (max)
-		// Case 21: Effort none → clamped to 128 (min)
-		// Case 22: Effort auto → DynamicAllowed=true → -1
-		// Case 23: Claude source no suffix → passthrough
-		// Case 24: Budget 8192 → 8192
-		// Case 25: Budget 64000 → clamped to 20000 (max)
-		// Case 26: Budget 0 → clamped to 128 (min)
-		// Case 27: Budget -1 → DynamicAllowed=true → -1
-		// gemini-mixed-model (Min=128, Max=32768, Levels=low/high, ZeroAllowed=false, DynamicAllowed=true)
+		// 用例 18：无后缀 → 直通
+		// 用例 19：Effort medium → 8192
+		// 用例 20：Effort xhigh → 钳制为 20000（最大值）
+		// 用例 21：Effort none → 钳制为 128（最小值）
+		// 用例 22：Effort auto → DynamicAllowed=true → -1
+		// 用例 23：Claude 来源无后缀 → 直通
+		// 用例 24：预算 8192 → 8192
+		// 用例 25：预算 64000 → 钳制为 20000（最大值）
+		// 用例 26：预算 0 → 钳制为 128（最小值）
+		// 用例 27：预算 -1 → DynamicAllowed=true → -1
+		// gemini-mixed-model（Min=128, Max=32768, Levels=low/high, ZeroAllowed=false, DynamicAllowed=true）
 
-		// Case 28: OpenAI source no suffix → passthrough
-		// Case 29: Effort high → low/high supported → high
-		// Case 30: Effort xhigh → clamped to high
-		// Case 31: Effort none → clamped to low (min supported)
-		// Case 32: Effort auto → DynamicAllowed=true → -1 (budget)
-		// Case 33: Claude source no suffix → passthrough
-		// Case 34: Budget 8192 → 8192 (keep budget)
-		// Case 35: Budget 64000 → clamped to 32768 (max)
-		// Case 36: Budget 0 → minimal → clamped to low (min level)
-		// Case 37: Budget -1 → DynamicAllowed=true → -1 (budget)
-		// claude-budget-model (Min=1024, Max=128000, ZeroAllowed=true, DynamicAllowed=false)
+		// 用例 28：OpenAI 来源无后缀 → 直通
+		// 用例 29：Effort high → 支持 low/high → high
+		// 用例 30：Effort xhigh → 钳制为 high
+		// 用例 31：Effort none → 钳制为 low（支持的最小值）
+		// 用例 32：Effort auto → DynamicAllowed=true → -1（预算）
+		// 用例 33：Claude 来源无后缀 → 直通
+		// 用例 34：预算 8192 → 8192（保留预算）
+		// 用例 35：预算 64000 → 钳制为 32768（最大值）
+		// 用例 36：预算 0 → minimal → 钳制为 low（最低级别）
+		// 用例 37：预算 -1 → DynamicAllowed=true → -1（预算）
+		// claude-budget-model（Min=1024, Max=128000, ZeroAllowed=true, DynamicAllowed=false）
 
-		// Case 38: OpenAI source no suffix → passthrough
-		// Case 39: Effort medium → 8192
-		// Case 40: Effort xhigh → clamped to 32768 (matrix value)
-		// Case 41: Effort none → ZeroAllowed=true → disabled
-		// Case 42: Effort auto → DynamicAllowed=false → 64512 (mid-range)
-		// Case 43: Gemini source no suffix → passthrough
-		// Case 44: Budget 8192 → 8192
-		// Case 45: Budget 200000 → clamped to 128000 (max)
-		// Case 46: Budget 0 → ZeroAllowed=true → disabled
-		// Case 47: Budget -1 → auto → DynamicAllowed=false → 64512 (mid-range)
+		// 用例 38：OpenAI 来源无后缀 → 直通
+		// 用例 39：Effort medium → 8192
+		// 用例 40：Effort xhigh → 钳制为 32768（矩阵值）
+		// 用例 41：Effort none → ZeroAllowed=true → 禁用
+		// 用例 42：Effort auto → DynamicAllowed=false → 64512（中间档）
+		// 用例 43：Gemini 来源无后缀 → 直通
+		// 用例 44：预算 8192 → 8192
+		// 用例 45：预算 200000 → 钳制为 128000（最大值）
+		// 用例 46：预算 0 → ZeroAllowed=true → 禁用
+		// 用例 47：预算 -1 → auto → DynamicAllowed=false → 64512（中间档）
 
-		// antigravity-budget-model (Min=128, Max=20000, ZeroAllowed=true, DynamicAllowed=true)
+		// antigravity-budget-model（Min=128, Max=20000, ZeroAllowed=true, DynamicAllowed=true）
 
-		// Case 48: Gemini to Antigravity no suffix → passthrough
-		// Case 49: Effort medium → 8192
-		// Case 50: Effort xhigh → clamped to 20000 (max)
-		// Case 51: Effort none → ZeroAllowed=true → 0
-		// Case 52: Effort auto → DynamicAllowed=true → -1
-		// Case 53: Claude to Antigravity no suffix → passthrough
-		// Case 54: Budget 8192 → 8192
-		// Case 55: Budget 64000 → clamped to 20000 (max)
-		// Case 56: Budget 0 → ZeroAllowed=true → 0
-		// Case 57: Budget -1 → DynamicAllowed=true → -1
+		// 用例 48：Gemini 到 Antigravity 无后缀 → 直通
+		// 用例 49：Effort medium → 8192
+		// 用例 50：Effort xhigh → 钳制为 20000（最大值）
+		// 用例 51：Effort none → ZeroAllowed=true → 0
+		// 用例 52：Effort auto → DynamicAllowed=true → -1
+		// 用例 53：Claude 到 Antigravity 无后缀 → 直通
+		// 用例 54：预算 8192 → 8192
+		// 用例 55：预算 64000 → 钳制为 20000（最大值）
+		// 用例 56：预算 0 → ZeroAllowed=true → 0
+		// 用例 57：预算 -1 → DynamicAllowed=true → -1
 
-		// no-thinking-model (Thinking=nil)
+		// no-thinking-model（Thinking=nil）
 
-		// Case 58: No thinking support → no configuration
-		// Case 59: Budget 8192 → no thinking support → suffix stripped → no configuration
-		// Case 60: Budget 0 → suffix stripped → no configuration
-		// Case 61: Budget -1 → suffix stripped → no configuration
-		// Case 62: Claude source no suffix → no configuration
+		// 用例 58：不支持 thinking → 无配置
+		// 用例 59：预算 8192 → 不支持 thinking → 剥离后缀 → 无配置
+		// 用例 60：预算 0 → 剥离后缀 → 无配置
+		// 用例 61：预算 -1 → 剥离后缀 → 无配置
+		// 用例 62：Claude 来源无后缀 → 无配置
 		{
 			name:        "62",
 			from:        "claude",
@@ -245,7 +245,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectField: "",
 			expectErr:   false,
 		},
-		// Case 63: Budget 8192 → suffix stripped → no configuration
+		// 用例 63：预算 8192 → 剥离后缀 → 无配置
 		{
 			name:        "63",
 			from:        "claude",
@@ -255,7 +255,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectField: "",
 			expectErr:   false,
 		},
-		// Case 64: Budget 0 → suffix stripped → no configuration
+		// 用例 64：预算 0 → 剥离后缀 → 无配置
 		{
 			name:        "64",
 			from:        "claude",
@@ -265,7 +265,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectField: "",
 			expectErr:   false,
 		},
-		// Case 65: Budget -1 → suffix stripped → no configuration
+		// 用例 65：预算 -1 → 剥离后缀 → 无配置
 		{
 			name:        "65",
 			from:        "claude",
@@ -276,14 +276,14 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectErr:   false,
 		},
 
-		// user-defined-model (UserDefined=true, Thinking=nil)
+		// user-defined-model（UserDefined=true, Thinking=nil）
 
-		// Case 66: User defined model no suffix → passthrough
-		// Case 67: Budget 8192 → passthrough logic → medium
-		// Case 68: Budget 64000 → passthrough logic → xhigh
-		// Case 69: Budget 0 → passthrough logic → none
-		// Case 70: Budget -1 → passthrough logic → auto
-		// Case 71: Claude to Codex no suffix → injected default → medium
+		// 用例 66：用户定义模型无后缀 → 直通
+		// 用例 67：预算 8192 → 直通逻辑 → medium
+		// 用例 68：预算 64000 → 直通逻辑 → xhigh
+		// 用例 69：预算 0 → 直通逻辑 → none
+		// 用例 70：预算 -1 → 直通逻辑 → auto
+		// 用例 71：Claude 到 Codex 无后缀 → 注入默认值 → medium
 		{
 			name:        "71",
 			from:        "claude",
@@ -294,7 +294,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 72: Budget 8192 → passthrough logic → medium
+		// 用例 72：预算 8192 → 直通逻辑 → medium
 		{
 			name:        "72",
 			from:        "claude",
@@ -305,7 +305,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 73: Budget 64000 → passthrough logic → xhigh
+		// 用例 73：预算 64000 → 直通逻辑 → xhigh
 		{
 			name:        "73",
 			from:        "claude",
@@ -316,7 +316,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "xhigh",
 			expectErr:   false,
 		},
-		// Case 74: Budget 0 → passthrough logic → none
+		// 用例 74：预算 0 → 直通逻辑 → none
 		{
 			name:        "74",
 			from:        "claude",
@@ -327,7 +327,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "none",
 			expectErr:   false,
 		},
-		// Case 75: Budget -1 → passthrough logic → auto
+		// 用例 75：预算 -1 → 直通逻辑 → auto
 		{
 			name:        "75",
 			from:        "claude",
@@ -338,14 +338,14 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "auto",
 			expectErr:   false,
 		},
-		// Case 76: OpenAI to Gemini budget 8192 → passthrough → 8192
-		// Case 77: OpenAI to Claude budget 8192 → passthrough → 8192
-		// Case 78: OpenAI-Response to Gemini budget 8192 → passthrough → 8192
-		// Case 79: OpenAI-Response to Claude budget 8192 → passthrough → 8192
+		// 用例 76：OpenAI 到 Gemini 预算 8192 → 直通 → 8192
+		// 用例 77：OpenAI 到 Claude 预算 8192 → 直通 → 8192
+		// 用例 78：OpenAI-Response 到 Gemini 预算 8192 → 直通 → 8192
+		// 用例 79：OpenAI-Response 到 Claude 预算 8192 → 直通 → 8192
 
-		// Same-protocol passthrough tests (80-89)
+		// 同协议直通测试（80-89）
 
-		// Case 80: OpenAI to OpenAI, level high → passthrough reasoning_effort
+		// 用例 80：OpenAI 到 OpenAI，级别 high → 直通 reasoning_effort
 		{
 			name:        "80",
 			from:        "openai",
@@ -356,7 +356,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "high",
 			expectErr:   false,
 		},
-		// Case 81: OpenAI to OpenAI, level xhigh → out of range error
+		// 用例 81：OpenAI 到 OpenAI，级别 xhigh → 超出范围错误
 		{
 			name:        "81",
 			from:        "openai",
@@ -366,7 +366,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectField: "",
 			expectErr:   true,
 		},
-		// Case 82: OpenAI-Response to Codex, level high → passthrough reasoning.effort
+		// 用例 82：OpenAI-Response 到 Codex，级别 high → 直通 reasoning.effort
 		{
 			name:        "82",
 			from:        "openai-response",
@@ -377,7 +377,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "high",
 			expectErr:   false,
 		},
-		// Case 83: OpenAI-Response to Codex, level xhigh → out of range error
+		// 用例 83：OpenAI-Response 到 Codex，级别 xhigh → 超出范围错误
 		{
 			name:        "83",
 			from:        "openai-response",
@@ -387,22 +387,22 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectField: "",
 			expectErr:   true,
 		},
-		// Case 84: Gemini to Gemini, budget 8192 → passthrough thinkingBudget
-		// Case 85: Gemini to Gemini, budget 64000 → clamped to Max
-		// Case 86: Claude to Claude, budget 8192 → passthrough thinking.budget_tokens
-		// Case 87: Claude to Claude, budget 200000 → clamped to Max
-		// Gemini Family Cross-Channel Consistency (Cases 88-89)
-		// Tests that gemini/antigravity as same API family should have consistent validation behavior
+		// 用例 84：Gemini 到 Gemini，预算 8192 → 直通 thinkingBudget
+		// 用例 85：Gemini 到 Gemini，预算 64000 → 钳制为 Max
+		// 用例 86：Claude 到 Claude，预算 8192 → 直通 thinking.budget_tokens
+		// 用例 87：Claude 到 Claude，预算 200000 → 钳制为 Max
+		// Gemini 家族跨通道一致性（用例 88-89）
+		// 测试 gemini/antigravity 作为同一 API 家族应具有一致的校验行为
 
-		// Case 88: Gemini to Antigravity, budget 64000 (suffix) → clamped to Max
-		// Case 89: Gemini to Antigravity, budget 8192 → passthrough (normal value)
+		// 用例 88：Gemini 到 Antigravity，预算 64000（后缀）→ 钳制为 Max
+		// 用例 89：Gemini 到 Antigravity，预算 8192 → 直通（正常值）
 	}
 
 	runThinkingTests(t, cases)
 }
 
-// TestThinkingE2EMatrix_Body tests the thinking configuration transformation using request body parameters.
-// Data flow: Input JSON with thinking params → TranslateRequest → ApplyThinking → Validate Output
+// TestThinkingE2EMatrix_Body 测试使用请求体参数的 thinking 配置转换。
+// 数据流：带 thinking 参数的输入 JSON → TranslateRequest → ApplyThinking → 验证输出
 func TestThinkingE2EMatrix_Body(t *testing.T) {
 	reg := registry.GetGlobalRegistry()
 	uid := fmt.Sprintf("thinking-e2e-body-%d", time.Now().UnixNano())
@@ -411,9 +411,9 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 	defer reg.UnregisterClient(uid)
 
 	cases := []thinkingTestCase{
-		// level-model (Levels=minimal/low/medium/high, ZeroAllowed=false, DynamicAllowed=false)
+		// level-model（Levels=minimal/low/medium/high, ZeroAllowed=false, DynamicAllowed=false）
 
-		// Case 1: No param → injected default → medium
+		// 用例 1：无参数 → 注入默认值 → medium
 		{
 			name:        "1",
 			from:        "openai",
@@ -424,7 +424,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 2: reasoning_effort=medium → medium
+		// 用例 2：reasoning_effort=medium → medium
 		{
 			name:        "2",
 			from:        "openai",
@@ -435,7 +435,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 3: reasoning_effort=xhigh → out of range error
+		// 用例 3：reasoning_effort=xhigh → 超出范围错误
 		{
 			name:        "3",
 			from:        "openai",
@@ -445,7 +445,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectField: "",
 			expectErr:   true,
 		},
-		// Case 4: reasoning_effort=none → clamped to minimal
+		// 用例 4：reasoning_effort=none → 钳制为 minimal
 		{
 			name:        "4",
 			from:        "openai",
@@ -456,7 +456,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "minimal",
 			expectErr:   false,
 		},
-		// Case 5: reasoning_effort=auto → medium (DynamicAllowed=false)
+		// 用例 5：reasoning_effort=auto → medium（DynamicAllowed=false）
 		{
 			name:        "5",
 			from:        "openai",
@@ -467,12 +467,12 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 6: No param from gemini → injected default → medium
-		// Case 7: thinkingBudget=8192 → medium
-		// Case 8: thinkingBudget=64000 → clamped to high
-		// Case 9: thinkingBudget=0 → clamped to minimal
-		// Case 10: thinkingBudget=-1 → medium (DynamicAllowed=false)
-		// Case 11: Claude no param → passthrough (no thinking)
+		// 用例 6：来自 gemini 无参数 → 注入默认值 → medium
+		// 用例 7：thinkingBudget=8192 → medium
+		// 用例 8：thinkingBudget=64000 → 钳制为 high
+		// 用例 9：thinkingBudget=0 → 钳制为 minimal
+		// 用例 10：thinkingBudget=-1 → medium（DynamicAllowed=false）
+		// 用例 11：Claude 无参数 → 直通（无 thinking）
 		{
 			name:        "11",
 			from:        "claude",
@@ -482,7 +482,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectField: "",
 			expectErr:   false,
 		},
-		// Case 12: thinking.budget_tokens=8192 → medium
+		// 用例 12：thinking.budget_tokens=8192 → medium
 		{
 			name:        "12",
 			from:        "claude",
@@ -493,7 +493,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 13: thinking.budget_tokens=64000 → clamped to high
+		// 用例 13：thinking.budget_tokens=64000 → 钳制为 high
 		{
 			name:        "13",
 			from:        "claude",
@@ -504,7 +504,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "high",
 			expectErr:   false,
 		},
-		// Case 14: thinking.budget_tokens=0 → clamped to minimal
+		// 用例 14：thinking.budget_tokens=0 → 钳制为 minimal
 		{
 			name:        "14",
 			from:        "claude",
@@ -515,7 +515,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "minimal",
 			expectErr:   false,
 		},
-		// Case 15: thinking.budget_tokens=-1 → medium (DynamicAllowed=false)
+		// 用例 15：thinking.budget_tokens=-1 → medium（DynamicAllowed=false）
 		{
 			name:        "15",
 			from:        "claude",
@@ -527,72 +527,72 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectErr:   false,
 		},
 
-		// level-subset-model (Levels=low/high, ZeroAllowed=false, DynamicAllowed=false)
+		// level-subset-model（Levels=low/high, ZeroAllowed=false, DynamicAllowed=false）
 
-		// Case 16: thinkingBudget=8192 → medium → rounded down to low
-		// Case 17: thinking.budget_tokens=1 → minimal → clamped to low
-		// gemini-budget-model (Min=128, Max=20000, ZeroAllowed=false, DynamicAllowed=true)
+		// 用例 16：thinkingBudget=8192 → medium → 向下取整为 low
+		// 用例 17：thinking.budget_tokens=1 → minimal → 钳制为 low
+		// gemini-budget-model（Min=128, Max=20000, ZeroAllowed=false, DynamicAllowed=true）
 
-		// Case 18: No param → passthrough
-		// Case 19: reasoning_effort=medium → 8192
-		// Case 20: reasoning_effort=xhigh → clamped to 20000
-		// Case 21: reasoning_effort=none → clamped to 128 → includeThoughts=false
-		// Case 22: reasoning_effort=auto → -1 (DynamicAllowed=true)
-		// Case 23: Claude no param → passthrough
-		// Case 24: thinking.budget_tokens=8192 → 8192
-		// Case 25: thinking.budget_tokens=64000 → clamped to 20000
-		// Case 26: thinking.budget_tokens=0 → clamped to 128
-		// Case 27: thinking.budget_tokens=-1 → -1 (DynamicAllowed=true)
-		// gemini-mixed-model (Min=128, Max=32768, Levels=low/high, ZeroAllowed=false, DynamicAllowed=true)
+		// 用例 18：无参数 → 直通
+		// 用例 19：reasoning_effort=medium → 8192
+		// 用例 20：reasoning_effort=xhigh → 钳制为 20000
+		// 用例 21：reasoning_effort=none → 钳制为 128 → includeThoughts=false
+		// 用例 22：reasoning_effort=auto → -1（DynamicAllowed=true）
+		// 用例 23：Claude 无参数 → 直通
+		// 用例 24：thinking.budget_tokens=8192 → 8192
+		// 用例 25：thinking.budget_tokens=64000 → 钳制为 20000
+		// 用例 26：thinking.budget_tokens=0 → 钳制为 128
+		// 用例 27：thinking.budget_tokens=-1 → -1（DynamicAllowed=true）
+		// gemini-mixed-model（Min=128, Max=32768, Levels=low/high, ZeroAllowed=false, DynamicAllowed=true）
 
-		// Case 28: No param → passthrough
-		// Case 29: reasoning_effort=high → high
-		// Case 30: reasoning_effort=xhigh → clamped to high
-		// Case 31: reasoning_effort=none → clamped to low → includeThoughts=false
-		// Case 31A: reasoning_effort=none with zero allowed removes the entire
-		// thinking config. includeThoughts alone would restore the model default.
-		// Case 31B: Antigravity keeps the same fully disabled representation.
-		// Case 31C: reasoning.effort=none with zero allowed → delete thinkingConfig
-		// Case 31D: reasoning.effort=none with zero allowed to Antigravity → delete thinkingConfig
-		// Case 32: reasoning_effort=auto → -1 (DynamicAllowed=true)
-		// Case 33: Claude no param → passthrough
-		// Case 34: thinking.budget_tokens=8192 → 8192 (keeps budget)
-		// Case 35: thinking.budget_tokens=64000 → clamped to 32768 (keeps budget)
-		// Case 36: thinking.budget_tokens=0 → clamped to low
-		// Case 37: thinking.budget_tokens=-1 → -1 (DynamicAllowed=true)
-		// claude-budget-model (Min=1024, Max=128000, ZeroAllowed=true, DynamicAllowed=false)
+		// 用例 28：无参数 → 直通
+		// 用例 29：reasoning_effort=high → high
+		// 用例 30：reasoning_effort=xhigh → 钳制为 high
+		// 用例 31：reasoning_effort=none → 钳制为 low → includeThoughts=false
+		// 用例 31A：允许零值时 reasoning_effort=none 会移除整个
+		// thinking 配置。仅保留 includeThoughts 会恢复模型默认值。
+		// 用例 31B：Antigravity 保持相同的完全禁用表示。
+		// 用例 31C：允许零值时 reasoning.effort=none → 删除 thinkingConfig
+		// 用例 31D：允许零值时 reasoning.effort=none 到 Antigravity → 删除 thinkingConfig
+		// 用例 32：reasoning_effort=auto → -1（DynamicAllowed=true）
+		// 用例 33：Claude 无参数 → 直通
+		// 用例 34：thinking.budget_tokens=8192 → 8192（保留预算）
+		// 用例 35：thinking.budget_tokens=64000 → 钳制为 32768（保留预算）
+		// 用例 36：thinking.budget_tokens=0 → 钳制为 low
+		// 用例 37：thinking.budget_tokens=-1 → -1（DynamicAllowed=true）
+		// claude-budget-model（Min=1024, Max=128000, ZeroAllowed=true, DynamicAllowed=false）
 
-		// Case 38: No param → passthrough
-		// Case 39: reasoning_effort=medium → 8192
-		// Case 40: reasoning_effort=xhigh → clamped to 32768
-		// Case 41: reasoning_effort=none → disabled
-		// Case 42: reasoning_effort=auto → 64512 (mid-range)
-		// Case 43: Gemini no param → passthrough
-		// Case 44: thinkingBudget=8192 → 8192
-		// Case 45: thinkingBudget=200000 → clamped to 128000
-		// Case 46: thinkingBudget=0 → disabled
-		// Case 47: thinkingBudget=-1 → 64512 (mid-range)
+		// 用例 38：无参数 → 直通
+		// 用例 39：reasoning_effort=medium → 8192
+		// 用例 40：reasoning_effort=xhigh → 钳制为 32768
+		// 用例 41：reasoning_effort=none → 禁用
+		// 用例 42：reasoning_effort=auto → 64512（中间档）
+		// 用例 43：Gemini 无参数 → 直通
+		// 用例 44：thinkingBudget=8192 → 8192
+		// 用例 45：thinkingBudget=200000 → 钳制为 128000
+		// 用例 46：thinkingBudget=0 → 禁用
+		// 用例 47：thinkingBudget=-1 → 64512（中间档）
 
-		// antigravity-budget-model (Min=128, Max=20000, ZeroAllowed=true, DynamicAllowed=true)
+		// antigravity-budget-model（Min=128, Max=20000, ZeroAllowed=true, DynamicAllowed=true）
 
-		// Case 48: Gemini no param → passthrough
-		// Case 49: thinkingLevel=medium → 8192
-		// Case 50: thinkingLevel=xhigh → clamped to 20000
-		// Case 51: thinkingLevel=none → 0 (ZeroAllowed=true)
-		// Case 52: thinkingBudget=-1 → -1 (DynamicAllowed=true)
-		// Case 53: Claude no param → passthrough
-		// Case 54: thinking.budget_tokens=8192 → 8192
-		// Case 55: thinking.budget_tokens=64000 → clamped to 20000
-		// Case 56: thinking.budget_tokens=0 → 0 (ZeroAllowed=true)
-		// Case 57: thinking.budget_tokens=-1 → -1 (DynamicAllowed=true)
+		// 用例 48：Gemini 无参数 → 直通
+		// 用例 49：thinkingLevel=medium → 8192
+		// 用例 50：thinkingLevel=xhigh → 钳制为 20000
+		// 用例 51：thinkingLevel=none → 0（ZeroAllowed=true）
+		// 用例 52：thinkingBudget=-1 → -1（DynamicAllowed=true）
+		// 用例 53：Claude 无参数 → 直通
+		// 用例 54：thinking.budget_tokens=8192 → 8192
+		// 用例 55：thinking.budget_tokens=64000 → 钳制为 20000
+		// 用例 56：thinking.budget_tokens=0 → 0（ZeroAllowed=true）
+		// 用例 57：thinking.budget_tokens=-1 → -1（DynamicAllowed=true）
 
-		// no-thinking-model (Thinking=nil)
+		// no-thinking-model（Thinking=nil）
 
-		// Case 58: Gemini no param → passthrough
-		// Case 59: thinkingBudget=8192 → stripped
-		// Case 60: thinkingBudget=0 → stripped
-		// Case 61: thinkingBudget=-1 → stripped
-		// Case 62: Claude no param → passthrough
+		// 用例 58：Gemini 无参数 → 直通
+		// 用例 59：thinkingBudget=8192 → 被剥离
+		// 用例 60：thinkingBudget=0 → 被剥离
+		// 用例 61：thinkingBudget=-1 → 被剥离
+		// 用例 62：Claude 无参数 → 直通
 		{
 			name:        "62",
 			from:        "claude",
@@ -602,7 +602,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectField: "",
 			expectErr:   false,
 		},
-		// Case 63: thinking.budget_tokens=8192 → stripped
+		// 用例 63：thinking.budget_tokens=8192 → 被剥离
 		{
 			name:        "63",
 			from:        "claude",
@@ -612,7 +612,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectField: "",
 			expectErr:   false,
 		},
-		// Case 64: thinking.budget_tokens=0 → stripped
+		// 用例 64：thinking.budget_tokens=0 → 被剥离
 		{
 			name:        "64",
 			from:        "claude",
@@ -622,7 +622,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectField: "",
 			expectErr:   false,
 		},
-		// Case 65: thinking.budget_tokens=-1 → stripped
+		// 用例 65：thinking.budget_tokens=-1 → 被剥离
 		{
 			name:        "65",
 			from:        "claude",
@@ -633,14 +633,14 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectErr:   false,
 		},
 
-		// user-defined-model (UserDefined=true, Thinking=nil)
+		// user-defined-model（UserDefined=true, Thinking=nil）
 
-		// Case 66: Gemini no param → passthrough
-		// Case 67: thinkingBudget=8192 → medium
-		// Case 68: thinkingBudget=64000 → xhigh (passthrough)
-		// Case 69: thinkingBudget=0 → none
-		// Case 70: thinkingBudget=-1 → auto
-		// Case 71: Claude no param → injected default → medium
+		// 用例 66：Gemini 无参数 → 直通
+		// 用例 67：thinkingBudget=8192 → medium
+		// 用例 68：thinkingBudget=64000 → xhigh（直通）
+		// 用例 69：thinkingBudget=0 → none
+		// 用例 70：thinkingBudget=-1 → auto
+		// 用例 71：Claude 无参数 → 注入默认值 → medium
 		{
 			name:        "71",
 			from:        "claude",
@@ -651,7 +651,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 72: thinking.budget_tokens=8192 → medium
+		// 用例 72：thinking.budget_tokens=8192 → medium
 		{
 			name:        "72",
 			from:        "claude",
@@ -662,7 +662,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 73: thinking.budget_tokens=64000 → xhigh (passthrough)
+		// 用例 73：thinking.budget_tokens=64000 → xhigh（直通）
 		{
 			name:        "73",
 			from:        "claude",
@@ -673,7 +673,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "xhigh",
 			expectErr:   false,
 		},
-		// Case 74: thinking.budget_tokens=0 → none
+		// 用例 74：thinking.budget_tokens=0 → none
 		{
 			name:        "74",
 			from:        "claude",
@@ -684,7 +684,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "none",
 			expectErr:   false,
 		},
-		// Case 75: thinking.budget_tokens=-1 → auto
+		// 用例 75：thinking.budget_tokens=-1 → auto
 		{
 			name:        "75",
 			from:        "claude",
@@ -695,14 +695,14 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "auto",
 			expectErr:   false,
 		},
-		// Case 76: OpenAI reasoning_effort=medium to Gemini → 8192
-		// Case 77: OpenAI reasoning_effort=medium to Claude → 8192
-		// Case 78: OpenAI-Response reasoning.effort=medium to Gemini → 8192
-		// Case 79: OpenAI-Response reasoning.effort=medium to Claude → 8192
+		// 用例 76：OpenAI reasoning_effort=medium 到 Gemini → 8192
+		// 用例 77：OpenAI reasoning_effort=medium 到 Claude → 8192
+		// 用例 78：OpenAI-Response reasoning.effort=medium 到 Gemini → 8192
+		// 用例 79：OpenAI-Response reasoning.effort=medium 到 Claude → 8192
 
-		// Same-protocol passthrough tests (80-89)
+		// 同协议直通测试（80-89）
 
-		// Case 80: OpenAI to OpenAI, reasoning_effort=high → passthrough
+		// 用例 80：OpenAI 到 OpenAI，reasoning_effort=high → 直通
 		{
 			name:        "80",
 			from:        "openai",
@@ -713,7 +713,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "high",
 			expectErr:   false,
 		},
-		// Case 81: OpenAI to OpenAI, reasoning_effort=xhigh → out of range error
+		// 用例 81：OpenAI 到 OpenAI，reasoning_effort=xhigh → 超出范围错误
 		{
 			name:        "81",
 			from:        "openai",
@@ -723,7 +723,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectField: "",
 			expectErr:   true,
 		},
-		// Case 82: OpenAI-Response to Codex, reasoning.effort=high → passthrough
+		// 用例 82：OpenAI-Response 到 Codex，reasoning.effort=high → 直通
 		{
 			name:        "82",
 			from:        "openai-response",
@@ -734,7 +734,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "high",
 			expectErr:   false,
 		},
-		// Case 83: OpenAI-Response to Codex, reasoning.effort=xhigh → out of range error
+		// 用例 83：OpenAI-Response 到 Codex，reasoning.effort=xhigh → 超出范围错误
 		{
 			name:        "83",
 			from:        "openai-response",
@@ -744,21 +744,21 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectField: "",
 			expectErr:   true,
 		},
-		// Case 84: Gemini to Gemini, thinkingBudget=8192 → passthrough
-		// Case 85: Gemini to Gemini, thinkingBudget=64000 → exceeds Max error
-		// Case 86: Claude to Claude, thinking.budget_tokens=8192 → passthrough
-		// Case 87: Claude to Claude, thinking.budget_tokens=200000 → exceeds Max error
-		// Gemini Family Cross-Channel Consistency (Cases 88-89)
-		// Tests that gemini/antigravity as same API family should have consistent validation behavior
+		// 用例 84：Gemini 到 Gemini，thinkingBudget=8192 → 直通
+		// 用例 85：Gemini 到 Gemini，thinkingBudget=64000 → 超出 Max 错误
+		// 用例 86：Claude 到 Claude，thinking.budget_tokens=8192 → 直通
+		// 用例 87：Claude 到 Claude，thinking.budget_tokens=200000 → 超出 Max 错误
+		// Gemini 家族跨通道一致性（用例 88-89）
+		// 测试 gemini/antigravity 作为同一 API 家族应具有一致的校验行为
 
-		// Case 88: Gemini to Antigravity, thinkingBudget=64000 → exceeds Max error (same family strict validation)
-		// Case 89: Gemini to Antigravity, thinkingBudget=8192 → passthrough (normal value)
+		// 用例 88：Gemini 到 Antigravity，thinkingBudget=64000 → 超出 Max 错误（同族严格校验）
+		// 用例 89：Gemini 到 Antigravity，thinkingBudget=8192 → 直通（正常值）
 	}
 
 	runThinkingTests(t, cases)
 }
 
-// TestThinkingE2EProviderTargets covers provider-specific targets that are not part of the main matrix.
+// TestThinkingE2EProviderTargets 覆盖不属于主矩阵的供应商特定目标。
 func TestThinkingE2EProviderTargets(t *testing.T) {
 	reg := registry.GetGlobalRegistry()
 	uid := fmt.Sprintf("thinking-e2e-provider-targets-%d", time.Now().UnixNano())
@@ -767,14 +767,14 @@ func TestThinkingE2EProviderTargets(t *testing.T) {
 	defer reg.UnregisterClient(uid)
 
 	cases := []thinkingTestCase{
-		// Kimi target: emit the native thinking object and accept reasoning_effort only as legacy input.
+		// Kimi 目标：输出原生 thinking 对象，仅将 reasoning_effort 作为旧式输入接受。
 
-		// xAI target: Grok uses Responses-compatible reasoning.effort with Grok-specific levels.
+		// xAI 目标：Grok 使用与 Responses 兼容的 reasoning.effort，并带有 Grok 专有的级别。
 
-		// Interactions target: native API uses generation_config.thinking_level and optional thinking_summaries.
-		// Responses client against a chat-shaped provider. Because thinking is read
-		// back off the translated body, this pair only works if the request translator
-		// rewrites reasoning.effort as reasoning_effort; nothing else covered it.
+		// Interactions 目标：原生 API 使用 generation_config.thinking_level 以及可选的 thinking_summaries。
+		// Responses 客户端对接 chat 形态的供应商。由于 thinking 是从
+		// 翻译后的请求体中读回的，因此这一组合只有在请求转换器
+		// 将 reasoning.effort 重写为 reasoning_effort 时才有效；此前没有其他测试覆盖这一点。
 		{
 			name:        "R1",
 			from:        "openai-response",
@@ -926,7 +926,7 @@ func getTestModels() []*registry.ModelInfo {
 	}
 }
 
-// runThinkingTests runs thinking test cases using the real data flow path.
+// runThinkingTests 使用真实数据流路径运行 thinking 测试用例。
 func runThinkingTests(t *testing.T, cases []thinkingTestCase) {
 	for _, tc := range cases {
 		tc := tc
@@ -1014,10 +1014,10 @@ func runThinkingTests(t *testing.T, cases []thinkingTestCase) {
 				assertField(tc.expectField2, tc.expectValue2)
 			}
 
-			// Claude adaptive effort is only valid as a pair: native Claude Code
-			// 2.1.220 always sends thinking.type="adaptive" alongside
-			// output_config.effort. Emitting effort on its own would be a wire
-			// shape the real client never produces.
+			// Claude 自适应 effort 只能成对出现：原生 Claude Code
+			// 2.1.220 总是同时发送 thinking.type="adaptive" 与
+			// output_config.effort。单独输出 effort 会形成真实客户端
+			// 永远不会产生的线上格式。
 			if tc.to == "claude" && gjson.GetBytes(body, "output_config.effort").Exists() {
 				assertField("thinking.type", "adaptive")
 			}
@@ -1030,8 +1030,8 @@ func runThinkingTests(t *testing.T, cases []thinkingTestCase) {
 				if tc.to == "antigravity" {
 					path = "request.generationConfig.thinkingConfig.includeThoughts"
 				}
-				// Each case declares its expected visibility independently from the
-				// extractor under test. Empty means the provider field must be absent.
+				// 每个用例独立于被测的提取器声明其期望的可见性。
+				// 为空表示供应商字段必须不存在。
 				wantIncludeThoughts := tc.includeThoughts
 				itVal := gjson.GetBytes(body, path)
 				if wantIncludeThoughts == "" {

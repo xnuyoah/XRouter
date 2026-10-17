@@ -5,8 +5,8 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-// SetStringIfDifferent updates path only when its value is not already the
-// canonical JSON string. Values with another JSON type are still normalized.
+// SetStringIfDifferent 仅当其值不是已存在的
+// 规范 JSON 字符串时才更新 path。其他 JSON 类型的值仍会被规范化。
 func SetStringIfDifferent(payload []byte, path, value string) []byte {
 	current := gjson.GetBytes(payload, path)
 	if current.Type == gjson.String && current.String() == value {
@@ -19,8 +19,8 @@ func SetStringIfDifferent(payload []byte, path, value string) []byte {
 	return updated
 }
 
-// SetBoolIfDifferent updates path only when its value is not already the
-// canonical JSON boolean. Values with another JSON type are still normalized.
+// SetBoolIfDifferent 仅当其值不是已存在的
+// 规范 JSON 布尔值时才更新 path。其他 JSON 类型的值仍会被规范化。
 func SetBoolIfDifferent(payload []byte, path string, value bool) []byte {
 	current := gjson.GetBytes(payload, path)
 	if (value && current.Type == gjson.True) || (!value && current.Type == gjson.False) {
@@ -33,7 +33,7 @@ func SetBoolIfDifferent(payload []byte, path string, value bool) []byte {
 	return updated
 }
 
-// SetRawIfDifferent updates path only when the existing raw JSON is identical.
+// SetRawIfDifferent 仅在现有原始 JSON 已相同时才更新 path。
 func SetRawIfDifferent(payload []byte, path string, value []byte) []byte {
 	current := gjson.GetBytes(payload, path)
 	if current.Exists() && len(current.Indexes) == 0 && current.Raw == string(value) {
@@ -46,7 +46,7 @@ func SetRawIfDifferent(payload []byte, path string, value []byte) []byte {
 	return updated
 }
 
-// JoinRawJSONArray joins validated raw JSON array items without re-encoding them.
+// JoinRawJSONArray 拼接已校验的原始 JSON 数组项，且不重新编码它们。
 func JoinRawJSONArray(items [][]byte) []byte {
 	size := len(items) + 1
 	for _, item := range items {
@@ -63,7 +63,7 @@ func JoinRawJSONArray(items [][]byte) []byte {
 	return append(out, ']')
 }
 
-// JoinRawJSONStrings joins raw JSON array items held as strings.
+// JoinRawJSONStrings 拼接以字符串形式持有的原始 JSON 数组项。
 func JoinRawJSONStrings(items []string) []byte {
 	size := len(items) + 1
 	for _, item := range items {

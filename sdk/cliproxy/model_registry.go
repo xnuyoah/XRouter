@@ -7,16 +7,16 @@ import (
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
-// ModelInfo re-exports the registry model info structure.
+// ModelInfo 重新导出注册表的模型信息结构。
 type ModelInfo = registry.ModelInfo
 
-// ClientModelProjection re-exports the registry model projection structure.
+// ClientModelProjection 重新导出注册表的模型投影结构。
 type ClientModelProjection = registry.ClientModelProjection
 
-// ModelRegistryHook re-exports the registry hook interface for external integrations.
+// ModelRegistryHook 为外部集成重新导出注册表的 hook 接口。
 type ModelRegistryHook = registry.ModelRegistryHook
 
-// ModelRegistry describes registry operations consumed by external callers.
+// ModelRegistry 描述供外部调用方使用的注册表操作。
 type ModelRegistry interface {
 	RegisterClient(clientID, clientProvider string, models []*ModelInfo)
 	RegisterClientIfEpochCurrent(clientID, clientProvider string, expectedEpoch uint64, models []*ModelInfo, publish func() bool) bool
@@ -34,22 +34,22 @@ type ModelRegistry interface {
 	ApplyClientModelCapabilities(clientID string, expectedEpoch uint64, mutate func(modelID string, info *ModelInfo)) bool
 }
 
-// GlobalModelRegistry returns the shared registry instance.
+// GlobalModelRegistry 返回共享的注册表实例。
 func GlobalModelRegistry() ModelRegistry {
 	return registry.GetGlobalRegistry()
 }
 
-// SetGlobalModelRegistryHook registers an optional hook on the shared global registry instance.
+// SetGlobalModelRegistryHook 在共享的全局注册表实例上注册一个可选 hook。
 func SetGlobalModelRegistryHook(hook ModelRegistryHook) {
 	registry.GetGlobalRegistry().SetHook(hook)
 }
 
-// modelRegistrationFence captures the model-registration inputs and the
-// registry epoch observed when a registration began. At the publication
-// boundary, the manager identity gate runs first under the auth's mutation
-// lock, then the concrete registry performs an atomic epoch CAS. This keeps
-// the lock order consistently auth-mutation before registry and prevents an
-// older computation from overwriting or removing a newer publication.
+// modelRegistrationFence 捕获模型注册的输入以及
+// 注册开始时观测到的注册表 epoch。在发布
+// 边界，manager 身份门禁先在 auth 的变更锁下运行，
+// 随后具体注册表执行原子 epoch CAS。这样可保持
+// 锁顺序始终为 auth 变更锁先于注册表，并防止
+// 较早的计算覆盖或移除较新的发布。
 type modelRegistrationFence struct {
 	registryEpoch     uint64
 	registrationEpoch uint64
@@ -75,9 +75,9 @@ func newModelRegistrationFence(a *coreauth.Auth) modelRegistrationFence {
 	}
 }
 
-// withAuth returns a copy of f with the auth-input fields replaced by a's
-// current values. The registry epoch intentionally remains the starting
-// epoch so a newer intervening publication cannot be adopted by this fence.
+// withAuth 返回 f 的副本，其中 auth 输入字段被替换为 a 的
+// 当前值。注册表 epoch 有意保持为起始
+// epoch，使该 fence 无法采用其间更新的发布。
 func (f modelRegistrationFence) withAuth(a *coreauth.Auth) modelRegistrationFence {
 	if a == nil {
 		return f

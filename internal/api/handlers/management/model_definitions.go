@@ -7,10 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetStaticModelDefinitions returns static model metadata for a given channel.
-// Channel is provided via path param (:channel) or query param (?channel=...).
-// Provider model defaults now live in each executor/config family, so the bundled
-// catalog has no static sections to serve.
+// GetStaticModelDefinitions 返回指定 channel 的静态模型元数据。
+// channel 通过路径参数（:channel）或查询参数（?channel=...）提供。
+// 供应商模型默认值现在位于各执行器/配置族中，因此内置
+// 目录没有可提供的静态区段。
 func (h *Handler) GetStaticModelDefinitions(c *gin.Context) {
 	channel := strings.TrimSpace(c.Param("channel"))
 	if channel == "" {

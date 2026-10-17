@@ -927,7 +927,7 @@ func TestGetRequestLogByID_MatchesFullUUIDAndShortID(t *testing.T) {
 		t.Fatalf("write log: %v", errWrite)
 	}
 
-	// 1. Fetch via short 8-char ID
+	// 1. 通过短的 8 字符 ID 获取
 	recShort := httptest.NewRecorder()
 	cShort, _ := gin.CreateTestContext(recShort)
 	cShort.Params = gin.Params{{Key: "id", Value: "1234abcd"}}
@@ -941,7 +941,7 @@ func TestGetRequestLogByID_MatchesFullUUIDAndShortID(t *testing.T) {
 		t.Fatalf("body = %q, want %q", body, "uuid v7 request log content")
 	}
 
-	// 2. Fetch via full 36-char UUID string ending with same 8 chars
+	// 2. 通过以相同 8 个字符结尾的完整 36 字符 UUID 字符串获取
 	recFull := httptest.NewRecorder()
 	cFull, _ := gin.CreateTestContext(recFull)
 	cFull.Params = gin.Params{{Key: "id", Value: "018f3a5b-1234-7abc-def0-00001234abcd"}}

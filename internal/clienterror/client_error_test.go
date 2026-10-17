@@ -184,8 +184,8 @@ func TestIsRequestFault(t *testing.T) {
 			want: true,
 		},
 		{
-			// Verbatim upstream text: plain text, not JSON, so it can only be matched
-			// by message.
+			// 上游原文：纯文本而非 JSON，因此只能按
+			// 消息匹配。
 			name:   "item not persisted with store=false",
 			status: http.StatusNotFound,
 			err:    errors.New("Item with id 'rs_0b5f3eb6f51f175c0169ca74e4a85881998539920821603a74' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input."),
@@ -212,8 +212,8 @@ func TestIsRequestFault(t *testing.T) {
 			want: true,
 		},
 		{
-			// An upstream internal error is not a request fault: it must stay eligible
-			// for credential rotation and (credential, model) cooldown.
+			// 上游内部错误不是请求方的过错：它必须保持可参与
+			// 凭据轮换和（凭据，模型）冷却。
 			name:   "upstream unknown internal error",
 			status: http.StatusInternalServerError,
 			err:    errors.New(`{"error":{"code":500,"message":"Internal error encountered.","status":"UNKNOWN"}}`),

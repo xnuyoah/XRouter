@@ -10,36 +10,36 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// NativeAPIExecutor serves one of the native OpenAI-wire API-key providers
-// (openai, deepseek, nvidia). It reuses the OpenAI-compatible execution core
-// while the provider identity, default endpoint, and credential model catalog
-// come from the provider's own config family.
+// NativeAPIExecutor 服务于原生 OpenAI 线协议 API key 供应商之一
+// （openai、deepseek、nvidia）。它复用 OpenAI 兼容的执行核心，
+// 而供应商身份、默认端点以及凭据模型目录
+// 则来自该供应商自身的配置族。
 type NativeAPIExecutor struct {
 	*OpenAICompatExecutor
 }
 
-// NewOpenAIExecutor creates the native OpenAI API-key provider executor.
+// NewOpenAIExecutor 创建原生 OpenAI API key 供应商执行器。
 func NewOpenAIExecutor(cfg *config.Config) *NativeAPIExecutor {
 	return &NativeAPIExecutor{OpenAICompatExecutor: NewOpenAICompatExecutor(constant.OpenAI, cfg)}
 }
 
-// NewDeepseekExecutor creates the native DeepSeek API-key provider executor.
+// NewDeepseekExecutor 创建原生 DeepSeek API key 供应商执行器。
 func NewDeepseekExecutor(cfg *config.Config) *NativeAPIExecutor {
 	return &NativeAPIExecutor{OpenAICompatExecutor: NewOpenAICompatExecutor(constant.Deepseek, cfg)}
 }
 
-// NewNvidiaExecutor creates the native NVIDIA API-key provider executor.
+// NewNvidiaExecutor 创建原生 NVIDIA API key 供应商执行器。
 func NewNvidiaExecutor(cfg *config.Config) *NativeAPIExecutor {
 	return &NativeAPIExecutor{OpenAICompatExecutor: NewOpenAICompatExecutor(constant.Nvidia, cfg)}
 }
 
-// NewAgnesExecutor creates the native Agnes AI API-key provider executor.
+// NewAgnesExecutor 创建原生 Agnes AI API key 供应商执行器。
 func NewAgnesExecutor(cfg *config.Config) *NativeAPIExecutor {
 	return &NativeAPIExecutor{OpenAICompatExecutor: NewOpenAICompatExecutor(constant.Agnes, cfg)}
 }
 
-// ForAPIKey rebinds configuration for API-key execution while preserving the
-// native provider wrapper type.
+// ForAPIKey 为 API key 执行重新绑定配置，同时保留
+// 原生供应商包装类型。
 func (e *NativeAPIExecutor) ForAPIKey() cliproxyauth.ProviderExecutor {
 	if e == nil || e.OpenAICompatExecutor == nil {
 		return e
@@ -51,20 +51,20 @@ func (e *NativeAPIExecutor) ForAPIKey() cliproxyauth.ProviderExecutor {
 	return &clone
 }
 
-// SupportsApplyPatch reports that the OpenAI-compatible wire path can serve
-// freeform apply_patch tool calls.
+// SupportsApplyPatch 报告 OpenAI 兼容线协议路径可以服务
+// 自由格式的 apply_patch 工具调用。
 func (e *NativeAPIExecutor) SupportsApplyPatch() bool { return e != nil }
 
-// NativeAPIProviderDefaultBaseURL returns the default upstream endpoint for a
-// native OpenAI-wire provider family, or "" for unknown providers.
+// NativeAPIProviderDefaultBaseURL 返回某个原生 OpenAI 线协议供应商族的
+// 默认上游端点，未知供应商则返回 ""。
 func NativeAPIProviderDefaultBaseURL(provider string) string {
 	return config.NativeAPIProviderDefaultsFor(provider).BaseURL
 }
 
-// nativeAPICompatConfig builds the OpenAI-compatible configuration view of a
-// native provider credential. The rest of the execution core then works
-// unchanged: model capabilities, prompt-cache support, and request-scoped
-// policy all read this view.
+// nativeAPICompatConfig 构建原生供应商凭据的 OpenAI 兼容
+// 配置视图。执行核心的其余部分随后无需改动即可工作：
+// 模型能力、prompt-cache 支持以及请求范围策略
+// 都读取该视图。
 func nativeAPICompatConfig(cfg *config.Config, auth *cliproxyauth.Auth, req cliproxyexecutor.Request) *config.OpenAICompatibility {
 	if auth == nil {
 		return nil
@@ -87,7 +87,7 @@ func nativeAPICompatConfig(cfg *config.Config, auth *cliproxyauth.Auth, req clip
 		}
 	}
 	if entry == nil {
-		// Home-managed credentials carry their model options on the auth itself.
+		// Home 管理的凭据将模型选项直接携带在 auth 自身上。
 		if model, ok := cliproxyauth.ResolvedHomeModelOptions(req); ok {
 			return &config.OpenAICompatibility{
 				Name:                  provider,
@@ -130,8 +130,8 @@ func nativeAPICompatConfig(cfg *config.Config, auth *cliproxyauth.Auth, req clip
 	}
 }
 
-// resolveNativeAPIKeyEntry finds the config entry backing an auth, preferring
-// the recorded config index and falling back to credential matching.
+// resolveNativeAPIKeyEntry 查找支撑某个 auth 的配置条目，优先使用
+// 已记录的配置索引，回退到凭据匹配。
 func resolveNativeAPIKeyEntry(entries []config.NativeAPIKey, auth *cliproxyauth.Auth) *config.NativeAPIKey {
 	if auth == nil || len(entries) == 0 {
 		return nil

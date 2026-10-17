@@ -46,9 +46,9 @@ func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.
 		t.Fatalf("register auth: %v", errRegister)
 	}
 
-	// Set up a mock watcher wrapper where dispatchPersistedAuth records updates
-	// but DOES NOT consume or execute anything asynchronously, verifying that
-	// the synchronous restoration does not depend on the watcher background queue.
+	// 搭建一个 mock watcher 包装器，其中 dispatchPersistedAuth 会记录更新
+	// 但不会异步消费或执行任何内容，以验证
+	// 同步恢复不依赖 watcher 的后台队列。
 	var persistedUpdates []watcher.AuthUpdate
 	watcherWrapper := &WatcherWrapper{
 		dispatchPersistedAuth: func(update watcher.AuthUpdate) bool {
@@ -68,7 +68,7 @@ func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.
 		t.Fatal("runtimeAuthSyncHook() returned nil")
 	}
 
-	// 1. Initial sync (enabled -> registers models)
+	// 1. 初始同步（启用 -> 注册模型）
 	if err := hook(context.Background(), auth); err != nil {
 		t.Fatalf("hook failed for initial sync: %v", err)
 	}
@@ -78,13 +78,13 @@ func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.
 		t.Fatal("expected models registered for active auth, got none")
 	}
 
-	// Verify scheduler selection works for enabled auth
+	// 验证调度器选择对已启用的 auth 可用
 	resp, errExec := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{})
 	if errExec != nil || string(resp.Payload) != authID {
 		t.Fatalf("expected scheduler to select active auth, got resp=%q, err=%v", string(resp.Payload), errExec)
 	}
 
-	// 2. Disable the credential
+	// 2. 禁用该凭据
 	disabledAuth := auth.Clone()
 	disabledAuth.Disabled = true
 	disabledAuth.Status = coreauth.StatusDisabled
@@ -99,18 +99,18 @@ func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.
 	}
 	manager.RegisterExecutor(&syncTestExecutor{})
 
-	// Verify immediately: models must be unregistered from global registry
+	// 立即验证：模型必须从全局注册表中注销
 	modelsAfterDisable := reg.GetModelsForClient(authID)
 	if len(modelsAfterDisable) != 0 {
 		t.Fatalf("expected 0 models for disabled client, got %d", len(modelsAfterDisable))
 	}
 
-	// Verify scheduler selection fails for disabled auth
+	// 验证调度器选择对已禁用的 auth 会失败
 	if _, errExecDisabled := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{}); errExecDisabled == nil {
 		t.Fatal("expected scheduler execution to fail for disabled auth, but got nil error")
 	}
 
-	// 3. Re-enable the credential without quota
+	// 3. 在没有额度的情况下重新启用该凭据
 	enabledAuth := disabledAuth.Clone()
 	enabledAuth.Disabled = false
 	enabledAuth.Status = coreauth.StatusActive
@@ -121,13 +121,13 @@ func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.
 		t.Fatalf("manager update enable failed: %v", errUpdate)
 	}
 
-	// 4. Re-enable hook invocation
+	// 4. 再次调用启用 hook
 	if err := hook(context.Background(), enabledAuth); err != nil {
 		t.Fatalf("hook failed for re-enable: %v", err)
 	}
 	manager.RegisterExecutor(&syncTestExecutor{})
 
-	// Verify immediately: models must be restored in the global registry without restart
+	// 立即验证：模型必须在无需重启的情况下于全局注册表中恢复
 	modelsAfterEnable := reg.GetModelsForClient(authID)
 	if len(modelsAfterEnable) == 0 {
 		t.Fatal("expected models to be restored synchronously upon re-enable, got none")
@@ -144,13 +144,13 @@ func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.
 		t.Fatalf("expected gpt-6-astra in restored models: %+v", modelsAfterEnable)
 	}
 
-	// Verify scheduler selection is restored for the re-enabled auth
+	// 验证已重新启用的 auth 的调度器选择已恢复
 	respAfterEnable, errExecEnable := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{})
 	if errExecEnable != nil || string(respAfterEnable.Payload) != authID {
 		t.Fatalf("expected scheduler to select restored auth, got resp=%q, err=%v", string(respAfterEnable.Payload), errExecEnable)
 	}
 
-	// 5. Verify quota cooldown separation: set quota exceeded on the enabled auth
+	// 5. 验证额度冷却的区分：在已启用的 auth 上设置额度超限
 	quotaAuth := enabledAuth.Clone()
 	quotaAuth.Quota = coreauth.QuotaState{
 		Exceeded:      true,
@@ -165,17 +165,17 @@ func TestRuntimeAuthSyncHook_SynchronousModelAndSchedulerRestoration(t *testing.
 	}
 	manager.RegisterExecutor(&syncTestExecutor{})
 
-	// Verify quota separation: models remain registered in global registry
+	// 验证额度区分：模型仍保留在全局注册表中
 	modelsWithQuota := reg.GetModelsForClient(authID)
 	if len(modelsWithQuota) == 0 {
 		t.Fatal("expected models to remain registered when auth is in quota cooldown")
 	}
-	// But scheduler blocks execution due to quota exhaustion
+	// 但由于额度耗尽，调度器会阻止执行
 	if _, errQuotaExec := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{}); errQuotaExec == nil {
 		t.Fatal("expected scheduler to block execution when quota exceeded")
 	}
 
-	// Verify watcher notification occurred
+	// 验证已发生 watcher 通知
 	if len(persistedUpdates) == 0 {
 		t.Fatal("expected watcher to be notified of persisted auth updates")
 	}
@@ -285,8 +285,8 @@ func TestHandleAuthUpdates_FileDeleteOrdering(t *testing.T) {
 					if errRemove := os.Remove(path); errRemove != nil {
 						t.Fatalf("remove auth file: %v", errRemove)
 					}
-					// Use the same watcher stamping/dispatch machinery as file deletes,
-					// without depending on fsnotify scheduling or debounce timers.
+					// 使用与文件删除相同的 watcher 打戳/派发机制，
+					// 而不依赖 fsnotify 的调度或防抖定时器。
 					deletion := watcher.AuthUpdate{Action: watcher.AuthUpdateActionDelete, ID: authID}
 					deletion.SetFileRemoval(true)
 					if !w.DispatchRuntimeAuthUpdate(deletion) {
@@ -305,11 +305,11 @@ func TestHandleAuthUpdates_FileDeleteOrdering(t *testing.T) {
 				if deleteBeforeSave {
 					deletion = observeDelete()
 				}
-				// Management uploads publish to coreManager before invoking the persist
-				// hook. Exercise that gap as well as the legacy callback's lost revision.
+				// 管理端上传会在调用持久化 hook 之前先发布到 coreManager。
+				// 既要覆盖这一间隙，也要覆盖旧式回调丢失修订号的情况。
 				save(!mode.delayHook)
 				if !mode.delayHook {
-					// Hold the queued add so restoration depends on the inline persist hook.
+					// 扣住已入队的添加，使恢复依赖于内联的持久化 hook。
 					addition := nextUpdate()
 					if deleteBeforeSave && addition.Revision() <= deletion.Revision() {
 						t.Fatal("re-created auth must have a newer watcher revision")
@@ -364,7 +364,7 @@ func TestHandleAuthUpdates_FileDeleteRecreatedSubset(t *testing.T) {
 			if snapshotPath != path {
 				t.Fatalf("snapshot path=%q, want %q", snapshotPath, path)
 			}
-			// The re-created source file contains only B, independent of watcher state.
+			// 重新创建的源文件只包含 B，与 watcher 状态无关。
 			return []*coreauth.Auth{auths[1].Clone()}, nil
 		}},
 	}
@@ -380,7 +380,7 @@ func TestHandleAuthUpdates_FileDeleteRecreatedSubset(t *testing.T) {
 		t.Fatal(errRemove)
 	}
 	write(`{"type":"plugin","ids":["b"]}`)
-	// Do not deliver the create event: the delayed deletes must reconcile IDs themselves.
+	// 不投递 create 事件：延迟的删除必须自行校正 ID。
 	service.handleAuthUpdates(ctx, deletes)
 	if _, present := manager.GetByID(auths[0].ID); present || len(reg.GetModelsForClient(auths[0].ID)) != 0 {
 		t.Fatal("auth A, absent from the re-created file, must be removed with its models")
@@ -971,7 +971,7 @@ func TestEndToEndStatusPatch_RestoresModelsThroughServerPipeline(t *testing.T) {
 		t.Fatalf("register auth: %v", errRegister)
 	}
 
-	// Initial model sync
+	// 初始模型同步
 	syncHook := service.runtimeAuthSyncHook()
 	if err := syncHook(context.Background(), auth); err != nil {
 		t.Fatalf("initial sync failed: %v", err)
@@ -979,7 +979,7 @@ func TestEndToEndStatusPatch_RestoresModelsThroughServerPipeline(t *testing.T) {
 
 	handler := server.Handler()
 
-	// 1. Confirm models exist before disabling
+	// 1. 确认禁用之前模型存在
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v0/management/auth-files/models?name="+fileName, nil)
 	req.Header.Set("Authorization", "Bearer test-secret")
@@ -994,7 +994,7 @@ func TestEndToEndStatusPatch_RestoresModelsThroughServerPipeline(t *testing.T) {
 		t.Fatalf("expected initial models, got %s", rec.Body.String())
 	}
 
-	// 2. Disable credential via PATCH /v0/management/auth-files/status
+	// 2. 通过 PATCH /v0/management/auth-files/status 禁用凭据
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"`+fileName+`","disabled":true}`))
 	req.Header.Set("Authorization", "Bearer test-secret")
@@ -1004,7 +1004,7 @@ func TestEndToEndStatusPatch_RestoresModelsThroughServerPipeline(t *testing.T) {
 		t.Fatalf("PATCH status disable failed: %s", rec.Body.String())
 	}
 
-	// 3. Confirm GET /v0/management/auth-files/models returns empty list immediately
+	// 3. 确认 GET /v0/management/auth-files/models 立即返回空列表
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files/models?name="+fileName, nil)
 	req.Header.Set("Authorization", "Bearer test-secret")
@@ -1017,7 +1017,7 @@ func TestEndToEndStatusPatch_RestoresModelsThroughServerPipeline(t *testing.T) {
 		t.Fatalf("expected 0 models after disable, got: %s", rec.Body.String())
 	}
 
-	// 4. Re-enable credential via PATCH /v0/management/auth-files/status
+	// 4. 通过 PATCH /v0/management/auth-files/status 重新启用凭据
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPatch, "/v0/management/auth-files/status", strings.NewReader(`{"name":"`+fileName+`","disabled":false}`))
 	req.Header.Set("Authorization", "Bearer test-secret")
@@ -1027,7 +1027,7 @@ func TestEndToEndStatusPatch_RestoresModelsThroughServerPipeline(t *testing.T) {
 		t.Fatalf("PATCH status re-enable failed: %s", rec.Body.String())
 	}
 
-	// 5. Confirm models are synchronously restored immediately without restart
+	// 5. 确认模型无需重启即被同步恢复
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/v0/management/auth-files/models?name="+fileName, nil)
 	req.Header.Set("Authorization", "Bearer test-secret")
@@ -1081,7 +1081,7 @@ func TestRuntimeAuthSync_StaleAsyncEventDoesNotOverwriteSynchronousEnable(t *tes
 
 	hook := service.runtimeAuthSyncHook()
 
-	// Initial sync
+	// 初始同步
 	if err := hook(context.Background(), registeredAuth); err != nil {
 		t.Fatalf("initial hook sync failed: %v", err)
 	}
@@ -1089,7 +1089,7 @@ func TestRuntimeAuthSync_StaleAsyncEventDoesNotOverwriteSynchronousEnable(t *tes
 		t.Fatal("expected models after initial sync")
 	}
 
-	// Step 1: Credential is disabled (Generation advances)
+	// 步骤 1：凭据被禁用（Generation 递增）
 	disabledAuth := registeredAuth.Clone()
 	disabledAuth.Disabled = true
 	disabledAuth.Status = coreauth.StatusDisabled
@@ -1100,7 +1100,7 @@ func TestRuntimeAuthSync_StaleAsyncEventDoesNotOverwriteSynchronousEnable(t *tes
 		t.Fatalf("update disable failed: %v", errDisable)
 	}
 
-	// Capture the stale async event that would normally sit in an async queue
+	// 捕获那个通常会在异步队列中滞留的过期异步事件
 	staleAsyncDisableUpdate := watcher.AuthUpdate{
 		Action: watcher.AuthUpdateActionModify,
 		ID:     authID,
@@ -1108,7 +1108,7 @@ func TestRuntimeAuthSync_StaleAsyncEventDoesNotOverwriteSynchronousEnable(t *tes
 	}
 	staleAsyncDisableUpdate.SetRevision(2)
 
-	// Step 2: Synchronous disable hook runs (assigns revision 2)
+	// 步骤 2：同步的禁用 hook 运行（分配修订号 2）
 	if err := hook(context.Background(), updatedDisabled); err != nil {
 		t.Fatalf("hook disable failed: %v", err)
 	}
@@ -1116,7 +1116,7 @@ func TestRuntimeAuthSync_StaleAsyncEventDoesNotOverwriteSynchronousEnable(t *tes
 		t.Fatal("expected 0 models after disable")
 	}
 
-	// Step 3: Credential is immediately re-enabled (advances revision to 3)
+	// 步骤 3：凭据立即被重新启用（修订号推进到 3）
 	enabledAuth := updatedDisabled.Clone()
 	enabledAuth.Disabled = false
 	enabledAuth.Status = coreauth.StatusActive
@@ -1127,22 +1127,22 @@ func TestRuntimeAuthSync_StaleAsyncEventDoesNotOverwriteSynchronousEnable(t *tes
 		t.Fatalf("update enable failed: %v", errEnable)
 	}
 
-	// Step 4: Synchronous enable hook runs (assigns revision 3)
+	// 步骤 4：同步的启用 hook 运行（分配修订号 3）
 	if err := hook(context.Background(), updatedEnabled); err != nil {
 		t.Fatalf("hook enable failed: %v", err)
 	}
 	manager.RegisterExecutor(&syncTestExecutor{})
 
-	// Models must be restored immediately
+	// 模型必须立即恢复
 	if len(reg.GetModelsForClient(authID)) == 0 {
 		t.Fatal("expected models restored immediately upon synchronous enable")
 	}
 
-	// Step 5: The delayed stale disable update from Step 1 is delivered now via consumer
+	// 步骤 5：来自步骤 1 的延迟过期禁用更新现在经由消费者投递
 	service.handleAuthUpdate(context.Background(), staleAsyncDisableUpdate)
 	manager.RegisterExecutor(&syncTestExecutor{})
 
-	// Step 6: Verify the stale async event was prevented from overwriting the newer enable state!
+	// 步骤 6：验证过期异步事件已被阻止覆盖更新的启用状态！
 	currentAuth, ok := manager.GetByID(authID)
 	if !ok || currentAuth == nil {
 		t.Fatal("expected auth to exist in manager")
@@ -1155,7 +1155,7 @@ func TestRuntimeAuthSync_StaleAsyncEventDoesNotOverwriteSynchronousEnable(t *tes
 		t.Fatal("stale async event unregistered models from global registry!")
 	}
 
-	// Scheduler execution must still succeed and select the enabled auth
+	// 调度器执行仍必须成功并选中已启用的 auth
 	resp, errExec := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{})
 	if errExec != nil || string(resp.Payload) != authID {
 		t.Fatalf("expected scheduler to select active auth, got resp=%q err=%v", string(resp.Payload), errExec)
@@ -1202,7 +1202,7 @@ func TestRuntimeAuthSync_StaleWatcherUnversionedEventDoesNotOverwriteSynchronous
 
 	hook := service.runtimeAuthSyncHook()
 
-	// Initial sync
+	// 初始同步
 	if err := hook(context.Background(), registeredAuth); err != nil {
 		t.Fatalf("initial hook sync failed: %v", err)
 	}
@@ -1211,9 +1211,9 @@ func TestRuntimeAuthSync_StaleWatcherUnversionedEventDoesNotOverwriteSynchronous
 		t.Fatal("expected models after initial sync")
 	}
 
-	// Step 1: Simulate the watcher generating an unversioned Auth snapshot during a disable
-	// event on disk (as synthesizer.SynthesizeAuthFile produces: RegistrationEpoch=0, Generation=0).
-	// Timestamp is recorded at observation time T1.
+	// 步骤 1：模拟 watcher 在磁盘上的禁用事件期间生成未带版本号的 Auth 快照
+	// （正如 synthesizer.SynthesizeAuthFile 所产生的：RegistrationEpoch=0、Generation=0）。
+	// 时间戳在观测时刻 T1 记录。
 	unversionedDisableTime := time.Now().Add(-50 * time.Millisecond)
 	unversionedDisableAuth := &coreauth.Auth{
 		ID:                authID,
@@ -1222,8 +1222,8 @@ func TestRuntimeAuthSync_StaleWatcherUnversionedEventDoesNotOverwriteSynchronous
 		Status:            coreauth.StatusDisabled,
 		CreatedAt:         unversionedDisableTime,
 		UpdatedAt:         unversionedDisableTime,
-		RegistrationEpoch: 0, // Unversioned from file watcher synthesizer
-		Generation:        0, // Unversioned from file watcher synthesizer
+		RegistrationEpoch: 0, // 来自文件 watcher synthesizer 的未带版本号值
+		Generation:        0, // 来自文件 watcher synthesizer 的未带版本号值
 		Attributes: map[string]string{
 			"auth_kind": "apikey",
 		},
@@ -1235,8 +1235,8 @@ func TestRuntimeAuthSync_StaleWatcherUnversionedEventDoesNotOverwriteSynchronous
 	}
 	delayedWatcherUpdate.SetRevision(2)
 
-	// Step 2: In the meantime, the credential was synchronously re-enabled via management API
-	// at T2 > T1, updating coreManager with RegistrationEpoch >= 1, Generation >= 2, UpdatedAt = T2.
+	// 步骤 2：与此同时，凭据已通过管理 API 在 T2 > T1 时被同步重新启用，
+	// 用 RegistrationEpoch >= 1、Generation >= 2、UpdatedAt = T2 更新了 coreManager。
 	enabledAuth := registeredAuth.Clone()
 	enabledAuth.Disabled = false
 	enabledAuth.Status = coreauth.StatusActive
@@ -1247,7 +1247,7 @@ func TestRuntimeAuthSync_StaleWatcherUnversionedEventDoesNotOverwriteSynchronous
 		t.Fatalf("update enable failed: %v", errEnable)
 	}
 
-	// Synchronous enable hook runs and restores models in GlobalModelRegistry
+	// 同步的启用 hook 运行，并在 GlobalModelRegistry 中恢复模型
 	if err := hook(context.Background(), updatedEnabled); err != nil {
 		t.Fatalf("hook enable failed: %v", err)
 	}
@@ -1257,11 +1257,11 @@ func TestRuntimeAuthSync_StaleWatcherUnversionedEventDoesNotOverwriteSynchronous
 		t.Fatal("expected models restored immediately upon synchronous enable")
 	}
 
-	// Step 3: Now the delayed unversioned watcher event from Step 1 arrives via the queue consumer
+	// 步骤 3：现在来自步骤 1 的延迟未带版本号 watcher 事件经由队列消费者到达
 	service.handleAuthUpdate(context.Background(), delayedWatcherUpdate)
 	manager.RegisterExecutor(&syncTestExecutor{})
 
-	// Scheduler execution must still succeed and select the enabled auth
+	// 调度器执行仍必须成功并选中已启用的 auth
 	resp, errExec := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{})
 	if errExec != nil || string(resp.Payload) != authID {
 		t.Fatalf("expected scheduler to select active auth, got resp=%q err=%v", string(resp.Payload), errExec)
@@ -1299,7 +1299,7 @@ func TestRuntimeAuthSync_FileSnapshotEnqueuedThenRequestExecutionThenConsume(t *
 
 	hook := service.runtimeAuthSyncHook()
 
-	// Initial sync (Revision 1)
+	// 初始同步（修订号 1）
 	if err := hook(context.Background(), registeredAuth); err != nil {
 		t.Fatalf("initial hook sync failed: %v", err)
 	}
@@ -1308,14 +1308,14 @@ func TestRuntimeAuthSync_FileSnapshotEnqueuedThenRequestExecutionThenConsume(t *
 		t.Fatal("expected models after initial sync")
 	}
 
-	// Step 1: A file change occurs on disk (e.g. user disables credential in auth file).
-	// The watcher generates an AuthUpdate with revision 2 and enqueues it.
+	// 步骤 1：磁盘上发生了文件变更（例如用户在 auth 文件中禁用了凭据）。
+	// watcher 生成修订号为 2 的 AuthUpdate 并将其入队。
 	fileSnapshotAuth := registeredAuth.Clone()
 	fileSnapshotAuth.Disabled = true
 	fileSnapshotAuth.Status = coreauth.StatusDisabled
 	fileSnapshotAuth.UpdatedAt = time.Now()
-	// File synthesizer snapshots are unversioned; keep this fixture aligned so an
-	// intermediate MarkResult generation bump cannot drop a newer watcher revision.
+	// 文件 synthesizer 的快照不带版本号；保持该测试夹具一致，
+	// 以免中间一次 MarkResult 的 generation 递增丢弃更新的 watcher 修订号。
 	fileSnapshotAuth.RegistrationEpoch = 0
 	fileSnapshotAuth.Generation = 0
 
@@ -1326,8 +1326,8 @@ func TestRuntimeAuthSync_FileSnapshotEnqueuedThenRequestExecutionThenConsume(t *
 	}
 	fileUpdate.SetRevision(2)
 
-	// Step 2: Before the queue consumer can process fileUpdate, an API request completes.
-	// MarkResult updates the auth in coreManager: auth.Generation++ and auth.UpdatedAt = now.
+	// 步骤 2：在队列消费者能够处理 fileUpdate 之前，一个 API 请求完成了。
+	// MarkResult 更新 coreManager 中的 auth：auth.Generation++ 且 auth.UpdatedAt = now。
 	manager.MarkResult(context.Background(), coreauth.Result{
 		AuthID:   authID,
 		Provider: "nvidia",
@@ -1335,13 +1335,13 @@ func TestRuntimeAuthSync_FileSnapshotEnqueuedThenRequestExecutionThenConsume(t *
 		Success:  true,
 	})
 
-	// Step 3: Now the queue consumer processes the fileUpdate (revision 2).
-	// Because revision 2 > revision 1, the file update MUST NOT be discarded due to
-	// the intermediate request's UpdatedAt timestamp!
+	// 步骤 3：现在队列消费者处理 fileUpdate（修订号 2）。
+	// 因为修订号 2 > 修订号 1，该文件更新绝不能因为
+	// 中间那次请求的 UpdatedAt 时间戳而被丢弃！
 	service.handleAuthUpdate(context.Background(), fileUpdate)
 	manager.RegisterExecutor(&syncTestExecutor{})
 
-	// Step 4: Verify the file update successfully took effect!
+	// 步骤 4：验证该文件更新已成功生效！
 	currentAuth, ok := manager.GetByID(authID)
 	if !ok || currentAuth == nil {
 		t.Fatal("expected auth to exist in manager")
@@ -1386,23 +1386,23 @@ func TestRuntimeAuthSyncHook_ContextCancellationDoesNotAbortSync(t *testing.T) {
 
 	hook := service.runtimeAuthSyncHook()
 
-	// Create a context that is ALREADY canceled (e.g. client aborted request right after save)
+	// 创建一个已经取消的上下文（例如客户端在保存后立即中止了请求）
 	canceledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	// Calling hook with canceled context must NOT abort registration
+	// 以已取消的上下文调用 hook 绝不能中止注册
 	if err := hook(canceledCtx, registeredAuth); err != nil {
 		t.Fatalf("hook failed with canceled context: %v", err)
 	}
 	manager.RegisterExecutor(&syncTestExecutor{})
 
-	// Verify models were registered successfully despite canceled incoming context
+	// 验证尽管传入的上下文已取消，模型仍被成功注册
 	models := reg.GetModelsForClient(authID)
 	if len(models) == 0 {
 		t.Fatal("expected models to be registered even when incoming context is canceled")
 	}
 
-	// Verify scheduler can execute
+	// 验证调度器可以执行
 	resp, errExec := manager.Execute(context.Background(), []string{"nvidia"}, cliproxyexecutor.Request{Model: "nemotron-3-ultra"}, cliproxyexecutor.Options{})
 	if errExec != nil || string(resp.Payload) != authID {
 		t.Fatalf("expected scheduler execution to succeed, got resp=%q err=%v", string(resp.Payload), errExec)

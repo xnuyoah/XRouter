@@ -28,7 +28,7 @@ const (
 	objectStoreAuthPrefix = "auths"
 )
 
-// ObjectStoreConfig captures configuration for the object storage-backed token store.
+// ObjectStoreConfig 保存对象存储支持的令牌存储所需的配置。
 type ObjectStoreConfig struct {
 	Endpoint  string
 	Bucket    string
@@ -41,8 +41,8 @@ type ObjectStoreConfig struct {
 	PathStyle bool
 }
 
-// ObjectTokenStore persists configuration and authentication metadata using an S3-compatible object storage backend.
-// Files are mirrored to a local workspace so existing file-based flows continue to operate.
+// ObjectTokenStore 使用兼容 S3 的对象存储后端持久化配置和认证元数据。
+// 文件会镜像到本地工作区，以便现有的基于文件的流程继续运作。
 type ObjectTokenStore struct {
 	client      *minio.Client
 	cfg         ObjectStoreConfig
@@ -53,7 +53,7 @@ type ObjectTokenStore struct {
 	putObjectFn func(ctx context.Context, key string, data []byte, contentType string) error
 }
 
-// NewObjectTokenStore initializes an object storage backed token store.
+// NewObjectTokenStore 初始化由对象存储支持的令牌存储。
 func NewObjectTokenStore(cfg ObjectStoreConfig) (*ObjectTokenStore, error) {
 	cfg.Endpoint = strings.TrimSpace(cfg.Endpoint)
 	cfg.Bucket = strings.TrimSpace(cfg.Bucket)
@@ -120,11 +120,11 @@ func NewObjectTokenStore(cfg ObjectStoreConfig) (*ObjectTokenStore, error) {
 	}, nil
 }
 
-// SetBaseDir implements the optional interface used by authenticators; it is a no-op because
-// the object store controls its own workspace.
+// SetBaseDir 实现认证器使用的可选接口；由于对象存储
+// 自行控制其工作区，因此它是空操作。
 func (s *ObjectTokenStore) SetBaseDir(string) {}
 
-// ConfigPath returns the managed configuration file path inside the spool directory.
+// ConfigPath 返回 spool 目录内受管理的配置文件路径。
 func (s *ObjectTokenStore) ConfigPath() string {
 	if s == nil {
 		return ""
@@ -132,7 +132,7 @@ func (s *ObjectTokenStore) ConfigPath() string {
 	return s.configPath
 }
 
-// AuthDir returns the local directory containing mirrored auth files.
+// AuthDir 返回包含镜像 auth 文件的本地目录。
 func (s *ObjectTokenStore) AuthDir() string {
 	if s == nil {
 		return ""
@@ -140,7 +140,7 @@ func (s *ObjectTokenStore) AuthDir() string {
 	return s.authDir
 }
 
-// Bootstrap ensures the target bucket exists and synchronizes data from the object storage backend.
+// Bootstrap 确保目标存储桶存在，并从对象存储后端同步数据。
 func (s *ObjectTokenStore) Bootstrap(ctx context.Context, exampleConfigPath string) error {
 	if s == nil {
 		return fmt.Errorf("object store: not initialized")
@@ -157,7 +157,7 @@ func (s *ObjectTokenStore) Bootstrap(ctx context.Context, exampleConfigPath stri
 	return nil
 }
 
-// Save persists authentication metadata to disk and uploads it to the object storage backend.
+// Save 将认证元数据持久化到磁盘并上传到对象存储后端。
 func (s *ObjectTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (string, error) {
 	if auth == nil {
 		return "", fmt.Errorf("object store: auth is nil")
@@ -175,9 +175,9 @@ func (s *ObjectTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (s
 		return "", fmt.Errorf("object store: missing file path attribute for %s", auth.ID)
 	}
 
-	// Runtime updates must not recreate a disabled credential whose source file
-	// was deliberately removed. Login and migration callers explicitly mark the
-	// save when creating a missing disabled credential is intentional.
+	// 运行时更新不得重建源文件已被有意删除的禁用凭据。
+	// 登录和迁移调用方在有意创建缺失的禁用凭据时
+	// 会显式标记该保存操作。
 	if auth.Disabled && !cliproxyauth.HasAuthCreationIntent(ctx) {
 		if _, statErr := os.Stat(path); errors.Is(statErr, fs.ErrNotExist) {
 			return "", nil
@@ -246,7 +246,7 @@ func (s *ObjectTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (s
 	return path, nil
 }
 
-// List enumerates auth JSON files from the mirrored workspace.
+// List 枚举镜像工作区中的 auth JSON 文件。
 func (s *ObjectTokenStore) List(_ context.Context) ([]*cliproxyauth.Auth, error) {
 	dir := strings.TrimSpace(s.AuthDir())
 	if dir == "" {
@@ -279,7 +279,7 @@ func (s *ObjectTokenStore) List(_ context.Context) ([]*cliproxyauth.Auth, error)
 	return entries, nil
 }
 
-// Delete removes an auth file locally and remotely.
+// Delete 在本地和远端删除一个 auth 文件。
 func (s *ObjectTokenStore) Delete(ctx context.Context, id string) error {
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -302,7 +302,7 @@ func (s *ObjectTokenStore) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// PersistAuthFiles uploads the provided auth files to the object storage backend.
+// PersistAuthFiles 将给定的 auth 文件上传到对象存储后端。
 func (s *ObjectTokenStore) PersistAuthFiles(ctx context.Context, _ string, paths ...string) error {
 	if len(paths) == 0 {
 		return nil
@@ -327,7 +327,7 @@ func (s *ObjectTokenStore) PersistAuthFiles(ctx context.Context, _ string, paths
 	return nil
 }
 
-// PersistConfig uploads the local configuration file to the object storage backend.
+// PersistConfig 将本地配置文件上传到对象存储后端。
 func (s *ObjectTokenStore) PersistConfig(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -391,9 +391,9 @@ func (s *ObjectTokenStore) syncConfigFromBucket(ctx context.Context, example str
 				}
 			}
 		}
-		// Seed the bucket with the file the startup load leaves behind, so a plaintext
-		// management secret never reaches it. Fail instead of skipping: the startup load
-		// could turn a refused file into one that a later start would upload.
+		// 用启动加载留下的文件为存储桶播种，这样明文
+		// 管理密钥永远不会进入其中。失败而非跳过：启动加载
+		// 可能把一个被拒绝的文件变成后续启动会上传的文件。
 		if errPrepare := config.PrepareConfigFileForUpload(s.configPath); errPrepare != nil {
 			return fmt.Errorf("object store: prepare local config for seeding: %w", errPrepare)
 		}
@@ -413,10 +413,10 @@ func (s *ObjectTokenStore) syncConfigFromBucket(ctx context.Context, example str
 }
 
 func (s *ObjectTokenStore) syncAuthFromBucket(ctx context.Context) error {
-	// NOTE: We intentionally do NOT use os.RemoveAll here.
-	// Wiping the directory triggers file watcher delete events, which then
-	// propagate deletions to the remote object store (race condition).
-	// Instead, we just ensure the directory exists and overwrite files incrementally.
+	// 注意：我们有意不在这里使用 os.RemoveAll。
+	// 清空目录会触发文件监听器的删除事件，随后这些事件
+	// 会把删除传播到远端对象存储（竞态条件）。
+	// 取而代之，我们只确保目录存在并增量覆盖文件。
 	if err := os.MkdirAll(s.authDir, 0o700); err != nil {
 		return fmt.Errorf("object store: create auth directory: %w", err)
 	}
@@ -569,17 +569,17 @@ func (s *ObjectTokenStore) resolveDeletePath(id string) (string, error) {
 	if id == "" {
 		return "", fmt.Errorf("object store: id is empty")
 	}
-	// Absolute paths are honored as-is; callers must ensure they point inside the mirror.
+	// 绝对路径按原样使用；调用方必须确保它们指向镜像内部。
 	if filepath.IsAbs(id) {
 		return id, nil
 	}
-	// Treat any non-absolute id (including nested like "team/foo") as relative to the mirror authDir.
-	// Normalize separators and guard against path traversal.
+	// 任何非绝对路径的 id（包括形如 "team/foo" 的嵌套 id）都视为相对于镜像 authDir。
+	// 规范化分隔符并防御路径穿越。
 	clean := filepath.Clean(filepath.FromSlash(id))
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
 		return "", fmt.Errorf("object store: invalid auth identifier %s", id)
 	}
-	// Ensure .json suffix.
+	// 确保 .json 后缀。
 	if !strings.HasSuffix(strings.ToLower(clean), ".json") {
 		clean += ".json"
 	}

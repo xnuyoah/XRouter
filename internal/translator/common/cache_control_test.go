@@ -64,7 +64,7 @@ func TestAttachToolMessageCacheControl_HoistsPartLevel(t *testing.T) {
 	if got := gjson.GetBytes(out, "content.0.cache_control.type").String(); got != "ephemeral" {
 		t.Fatalf("tool_result cache_control.type = %q, want ephemeral; out=%s", got, out)
 	}
-	// Part-level does not carry ttl, so ttl should be absent
+	// part 级别不携带 ttl，因此 ttl 应当缺失
 	if gjson.GetBytes(out, "content.0.cache_control.ttl").Exists() {
 		t.Fatalf("part-level should take precedence over message-level; out=%s", out)
 	}

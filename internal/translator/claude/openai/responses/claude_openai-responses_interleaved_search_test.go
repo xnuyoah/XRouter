@@ -9,12 +9,12 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// Regression for a production incident: a Claude turn that interleaved thinking
-// with server-side web searches used to lose the search blocks, leaving two
-// adjacent reasoning items. Replaying those produced two adjacent Claude
-// `thinking` blocks, which Anthropic rejects with
-// "`thinking` ... blocks in the latest assistant message cannot be modified",
-// killing the session mid-turn.
+// 针对一次生产事故的回归测试：某个将 thinking 与
+// 服务端网络搜索交错进行的 Claude 轮次会丢失搜索块，留下两个
+// 相邻的 reasoning 条目。重放这些条目会产生两个相邻的 Claude
+// `thinking` 块，Anthropic 会以下述错误拒绝：
+// "`thinking` ... blocks in the latest assistant message cannot be modified"，
+// 从而在轮次中途终止会话。
 func TestInterleavedThinkingAndSearchSurvivesRoundTrip(t *testing.T) {
 	signature := mustTestSignature(t)
 	thinking := func(index int, text string) [][]byte {

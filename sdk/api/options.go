@@ -1,7 +1,7 @@
-// Package api exposes server option helpers for embedding XRouter.
+// Package api 暴露用于嵌入 XRouter 的服务器选项辅助工具。
 //
-// It wraps internal server option types so external projects can configure the embedded
-// HTTP server without importing internal packages.
+// 它包装内部服务器选项类型，使外部项目无需导入 internal
+// 包即可配置嵌入式 HTTP 服务器。
 package api
 
 import (
@@ -14,33 +14,33 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/logging"
 )
 
-// ServerOption customises HTTP server construction.
+// ServerOption 用于定制 HTTP 服务器的构建。
 type ServerOption = internalapi.ServerOption
 
-// WithMiddleware appends additional Gin middleware during server construction.
+// WithMiddleware 在服务器构建期间追加额外的 Gin 中间件。
 func WithMiddleware(mw ...gin.HandlerFunc) ServerOption { return internalapi.WithMiddleware(mw...) }
 
-// WithEngineConfigurator allows callers to mutate the Gin engine prior to middleware setup.
+// WithEngineConfigurator 允许调用方在中间件设置之前修改 Gin engine。
 func WithEngineConfigurator(fn func(*gin.Engine)) ServerOption {
 	return internalapi.WithEngineConfigurator(fn)
 }
 
-// WithRouterConfigurator appends a callback after default routes are registered.
+// WithRouterConfigurator 在默认路由注册之后追加一个回调。
 func WithRouterConfigurator(fn func(*gin.Engine, *handlers.BaseAPIHandler, *config.Config)) ServerOption {
 	return internalapi.WithRouterConfigurator(fn)
 }
 
-// WithLocalManagementPassword stores a runtime-only management password accepted for localhost requests.
+// WithLocalManagementPassword 存储仅运行时的管理密码，用于接受来自 localhost 的请求。
 func WithLocalManagementPassword(password string) ServerOption {
 	return internalapi.WithLocalManagementPassword(password)
 }
 
-// WithKeepAliveEndpoint enables a keep-alive endpoint with the provided timeout and callback.
+// WithKeepAliveEndpoint 用给定的超时和回调启用 keep-alive 端点。
 func WithKeepAliveEndpoint(timeout time.Duration, onTimeout func()) ServerOption {
 	return internalapi.WithKeepAliveEndpoint(timeout, onTimeout)
 }
 
-// WithRequestLoggerFactory customises request logger creation.
+// WithRequestLoggerFactory 定制请求日志记录器的创建。
 func WithRequestLoggerFactory(factory func(*config.Config, string) logging.RequestLogger) ServerOption {
 	return internalapi.WithRequestLoggerFactory(factory)
 }

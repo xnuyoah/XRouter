@@ -1,12 +1,12 @@
-// Package misc provides miscellaneous utility functions and embedded data for XRouter.
-// This package contains general-purpose helpers and embedded resources that do not fit into
-// more specific domain packages. It includes a comprehensive MIME type mapping for file operations.
+// Package misc 为 XRouter 提供杂项工具函数和内嵌数据。
+// 该包包含不属于更具体领域包的通用辅助函数和内嵌资源。
+// 它包含用于文件操作的全面 MIME 类型映射。
 package misc
 
-// MimeTypes is a comprehensive map of file extensions to their corresponding MIME types.
-// This map is used to determine the Content-Type header for file uploads and other
-// operations where the MIME type needs to be identified from a file extension.
-// The list is extensive to cover a wide range of common and uncommon file formats.
+// MimeTypes 是文件扩展名到对应 MIME 类型的全面映射。
+// 该映射用于确定文件上传及其他需要根据文件扩展名
+// 识别 MIME 类型的操作的 Content-Type 头。
+// 该列表覆盖范围广泛，涵盖大量常见和不常见的文件格式。
 var MimeTypes = map[string]string{
 	"ez":          "application/andrew-inset",
 	"aw":          "application/applixware",

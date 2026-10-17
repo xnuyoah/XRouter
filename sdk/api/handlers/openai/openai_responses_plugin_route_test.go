@@ -123,7 +123,7 @@ type responsesUsageCapture struct {
 }
 
 func (p *responsesUsageCapture) HandleUsage(_ context.Context, record usage.Record) {
-	// A previous streaming request may publish after this test has started.
+	// 之前的流式请求可能会在本测试开始之后才发布。
 	if record.Provider != "commandcode" || record.Model != p.model {
 		return
 	}

@@ -19,12 +19,12 @@ func TestIsCloudflareChallengeErrorMessage_ExcludesOriginErrors(t *testing.T) {
 		t.Fatalf("expected minimal origin error not to be classified as cloudflare challenge")
 	}
 
-	// Legitimate challenge messages must still be recognized.
+	// 合法的挑战消息仍必须被识别。
 	challenges := []string{
 		"cf-mitigated: challenge",
 		`<html><body><script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1"></script></body></html>`,
 		"cloudflare challenge required",
-		// Isolated "Just a moment..." challenge page test without "cloudflare challenge" phrase
+		// 不含 "cloudflare challenge" 字样的孤立 "Just a moment..." 挑战页测试
 		`<html><head><title>Just a moment...</title></head><body>Checking your browser... cloudflare</body></html>`,
 	}
 	for _, ch := range challenges {
@@ -65,7 +65,7 @@ func TestManager_MarkResult_Cloudflare520OriginError_NotTreatedAsChallenge(t *te
 		t.Fatalf("expected model state to be present")
 	}
 
-	// Quota must not be marked as exceeded or challenged.
+	// 额度不得被标记为超限或受到挑战。
 	if state.Quota.Exceeded {
 		t.Fatalf("expected Quota.Exceeded to be false for 520 origin error")
 	}
@@ -79,12 +79,12 @@ func TestManager_MarkResult_Cloudflare520OriginError_NotTreatedAsChallenge(t *te
 		t.Fatalf("expected StatusMessage to preserve upstream error, got %q", state.StatusMessage)
 	}
 
-	// LastError must retain the 520 error.
+	// LastError 必须保留 520 错误。
 	if state.LastError == nil || state.LastError.HTTPStatus != 520 {
 		t.Fatalf("expected LastError to retain HTTP 520, got %#v", state.LastError)
 	}
 
-	// By default, transient errors apply a 1-minute retry window.
+	// 默认情况下，瞬时错误会应用 1 分钟的重试窗口。
 	if !state.Unavailable {
 		t.Fatalf("expected model to be marked unavailable during transient cooldown")
 	}
@@ -346,7 +346,7 @@ func TestManager_MarkResult_AuthLevelCloudflare520_DisabledTransientCooldown_Ign
 }
 
 func TestManager_MarkResult_HTTP503_TransientCooldown_RespectsDisabledAndHint(t *testing.T) {
-	// 1. When disabled (-1), 503 with RetryAfter hint must NOT apply cooldown.
+	// 1. 禁用时（-1），带 RetryAfter 提示的 503 绝不能应用冷却。
 	{
 		prevTransient := transientErrorCooldownSeconds.Load()
 		transientErrorCooldownSeconds.Store(-1)
@@ -389,7 +389,7 @@ func TestManager_MarkResult_HTTP503_TransientCooldown_RespectsDisabledAndHint(t 
 		}
 	}
 
-	// 2. When enabled (0 = default), 503 with RetryAfter hint must use hint.
+	// 2. 启用时（0 = 默认值），带 RetryAfter 提示的 503 必须使用该提示。
 	{
 		prevTransient := transientErrorCooldownSeconds.Load()
 		transientErrorCooldownSeconds.Store(0)
@@ -482,7 +482,7 @@ func TestManager_MarkResult_AuthLevelCloudflare520_SetsTransientError(t *testing
 }
 
 func TestIsCloudflareChallengeResultError_Excludes5xx(t *testing.T) {
-	// Status >= 500 origin errors must not be classified as challenges even if containing challenge strings.
+	// 状态 >= 500 的源站错误即使包含挑战字符串也不得被归类为挑战。
 	for _, status := range []int{500, 502, 503, 504, 520, 521, 522, 523, 524, 525, 526} {
 		err5xx := &Error{
 			HTTPStatus: status,
@@ -503,7 +503,7 @@ func TestIsCloudflareChallengeResultError_Excludes5xx(t *testing.T) {
 }
 
 func TestIsCloudflareChallengeError(t *testing.T) {
-	// 520 error wrapped in standard error interface must not be treated as challenge.
+	// 用标准 error 接口包装的 520 错误不得被视为挑战。
 	err520 := &Error{
 		HTTPStatus: 520,
 		Message:    "cf-error-details cf-error-520: Web server is returning an unknown error",
@@ -512,7 +512,7 @@ func TestIsCloudflareChallengeError(t *testing.T) {
 		t.Fatalf("expected 520 error not to be cloudflare challenge")
 	}
 
-	// 403 challenge error must be recognized.
+	// 403 挑战错误必须被识别。
 	err403 := &Error{
 		HTTPStatus: http.StatusForbidden,
 		Message:    "cf-mitigated: challenge",
@@ -521,13 +521,13 @@ func TestIsCloudflareChallengeError(t *testing.T) {
 		t.Fatalf("expected 403 challenge error to be recognized")
 	}
 
-	// Plain error without status but with challenge message must be recognized.
+	// 没有状态码但带挑战消息的普通错误必须被识别。
 	plainChallenge := errors.New("challenge-platform orchestrate script blocked")
 	if !isCloudflareChallengeError(plainChallenge) {
 		t.Fatalf("expected plain challenge error to be recognized")
 	}
 
-	// Plain origin error without challenge markers must not be recognized.
+	// 不含挑战标记的普通源站错误不得被识别。
 	plainOrigin := errors.New("Web server is returning an unknown error between Cloudflare and origin")
 	if isCloudflareChallengeError(plainOrigin) {
 		t.Fatalf("expected plain origin error not to be recognized as challenge")

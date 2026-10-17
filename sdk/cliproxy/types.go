@@ -1,6 +1,6 @@
-// Package cliproxy provides the core service implementation for XRouter.
-// It includes service lifecycle management, authentication handling, file watching,
-// and integration with various AI service providers through a unified interface.
+// Package cliproxy 提供 XRouter 的核心服务实现。
+// 它包括服务生命周期管理、认证处理、文件监听，
+// 以及通过统一接口与各种 AI 服务供应商的集成。
 package cliproxy
 
 import (
@@ -13,87 +13,87 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
 
-// TokenClientProvider loads clients backed by stored authentication tokens.
-// It provides an interface for loading authentication tokens from various sources
-// and creating clients for AI service providers.
+// TokenClientProvider 加载由已存储的认证令牌支持的客户端。
+// 它提供接口，用于从各种来源加载认证令牌
+// 并为 AI 服务供应商创建客户端。
 type TokenClientProvider interface {
-	// Load loads token-based clients from the configured source.
+	// Load 从已配置的来源加载基于令牌的客户端。
 	//
-	// Parameters:
-	//   - ctx: The context for the loading operation
-	//   - cfg: The application configuration
+	// 参数：
+	//   - ctx: 加载操作的上下文
+	//   - cfg: 应用配置
 	//
-	// Returns:
-	//   - *TokenClientResult: The result containing loaded clients
-	//   - error: An error if loading fails
+	// 返回：
+	//   - *TokenClientResult: 包含已加载客户端的结果
+	//   - error: 加载失败时的错误
 	Load(ctx context.Context, cfg *config.Config) (*TokenClientResult, error)
 }
 
-// TokenClientResult represents clients generated from persisted tokens.
-// It contains metadata about the loading operation and the number of successful authentications.
+// TokenClientResult 表示由持久化令牌生成的客户端。
+// 它包含有关加载操作的元数据以及成功认证的数量。
 type TokenClientResult struct {
-	// SuccessfulAuthed is the number of successfully authenticated clients.
+	// SuccessfulAuthed 是成功认证的客户端数量。
 	SuccessfulAuthed int
 }
 
-// APIKeyClientProvider loads clients backed directly by configured API keys.
-// It provides an interface for loading API key-based clients for various AI service providers.
+// APIKeyClientProvider 加载由已配置 API 密钥直接支持的客户端。
+// 它提供接口，用于为各种 AI 服务供应商加载基于 API 密钥的客户端。
 type APIKeyClientProvider interface {
-	// Load loads API key-based clients from the configuration.
+	// Load 从配置中加载基于 API 密钥的客户端。
 	//
-	// Parameters:
-	//   - ctx: The context for the loading operation
-	//   - cfg: The application configuration
+	// 参数：
+	//   - ctx: 加载操作的上下文
+	//   - cfg: 应用配置
 	//
-	// Returns:
-	//   - *APIKeyClientResult: The result containing loaded clients
-	//   - error: An error if loading fails
+	// 返回：
+	//   - *APIKeyClientResult: 包含已加载客户端的结果
+	//   - error: 加载失败时的错误
 	Load(ctx context.Context, cfg *config.Config) (*APIKeyClientResult, error)
 }
 
-// APIKeyClientResult is returned by APIKeyClientProvider.Load()
+// APIKeyClientResult 由 APIKeyClientProvider.Load() 返回
 type APIKeyClientResult struct {
-	// OpenAIKeyCount is the number of native OpenAI API keys loaded
+	// OpenAIKeyCount 是已加载的原生 OpenAI API 密钥数量
 	OpenAIKeyCount int
 
-	// DeepseekKeyCount is the number of native DeepSeek API keys loaded
+	// DeepseekKeyCount 是已加载的原生 DeepSeek API 密钥数量
 	DeepseekKeyCount int
 
-	// NvidiaKeyCount is the number of native NVIDIA API keys loaded
+	// NvidiaKeyCount 是已加载的原生 NVIDIA API 密钥数量
 	NvidiaKeyCount int
 
-	// AgnesKeyCount is the number of native Agnes API keys loaded
+	// AgnesKeyCount 是已加载的原生 Agnes API 密钥数量
 	AgnesKeyCount int
 
-	// OpenAICompatCount is the number of OpenAI compatibility API keys loaded
+	// OpenAICompatCount 是已加载的 OpenAI 兼容 API 密钥数量
 	OpenAICompatCount int
 }
 
-// WatcherFactory creates a watcher for configuration and token changes.
-// The reload callback receives the updated configuration when changes are detected.
+// WatcherFactory 创建用于配置和令牌变更的监听器。
+// 检测到变更时，reload 回调会接收到更新后的配置。
 //
-// Parameters:
-//   - configPath: The path to the configuration file to watch
-//   - authDir: The directory containing authentication tokens to watch
-//   - reload: The callback function to call when changes are detected
+// 参数：
+//   - configPath: 要监听的配置文件路径
+//   - authDir: 包含要监听的认证令牌的目录
+//   - reload: 检测到变更时要调用的回调函数
 //
-// Returns:
-//   - *WatcherWrapper: A watcher wrapper instance
-//   - error: An error if watcher creation fails
+// 返回：
+//   - *WatcherWrapper: 监听器包装实例
+//   - error: 创建监听器失败时的错误
 type WatcherFactory func(configPath, authDir string, reload func(*config.Config)) (*WatcherWrapper, error)
 
-// PluginAuthParser parses auth JSON owned by plugin providers.
+// PluginAuthParser 解析由插件供应商拥有的 auth JSON。
 type PluginAuthParser interface {
 	ParseAuth(context.Context, pluginapi.AuthParseRequest) (*coreauth.Auth, bool, error)
 }
 
-// PluginMultiAuthParser expands one auth JSON payload into multiple plugin auth records.
-// Returning handled=true with an empty slice means the plugin intentionally suppresses built-in parsing.
+// PluginMultiAuthParser 将一个 auth JSON 载荷展开为多条插件 auth 记录。
+// 返回 handled=true 且切片为空表示插件有意抑制内置解析。
 type PluginMultiAuthParser interface {
 	ParseAuths(context.Context, pluginapi.AuthParseRequest) ([]*coreauth.Auth, bool, error)
 }
 
-// WatcherWrapper exposes the subset of watcher methods required by the SDK.
+// WatcherWrapper 暴露 SDK 所需的 watcher 方法子集。
 type WatcherWrapper struct {
 	start func(ctx context.Context) error
 	stop  func() error
@@ -109,7 +109,7 @@ type WatcherWrapper struct {
 	reloadConfigIfChanged        func()
 }
 
-// Start proxies to the underlying watcher Start implementation.
+// Start 代理到下层 watcher 的 Start 实现。
 func (w *WatcherWrapper) Start(ctx context.Context) error {
 	if w == nil || w.start == nil {
 		return nil
@@ -117,7 +117,7 @@ func (w *WatcherWrapper) Start(ctx context.Context) error {
 	return w.start(ctx)
 }
 
-// Stop proxies to the underlying watcher Stop implementation.
+// Stop 代理到下层 watcher 的 Stop 实现。
 func (w *WatcherWrapper) Stop() error {
 	if w == nil || w.stop == nil {
 		return nil
@@ -125,7 +125,7 @@ func (w *WatcherWrapper) Stop() error {
 	return w.stop()
 }
 
-// SetConfig updates the watcher configuration cache.
+// SetConfig 更新监听器的配置缓存。
 func (w *WatcherWrapper) SetConfig(cfg *config.Config) {
 	if w == nil || w.setConfig == nil {
 		return
@@ -133,7 +133,7 @@ func (w *WatcherWrapper) SetConfig(cfg *config.Config) {
 	w.setConfig(cfg)
 }
 
-// ReloadConfigIfChanged asks the underlying watcher to reload config from disk.
+// ReloadConfigIfChanged 请求下层 watcher 从磁盘重新加载配置。
 func (w *WatcherWrapper) ReloadConfigIfChanged() bool {
 	if w == nil || w.reloadConfigIfChanged == nil {
 		return false
@@ -142,7 +142,7 @@ func (w *WatcherWrapper) ReloadConfigIfChanged() bool {
 	return true
 }
 
-// SetPluginAuthParser updates the plugin auth parser used by the watcher.
+// SetPluginAuthParser 更新监听器使用的插件 auth 解析器。
 func (w *WatcherWrapper) SetPluginAuthParser(parser PluginAuthParser) {
 	if w == nil || w.setPluginAuthParser == nil {
 		return
@@ -150,9 +150,9 @@ func (w *WatcherWrapper) SetPluginAuthParser(parser PluginAuthParser) {
 	w.setPluginAuthParser(parser)
 }
 
-// DispatchRuntimeAuthUpdate forwards runtime auth updates (e.g., websocket providers)
-// into the watcher-managed auth update queue when available.
-// Returns true if the update was enqueued successfully.
+// DispatchRuntimeAuthUpdate 将运行时 auth 更新（例如 WebSocket 供应商）
+// 转发到监听器管理的 auth 更新队列（如果可用）。
+// 如果更新成功入队则返回 true。
 func (w *WatcherWrapper) DispatchRuntimeAuthUpdate(update watcher.AuthUpdate) bool {
 	if w == nil || w.dispatchRuntimeUpdate == nil {
 		return false
@@ -160,7 +160,7 @@ func (w *WatcherWrapper) DispatchRuntimeAuthUpdate(update watcher.AuthUpdate) bo
 	return w.dispatchRuntimeUpdate(update)
 }
 
-// DispatchPersistedAuthUpdate forwards already-persisted file auth updates.
+// DispatchPersistedAuthUpdate 转发已持久化的文件 auth 更新。
 func (w *WatcherWrapper) DispatchPersistedAuthUpdate(update watcher.AuthUpdate) bool {
 	if w == nil {
 		return false
@@ -175,8 +175,8 @@ func (w *WatcherWrapper) DispatchPersistedAuthUpdate(update watcher.AuthUpdate) 
 	return false
 }
 
-// DispatchPersistedAuthUpdateWithRevision forwards already-persisted file auth updates
-// and returns whether it was enqueued along with its assigned watcher revision.
+// DispatchPersistedAuthUpdateWithRevision 转发已持久化的文件 auth 更新，
+// 并返回是否已入队及其分配的监听器修订号。
 func (w *WatcherWrapper) DispatchPersistedAuthUpdateWithRevision(update *watcher.AuthUpdate) (bool, uint64) {
 	if w == nil {
 		return false, 0
@@ -191,13 +191,13 @@ func (w *WatcherWrapper) DispatchPersistedAuthUpdateWithRevision(update *watcher
 	return false, 0
 }
 
-// SetClients updates the watcher file-backed clients registry.
-// SetClients and SetAPIKeyClients removed; watcher manages its own caches
+// SetClients 更新监听器中由文件支持的客户端注册表。
+// SetClients 和 SetAPIKeyClients 已移除；监听器自行管理其缓存
 
-// SnapshotClients returns the current combined clients snapshot from the underlying watcher.
-// SnapshotClients removed; use SnapshotAuths
+// SnapshotClients 返回下层 watcher 当前的组合客户端快照。
+// SnapshotClients 已移除；请使用 SnapshotAuths
 
-// SnapshotAuths returns the current auth entries derived from legacy clients.
+// SnapshotAuths 返回由旧版客户端派生的当前 auth 条目。
 func (w *WatcherWrapper) SnapshotAuths() []*coreauth.Auth {
 	if w == nil || w.snapshotAuths == nil {
 		return nil
@@ -205,7 +205,7 @@ func (w *WatcherWrapper) SnapshotAuths() []*coreauth.Auth {
 	return w.snapshotAuths()
 }
 
-// SnapshotAuthFile re-synthesizes a single file and preserves parsing errors.
+// SnapshotAuthFile 重新合成单个文件并保留解析错误。
 func (w *WatcherWrapper) SnapshotAuthFile(path string) ([]*coreauth.Auth, error) {
 	if w == nil || w.snapshotAuthFile == nil {
 		return nil, fmt.Errorf("file auth snapshot is unavailable")
@@ -213,7 +213,7 @@ func (w *WatcherWrapper) SnapshotAuthFile(path string) ([]*coreauth.Auth, error)
 	return w.snapshotAuthFile(path)
 }
 
-// SetAuthUpdateQueue registers the channel used to propagate auth updates.
+// SetAuthUpdateQueue 注册用于传播 auth 更新的通道。
 func (w *WatcherWrapper) SetAuthUpdateQueue(queue chan<- watcher.AuthUpdate) {
 	if w == nil || w.setUpdateQueue == nil {
 		return

@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// TestFileTokenStoreList_LoadsProxyURLAndPrefix verifies that cold-start file loading
-// populates ProxyURL and Prefix on the runtime Auth struct from metadata.
+// TestFileTokenStoreList_LoadsProxyURLAndPrefix 验证冷启动文件加载
+// 会从元数据中填充运行时 Auth 结构体上的 ProxyURL 和 Prefix。
 func TestFileTokenStoreList_LoadsProxyURLAndPrefix(t *testing.T) {
 	dir := t.TempDir()
 	store := NewFileTokenStore()
@@ -45,14 +45,14 @@ func TestFileTokenStoreList_LoadsProxyURLAndPrefix(t *testing.T) {
 	}
 }
 
-// TestFileTokenStoreList_DoesNotBlockColdStartWithUnproxiedNetworkRequest verifies that
-// loading auth files on cold start does not trigger unproxied network requests (e.g. FetchAntigravityProjectID).
+// TestFileTokenStoreList_DoesNotBlockColdStartWithUnproxiedNetworkRequest 验证
+// 冷启动时加载认证文件不会触发未经代理的网络请求（例如 FetchAntigravityProjectID）。
 func TestFileTokenStoreList_DoesNotBlockColdStartWithUnproxiedNetworkRequest(t *testing.T) {
 	var httpDefaultCalled atomic.Bool
 	origTransport := http.DefaultTransport
 	defer func() { http.DefaultTransport = origTransport }()
 
-	// Intercept any request via http.DefaultClient/http.DefaultTransport
+	// 通过 http.DefaultClient/http.DefaultTransport 拦截任何请求
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		httpDefaultCalled.Store(true)
 		w.WriteHeader(http.StatusOK)
@@ -63,7 +63,7 @@ func TestFileTokenStoreList_DoesNotBlockColdStartWithUnproxiedNetworkRequest(t *
 	store := NewFileTokenStore()
 	store.SetBaseDir(dir)
 
-	// Auth file without project_id, but with proxy_url
+	// 不含 project_id 但带 proxy_url 的认证文件
 	content := []byte(`{
 		"type": "antigravity",
 		"proxy_url": "http://127.0.0.1:9999",
@@ -87,7 +87,7 @@ func TestFileTokenStoreList_DoesNotBlockColdStartWithUnproxiedNetworkRequest(t *
 	if auths[0].ProxyURL != "http://127.0.0.1:9999" {
 		t.Fatalf("ProxyURL = %q, want http://127.0.0.1:9999", auths[0].ProxyURL)
 	}
-	// Cold start file load must be fast and not perform outbound network I/O
+	// 冷启动文件加载必须快速，且不进行出站网络 I/O
 	if elapsed > 2*time.Second {
 		t.Fatalf("List took %v, expected < 2s (should not perform blocking network calls during file load)", elapsed)
 	}

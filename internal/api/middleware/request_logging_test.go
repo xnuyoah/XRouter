@@ -483,7 +483,7 @@ func TestRequestLoggingMiddleware_ClientCancellationExclusion(t *testing.T) {
 		router := gin.New()
 		router.Use(RequestLoggingMiddleware(logger))
 		router.POST("/v1/responses", func(c *gin.Context) {
-			// Simulate client closing connection mid-flight
+			// 模拟客户端在传输过程中关闭连接
 			ctx, cancel := context.WithCancel(c.Request.Context())
 			cancel()
 			c.Request = c.Request.WithContext(ctx)
@@ -582,7 +582,7 @@ func TestCaptureRequestInfo_HeadersDeepCopy(t *testing.T) {
 		t.Fatalf("captureRequestInfo failed: %v", err)
 	}
 
-	// Mutate the original request header slice in place
+	// 就地修改原始请求头切片
 	c.Request.Header["X-Audit"][0] = "mutated-value"
 
 	if got := info.Headers["X-Audit"][0]; got != "original-value" {
@@ -647,7 +647,7 @@ func TestRequestLoggingMiddleware_PreservesFullUUIDForLoggerAndTruncatesFilename
 		t.Fatalf("status = %d, want 200", resp.Code)
 	}
 
-	// 1. Verify logger received full UUIDv7
+	// 1. 验证日志器收到完整的 UUIDv7
 	if spy.lastLogRequestID == "" {
 		t.Fatalf("expected non-empty request ID passed to logger")
 	}
@@ -659,7 +659,7 @@ func TestRequestLoggingMiddleware_PreservesFullUUIDForLoggerAndTruncatesFilename
 		t.Fatalf("request ID version = %d, want 7", parsed.Version())
 	}
 
-	// 2. Verify on-disk log filename uses the trailing 8 chars, not full UUID
+	// 2. 验证磁盘上的日志文件名使用末尾 8 个字符而非完整 UUID
 	entries, errRead := os.ReadDir(logsDir)
 	if errRead != nil {
 		t.Fatalf("ReadDir logsDir failed: %v", errRead)

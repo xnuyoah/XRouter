@@ -7,9 +7,9 @@ import (
 	"testing"
 )
 
-// TestConfiguredTLSHandshakeTimeoutErrorIdentity verifies that retry
-// classification can rely on the concrete configured-timeout type while
-// callers retain the original deadline through errors.Is.
+// TestConfiguredTLSHandshakeTimeoutErrorIdentity 验证重试
+// 分类可以依赖具体的配置超时类型，同时调用方
+// 仍能通过 errors.Is 保留原始截止时间（deadline）。
 func TestConfiguredTLSHandshakeTimeoutErrorIdentity(t *testing.T) {
 	err := NewConfiguredTLSHandshakeTimeoutError(context.DeadlineExceeded)
 	if err == nil {
@@ -30,10 +30,10 @@ func TestConfiguredTLSHandshakeTimeoutErrorIdentity(t *testing.T) {
 	}
 }
 
-// contextIdentityError models an error whose own Is method reports a
-// caller context identity while Unwrap exposes an unrelated diagnostic
-// child. Classification must inspect that node's own identity, not only
-// terminal sentinels reached through Unwrap.
+// contextIdentityError 建模这样一种错误：它自身的 Is 方法报告
+// 调用方 context 标识，而 Unwrap 暴露一个不相关的诊断
+// 子错误。分类必须检查该节点自身的标识，而不仅仅
+// 是经由 Unwrap 到达的终止性哨兵错误。
 type contextIdentityError struct {
 	target error
 	child  error
@@ -75,9 +75,9 @@ func (e *multiContextIdentityError) Unwrap() []error {
 	return e.children
 }
 
-// TestIsConfiguredTLSHandshakeTimeoutErrorCallerContextWins covers mixed
-// error trees. Matching text never substitutes for the typed identity,
-// and caller-owned context failures outside a configured subtree win.
+// TestIsConfiguredTLSHandshakeTimeoutErrorCallerContextWins 覆盖混合的
+// 错误树。匹配文本绝不能替代类型化标识，
+// 且配置子树之外由调用方拥有的 context 失败优先。
 func TestIsConfiguredTLSHandshakeTimeoutErrorCallerContextWins(t *testing.T) {
 	configured := NewConfiguredTLSHandshakeTimeoutError(context.DeadlineExceeded)
 	tests := []struct {

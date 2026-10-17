@@ -1,6 +1,6 @@
 package translator
 
-// Common format identifiers exposed for SDK users.
+// 向 SDK 使用者暴露的通用格式标识符。
 const (
 	FormatOpenAI         Format = "openai"
 	FormatOpenAIResponse Format = "openai-response"

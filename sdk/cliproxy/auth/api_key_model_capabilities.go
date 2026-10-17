@@ -52,8 +52,8 @@ func (m *Manager) loadAPIKeyModelRouting() *apiKeyModelRoutingSnapshot {
 	return snapshot
 }
 
-// ResolvedAPIKeyModelInfo returns the exact configured model definition bound to
-// this API-key execution attempt.
+// ResolvedAPIKeyModelInfo 返回绑定到本次 API 密钥执行尝试的
+// 精确配置模型定义。
 func ResolvedAPIKeyModelInfo(req cliproxyexecutor.Request) (*registry.ModelInfo, bool) {
 	modelInfo, ok := req.Metadata[resolvedAPIKeyModelInfoMetadataKey].(*registry.ModelInfo)
 	if !ok || modelInfo == nil {
@@ -62,7 +62,7 @@ func ResolvedAPIKeyModelInfo(req cliproxyexecutor.Request) (*registry.ModelInfo,
 	return modelInfo, true
 }
 
-// ResolvedModelInfo returns the authoritative model capabilities bound to this execution attempt.
+// ResolvedModelInfo 返回绑定到本次执行尝试的权威模型能力。
 func ResolvedModelInfo(req cliproxyexecutor.Request) (*registry.ModelInfo, bool) {
 	if modelInfo, ok := req.Metadata[resolvedHomeModelInfoMetadataKey].(*registry.ModelInfo); ok && modelInfo != nil {
 		return modelInfo, true
@@ -70,15 +70,15 @@ func ResolvedModelInfo(req cliproxyexecutor.Request) (*registry.ModelInfo, bool)
 	return ResolvedAPIKeyModelInfo(req)
 }
 
-// ResolvedHomeModelOptions returns the credential model options selected for this attempt.
-// A present but unmatched or empty models list yields zero-value options.
+// ResolvedHomeModelOptions 返回为本次尝试选择的凭据模型选项。
+// 存在但未匹配或为空的 models 列表会得到零值选项。
 func ResolvedHomeModelOptions(req cliproxyexecutor.Request) (internalconfig.OpenAICompatibilityModel, bool) {
 	options, ok := req.Metadata[resolvedHomeModelOptionsMetadataKey].(internalconfig.OpenAICompatibilityModel)
 	return options, ok
 }
 
-// homeAPIKeyModelOptions reads the selected credential's model configuration.
-// A present models list is authoritative, including empty lists and false defaults.
+// homeAPIKeyModelOptions 读取所选凭据的模型配置。
+// 存在 models 列表时以其为准，包括空列表和 false 默认值。
 func homeAPIKeyModelOptions(auth *Auth, model, routeModel string) (internalconfig.OpenAICompatibilityModel, bool) {
 	var empty internalconfig.OpenAICompatibilityModel
 	if auth == nil {
@@ -122,7 +122,7 @@ func homeAPIKeyModelOptions(auth *Auth, model, routeModel string) (internalconfi
 			}
 		}
 	}
-	// Prefer upstream names over aliases and exact suffixes over base fallbacks.
+	// 优先使用上游名称而非别名，优先使用精确后缀而非基础回退。
 	for _, useAlias := range []bool{false, true} {
 		for _, candidate := range []string{requested, baseModel} {
 			if candidate == "" {

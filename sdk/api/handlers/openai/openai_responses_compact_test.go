@@ -258,13 +258,13 @@ func TestOpenAIResponsesCompactTransientFailureDoesNotCooldownAuthAndPreservesEr
 	router.POST("/v1/responses/compact", h.Compact)
 	router.POST("/v1/responses", h.Responses)
 
-	// Send compact request which fails upstream on all auths with 500
+	// 发送在所有认证上均以 500 上游失败的 compact 请求
 	req := httptest.NewRequest(http.MethodPost, "/v1/responses/compact", strings.NewReader(`{"model":"test-model","input":"hello"}`))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
-	// 1. Should return upstream status 500 and upstream error message (not generic 503 Service temporarily unavailable)
+	// 1. 应返回上游状态码 500 和上游错误消息（而不是通用的 503 Service temporarily unavailable）
 	if resp.Code != http.StatusInternalServerError {
 		t.Fatalf("compact status = %d, want %d; body = %s", resp.Code, http.StatusInternalServerError, resp.Body.String())
 	}
@@ -272,7 +272,7 @@ func TestOpenAIResponsesCompactTransientFailureDoesNotCooldownAuthAndPreservesEr
 		t.Fatalf("compact body = %s, want containing 'compact upstream temporary error'", resp.Body.String())
 	}
 
-	// 2. Auth model states should NOT be marked unavailable for normal traffic
+	// 2. 对于普通流量，认证的模型状态不应被标记为不可用
 	for _, authID := range []string{"auth1", "auth2"} {
 		a, ok := manager.GetByID(authID)
 		if !ok {
@@ -288,7 +288,7 @@ func TestOpenAIResponsesCompactTransientFailureDoesNotCooldownAuthAndPreservesEr
 		}
 	}
 
-	// 3. Normal /v1/responses request should succeed immediately without auth cooldown errors
+	// 3. 普通 /v1/responses 请求应立即成功，且没有认证冷却错误
 	reqNormal := httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(`{"model":"test-model","input":"hello"}`))
 	reqNormal.Header.Set("Content-Type", "application/json")
 	respNormal := httptest.NewRecorder()
@@ -331,13 +331,13 @@ func TestOpenAIResponsesCompactRequestFaultStopsFallbackAndPreservesError(t *tes
 	router.POST("/v1/responses/compact", h.Compact)
 	router.POST("/v1/responses", h.Responses)
 
-	// Send compact request which fails upstream with 404 (endpoint not supported / invalid)
+	// 发送以上游 404（端点不受支持 / 无效）失败的 compact 请求
 	req := httptest.NewRequest(http.MethodPost, "/v1/responses/compact", strings.NewReader(`{"model":"test-model","input":"hello"}`))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 
-	// 1. Should return upstream status 404 and upstream error message
+	// 1. 应返回上游状态码 404 和上游错误消息
 	if resp.Code != http.StatusNotFound {
 		t.Fatalf("compact status = %d, want %d; body = %s", resp.Code, http.StatusNotFound, resp.Body.String())
 	}
@@ -345,12 +345,12 @@ func TestOpenAIResponsesCompactRequestFaultStopsFallbackAndPreservesError(t *tes
 		t.Fatalf("compact body = %s, want containing '404 page not found'", resp.Body.String())
 	}
 
-	// 2. Should stop fallback on request/capability fault (calls == 1)
+	// 2. 遇到请求/能力故障时应停止回退（calls == 1）
 	if executor.calls != 1 {
 		t.Fatalf("executor calls = %d, want 1 (fallback should stop)", executor.calls)
 	}
 
-	// 3. Auth model states should NOT be marked unavailable for normal traffic
+	// 3. 对于普通流量，认证的模型状态不应被标记为不可用
 	for _, authID := range []string{"auth1", "auth2"} {
 		a, ok := manager.GetByID(authID)
 		if !ok {
@@ -363,7 +363,7 @@ func TestOpenAIResponsesCompactRequestFaultStopsFallbackAndPreservesError(t *tes
 		}
 	}
 
-	// 4. Normal /v1/responses request should succeed immediately
+	// 4. 普通 /v1/responses 请求应立即成功
 	reqNormal := httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(`{"model":"test-model","input":"hello"}`))
 	reqNormal.Header.Set("Content-Type", "application/json")
 	respNormal := httptest.NewRecorder()

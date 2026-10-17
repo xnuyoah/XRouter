@@ -1,5 +1,5 @@
-// events.go implements fsnotify event handling for config and auth file changes.
-// It normalizes paths, debounces noisy events, and triggers reload/update logic.
+// events.go 实现针对配置与 auth 文件变更的 fsnotify 事件处理。
+// 它规范化路径、对噪声事件进行去抖，并触发重载/更新逻辑。
 package watcher
 
 import (
@@ -65,7 +65,7 @@ func (w *Watcher) processEvents(ctx context.Context) {
 }
 
 func (w *Watcher) handleEvent(event fsnotify.Event) {
-	// Filter only relevant events: config file or auth-dir JSON files.
+	// 只过滤相关事件：配置文件或 auth 目录下的 JSON 文件。
 	configOps := fsnotify.Write | fsnotify.Create | fsnotify.Rename
 	normalizedName := w.normalizeAuthPath(event.Name)
 	normalizedConfigPath := w.normalizeAuthPath(w.configPath)
@@ -74,21 +74,21 @@ func (w *Watcher) handleEvent(event fsnotify.Event) {
 	authOps := fsnotify.Create | fsnotify.Write | fsnotify.Remove | fsnotify.Rename
 	isAuthJSON := filepath.Dir(normalizedName) == normalizedAuthDir && strings.HasSuffix(normalizedName, ".json") && event.Op&authOps != 0
 	if !isConfigEvent && !isAuthJSON {
-		// Ignore unrelated files (e.g., cookie snapshots *.cookie) and other noise.
+		// 忽略无关文件（例如 cookie 快照 *.cookie）及其他噪声。
 		return
 	}
 
 	now := time.Now()
 	log.Debugf("file system event detected: %s %s", event.Op.String(), event.Name)
 
-	// Handle config file changes
+	// 处理配置文件变更
 	if isConfigEvent {
 		log.Debugf("config file change details - operation: %s, timestamp: %s", event.Op.String(), now.Format("2006-01-02 15:04:05.000"))
 		w.scheduleConfigReload()
 		return
 	}
 
-	// Handle auth directory changes incrementally (.json only)
+	// 增量处理 auth 目录变更（仅 .json）
 	w.authRescanMu.Lock()
 	defer w.authRescanMu.Unlock()
 	w.observeAuthFile(event.Name)
@@ -98,16 +98,16 @@ func (w *Watcher) handleEvent(event fsnotify.Event) {
 			log.Debugf("debouncing remove event for %s", filepath.Base(event.Name))
 			return
 		}
-		// Atomic replace on some platforms may surface as Rename (or Remove) before the new file is ready.
-		// Wait briefly; if the path exists again, treat as an update instead of removal.
+		// 在某些平台上，原子替换可能在新文件就绪前表现为 Rename（或 Remove）。
+		// 短暂等待；若路径重新出现，则视为更新而非删除。
 		time.Sleep(replaceCheckDelay)
 		statSucceeded := false
 		if _, statErr := os.Stat(event.Name); statErr == nil {
 			statSucceeded = true
 		} else if w.isKnownAuthFile(event.Name) {
-			// On macOS (and under disk I/O pressure), atomic replace (e.g. os.Rename from temp file)
-			// can trigger a NOTE_DELETE before the target inode is fully visible. Retry briefly
-			// before treating a known auth file as permanently removed.
+			// 在 macOS 上（以及磁盘 I/O 压力下），原子替换（例如从临时文件 os.Rename）
+			// 可能在目标 inode 完全可见前触发 NOTE_DELETE。在把已知 auth 文件
+			// 当作永久删除之前，短暂重试。
 			for attempt := 0; attempt < 3; attempt++ {
 				time.Sleep(25 * time.Millisecond)
 				if _, retryErr := os.Stat(event.Name); retryErr == nil {
@@ -143,8 +143,8 @@ func (w *Watcher) handleEvent(event fsnotify.Event) {
 	}
 }
 
-// observeAuthFile invalidates in-flight scans even if hash or content deduplication
-// suppresses an update. It must not invalidate an otherwise valid queued auth event.
+// 即使哈希或内容去重抑制了更新，observeAuthFile 也会使进行中的扫描
+// 失效。它不得使本来有效的排队 auth 事件失效。
 func (w *Watcher) observeAuthFile(path string) {
 	normalized := w.normalizeAuthPath(path)
 	if normalized == "" {
@@ -157,8 +157,8 @@ func (w *Watcher) observeAuthFile(path string) {
 	}
 	w.fileObservations[normalized]++
 	if w.activeAuthScans > 0 {
-		// A reload may cache a hash before publishing its auth. Force the event
-		// to parse it even if the scan finishes first, retaining the known path.
+		// 重载可能在发布其 auth 之前先缓存哈希。强制该事件
+		// 即使扫描先结束也解析它，并保留已知路径。
 		if _, known := w.lastAuthHashes[normalized]; known {
 			w.lastAuthHashes[normalized] = ""
 		}

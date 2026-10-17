@@ -7,7 +7,7 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-// isValidCacheControl checks if the cache_control object has an exact valid "type" of "ephemeral".
+// isValidCacheControl 检查 cache_control 对象是否具有恰好为 "ephemeral" 的合法 "type"。
 func isValidCacheControl(cc gjson.Result) bool {
 	if !cc.Exists() || cc.Type == gjson.Null || !cc.IsObject() {
 		return false
@@ -16,8 +16,8 @@ func isValidCacheControl(cc gjson.Result) bool {
 	return typ.Type == gjson.String && typ.String() == "ephemeral"
 }
 
-// AttachCacheControl copies a Claude-compatible cache_control object from src onto dst.
-// Returns dst unchanged when cache_control is missing or not an object.
+// AttachCacheControl 将 src 上兼容 Claude 的 cache_control 对象复制到 dst 上。
+// 当 cache_control 缺失或不是对象时原样返回 dst。
 func AttachCacheControl(dst []byte, src gjson.Result) []byte {
 	cc := src.Get("cache_control")
 	if !isValidCacheControl(cc) {
@@ -30,9 +30,9 @@ func AttachCacheControl(dst []byte, src gjson.Result) []byte {
 	return out
 }
 
-// AttachMessageCacheControl applies message-level cache_control onto the last content block.
-// Part-level cache_control wins when the last block already has one.
-// String content is promoted to a content array so Claude can accept cache_control.
+// AttachMessageCacheControl 将消息级 cache_control 应用到最后一个内容块。
+// 当最后一个块已有 cache_control 时，以部分级 cache_control 为准。
+// 字符串内容会被提升为内容数组，以便 Claude 能接受 cache_control。
 func AttachMessageCacheControl(msg []byte, src gjson.Result) []byte {
 	cc := src.Get("cache_control")
 	if !isValidCacheControl(cc) {
@@ -75,9 +75,9 @@ func AttachMessageCacheControl(msg []byte, src gjson.Result) []byte {
 	return out
 }
 
-// AttachToolMessageCacheControl hoists part-level or message-level cache_control
-// onto the tool_result content block in msg.
-// Part-level cache_control from src content takes precedence over message-level cache_control.
+// AttachToolMessageCacheControl 将部分级或消息级 cache_control 提升
+// 到 msg 中的 tool_result 内容块上。
+// src 内容中的部分级 cache_control 优先于消息级 cache_control。
 func AttachToolMessageCacheControl(msg []byte, src gjson.Result) []byte {
 	rawCC := extractFirstPartCacheControl(src)
 	if rawCC == "" {

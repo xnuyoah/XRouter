@@ -49,7 +49,7 @@ type pluginUnloadTarget struct {
 type pluginLoadRequest struct {
 	result            chan pluginLoadResult
 	cleanupStarted    bool
-	closed            bool // Protected by Host.mu; rejects callbacks arriving after cleanup starts.
+	closed            bool // 由 Host.mu 保护；拒绝在清理开始后到达的回调。
 	callbackInstances map[*hostCallbackInstance]struct{}
 }
 
@@ -163,7 +163,7 @@ func (h *Host) Snapshot() *Snapshot {
 	return emptySnapshot()
 }
 
-// PluginLoaded reports whether a plugin is still active in the host runtime.
+// PluginLoaded 报告某个插件是否仍在 host 运行时中活跃。
 func (h *Host) PluginLoaded(id string) bool {
 	if h == nil {
 		return false
@@ -181,7 +181,7 @@ func (h *Host) PluginLoaded(id string) bool {
 	return len(h.retired[id]) > 0
 }
 
-// PluginBusy reports whether a plugin is active in the host runtime or being loaded.
+// PluginBusy 报告某个插件是否在 host 运行时中活跃或正在加载。
 func (h *Host) PluginBusy(id string) bool {
 	if h == nil {
 		return false
@@ -537,8 +537,8 @@ func (h *Host) cleanupCanceledPluginLoadAndWait(id string, request *pluginLoadRe
 	h.clearLoadingRequest(id, request)
 }
 
-// cleanupPluginLoad retains the matching load token until the client has physically
-// shut down, preventing a replacement ApplyConfig from opening a second client.
+// cleanupPluginLoad 保留匹配的加载令牌，直到 client 真正
+// 关闭为止，防止替换性的 ApplyConfig 再打开第二个 client。
 func (h *Host) cleanupPluginLoad(id string, request *pluginLoadRequest, loaded *loadedPlugin) {
 	if h == nil || request == nil {
 		return
@@ -640,14 +640,14 @@ func (h *Host) withLoadedPluginFallbacks(files []pluginFile, items map[string]ru
 	return files
 }
 
-// UnloadPlugin removes one plugin from the active runtime.
-// The plugin image itself stays mapped for the lifetime of the process.
+// UnloadPlugin 从活跃运行时中移除一个插件。
+// 插件镜像本身在进程生命周期内保持映射。
 func (h *Host) UnloadPlugin(id string) bool {
 	return h.UnloadPluginContext(context.Background(), id)
 }
 
-// UnloadPluginContext detaches a plugin from the runtime before waiting for its
-// active calls. Physical client cleanup continues after cancellation if needed.
+// UnloadPluginContext 在等待插件的活跃调用之前将其从运行时
+// 分离。若需要，物理 client 清理会在取消后继续。
 func (h *Host) UnloadPluginContext(ctx context.Context, id string) bool {
 	if h == nil {
 		return false
@@ -660,7 +660,7 @@ func (h *Host) UnloadPluginContext(ctx context.Context, id string) bool {
 	return h.detachPlugin(ctx, id)
 }
 
-// detachPlugin shuts down one loaded plugin. Caller must hold the apply lock.
+// detachPlugin 关闭一个已加载的插件。调用方必须持有 apply 锁。
 func (h *Host) detachPlugin(ctx context.Context, id string) bool {
 	if h == nil {
 		return false
@@ -728,8 +728,8 @@ func (h *Host) detachPlugin(ctx context.Context, id string) bool {
 	return true
 }
 
-// detachUnselectedPlugins stops plugins that are no longer enabled. nil keeps none.
-// Caller must hold the apply lock.
+// detachUnselectedPlugins 停止不再启用的插件。为 nil 时不保留任何插件。
+// 调用方必须持有 apply 锁。
 func (h *Host) detachUnselectedPlugins(ctx context.Context, selected map[string]struct{}) {
 	if h == nil {
 		return
@@ -780,14 +780,14 @@ func enabledPluginIDs(files []pluginFile, items map[string]runtimeItemConfig) ma
 	return ids
 }
 
-// ShutdownAll removes active plugin capabilities and detaches all plugins.
-// Plugin images stay mapped for the lifetime of the process.
+// ShutdownAll 移除活跃的插件能力并分离所有插件。
+// 插件镜像在进程生命周期内保持映射。
 func (h *Host) ShutdownAll() {
 	h.ShutdownAllContext(context.Background())
 }
 
-// ShutdownAllContext detaches all plugin runtime state without waiting beyond ctx
-// for active plugin calls to complete.
+// ShutdownAllContext 分离所有插件运行时状态，等待活跃插件调用完成时
+// 不会超过 ctx。
 func (h *Host) ShutdownAllContext(ctx context.Context) {
 	if h == nil || !h.lockApply(ctx) {
 		return

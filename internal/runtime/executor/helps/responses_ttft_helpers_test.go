@@ -222,7 +222,7 @@ func TestIsResponsesTokenEvent_Classification(t *testing.T) {
 			payload: `{"type":"error","error":{"message":"overloaded","code":"rate_limit_exceeded"}}`,
 			want:    true,
 		},
-		// SSE line format verification
+		// SSE 行格式校验
 		{
 			name:    "SSE data line with output text delta",
 			payload: `data: {"type":"response.output_text.delta","delta":"Hello SSE"}`,
@@ -250,12 +250,12 @@ func TestObserveResponsesTokenEvent_Behavior(t *testing.T) {
 	reporter.StartResponseTTFT()
 	time.Sleep(10 * time.Millisecond)
 
-	// 1. Initial state: TTFT not set
+	// 1. 初始状态：TTFT 未设置
 	if reporter.IsTTFTSet() {
 		t.Fatalf("expected IsTTFTSet() to be false initially")
 	}
 
-	// 2. Metadata event records first packet fallback, but does not mark effective TTFT
+	// 2. Metadata 事件记录首包回退，但不标记有效 TTFT
 	ObserveResponsesTokenEvent(reporter, []byte(`{"type":"codex.rate_limits","rate_limits":{"plan_type":"pro"}}`))
 	if reporter.IsTTFTSet() {
 		t.Fatalf("metadata event must not trigger IsTTFTSet()")
@@ -264,13 +264,13 @@ func TestObserveResponsesTokenEvent_Behavior(t *testing.T) {
 		t.Fatalf("expected IsFirstPacketSet() == true")
 	}
 
-	// 3. Response created event does not mark effective TTFT
+	// 3. Response created 事件不标记有效 TTFT
 	ObserveResponsesTokenEvent(reporter, []byte(`{"type":"response.created","response":{"id":"resp_1"}}`))
 	if reporter.IsTTFTSet() {
 		t.Fatalf("response.created must not trigger IsTTFTSet()")
 	}
 
-	// 4. Meaningful token delta triggers effective TTFT
+	// 4. 有意义的 token 增量触发有效 TTFT
 	ObserveResponsesTokenEvent(reporter, []byte(`{"type":"response.output_text.delta","delta":"First word"}`))
 	if !reporter.IsTTFTSet() {
 		t.Fatalf("response.output_text.delta must trigger IsTTFTSet()")
@@ -280,7 +280,7 @@ func TestObserveResponsesTokenEvent_Behavior(t *testing.T) {
 		t.Fatalf("expected token TTFT > 0, got %v", tokenTTFT)
 	}
 
-	// 5. Subsequent calls should be fast-path no-ops and not alter TTFT
+	// 5. 后续调用应为快速路径空操作，且不改变 TTFT
 	ObserveResponsesTokenEvent(reporter, []byte(`{"type":"response.output_text.delta","delta":"Second word"}`))
 	if reporter.ttftDuration() != tokenTTFT {
 		t.Fatalf("subsequent ObserveResponsesTokenEvent must not modify already set TTFT")
@@ -292,7 +292,7 @@ func TestObserveResponsesTokenEvent_FirstPacketFallback(t *testing.T) {
 	reporter := NewUsageReporter(ctx, "codex", "gpt-5.6-luna", nil)
 	reporter.StartResponseTTFT()
 
-	// Only send metadata events, no token deltas
+	// 只发送 metadata 事件，不发送 token 增量
 	ObserveResponsesTokenEvent(reporter, []byte(`{"type":"codex.rate_limits","rate_limits":{"plan_type":"pro"}}`))
 	ObserveResponsesTokenEvent(reporter, []byte(`{"type":"response.created","response":{"id":"resp_1"}}`))
 
@@ -300,7 +300,7 @@ func TestObserveResponsesTokenEvent_FirstPacketFallback(t *testing.T) {
 		t.Fatalf("expected IsTTFTSet() to be false when no tokens were received")
 	}
 
-	// First packet fallback must be returned
+	// 必须返回首包回退值
 	if !reporter.IsFirstPacketSet() {
 		t.Fatalf("expected IsFirstPacketSet() == true")
 	}

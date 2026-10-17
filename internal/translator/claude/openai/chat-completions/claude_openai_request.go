@@ -1,8 +1,8 @@
-// Package openai provides request translation functionality for OpenAI to Claude Code API compatibility.
-// It handles parsing and transforming OpenAI Chat Completions API requests into Claude Code API format,
-// extracting model information, system instructions, message contents, and tool declarations.
-// The package performs JSON data transformation to ensure compatibility
-// between OpenAI API format and Claude Code API's expected format.
+// Package openai 提供 OpenAI 到 Claude Code API 兼容格式的请求转换功能。
+// 它负责解析并将 OpenAI Chat Completions API 请求转换为 Claude Code API 格式，
+// 提取模型信息、系统指令、消息内容和工具声明。
+// 本包执行 JSON 数据转换，以确保 OpenAI API 格式
+// 与 Claude Code API 期望格式之间的兼容性。
 package chat_completions
 
 import (
@@ -21,30 +21,30 @@ const (
 	defaultFableChatMaxTokens  = 64000
 )
 
-// ConvertOpenAIRequestToClaude parses and transforms an OpenAI Chat Completions API request into Claude Code API format.
-// It extracts the model name, system instruction, message contents, and tool declarations
-// from the raw JSON request and returns them in the format expected by the Claude Code API.
-// The function performs comprehensive transformation including:
-// 1. Model name mapping and parameter extraction (max_tokens, top_p, etc.)
-// 2. Message content conversion from OpenAI to Claude Code format
-// 3. Tool call and tool result handling with proper ID mapping
-// 4. Image data conversion from OpenAI data URLs to Claude Code base64 format
-// 5. Stop sequence and streaming configuration handling
+// ConvertOpenAIRequestToClaude 解析并将 OpenAI Chat Completions API 请求转换为 Claude Code API 格式。
+// 它从原始 JSON 请求中提取模型名、系统指令、消息内容和工具声明，
+// 并按 Claude Code API 期望的格式返回。
+// 该函数执行全面的转换，包括：
+// 1. 模型名映射和参数提取（max_tokens、top_p 等）
+// 2. 消息内容从 OpenAI 格式转换为 Claude Code 格式
+// 3. 工具调用和工具结果处理，含正确的 ID 映射
+// 4. 图像数据从 OpenAI data URL 转换为 Claude Code base64 格式
+// 5. 停止序列和流式配置处理
 //
-// Parameters:
-//   - modelName: The name of the model to use for the request
-//   - rawJSON: The raw JSON request data from the OpenAI API
-//   - stream: A boolean indicating if the request is for a streaming response
+// 参数：
+//   - modelName: 请求所使用的模型名
+//   - rawJSON: 来自 OpenAI API 的原始 JSON 请求数据
+//   - stream: 布尔值，表示该请求是否要求流式响应
 //
-// Returns:
-//   - []byte: The transformed request data in Claude Code API format
+// 返回：
+//   - []byte: 转换为 Claude Code API 格式的请求数据
 func ConvertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream bool) ([]byte, error) {
 	return convertOpenAIRequestToClaude(modelName, inputRawJSON, stream, false)
 
 }
 
-// ConvertOpenAIRequestToClaudeWithCompat preserves assistant reasoning content
-// as an unsigned thinking block for configured compatibility endpoints.
+// ConvertOpenAIRequestToClaudeWithCompat 为已配置的兼容端点
+// 将助手推理内容保留为无签名的 thinking 块。
 func ConvertOpenAIRequestToClaudeWithCompat(modelName string, inputRawJSON []byte, stream bool) ([]byte, error) {
 	return convertOpenAIRequestToClaude(modelName, inputRawJSON, stream, true)
 }
@@ -55,14 +55,14 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 
 	userID := common.DeriveClaudeUserID(rawJSON)
 
-	// Base Claude Code API template with default max_tokens value
+	// 带默认 max_tokens 值的基础 Claude Code API 模板
 	out := []byte(`{"model":"","max_tokens":32000,"messages":[],"metadata":{}}`)
 	out, _ = sjson.SetBytes(out, "metadata.user_id", userID)
 	out, _ = sjson.SetBytes(out, "max_tokens", defaultClaudeChatMaxTokensForModel(modelName))
 
 	root := gjson.ParseBytes(rawJSON)
 
-	// Convert OpenAI reasoning_effort to Claude thinking config.
+	// 将 OpenAI 的 reasoning_effort 转换为 Claude 的思考配置。
 	if v := root.Get("reasoning_effort"); v.Exists() {
 		effort := strings.ToLower(strings.TrimSpace(v.String()))
 		if effort != "" {
@@ -70,9 +70,9 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 			supportsAdaptive := mi != nil && mi.Thinking != nil && len(mi.Thinking.Levels) > 0
 			supportsMax := supportsAdaptive && thinking.HasLevel(mi.Thinking.Levels, string(thinking.LevelMax))
 
-			// Claude 4.6 supports adaptive thinking with output_config.effort.
-			// MapToClaudeEffort normalizes levels (e.g. minimal→low, xhigh→high) to avoid
-			// validation errors since validate treats same-provider unsupported levels as errors.
+			// Claude 4.6 通过 output_config.effort 支持自适应思考。
+			// MapToClaudeEffort 会对档位做规范化（例如 minimal→low、xhigh→high）以避免
+			// 校验错误，因为 validate 会把同供应商不支持的档位视为错误。
 			if supportsAdaptive {
 				switch effort {
 				case "none":
@@ -92,7 +92,7 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 					out, _ = sjson.SetBytes(out, "output_config.effort", effort)
 				}
 			} else {
-				// Legacy/manual thinking (budget_tokens).
+				// 旧式/手动思考（budget_tokens）。
 				budget, ok := thinking.ConvertLevelToBudget(effort)
 				if ok {
 					switch budget {
@@ -111,22 +111,22 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 		}
 	}
 
-	// Model mapping to specify which Claude Code model to use
+	// 模型映射，用于指定使用哪个 Claude Code 模型
 	out, _ = sjson.SetBytes(out, "model", modelName)
 
-	// Max tokens configuration with fallback to default value.
-	// OpenAI Chat Completions deprecated max_tokens in favor of
-	// max_completion_tokens, so accept either spelling.
+	// Max tokens 配置，缺省时回退到默认值。
+	// OpenAI Chat Completions 已弃用 max_tokens 并改用
+	// max_completion_tokens，因此两种写法都接受。
 	if maxTokens := firstExisting(root.Get("max_tokens"), root.Get("max_completion_tokens")); maxTokens.Exists() {
 		out, _ = sjson.SetBytes(out, "max_tokens", maxTokens.Int())
 	}
 
-	// Top P setting for nucleus sampling.
+	// Top P 设置，用于核采样。
 	if topP := root.Get("top_p"); topP.Exists() {
 		out, _ = sjson.SetBytes(out, "top_p", topP.Float())
 	}
 
-	// Stop sequences configuration for custom termination conditions
+	// 停止序列配置，用于自定义终止条件
 	if stop := root.Get("stop"); stop.Exists() {
 		if stop.IsArray() {
 			var stopSequences []string
@@ -142,13 +142,13 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 		}
 	}
 
-	// Stream configuration to enable or disable streaming responses
+	// 流式配置，用于启用或禁用流式响应
 	out, _ = sjson.SetBytes(out, "stream", stream)
 
 	systemBlocks := make([][]byte, 0)
 	messageBlocks := make([][]byte, 0)
 
-	// Process messages and transform them to Claude Code format
+	// 处理消息并将其转换为 Claude Code 格式
 	if messages := root.Get("messages"); messages.Exists() && messages.IsArray() {
 		lastToolMessage := map[string]gjson.Result{}
 		messages.ForEach(func(_, message gjson.Result) bool {
@@ -168,10 +168,10 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 			contentResult := message.Get("content")
 
 			switch role {
-			// Developer messages rank with system messages in OpenAI's instruction
-			// hierarchy, so both become top-level Claude system blocks. Dropping the
-			// developer role, as this translator used to, silently removed operator
-			// instructions from the upstream request.
+			// developer 消息在 OpenAI 的指令层级中与 system 消息同级，
+			// 因此两者都转为顶层的 Claude system 块。像本转换器此前那样
+			// 丢弃 developer 角色，会悄悄从上游请求中
+			// 移除运维者指令。
 			case "system", "developer":
 				systemStart := len(systemBlocks)
 				if contentResult.Exists() && contentResult.Type == gjson.String && contentResult.String() != "" {
@@ -189,7 +189,7 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 						}
 						return true
 					})
-					// Message-level cache_control applies to the last system block from this message.
+					// 消息级 cache_control 应用于该消息的最后一个 system 块。
 					if message.Get("cache_control").Exists() {
 						if len(systemBlocks) > systemStart {
 							lastIdx := len(systemBlocks) - 1
@@ -209,7 +209,7 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 					}
 				}
 
-				// Handle content based on its type
+				// 根据内容类型进行处理
 				if contentResult.Exists() && contentResult.Type == gjson.String && contentResult.String() != "" {
 					part := []byte(`{"type":"text","text":""}`)
 					part, _ = sjson.SetBytes(part, "text", contentResult.String())
@@ -229,7 +229,7 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 					drops.EndTurn(len(contentBlocks))
 				}
 
-				// Handle tool calls (for assistant messages)
+				// 处理工具调用（针对 assistant 消息）
 				if toolCalls := message.Get("tool_calls"); toolCalls.Exists() && toolCalls.IsArray() && role == "assistant" {
 					toolCalls.ForEach(func(_, toolCall gjson.Result) bool {
 						if toolCall.Get("type").String() == "function" {
@@ -244,7 +244,7 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 							toolUse, _ = sjson.SetBytes(toolUse, "id", toolCallID)
 							toolUse, _ = sjson.SetBytes(toolUse, "name", util.SanitizeClaudeFunctionName(function.Get("name").String()))
 
-							// Parse arguments for the tool call
+							// 解析工具调用的参数
 							if args := function.Get("arguments"); args.Exists() {
 								argsStr := args.String()
 								if argsStr != "" && gjson.Valid(argsStr) {
@@ -274,7 +274,7 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 				messageAccumulator.Append(msg)
 
 			case "tool":
-				// Handle tool result messages conversion
+				// 处理工具结果消息的转换
 				rawID := message.Get("tool_call_id").String()
 				toolCallID := util.SanitizeClaudeToolID(rawID)
 				if rawID != "" {
@@ -300,9 +300,9 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 				} else {
 					msg, _ = sjson.SetBytes(msg, "content.0.content", toolResultContent)
 				}
-				// Anthropic rejects cache_control inside tool_result.content, so
-				// part-level or message-level cache_control is hoisted onto the
-				// tool_result block itself.
+				// Anthropic 拒绝 tool_result.content 中的 cache_control，因此
+				// 部分级或消息级的 cache_control 会被上提到
+				// tool_result 块本身。
 				msg = common.AttachToolMessageCacheControl(msg, targetMsg)
 				messageAccumulator.Append(msg)
 			}
@@ -318,11 +318,11 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 		systemBlocks = append(systemBlocks, systemBlock)
 	}
 
-	// Decided per user turn, so neither a system prompt nor the blank turn added below hides an emptied turn.
+	// 按用户轮次判定，因此无论是系统提示还是下面补入的空轮次都不会掩盖被清空的轮次。
 	nothingLeftErr := drops.Err()
 
-	// Preserve a minimal conversational turn for system-only inputs.
-	// Claude payloads with top-level system instructions but no messages are risky for downstream validation.
+	// 为仅含系统输入的场景保留一个最小对话轮次。
+	// 带有顶层 system 指令但无 messages 的 Claude 载荷对下游校验有风险。
 	if len(messageBlocks) == 0 && len(systemBlocks) > 0 {
 		messageBlocks = append(messageBlocks, []byte(`{"role":"user","content":[{"type":"text","text":""}]}`))
 	}
@@ -334,7 +334,7 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 		out = common.SetRawArrayItems(out, "messages", messageBlocks)
 	}
 
-	// Tools mapping: OpenAI tools -> Claude Code tools
+	// 工具映射：OpenAI tools -> Claude Code tools
 	allowedToolNames := make(map[string]struct{})
 	isAllowedTools := false
 	allowedMode := "auto"
@@ -381,7 +381,7 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 				anthropicTool, _ = sjson.SetBytes(anthropicTool, "name", sanitizedFnName)
 				anthropicTool, _ = sjson.SetBytes(anthropicTool, "description", function.Get("description").String())
 
-				// Convert parameters schema for the tool
+				// 转换工具的参数 schema
 				if parameters := function.Get("parameters"); parameters.Exists() {
 					anthropicTool, _ = sjson.SetRawBytes(anthropicTool, "input_schema", util.NormalizeClaudeToolInputSchema([]byte(parameters.Raw)))
 				} else if parameters := function.Get("parametersJsonSchema"); parameters.Exists() {
@@ -417,7 +417,7 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 		}
 	}
 
-	// Tool choice mapping from OpenAI format to Claude Code format
+	// 工具选择映射：从 OpenAI 格式到 Claude Code 格式
 	if isAllowedTools {
 		if len(anthropicTools) == 0 {
 			out, _ = sjson.SetRawBytes(out, "tool_choice", []byte(`{"type":"none"}`))
@@ -593,16 +593,16 @@ func defaultClaudeChatMaxTokensForModel(modelName string) int {
 	if info == nil || info.MaxCompletionTokens <= 0 {
 		return maxTokens
 	}
-	// Fable keeps its conservative omitted-field ceiling. Every other registered
-	// model uses its output limit, including when that limit is above the
-	// historical 32000 default.
+	// Fable 保留其保守的字段省略上限。其他所有已注册
+	// 模型都使用其输出上限，包括该上限高于
+	// 历史默认值 32000 的情况。
 	if strings.Contains(normalized, "fable") && info.MaxCompletionTokens >= maxTokens {
 		return maxTokens
 	}
 	return info.MaxCompletionTokens
 }
 
-// firstExisting returns the first non-null result that exists, or an empty result.
+// firstExisting 返回第一个存在且非 null 的结果，否则返回空结果。
 func firstExisting(values ...gjson.Result) gjson.Result {
 	for _, value := range values {
 		if value.Exists() && value.Type != gjson.Null {

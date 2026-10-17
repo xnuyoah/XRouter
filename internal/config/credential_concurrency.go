@@ -19,7 +19,7 @@ const (
 	maxCredentialConcurrencyLimit int64 = 1_000_000
 )
 
-// CredentialConcurrencyConfig controls the credential concurrency lifecycle managed by Home.
+// CredentialConcurrencyConfig 控制由 Home 管理的凭据并发生命周期。
 type CredentialConcurrencyConfig struct {
 	LifecycleConfigRevision    int64         `yaml:"lifecycle-config-revision" json:"lifecycle-config-revision"`
 	ObservationBarrierRevision int64         `yaml:"observation-barrier-revision" json:"observation-barrier-revision"`
@@ -46,7 +46,7 @@ type CredentialConcurrencyConfig struct {
 	maxLimitPresent                   bool
 }
 
-// UnmarshalYAML preserves field presence so only absent lifecycle values receive legacy defaults.
+// UnmarshalYAML 保留字段是否出现的信息，因此只有缺失的生命周期值才会获得旧版默认值。
 func (c *CredentialConcurrencyConfig) UnmarshalYAML(value *yaml.Node) error {
 	type rawCredentialConcurrencyConfig struct {
 		LifecycleConfigRevision    int64         `yaml:"lifecycle-config-revision"`
@@ -106,7 +106,7 @@ func credentialConcurrencyFieldPresent(value *yaml.Node, field string) bool {
 	return false
 }
 
-// WithDefaults applies the lifecycle defaults required for compatibility with older Home versions.
+// WithDefaults 应用与较旧 Home 版本兼容所需的生命周期默认值。
 func (c CredentialConcurrencyConfig) WithDefaults() CredentialConcurrencyConfig {
 	if !c.cpaHeartbeatTimeoutPresent && c.CPAHeartbeatTimeout == 0 {
 		c.CPAHeartbeatTimeout = defaultCPAHeartbeatTimeout
@@ -138,7 +138,7 @@ func (c CredentialConcurrencyConfig) WithDefaults() CredentialConcurrencyConfig 
 	return c
 }
 
-// ValidateCredentialConcurrency validates values intrinsic to a credential concurrency configuration.
+// ValidateCredentialConcurrency 校验凭据并发配置自身的取值。
 func ValidateCredentialConcurrency(cfg CredentialConcurrencyConfig) error {
 	if cfg.LifecycleConfigRevision < 0 || (cfg.lifecycleConfigRevisionPresent && cfg.LifecycleConfigRevision == 0) {
 		return fmt.Errorf("lifecycle configuration revision must be positive when present")
@@ -167,7 +167,7 @@ func ValidateCredentialConcurrency(cfg CredentialConcurrencyConfig) error {
 	return nil
 }
 
-// ValidateCredentialConcurrencyLifecycle verifies the Home lifecycle timing safety invariant.
+// ValidateCredentialConcurrencyLifecycle 验证 Home 生命周期时序安全不变量。
 func ValidateCredentialConcurrencyLifecycle(nodeHeartbeatTimeout time.Duration, cfg CredentialConcurrencyConfig) error {
 	if nodeHeartbeatTimeout <= 0 {
 		return fmt.Errorf("credential concurrency lifecycle durations must be positive")

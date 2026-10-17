@@ -1,9 +1,9 @@
-// Package claude provides HTTP handlers for Claude API code-related functionality.
-// This package implements Claude-compatible streaming chat completions with sophisticated
-// client rotation and quota management systems to ensure high availability and optimal
-// resource utilization across multiple backend clients. It handles request translation
-// between the Claude API format and the upstream provider, providing seamless
-// API compatibility while maintaining robust error handling and connection management.
+// Package claude 提供 Claude API 代码相关功能的 HTTP 处理器。
+// 本包实现兼容 Claude 的流式 chat completions，并带有完善的
+// 客户端轮询与额度管理机制，以确保高可用性和最优的
+// 多后端客户端资源利用。它负责在 Claude API 格式与上游
+// 供应商之间转换请求，提供无缝的
+// API 兼容性，同时保持健壮的错误处理和连接管理。
 package claude
 
 import (
@@ -31,48 +31,48 @@ import (
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
-// ClaudeCodeAPIHandler contains the handlers for Claude API endpoints.
-// It holds a pool of clients to interact with the backend service.
+// ClaudeCodeAPIHandler 包含 Claude API 各端点所需的处理器。
+// 它持有一个与后端服务交互的客户端池。
 type ClaudeCodeAPIHandler struct {
 	*handlers.BaseAPIHandler
 }
 
-// NewClaudeCodeAPIHandler creates a new Claude API handlers instance.
-// It takes an BaseAPIHandler instance as input and returns a ClaudeCodeAPIHandler.
+// NewClaudeCodeAPIHandler 创建新的 Claude API 处理器实例。
+// 它以 BaseAPIHandler 实例作为输入并返回 ClaudeCodeAPIHandler。
 //
-// Parameters:
-//   - apiHandlers: The base API handler instance.
+// 参数：
+//   - apiHandlers: 基础 API 处理器实例。
 //
-// Returns:
-//   - *ClaudeCodeAPIHandler: A new Claude code API handler instance.
+// 返回：
+//   - *ClaudeCodeAPIHandler: 新的 Claude code API 处理器实例。
 func NewClaudeCodeAPIHandler(apiHandlers *handlers.BaseAPIHandler) *ClaudeCodeAPIHandler {
 	return &ClaudeCodeAPIHandler{
 		BaseAPIHandler: apiHandlers,
 	}
 }
 
-// HandlerType returns the identifier for this handler implementation.
+// HandlerType 返回本处理器实现的标识符。
 func (h *ClaudeCodeAPIHandler) HandlerType() string {
 	return Claude
 }
 
-// Models returns a list of models supported by this handler.
+// Models 返回本处理器支持的模型列表。
 func (h *ClaudeCodeAPIHandler) Models() []map[string]any {
-	// Get dynamic models from the global registry
+	// 从全局注册表获取动态模型
 	modelRegistry := registry.GetGlobalRegistry()
 	return modelRegistry.GetAvailableModels("claude")
 }
 
-// ClaudeMessages handles Claude-compatible streaming chat completions.
-// This function implements a sophisticated client rotation and quota management system
-// to ensure high availability and optimal resource utilization across multiple backend clients.
+// ClaudeMessages 处理兼容 Claude 的流式 chat completions。
+// 本函数实现完善的客户端轮询与额度管理机制，
+// 以确保多后端客户端间的高可用性和最优资源利用。
 //
-// Parameters:
-//   - c: The Gin context for the request.
+// 参数：
+//   - c: 请求的 Gin 上下文。
 func (h *ClaudeCodeAPIHandler) ClaudeMessages(c *gin.Context) {
-	// Extract raw JSON data from the incoming request
+	// 从传入请求中提取原始 JSON 数据
 	rawJSON, err := c.GetRawData()
-	// If data retrieval fails, return a 400 Bad Request error.
+	// 若数据读取失败，返回 400 Bad Request 错误。
 	if err != nil {
 		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadRequest), handlers.ErrorResponse{
 			Error: handlers.ErrorDetail{
@@ -83,10 +83,10 @@ func (h *ClaudeCodeAPIHandler) ClaudeMessages(c *gin.Context) {
 		return
 	}
 
-	// Decode claude-fable-5-dd-<reversed> model IDs back to the real model name for routing.
+	// 将 claude-fable-5-dd-<reversed> 形式的模型 ID 解码回用于路由的真实模型名。
 	rawJSON = rewriteClaudeDDModelInBody(rawJSON)
 
-	// Check if the client requested a streaming response.
+	// 检查客户端是否请求流式响应。
 	streamResult := gjson.GetBytes(rawJSON, "stream")
 	if !streamResult.Exists() || streamResult.Type == gjson.False {
 		h.handleNonStreamingResponse(c, rawJSON)
@@ -95,16 +95,16 @@ func (h *ClaudeCodeAPIHandler) ClaudeMessages(c *gin.Context) {
 	}
 }
 
-// ClaudeMessages handles Claude-compatible streaming chat completions.
-// This function implements a sophisticated client rotation and quota management system
-// to ensure high availability and optimal resource utilization across multiple backend clients.
+// ClaudeMessages 处理兼容 Claude 的流式 chat completions。
+// 本函数实现完善的客户端轮询与额度管理机制，
+// 以确保多后端客户端间的高可用性和最优资源利用。
 //
-// Parameters:
-//   - c: The Gin context for the request.
+// 参数：
+//   - c: 请求的 Gin 上下文。
 func (h *ClaudeCodeAPIHandler) ClaudeCountTokens(c *gin.Context) {
-	// Extract raw JSON data from the incoming request
+	// 从传入请求中提取原始 JSON 数据
 	rawJSON, err := c.GetRawData()
-	// If data retrieval fails, return a 400 Bad Request error.
+	// 若数据读取失败，返回 400 Bad Request 错误。
 	if err != nil {
 		c.JSON(clienterror.HTTPStatusFromErrorOr(err, http.StatusBadRequest), handlers.ErrorResponse{
 			Error: handlers.ErrorDetail{
@@ -115,7 +115,7 @@ func (h *ClaudeCodeAPIHandler) ClaudeCountTokens(c *gin.Context) {
 		return
 	}
 
-	// Decode claude-fable-5-dd-<reversed> model IDs back to the real model name for routing.
+	// 将 claude-fable-5-dd-<reversed> 形式的模型 ID 解码回用于路由的真实模型名。
 	rawJSON = rewriteClaudeDDModelInBody(rawJSON)
 
 	c.Header("Content-Type", "application/json")
@@ -136,8 +136,8 @@ func (h *ClaudeCodeAPIHandler) ClaudeCountTokens(c *gin.Context) {
 	cliCancel()
 }
 
-// rewriteClaudeDDModelInBody decodes model IDs of the form claude-fable-5-dd-<reversed>
-// back into the original model name used for routing and upstream requests.
+// rewriteClaudeDDModelInBody 将 claude-fable-5-dd-<reversed> 形式的模型 ID 解码回
+// 用于路由和上游请求的原始模型名。
 func rewriteClaudeDDModelInBody(rawJSON []byte) []byte {
 	modelName := gjson.GetBytes(rawJSON, "model").String()
 	resolved := claudemodels.ResolveClaudeModelIDPrefix(modelName)
@@ -151,26 +151,26 @@ func rewriteClaudeDDModelInBody(rawJSON []byte) []byte {
 	return updated
 }
 
-// ClaudeModels handles the Claude models listing endpoint.
-// It returns a JSON response containing available Claude models and their specifications.
+// ClaudeModels 处理 Claude 模型列表端点。
+// 它返回包含可用 Claude 模型及其规格的 JSON 响应。
 //
-// Parameters:
-//   - c: The Gin context for the request.
+// 参数：
+//   - c: 请求的 Gin 上下文。
 func (h *ClaudeCodeAPIHandler) ClaudeModels(c *gin.Context) {
 	cfg := h.CurrentConfig()
 	disableCloaking := cfg != nil && cfg.ClaudeCode.DisableCloakingModelList
 	h.WriteModelListResponse(c, h.HandlerType(), claudemodels.BuildResponse(h.Models(), disableCloaking))
 }
 
-// handleNonStreamingResponse handles non-streaming content generation requests for Claude models.
-// This function processes the request synchronously and returns the complete generated
-// response in a single API call. It supports various generation parameters and
-// response formats.
+// handleNonStreamingResponse 处理 Claude 模型的非流式内容生成请求。
+// 本函数同步处理请求，并在单次 API 调用中返回完整的
+// 生成结果。它支持各种生成参数和
+// 响应格式。
 //
-// Parameters:
-//   - c: The Gin context for the request
-//   - modelName: The name of the model to use for content generation
-//   - rawJSON: The raw JSON request body containing generation parameters and content
+// 参数：
+//   - c: 请求的 Gin 上下文
+//   - modelName: 用于内容生成的模型名
+//   - rawJSON: 包含生成参数和内容的原始 JSON 请求体
 func (h *ClaudeCodeAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSON []byte) {
 	c.Header("Content-Type", "application/json")
 	alt := h.GetAlt(c)
@@ -187,8 +187,8 @@ func (h *ClaudeCodeAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSO
 		return
 	}
 
-	// Decompress gzipped responses - Claude API sometimes returns gzip without Content-Encoding header
-	// This fixes title generation and other non-streaming responses that arrive compressed
+	// 解压 gzip 响应——Claude API 有时返回 gzip 却不带 Content-Encoding 头
+	// 这修复了标题生成及其他以压缩形式到达的非流式响应
 	if len(resp) >= 2 && resp[0] == 0x1f && resp[1] == 0x8b {
 		gzReader, errGzip := gzip.NewReader(bytes.NewReader(resp))
 		if errGzip != nil {
@@ -213,16 +213,16 @@ func (h *ClaudeCodeAPIHandler) handleNonStreamingResponse(c *gin.Context, rawJSO
 	cliCancel()
 }
 
-// handleStreamingResponse streams Claude-compatible responses.
-// It sets up SSE, selects a backend client with rotation/quota logic,
-// forwards chunks, and translates them to Claude CLI format.
+// handleStreamingResponse 流式返回兼容 Claude 的响应。
+// 它设置 SSE，按轮询/额度逻辑选择后端客户端，
+// 转发数据块并将其转换为 Claude CLI 格式。
 //
-// Parameters:
-//   - c: The Gin context for the request.
-//   - rawJSON: The raw JSON request body.
+// 参数：
+//   - c: 请求的 Gin 上下文。
+//   - rawJSON: 原始 JSON 请求体。
 func (h *ClaudeCodeAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON []byte) {
-	// Get the http.Flusher interface to manually flush the response.
-	// This is crucial for streaming as it allows immediate sending of data chunks
+	// 获取 http.Flusher 接口以便手动刷新响应。
+	// 这对流式至关重要，因为它允许立即发送数据块
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, handlers.ErrorResponse{
@@ -236,8 +236,8 @@ func (h *ClaudeCodeAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON [
 
 	modelName := gjson.GetBytes(rawJSON, "model").String()
 
-	// Create a cancellable context for the backend client request
-	// This allows proper cleanup and cancellation of ongoing requests
+	// 为后端客户端请求创建一个可取消的上下文
+	// 这样可以正确清理和取消进行中的请求
 	cliCtx, cliCancel := h.GetContextWithCancel(h, c, context.Background())
 
 	setSSEHeaders := func() {
@@ -273,7 +273,7 @@ func (h *ClaudeCodeAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON [
 	}
 	upstreamHeaders = resolvedHeaders
 
-	// Peek at the first chunk to determine success or failure before setting headers
+	// 先窥视首个数据块，在设置响应头之前判断成功还是失败
 	for {
 		select {
 		case <-c.Request.Context().Done():
@@ -281,7 +281,7 @@ func (h *ClaudeCodeAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON [
 			return
 		case errMsg, ok := <-errChan:
 			if !ok {
-				// Err channel closed cleanly; wait for data channel.
+				// err 通道已正常关闭；等待数据通道。
 				errChan = nil
 				continue
 			}
@@ -293,7 +293,7 @@ func (h *ClaudeCodeAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON [
 				h.forwardClaudeStream(c, flusher, func(err error) { cliCancel(err) }, make(chan []byte), pendingErrors)
 				return
 			}
-			// Upstream failed immediately. Return proper error status and JSON.
+			// 上游立即失败。返回恰当的错误状态和 JSON。
 			h.WriteErrorResponse(c, errMsg)
 			if errMsg != nil {
 				cliCancel(errMsg.Error)
@@ -320,25 +320,25 @@ func (h *ClaudeCodeAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON [
 					}
 					return
 				}
-				// Stream closed without data? Send DONE or just headers.
+				// 流在没有数据的情况下关闭？发送 DONE 或仅发送响应头。
 				commitSSE()
 				flusher.Flush()
 				cliCancel(nil)
 				return
 			}
 
-			// Success! Set headers now.
+			// 成功！现在设置响应头。
 			stopKeepAlive()
 			commitSSE()
 
-			// Write the first chunk
+			// 写入首个数据块
 			sawErrorEvent := claudeChunkHasErrorEvent(chunk)
 			if len(chunk) > 0 {
 				_, _ = c.Writer.Write(chunk)
 				flusher.Flush()
 			}
 
-			// Continue streaming the rest
+			// 继续流式传输剩余部分
 			h.forwardClaudeStream(c, flusher, func(err error) { cliCancel(err) }, dataChan, errChan, sawErrorEvent)
 			return
 		case <-keepAliveC:

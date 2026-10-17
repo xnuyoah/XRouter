@@ -76,9 +76,9 @@ func runMockStreamTest(t *testing.T, chunks []string, authID string) string {
 	return recorder.Body.String()
 }
 
-// Issue #6371: A stream that emits multiple chunks and then cleanly closes without
-// any chunk carrying finish_reason is truncated. It must NOT be answered with [DONE],
-// but must surface an error so clients can detect truncation and retry.
+// Issue #6371: 一个发出多个分块后干净关闭、但
+// 没有任何分块携带 finish_reason 的流属于截断。绝不能以 [DONE] 回应，
+// 而必须抛出错误，让客户端能够检测到截断并重试。
 func TestChatCompletionsStreamWithoutFinishReasonIsReportedAsError(t *testing.T) {
 	chunks := []string{
 		`{"choices":[{"index":0,"delta":{"role":"assistant"}}]}`,
@@ -96,7 +96,7 @@ func TestChatCompletionsStreamWithoutFinishReasonIsReportedAsError(t *testing.T)
 	}
 }
 
-// Issue #6371: A stream with explicit null or empty finish_reason must still be detected as truncated.
+// Issue #6371: finish_reason 显式为 null 或空值的流仍必须被判定为截断。
 func TestChatCompletionsStreamExplicitNullOrEmptyFinishReasonIsReportedAsError(t *testing.T) {
 	chunks := []string{
 		`{"choices":[{"index":0,"delta":{"role":"assistant","content":"part1"},"finish_reason":null}]}`,
@@ -111,8 +111,8 @@ func TestChatCompletionsStreamExplicitNullOrEmptyFinishReasonIsReportedAsError(t
 	}
 }
 
-// Issue #6371: A stream that emits only 1 chunk without finish_reason and closes must also
-// be flagged as truncated, not [DONE].
+// Issue #6371: 只发出 1 个不含 finish_reason 的分块后关闭的流同样
+// 必须被标记为截断，而不是 [DONE]。
 func TestChatCompletionsStreamSingleChunkWithoutFinishReasonIsReportedAsError(t *testing.T) {
 	chunks := []string{
 		`{"choices":[{"index":0,"delta":{"role":"assistant","content":"hello"}}]}`,
@@ -126,7 +126,7 @@ func TestChatCompletionsStreamSingleChunkWithoutFinishReasonIsReportedAsError(t 
 	}
 }
 
-// Control: A multi-chunk stream that does carry finish_reason must complete with [DONE].
+// 对照组：携带 finish_reason 的多分块流必须以 [DONE] 正常结束。
 func TestChatCompletionsStreamWithFinishReasonStillCompletes(t *testing.T) {
 	chunks := []string{
 		`{"choices":[{"index":0,"delta":{"role":"assistant"}}]}`,
@@ -142,7 +142,7 @@ func TestChatCompletionsStreamWithFinishReasonStillCompletes(t *testing.T) {
 	}
 }
 
-// Control: A single-chunk stream that carries finish_reason must complete with [DONE].
+// 对照组：携带 finish_reason 的单分块流必须以 [DONE] 正常结束。
 func TestChatCompletionsStreamSingleChunkWithFinishReasonStillCompletes(t *testing.T) {
 	chunks := []string{
 		`{"choices":[{"index":0,"delta":{"content":"instant"},"finish_reason":"stop"}]}`,
@@ -156,7 +156,7 @@ func TestChatCompletionsStreamSingleChunkWithFinishReasonStillCompletes(t *testi
 	}
 }
 
-// Issue #6371: Legacy /v1/completions stream that ends without finish_reason must also be flagged as error.
+// Issue #6371: 旧式 /v1/completions 流在结束时没有 finish_reason，同样必须被标记为错误。
 func TestCompletionsStreamWithoutFinishReasonIsReportedAsError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -194,7 +194,7 @@ func TestCompletionsStreamWithoutFinishReasonIsReportedAsError(t *testing.T) {
 	}
 }
 
-// Control: Legacy /v1/completions stream that carries finish_reason completes with [DONE].
+// 对照组：携带 finish_reason 的旧式 /v1/completions 流以 [DONE] 正常结束。
 func TestCompletionsStreamWithFinishReasonStillCompletes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -232,7 +232,7 @@ func TestCompletionsStreamWithFinishReasonStillCompletes(t *testing.T) {
 	}
 }
 
-// Control: A stream with usage chunk arriving after finish_reason chunk must complete with [DONE].
+// 对照组：usage 分块在 finish_reason 分块之后到达的流必须以 [DONE] 正常结束。
 func TestChatCompletionsStreamUsageAfterFinishReasonStillCompletes(t *testing.T) {
 	chunks := []string{
 		`{"choices":[{"index":0,"delta":{"content":"hi"}}]}`,
@@ -248,7 +248,7 @@ func TestChatCompletionsStreamUsageAfterFinishReasonStillCompletes(t *testing.T)
 	}
 }
 
-// Control: Legacy /v1/completions single-chunk stream with finish_reason completes with [DONE].
+// 对照组：带 finish_reason 的旧式 /v1/completions 单分块流以 [DONE] 正常结束。
 func TestCompletionsStreamSingleChunkWithFinishReasonStillCompletes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

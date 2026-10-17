@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// AuthErrorCode classifies authentication failures.
+// AuthErrorCode 对认证失败进行分类。
 type AuthErrorCode string
 
 const (
@@ -17,7 +17,7 @@ const (
 	AuthErrorCodeInternal          AuthErrorCode = "internal_error"
 )
 
-// AuthError carries authentication failure details and HTTP status.
+// AuthError 携带认证失败详情与 HTTP 状态。
 type AuthError struct {
 	Code       AuthErrorCode
 	Message    string
@@ -46,7 +46,7 @@ func (e *AuthError) Unwrap() error {
 	return e.Cause
 }
 
-// HTTPStatusCode returns a safe fallback for missing status codes.
+// HTTPStatusCode 为缺失的状态码返回安全回退值。
 func (e *AuthError) HTTPStatusCode() int {
 	if e == nil || e.StatusCode <= 0 {
 		return http.StatusInternalServerError
@@ -75,7 +75,7 @@ func NewNotHandledError() *AuthError {
 	return newAuthError(AuthErrorCodeNotHandled, "authentication provider did not handle request", 0, nil)
 }
 
-// NewRequestEntityTooLargeError builds a 413 error when the request body exceeds the configured limit.
+// NewRequestEntityTooLargeError 在请求体超过配置上限时构建 413 错误。
 func NewRequestEntityTooLargeError(cause error) *AuthError {
 	return newAuthError(AuthErrorCodeRequestTooLarge, "http: request body too large", http.StatusRequestEntityTooLarge, cause)
 }

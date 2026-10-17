@@ -15,8 +15,8 @@ import (
 	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
-// noopPluginHooks supplies the request/response hooks that plugin tests embed
-// when only one side of the pipeline needs custom behavior.
+// noopPluginHooks 提供插件测试内嵌的请求/响应钩子，
+// 用于流水线中只有一侧需要自定义行为的情形。
 type noopPluginHooks struct{}
 
 func (noopPluginHooks) NormalizeRequest(_ context.Context, _, _ sdktranslator.Format, _ string, body []byte, _ bool) []byte {

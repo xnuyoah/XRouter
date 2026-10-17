@@ -14,9 +14,9 @@ import (
 
 var claudeToolNamePattern = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
 
-// claudeToolNames maps qualified Responses tool identities to unique Claude
-// tool names for one request, and back. The request and response translators
-// build it from the same Responses JSON, so both sides agree.
+// claudeToolNames 将带限定符的 Responses 工具标识映射为唯一的 Claude
+// 工具名（针对单个请求），并支持反向映射。请求和响应转换器
+// 从相同的 Responses JSON 构建它，因此两侧保持一致。
 type claudeToolNames struct {
 	toClaude   map[string]string
 	fromClaude map[string]string
@@ -46,7 +46,7 @@ func buildClaudeToolNamesWithWinners(root gjson.Result, winners map[string]respo
 	return m
 }
 
-// claudeName returns the Claude name for a qualified Responses identity.
+// claudeName 返回带限定符的 Responses 标识对应的 Claude 名称。
 func (m claudeToolNames) claudeName(identity string) string {
 	if name, ok := m.toClaude[identity]; ok {
 		return name
@@ -54,8 +54,8 @@ func (m claudeToolNames) claudeName(identity string) string {
 	return util.SanitizeClaudeFunctionName(identity)
 }
 
-// identity returns the qualified Responses identity for a Claude name.
-// Unknown names are returned unchanged.
+// identity 返回 Claude 名称对应的带限定符的 Responses 标识。
+// 未知名称原样返回。
 func (m claudeToolNames) identity(claudeName string) string {
 	if identity, ok := m.fromClaude[claudeName]; ok {
 		return identity
@@ -115,8 +115,8 @@ func (m claudeToolNames) allocate(identities []string, taken map[string]bool) {
 	}
 }
 
-// responsesHistoryToolIdentities lists qualified names of function_call and
-// custom_tool_call items in input, in order.
+// responsesHistoryToolIdentities 按顺序列出 input 中 function_call 和
+// custom_tool_call 项的带限定符名称。
 func responsesHistoryToolIdentities(root gjson.Result) []string {
 	var ids []string
 	input := root.Get("input")

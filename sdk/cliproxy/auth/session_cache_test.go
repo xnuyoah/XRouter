@@ -14,7 +14,7 @@ func TestSessionCache_CapacityEvictionOrder(t *testing.T) {
 	cache := NewSessionCacheWithCapacity(time.Hour, maxEntries)
 	defer cache.Stop()
 
-	// Insert 5 entries (fill cache to capacity)
+	// 插入 5 个条目（将缓存填满至容量）
 	for i := 1; i <= 5; i++ {
 		cache.Set(fmt.Sprintf("sess-%d", i), fmt.Sprintf("auth-%d", i))
 	}
@@ -23,7 +23,7 @@ func TestSessionCache_CapacityEvictionOrder(t *testing.T) {
 		t.Fatalf("cache.Len() = %d, want 5", cache.Len())
 	}
 
-	// Insert 6th entry: oldest (sess-1) should be evicted
+	// 插入第 6 个条目：最旧的（sess-1）应被淘汰
 	cache.Set("sess-6", "auth-6")
 
 	if cache.Len() > maxEntries {
@@ -48,17 +48,17 @@ func TestSessionCache_MultiAliasGroupEviction(t *testing.T) {
 	cache := NewSessionCacheWithCapacity(time.Hour, maxEntries)
 	defer cache.Stop()
 
-	// Group 1: 2 aliases (s1-a, s1-b)
+	// 组 1：2 个别名（s1-a、s1-b）
 	cache.SetAliases("auth-1", "s1-a", "s1-b")
-	// Group 2: 2 aliases (s2-a, s2-b)
+	// 组 2：2 个别名（s2-a、s2-b）
 	cache.SetAliases("auth-2", "s2-a", "s2-b")
 
 	if cache.Len() != 4 {
 		t.Fatalf("cache.Len() = %d, want 4", cache.Len())
 	}
 
-	// Group 3: 1 alias (s3)
-	// Inserting s3 should evict Group 1 completely (both s1-a and s1-b)
+	// 组 3：1 个别名（s3）
+	// 插入 s3 应完全淘汰组 1（s1-a 和 s1-b 两者）
 	cache.Set("s3", "auth-3")
 
 	if cache.Len() > maxEntries {
@@ -87,7 +87,7 @@ func TestSessionCache_HighThroughputCapacitySaturated(t *testing.T) {
 	cache := NewSessionCacheWithCapacity(time.Hour, maxEntries)
 	defer cache.Stop()
 
-	// Rapidly write 10,000 entries through a small capacity cache to ensure O(1) eviction
+	// 通过一个小容量缓存快速写入 10,000 个条目，以确保 O(1) 淘汰
 	for i := 0; i < 10000; i++ {
 		cache.Set(fmt.Sprintf("sess-%d", i), fmt.Sprintf("auth-%d", i%10))
 	}
@@ -96,7 +96,7 @@ func TestSessionCache_HighThroughputCapacitySaturated(t *testing.T) {
 		t.Fatalf("cache.Len() = %d, want <= %d", cache.Len(), maxEntries)
 	}
 
-	// Latest entries must be present
+	// 最新条目必须存在
 	for i := 9900; i < 10000; i++ {
 		if got, ok := cache.Get(fmt.Sprintf("sess-%d", i)); !ok || got != fmt.Sprintf("auth-%d", i%10) {
 			t.Fatalf("Get(sess-%d) = %q, %v", i, got, ok)

@@ -7,7 +7,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/misc"
 )
 
-// NormalizeOpenAIFileData returns the MIME type and raw base64 payload for OpenAI file content.
+// NormalizeOpenAIFileData 返回 OpenAI 文件内容的 MIME 类型和原始 base64 载荷。
 func NormalizeOpenAIFileData(filename, fallbackMIMEType, fileData string) (mimeType, data string, ok bool) {
 	if fileData == "" {
 		return "", "", false

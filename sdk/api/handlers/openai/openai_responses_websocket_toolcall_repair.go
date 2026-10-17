@@ -500,7 +500,7 @@ func repairResponsesToolCallItems(
 		return dedupeResponsesWebsocketInputItems(items), nil
 	}
 
-	// First pass: record tool outputs and remember which call_ids have outputs in this payload.
+	// 第一遍：记录工具输出，并记住本载荷中哪些 call_id 已有输出。
 	outputPresent := make(map[string]struct{}, len(items))
 	callPresent := make(map[string]struct{}, len(items))
 	for _, item := range items {
@@ -532,8 +532,8 @@ func repairResponsesToolCallItems(
 	for _, item := range items {
 		if isResponsesToolCallOutputType(item.itemType) {
 			if item.callID == "" {
-				// Codex sends standalone named results for heartbeat and delegation
-				// input. These intentionally have no preceding call or call_id.
+				// Codex 会为心跳和委派发送独立的具名结果
+				// 输入。这些有意不带前置调用或 call_id。
 				name := gjson.GetBytes(item.raw, "name")
 				if item.itemType == "function_call_output" && name.Type == gjson.String && strings.TrimSpace(name.String()) != "" {
 					filtered = append(filtered, item)
@@ -567,7 +567,7 @@ func repairResponsesToolCallItems(
 				}
 			}
 
-			// Drop orphaned function_call_output items; upstream rejects transcripts with missing calls.
+			// 丢弃孤立的 function_call_output 项；上游会拒绝缺少调用的记录。
 			continue
 		}
 		if !isResponsesToolCallType(item.itemType) {
@@ -576,7 +576,7 @@ func repairResponsesToolCallItems(
 		}
 
 		if item.callID == "" {
-			// Upstream rejects tool calls without a call_id; drop it.
+			// 上游会拒绝没有 call_id 的工具调用；将其丢弃。
 			continue
 		}
 
@@ -600,7 +600,7 @@ func repairResponsesToolCallItems(
 			continue
 		}
 
-		// Drop orphaned function_call items; upstream rejects transcripts with missing outputs.
+		// 丢弃孤立的 function_call 项；上游会拒绝缺少输出的记录。
 	}
 
 	return dedupeResponsesWebsocketInputItems(filtered), nil

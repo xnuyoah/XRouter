@@ -65,7 +65,7 @@ func markNestedExecution(ctx context.Context) {
 	}
 }
 
-// WithPinnedAuthID returns a child context that requests execution on a specific auth ID.
+// WithPinnedAuthID 返回一个子 context，要求使用特定 auth ID 执行。
 func WithPinnedAuthID(ctx context.Context, authID string) context.Context {
 	authID = strings.TrimSpace(authID)
 	if authID == "" {
@@ -77,7 +77,7 @@ func WithPinnedAuthID(ctx context.Context, authID string) context.Context {
 	return context.WithValue(ctx, pinnedAuthContextKey{}, authID)
 }
 
-// WithSelectedAuthIDCallback returns a child context that receives the selected auth ID.
+// WithSelectedAuthIDCallback 返回一个子 context，用于接收被选中的 auth ID。
 func WithSelectedAuthIDCallback(ctx context.Context, callback func(string)) context.Context {
 	if callback == nil {
 		return ctx
@@ -88,8 +88,8 @@ func WithSelectedAuthIDCallback(ctx context.Context, callback func(string)) cont
 	return context.WithValue(ctx, selectedAuthCallbackContextKey{}, callback)
 }
 
-// PrepareStreamModelRoute resolves a stream route once and stores it on the returned context for execution.
-// The boolean reports whether the route overrides normal model-to-provider resolution.
+// PrepareStreamModelRoute 一次性解析流式路由，并将其存储到返回的 context 上以供执行。
+// 布尔值报告该路由是否覆盖常规的模型到供应商解析。
 func (h *BaseAPIHandler) PrepareStreamModelRoute(ctx context.Context, handlerType string, modelName string, rawJSON []byte) (context.Context, bool) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -101,9 +101,9 @@ func (h *BaseAPIHandler) PrepareStreamModelRoute(ctx context.Context, handlerTyp
 }
 
 func preparedModelRouteFromContext(ctx context.Context, skipRouterPluginID string) (modelRouteDecision, bool) {
-	// A host.model.execute_stream callback is a nested execution. Its caller is
-	// excluded from model routing, so an outer prepared route cannot be reused:
-	// it may point straight back at that caller.
+	// host.model.execute_stream 回调是一次嵌套执行。其调用方
+	// 被排除在模型路由之外，因此外层已准备的路由不能复用：
+	// 它可能直指该调用方自身。
 	if ctx == nil || strings.TrimSpace(skipRouterPluginID) != "" {
 		return modelRouteDecision{}, false
 	}
@@ -111,7 +111,7 @@ func preparedModelRouteFromContext(ctx context.Context, skipRouterPluginID strin
 	return decision, ok
 }
 
-// PreparedStreamPluginExecutor returns the executor plugin ID if the prepared route targets a plugin executor.
+// PreparedStreamPluginExecutor 在已准备的路由指向插件执行器时返回该执行器插件 ID。
 func PreparedStreamPluginExecutor(ctx context.Context) string {
 	decision, ok := preparedModelRouteFromContext(ctx, "")
 	if !ok {
@@ -120,7 +120,7 @@ func PreparedStreamPluginExecutor(ctx context.Context) string {
 	return strings.TrimSpace(decision.ExecutorPluginID)
 }
 
-// PreparedStreamProviderRoute returns the provider and target model if the prepared route targets a provider route override.
+// PreparedStreamProviderRoute 在已准备的路由指向供应商路由覆盖时返回供应商和目标模型。
 func PreparedStreamProviderRoute(ctx context.Context) (string, string) {
 	decision, ok := preparedModelRouteFromContext(ctx, "")
 	if !ok {
@@ -129,7 +129,7 @@ func PreparedStreamProviderRoute(ctx context.Context) (string, string) {
 	return strings.TrimSpace(decision.Provider), strings.TrimSpace(decision.Model)
 }
 
-// WithExecutionSessionID returns a child context tagged with a long-lived execution session ID.
+// WithExecutionSessionID 返回一个子 context，并标记一个长生命周期的执行会话 ID。
 func WithExecutionSessionID(ctx context.Context, sessionID string) context.Context {
 	sessionID = strings.TrimSpace(sessionID)
 	if sessionID == "" {
@@ -141,7 +141,7 @@ func WithExecutionSessionID(ctx context.Context, sessionID string) context.Conte
 	return context.WithValue(ctx, executionSessionContextKey{}, sessionID)
 }
 
-// WithDisallowFreeAuth returns a child context that requests skipping known free-tier credentials.
+// WithDisallowFreeAuth 返回一个子 context，要求跳过已知的免费层凭据。
 func WithDisallowFreeAuth(ctx context.Context) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -149,9 +149,9 @@ func WithDisallowFreeAuth(ctx context.Context) context.Context {
 	return context.WithValue(ctx, disallowFreeAuthContextKey{}, true)
 }
 
-// headersFromContext extracts the original HTTP request headers from the gin context
-// embedded in the provided context. This allows session affinity selectors to read
-// client-provided session headers.
+// headersFromContext 从所提供 context 内嵌的 gin context 中提取
+// 原始 HTTP 请求头。这使会话亲和性选择器能够读取
+// 客户端提供的会话请求头。
 func headersFromContext(ctx context.Context) http.Header {
 	if ctx == nil {
 		return nil
@@ -162,10 +162,10 @@ func headersFromContext(ctx context.Context) http.Header {
 	return nil
 }
 
-// queryFromContext extracts the original HTTP request query parameters from the
-// gin context embedded in the provided context. Mirrors headersFromContext so
-// model routers can observe inbound query parameters for plain HTTP requests,
-// where execOptions.Query is not populated by callers.
+// queryFromContext 从所提供 context 内嵌的 gin context 中提取
+// 原始 HTTP 请求查询参数。与 headersFromContext 对应，使
+// 模型路由器能够观察普通 HTTP 请求的入站查询参数，
+// 这些请求中调用方未填充 execOptions.Query。
 func queryFromContext(ctx context.Context) url.Values {
 	if ctx == nil {
 		return nil

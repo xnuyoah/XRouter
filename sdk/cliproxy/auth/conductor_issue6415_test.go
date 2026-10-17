@@ -11,10 +11,10 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// TestManager_Issue6415_RefreshPending_DoesNotSelectRejectedCredential reproduces
-// Issue #6415 symptom 1:
-// When a request fails with 401 and token expiry is unknown, concurrent requests
-// should not pick the credential while refresh is pending.
+// TestManager_Issue6415_RefreshPending_DoesNotSelectRejectedCredential 复现
+// Issue #6415 的症状 1：
+// 当请求以 401 失败且令牌过期时间未知时，刷新处于待处理期间
+// 的并发请求不应选中该凭据。
 func TestManager_Issue6415_RefreshPending_DoesNotSelectRejectedCredential(t *testing.T) {
 	m, executor, primary, backup, model := newUnauthorizedRefreshFixture(t, false)
 
@@ -40,10 +40,10 @@ func TestManager_Issue6415_RefreshPending_DoesNotSelectRejectedCredential(t *tes
 		resp1, err1 = m.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: model}, cliproxyexecutor.Options{})
 	}()
 
-	// Wait for primary to hit 401 and enter Refresh (which is now blocked).
+	// 等待 primary 命中 401 并进入 Refresh（此时已被阻塞）。
 	<-refreshStarted
 
-	// While refresh is pending on primary with a rejected token, primary must be blocked / not selectable.
+	// 当 primary 上带着被拒绝的令牌、刷新处于待处理时，primary 必须被阻塞 / 不可选中。
 	currentPrimary, ok := m.GetByID(primary.ID)
 	if !ok || currentPrimary == nil {
 		t.Fatal("primary auth missing")
@@ -53,7 +53,7 @@ func TestManager_Issue6415_RefreshPending_DoesNotSelectRejectedCredential(t *tes
 		t.Fatalf("primary must be blocked while refresh is pending for rejected token")
 	}
 
-	// Concurrent request while refresh is pending must pick backup and succeed without touching primary.
+	// 刷新待处理时的并发请求必须选中 backup 并成功，且不触碰 primary。
 	execCallsBefore := len(executor.ExecuteCalls())
 	resp2, err2 := m.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: model}, cliproxyexecutor.Options{})
 	if err2 != nil {
@@ -68,7 +68,7 @@ func TestManager_Issue6415_RefreshPending_DoesNotSelectRejectedCredential(t *tes
 		}
 	}
 
-	// Release refresh and wait for first request to complete.
+	// 释放刷新并等待第一个请求完成。
 	close(releaseRefresh)
 	<-req1Done
 	if err1 != nil {
@@ -79,10 +79,10 @@ func TestManager_Issue6415_RefreshPending_DoesNotSelectRejectedCredential(t *tes
 	}
 }
 
-// TestManager_Issue6415_NonTerminalRefreshFailure_MarksCredentialUnavailable reproduces
-// Issue #6415 symptom 2:
-// When refresh fails with a non-terminal error (e.g. transient 503) for a token with
-// unknown expiry, the rejected token must not be retained as active.
+// TestManager_Issue6415_NonTerminalRefreshFailure_MarksCredentialUnavailable 复现
+// Issue #6415 的症状 2：
+// 当刷新对过期时间未知的令牌以非终结性错误（例如瞬时 503）
+// 失败时，被拒绝的令牌不得被保留为活跃状态。
 func TestManager_Issue6415_NonTerminalRefreshFailure_MarksCredentialUnavailable(t *testing.T) {
 	m, executor, primary, _, _ := newUnauthorizedRefreshFixture(t, false)
 
@@ -90,7 +90,7 @@ func TestManager_Issue6415_NonTerminalRefreshFailure_MarksCredentialUnavailable(
 	executor.refreshErr = errors.New("upstream 503 Service Unavailable")
 	executor.mu.Unlock()
 
-	// Direct call to refreshAuthForRequest with the rejected access token.
+	// 使用被拒绝的访问令牌直接调用 refreshAuthForRequest。
 	_, errRefresh := m.refreshAuthForRequest(context.Background(), primary.ID, authAccessToken(primary))
 	if errRefresh == nil {
 		t.Fatal("expected refresh error")
@@ -108,13 +108,13 @@ func TestManager_Issue6415_NonTerminalRefreshFailure_MarksCredentialUnavailable(
 	}
 }
 
-// TestManager_Issue6415_RefreshSuccess_PreservesActiveQuotaCooldown reproduces
-// Issue #6415 related symptom:
-// A successful 401 refresh must not wipe an independent, still-active quota cooldown on that model.
+// TestManager_Issue6415_RefreshSuccess_PreservesActiveQuotaCooldown 复现
+// Issue #6415 的相关症状：
+// 一次成功的 401 刷新不得抹掉该模型上独立的、仍然生效的额度冷却。
 func TestManager_Issue6415_RefreshSuccess_PreservesActiveQuotaCooldown(t *testing.T) {
 	m, _, primary, _, model := newUnauthorizedRefreshFixture(t, false)
 
-	// Set active quota cooldown on primary for model.
+	// 为 primary 上的模型设置生效中的额度冷却。
 	now := time.Now()
 	quotaRecover := now.Add(30 * time.Minute)
 	primaryAuth, ok := m.GetByID(primary.ID)
@@ -139,7 +139,7 @@ func TestManager_Issue6415_RefreshSuccess_PreservesActiveQuotaCooldown(t *testin
 		t.Fatalf("update primary auth: %v", errUpdate)
 	}
 
-	// Trigger 401 refresh on primary.
+	// 在 primary 上触发 401 刷新。
 	_, errRefresh := m.ForceRefreshAuth(context.Background(), primary.ID)
 	if errRefresh != nil {
 		t.Fatalf("ForceRefreshAuth error = %v", errRefresh)
@@ -161,9 +161,9 @@ func TestManager_Issue6415_RefreshSuccess_PreservesActiveQuotaCooldown(t *testin
 	}
 }
 
-// TestManager_Issue6415_ExecuteRetrySuccess_PreservesActiveQuotaCooldown tests
-// the full Execute path (401 -> refresh -> retry success) and ensures both sibling
-// models and the retried model with active quota cooldown keep their quota state.
+// TestManager_Issue6415_ExecuteRetrySuccess_PreservesActiveQuotaCooldown 测试
+// 完整的 Execute 路径（401 -> refresh -> retry 成功），并确保同级的
+// 模型以及带生效额度冷却的重试模型都保持其额度状态。
 func TestManager_Issue6415_ExecuteRetrySuccess_PreservesActiveQuotaCooldown(t *testing.T) {
 	m, executor, primary, _, model := newUnauthorizedRefreshFixture(t, false)
 
@@ -198,7 +198,7 @@ func TestManager_Issue6415_ExecuteRetrySuccess_PreservesActiveQuotaCooldown(t *t
 		t.Fatalf("update primary auth: %v", errUpdate)
 	}
 
-	// Execute model: triggers 401 on primary, refreshes token, retries, and succeeds.
+	// 对模型执行：在 primary 上触发 401，刷新令牌，重试并成功。
 	resp, errExec := m.Execute(context.Background(), []string{"codex"}, cliproxyexecutor.Request{Model: model}, cliproxyexecutor.Options{})
 	if errExec != nil {
 		t.Fatalf("Execute error = %v, want success after refresh retry", errExec)
@@ -216,7 +216,7 @@ func TestManager_Issue6415_ExecuteRetrySuccess_PreservesActiveQuotaCooldown(t *t
 		t.Fatal("primary auth missing after execution")
 	}
 
-	// Verify sibling model still preserves its active quota cooldown.
+	// 验证同级模型仍保留其生效中的额度冷却。
 	siblingState := updatedPrimary.ModelStates[siblingModel]
 	if siblingState == nil {
 		t.Fatalf("sibling model state %q missing", siblingModel)
@@ -229,9 +229,9 @@ func TestManager_Issue6415_ExecuteRetrySuccess_PreservesActiveQuotaCooldown(t *t
 	}
 }
 
-// TestManager_Issue6415_MarkRejectedAccessToken_AdvancesGeneration verifies
-// that markRejectedAccessToken increments Generation so stale in-flight results
-// cannot overwrite the rejected credential status in the scheduler.
+// TestManager_Issue6415_MarkRejectedAccessToken_AdvancesGeneration 验证
+// markRejectedAccessToken 会递增 Generation，因此过期的在途结果
+// 无法覆盖调度器中该被拒绝凭据的状态。
 func TestManager_Issue6415_MarkRejectedAccessToken_AdvancesGeneration(t *testing.T) {
 	m, _, primary, _, _ := newUnauthorizedRefreshFixture(t, false)
 
@@ -256,17 +256,17 @@ func TestManager_Issue6415_MarkRejectedAccessToken_AdvancesGeneration(t *testing
 }
 
 // TestManager_Issue6415_UpdateWithoutCredentialChange_PreservesRejectedAccessToken
-// verifies that hot-reloads or Manager.Update with identical credentials does not
-// wipe out the runtime RejectedAccessToken marker.
+// 验证热重载或使用相同凭据的 Manager.Update 不会
+// 抹掉运行时的 RejectedAccessToken 标记。
 func TestManager_Issue6415_UpdateWithoutCredentialChange_PreservesRejectedAccessToken(t *testing.T) {
 	m, _, primary, _, _ := newUnauthorizedRefreshFixture(t, false)
 
 	token := authAccessToken(primary)
 	m.markRejectedAccessToken(primary.ID, token)
 
-	// Simulate config reload or metadata update (e.g. note or weight change, but same credentials).
+	// 模拟配置重载或元数据更新（例如 note 或 weight 变化，但凭据相同）。
 	reloadAuth := primary.Clone()
-	reloadAuth.RejectedAccessToken = "" // Serialized auth from file has empty runtime field
+	reloadAuth.RejectedAccessToken = "" // 从文件反序列化得到的 auth 其运行时字段为空
 	reloadAuth.Metadata["note"] = "reloaded from file"
 
 	updated, errUpdate := m.Update(context.Background(), reloadAuth)
@@ -287,15 +287,15 @@ func TestManager_Issue6415_UpdateWithoutCredentialChange_PreservesRejectedAccess
 }
 
 // TestManager_Issue6415_RefreshSuccessWithUnchangedToken_ClearsRejectedAccessToken
-// verifies that when Refresh succeeds but returns the exact same token string,
-// the RejectedAccessToken marker is cleared and not erroneously restored.
+// 验证当 Refresh 成功但返回的令牌字符串完全相同时，
+// RejectedAccessToken 标记会被清除，而不会被错误地恢复。
 func TestManager_Issue6415_RefreshSuccessWithUnchangedToken_ClearsRejectedAccessToken(t *testing.T) {
 	m, executor, primary, _, model := newUnauthorizedRefreshFixture(t, false)
 
 	token := authAccessToken(primary)
 	m.markRejectedAccessToken(primary.ID, token)
 
-	// Executor Refresh returns the same token string (e.g. session refreshed without rotating key).
+	// 执行器 Refresh 返回相同的令牌字符串（例如会话刷新但未轮换 key）。
 	executor.mu.Lock()
 	executor.refreshTokens[primary.ID] = token
 	executor.mu.Unlock()
@@ -322,9 +322,9 @@ func TestManager_Issue6415_RefreshSuccessWithUnchangedToken_ClearsRejectedAccess
 	}
 }
 
-// TestManager_Issue6415_RefreshCanceled_ReschedulesRefresh verifies that if
-// a refresh is canceled via context, a retry is scheduled so the rejected credential
-// does not remain indefinitely unselectable without a retry attempt.
+// TestManager_Issue6415_RefreshCanceled_ReschedulesRefresh 验证：如果
+// 刷新通过 context 被取消，则会安排一次重试，使被拒绝的凭据
+// 不会无限期地保持不可选中且不进行任何重试尝试。
 func TestManager_Issue6415_RefreshCanceled_ReschedulesRefresh(t *testing.T) {
 	m, executor, primary, _, _ := newUnauthorizedRefreshFixture(t, false)
 

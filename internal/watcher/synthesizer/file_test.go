@@ -69,7 +69,7 @@ func TestFileSynthesizer_Synthesize_NonExistentDir(t *testing.T) {
 func TestFileSynthesizer_Synthesize_ValidAuthFile(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create a valid auth file
+	// 创建有效的 auth 文件
 	authData := map[string]any{
 		"type":      "claude",
 		"email":     "test@example.com",
@@ -343,13 +343,13 @@ func (f multiAuthParserFunc) ParseAuths(ctx context.Context, req pluginapi.AuthP
 func TestFileSynthesizer_Synthesize_SkipsInvalidFiles(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create various invalid files
+	// 创建各种无效文件
 	_ = os.WriteFile(filepath.Join(tempDir, "not-json.txt"), []byte("text content"), 0644)
 	_ = os.WriteFile(filepath.Join(tempDir, "invalid.json"), []byte("not valid json"), 0644)
 	_ = os.WriteFile(filepath.Join(tempDir, "empty.json"), []byte(""), 0644)
 	_ = os.WriteFile(filepath.Join(tempDir, "no-type.json"), []byte(`{"email": "test@example.com"}`), 0644)
 
-	// Create one valid file
+	// 创建一个有效文件
 	validData, _ := json.Marshal(map[string]any{"type": "claude", "email": "valid@example.com"})
 	_ = os.WriteFile(filepath.Join(tempDir, "valid.json"), validData, 0644)
 
@@ -376,14 +376,14 @@ func TestFileSynthesizer_Synthesize_SkipsInvalidFiles(t *testing.T) {
 func TestFileSynthesizer_Synthesize_SkipsDirectories(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create a subdirectory with a json file inside
+	// 创建内含一个 json 文件的子目录
 	subDir := filepath.Join(tempDir, "subdir.json")
 	err := os.Mkdir(subDir, 0755)
 	if err != nil {
 		t.Fatalf("failed to create subdir: %v", err)
 	}
 
-	// Create a valid file in root
+	// 在根目录创建有效文件
 	validData, _ := json.Marshal(map[string]any{"type": "claude"})
 	_ = os.WriteFile(filepath.Join(tempDir, "valid.json"), validData, 0644)
 
@@ -430,7 +430,7 @@ func TestFileSynthesizer_Synthesize_RelativeID(t *testing.T) {
 		t.Fatalf("expected 1 auth, got %d", len(auths))
 	}
 
-	// ID should be relative path
+	// ID 应为相对路径
 	if auths[0].ID != "my-auth.json" {
 		t.Errorf("expected ID my-auth.json, got %s", auths[0].ID)
 	}

@@ -7,16 +7,16 @@ import (
 	"testing"
 )
 
-// TestV8ExampleLoadsAndRoundTrips guards the shipped template: config.example.yaml
-// must load as v8 without a rewrite, and a migration must produce a document the
-// v8 API accepts. Provider examples stay commented until explicitly enabled, and
-// the commented API-key examples must validate once uncommented.
+// TestV8ExampleLoadsAndRoundTrips 守护随附模板：config.example.yaml
+// 必须在不重写的情况下作为 v8 加载，且迁移必须生成
+// v8 API 接受的文档。供应商示例保持注释状态直到显式启用，
+// 而被注释的 API-key 示例在取消注释后必须能通过校验。
 func TestV8ExampleLoadsAndRoundTrips(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("..", "..", "config.example.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Historical spellings kept as documentation must not be rewritten on load.
+	// 作为文档保留的历史写法在加载时不得被重写。
 	if _, changed, errReadOnly := NormalizeConfigLayout(data, false); errReadOnly != nil || changed {
 		t.Fatalf("config.example.yaml must use the v8 layout: changed=%v error=%v", changed, errReadOnly)
 	}
@@ -34,7 +34,7 @@ func TestV8ExampleLoadsAndRoundTrips(t *testing.T) {
 	if cfg.Port != 11016 {
 		t.Fatalf("config.example.yaml port = %d, want 11016", cfg.Port)
 	}
-	// access.api-keys ships active example client keys; provider credentials stay commented.
+	// access.api-keys 附带生效的示例客户端密钥；供应商凭据保持注释状态。
 	if len(cfg.APIKeys) == 0 {
 		t.Fatal("config.example.yaml lost its active access.api-keys entries")
 	}
@@ -49,7 +49,7 @@ func TestV8ExampleLoadsAndRoundTrips(t *testing.T) {
 			t.Fatalf("placeholder api-keys.%s examples must remain commented, got %d active entries", name, count)
 		}
 	}
-	// Validate the provider examples exactly as operators uncomment them.
+	// 完全按运维人员取消注释后的样子校验供应商示例。
 	text := strings.ReplaceAll(string(migrated), "\r\n", "\n")
 	_, block, found := strings.Cut(text, "# BEGIN API KEY EXAMPLES\n")
 	if !found {
@@ -99,9 +99,9 @@ func TestV8ExampleLoadsAndRoundTrips(t *testing.T) {
 	}
 }
 
-// removedExampleProvider reports whether the api-keys example block belongs to a
-// provider family the runtime no longer accepts. Those examples are left in the
-// template as documentation but must not be uncommented for validation.
+// removedExampleProvider 报告该 api-keys 示例块是否属于一个
+// 运行时不再接受的供应商标族。这些示例会保留在
+// 模板中作为文档，但不得为校验而取消注释。
 func removedExampleProvider(name string) bool {
 	switch name {
 	case "gemini", "interactions", "vertex":

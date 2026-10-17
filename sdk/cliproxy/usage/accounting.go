@@ -2,10 +2,10 @@ package usage
 
 import "strings"
 
-// TokenAccountingSchemaVersion identifies the canonical token accounting contract.
+// TokenAccountingSchemaVersion 标识规范的 token 计量契约。
 const TokenAccountingSchemaVersion = 2
 
-// TokenAccountingQuality describes how confidently a token total can be classified.
+// TokenAccountingQuality 描述一个 token 总量能以多高置信度被归类。
 type TokenAccountingQuality string
 
 const (
@@ -23,7 +23,7 @@ const (
 	tokenAccountingSemanticsSeparateReasoning
 )
 
-// TokenInputBreakdown contains mutually exclusive input token buckets.
+// TokenInputBreakdown 包含互斥的输入 token 桶。
 type TokenInputBreakdown struct {
 	TotalTokens      int64 `json:"total_tokens"`
 	UncachedTokens   int64 `json:"uncached_tokens"`
@@ -31,14 +31,14 @@ type TokenInputBreakdown struct {
 	CacheWriteTokens int64 `json:"cache_write_tokens"`
 }
 
-// TokenOutputBreakdown contains mutually exclusive output token buckets.
+// TokenOutputBreakdown 包含互斥的输出 token 桶。
 type TokenOutputBreakdown struct {
 	TotalTokens        int64 `json:"total_tokens"`
 	NonReasoningTokens int64 `json:"non_reasoning_tokens"`
 	ReasoningTokens    int64 `json:"reasoning_tokens"`
 }
 
-// TokenBreakdown is the canonical, non-overlapping token accounting contract.
+// TokenBreakdown 是规范且互不重叠的 token 计量契约。
 type TokenBreakdown struct {
 	SchemaVersion      int                    `json:"schema_version"`
 	Quality            TokenAccountingQuality `json:"quality"`
@@ -48,7 +48,7 @@ type TokenBreakdown struct {
 	UnclassifiedTokens int64                  `json:"unclassified_tokens"`
 }
 
-// Valid reports whether the breakdown satisfies the v2 accounting invariants.
+// Valid 报告该细分是否满足 v2 计量不变式。
 func (b TokenBreakdown) Valid() bool {
 	if b.SchemaVersion != TokenAccountingSchemaVersion || !validTokenAccountingQuality(b.Quality) {
 		return false
@@ -87,8 +87,8 @@ func validTokenAccountingQuality(quality TokenAccountingQuality) bool {
 	}
 }
 
-// NewSubsetTokenBreakdown normalizes protocols where cache tokens are included
-// in input totals and reasoning tokens are included in output totals.
+// NewSubsetTokenBreakdown 规范化这样一类协议：缓存 token 计入
+// 输入总量，推理 token 计入输出总量。
 func NewSubsetTokenBreakdown(inputTotal, cacheRead, cacheWrite, outputTotal, reasoning, total int64) TokenBreakdown {
 	cacheTotal, okCache := nonNegativeSum(cacheRead, cacheWrite)
 	expectedTotal, okExpected := nonNegativeSum(inputTotal, outputTotal)
@@ -118,8 +118,8 @@ func NewSubsetTokenBreakdown(inputTotal, cacheRead, cacheWrite, outputTotal, rea
 	}
 }
 
-// NewPartialSubsetTokenBreakdown preserves known subset buckets while assigning
-// an authoritative remainder to the unclassified bucket.
+// NewPartialSubsetTokenBreakdown 保留已知子集桶，同时把
+// 权威的剩余量分配到未分类桶。
 func NewPartialSubsetTokenBreakdown(inputTotal, cacheRead, cacheWrite, outputTotal, reasoning, total int64) TokenBreakdown {
 	cacheTotal, okCache := nonNegativeSum(cacheRead, cacheWrite)
 	expectedTotal, okExpected := nonNegativeSum(inputTotal, outputTotal)
@@ -158,8 +158,8 @@ func NewPartialSubsetTokenBreakdown(inputTotal, cacheRead, cacheWrite, outputTot
 	}
 }
 
-// NewIndependentTokenBreakdown normalizes protocols where uncached input,
-// cache reads, cache writes, non-reasoning output, and reasoning are separate.
+// NewIndependentTokenBreakdown 规范化这样一类协议：未缓存输入、
+// 缓存读取、缓存写入、非推理输出和推理彼此分离。
 func NewIndependentTokenBreakdown(uncachedInput, cacheRead, cacheWrite, nonReasoningOutput, reasoning, total int64) TokenBreakdown {
 	inputTotal, okInput := nonNegativeSum(uncachedInput, cacheRead, cacheWrite)
 	outputTotal, okOutput := nonNegativeSum(nonReasoningOutput, reasoning)
@@ -189,8 +189,8 @@ func NewIndependentTokenBreakdown(uncachedInput, cacheRead, cacheWrite, nonReaso
 	}
 }
 
-// NewSeparateReasoningTokenBreakdown normalizes protocols where cache tokens
-// are included in input totals while reasoning is separate from ordinary output.
+// NewSeparateReasoningTokenBreakdown 规范化这样一类协议：缓存 token
+// 计入输入总量，而推理与普通输出分离。
 func NewSeparateReasoningTokenBreakdown(inputTotal, cacheRead, cacheWrite, nonReasoningOutput, reasoning, total int64) TokenBreakdown {
 	cacheTotal, okCache := nonNegativeSum(cacheRead, cacheWrite)
 	if !okCache || inputTotal < 0 || cacheTotal > inputTotal {
@@ -223,8 +223,8 @@ func NewSeparateReasoningTokenBreakdown(inputTotal, cacheRead, cacheWrite, nonRe
 	}
 }
 
-// NewUnclassifiedTokenBreakdown preserves an authoritative total without
-// guessing how an unknown protocol partitions it.
+// NewUnclassifiedTokenBreakdown 保留权威总量，而不去
+// 猜测未知协议如何划分该总量。
 func NewUnclassifiedTokenBreakdown(total int64) TokenBreakdown {
 	if total <= 0 {
 		quality := TokenAccountingQualityComplete
@@ -241,15 +241,15 @@ func NewUnclassifiedTokenBreakdown(total int64) TokenBreakdown {
 	}
 }
 
-// EnsureTokenBreakdown attaches a valid v2 breakdown to legacy or direct SDK
-// usage details without guessing whether reasoning is already inside output.
+// EnsureTokenBreakdown 为旧版或直接来自 SDK 的
+// 用量明细附加一个有效的 v2 细分，不猜测推理是否已包含在输出中。
 func EnsureTokenBreakdown(detail Detail) Detail {
 	return EnsureTokenBreakdownForProvider(detail, "", "")
 }
 
-// EnsureTokenBreakdownForProvider attaches a valid v2 breakdown to legacy or
-// direct SDK usage details using the known provider's token semantics. Unknown
-// providers remain unclassified instead of guessing how their buckets overlap.
+// EnsureTokenBreakdownForProvider 使用已知供应商的 token 语义，为旧版或
+// 直接来自 SDK 的用量明细附加一个有效的 v2 细分。未知
+// 供应商保持未分类，而不是猜测其各桶如何重叠。
 func EnsureTokenBreakdownForProvider(detail Detail, provider, executorType string) Detail {
 	if !detail.TokenBreakdown.Valid() {
 		semantics := tokenAccountingSemanticsFor(provider, executorType)

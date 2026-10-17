@@ -11,7 +11,7 @@ type NativeAPIModelsSummary struct {
 	count int
 }
 
-// SummarizeNativeAPIModels hashes native OpenAI-wire API-key model aliases for change detection.
+// SummarizeNativeAPIModels 哈希原生 OpenAI 线路 API-key 模型别名，用于变更检测。
 func SummarizeNativeAPIModels(models []config.NativeAPIModel) NativeAPIModelsSummary {
 	if len(models) == 0 {
 		return NativeAPIModelsSummary{}

@@ -43,7 +43,7 @@ func TestAuthChangeWatchCoversNativeMutationsAndReload(t *testing.T) {
 		}
 		assertChanged()
 	}
-	// Slow subscribers never block manager mutations and receive a coalesced hint.
+	// 慢订阅者绝不会阻塞管理器的变更，并会收到合并后的提示。
 	for range 100 {
 		auth, err = manager.Update(t.Context(), auth)
 		if err != nil {
@@ -56,7 +56,7 @@ func TestAuthChangeWatchCoversNativeMutationsAndReload(t *testing.T) {
 	assertChanged()
 	manager.Remove(t.Context(), auth.ID)
 	assertChanged()
-	// Reload invalidates all subscribed snapshots, including currently absent IDs.
+	// Reload 会使所有已订阅快照失效，包括当前不存在的 ID。
 	if err = manager.Load(t.Context()); err != nil {
 		t.Fatal(err)
 	}

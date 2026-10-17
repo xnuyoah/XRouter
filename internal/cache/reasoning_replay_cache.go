@@ -18,28 +18,28 @@ import (
 )
 
 const (
-	// ReasoningReplayCacheTTL limits how long encrypted reasoning replay
-	// items stay in process memory.
+	// ReasoningReplayCacheTTL 限制加密的推理重放
+	// 条目在进程内存中保留多久。
 	ReasoningReplayCacheTTL = 1 * time.Hour
 
-	// ReasoningReplayCacheMaxEntries bounds process memory for replay
-	// continuity. Oldest entries are evicted first.
+	// ReasoningReplayCacheMaxEntries 为需要重放
+	// 连续性的进程内存设限。最旧的条目最先被驱逐。
 	ReasoningReplayCacheMaxEntries = 10240
 
-	// ReasoningReplayCacheEvictBatchSize leaves headroom after the cache
-	// reaches capacity so high write volume does not rescan the map every turn.
+	// ReasoningReplayCacheEvictBatchSize 在缓存
+	// 达到容量后留出余量，使高写入量不会每轮都重新扫描整个 map。
 	ReasoningReplayCacheEvictBatchSize = 128
 
 	minThoughtSignatureReplayLen = 16
 
-	// ReasoningReplayCacheMaxItemsPerEntry and MaxBytesPerEntry
-	// bound one logical conversation. Oversized chains are not partially cached,
-	// because dropping an arbitrary prefix would break native signature ordering.
+	// ReasoningReplayCacheMaxItemsPerEntry 和 MaxBytesPerEntry
+	// 为一轮逻辑对话设限。超大的链不会被部分缓存，
+	// 因为丢弃任意前缀会破坏原生签名的顺序。
 	ReasoningReplayCacheMaxItemsPerEntry = 4096
 	ReasoningReplayCacheMaxBytesPerEntry = 16 << 20
 
-	// JSON encodes each normalized []byte item as base64. Leave enough room for
-	// that expansion while rejecting oversized Home values before unmarshalling.
+	// JSON 把每个规范化后的 []byte 条目编码为 base64。要为
+	// 这种膨胀留足空间，同时在反序列化前拒收过大的 Home 值。
 	reasoningReplayCacheMaxSerializedBytes = 24 << 20
 )
 
@@ -51,12 +51,12 @@ type reasoningReplayEntry struct {
 	Deleted   bool
 }
 
-// reasoningReplayGenerationItemType keeps its historical spelling because the
-// marker is a wire-level Home KV identifier.
+// reasoningReplayGenerationItemType 保留其历史拼写，因为
+// 该标记是线路层面的 Home KV 标识符。
 const reasoningReplayGenerationItemType = "cpa_antigravity_replay_generation"
 
-// ReasoningReplaySnapshot identifies the exact replay state read for
-// one request. Its fields are intentionally opaque outside this package.
+// ReasoningReplaySnapshot 标识为某个请求读取到的确切重放
+// 状态。其字段在本包之外有意保持不透明。
 type ReasoningReplaySnapshot struct {
 	raw           []byte
 	items         [][]byte
@@ -85,20 +85,20 @@ var currentReasoningReplayKVClient = func() (reasoningReplayKVClient, bool, erro
 	return homekv.CurrentKVClient()
 }
 
-// CacheReasoningReplayItem stores a final GPT/Codex reasoning item for
-// stateless replay. The stored item is normalized to the minimal shape accepted
-// by Responses input replay.
+// CacheReasoningReplayItem 为无状态重放存储一个最终的
+// GPT/Codex 推理条目。存储的条目会被规范化为 Responses
+// 输入重放可接受的最小形态。
 func CacheReasoningReplayItem(modelName, sessionKey string, item []byte) bool {
 	return CacheReasoningReplayItems(modelName, sessionKey, [][]byte{item})
 }
 
-// CacheReasoningReplayItems stores the final GPT/Codex assistant output
-// items needed to replay a stateless next turn.
+// CacheReasoningReplayItems 存储重放无状态下一轮所需的
+// 最终 GPT/Codex 助手输出条目。
 func CacheReasoningReplayItems(modelName, sessionKey string, items [][]byte) bool {
 	return CacheReasoningReplayItemsBestEffort(context.Background(), modelName, sessionKey, items)
 }
 
-// CacheReasoningReplayItemsBestEffort stores replay items for completed response paths.
+// CacheReasoningReplayItemsBestEffort 为已完成的响应路径存储重放条目。
 func CacheReasoningReplayItemsBestEffort(ctx context.Context, modelName, sessionKey string, items [][]byte) bool {
 	key := reasoningReplayCacheKey(modelName, sessionKey)
 	if key == "" {
@@ -143,7 +143,7 @@ func CacheReasoningReplayItemsBestEffort(ctx context.Context, modelName, session
 	return true
 }
 
-// GetReasoningReplayItem retrieves a normalized reasoning replay item.
+// GetReasoningReplayItem 取回一个规范化后的推理重放条目。
 func GetReasoningReplayItem(modelName, sessionKey string) ([]byte, bool) {
 	items, ok := GetReasoningReplayItems(modelName, sessionKey)
 	if !ok || len(items) == 0 {
@@ -152,7 +152,7 @@ func GetReasoningReplayItem(modelName, sessionKey string) ([]byte, bool) {
 	return items[0], true
 }
 
-// GetReasoningReplayItems retrieves normalized assistant output items.
+// GetReasoningReplayItems 取回规范化后的助手输出条目。
 func GetReasoningReplayItems(modelName, sessionKey string) ([][]byte, bool) {
 	items, ok, err := GetReasoningReplayItemsRequired(context.Background(), modelName, sessionKey)
 	if err == nil {
@@ -161,14 +161,14 @@ func GetReasoningReplayItems(modelName, sessionKey string) ([][]byte, bool) {
 	return nil, false
 }
 
-// GetReasoningReplayItemsRequired retrieves replay items for request-time paths.
+// GetReasoningReplayItemsRequired 为请求时路径取回重放条目。
 func GetReasoningReplayItemsRequired(ctx context.Context, modelName, sessionKey string) ([][]byte, bool, error) {
 	items, _, found, errGet := GetReasoningReplayItemsWithSnapshotRequired(ctx, modelName, sessionKey)
 	return items, found, errGet
 }
 
-// GetReasoningReplayItemsWithSnapshotRequired retrieves replay items
-// and the exact cache state that guarded this request.
+// GetReasoningReplayItemsWithSnapshotRequired 取回重放条目
+// 以及为此请求把关的确切缓存状态。
 func GetReasoningReplayItemsWithSnapshotRequired(ctx context.Context, modelName, sessionKey string) ([][]byte, ReasoningReplaySnapshot, bool, error) {
 	key := reasoningReplayCacheKey(modelName, sessionKey)
 	if key == "" {
@@ -252,9 +252,9 @@ func GetReasoningReplayItemsWithSnapshotRequired(ctx context.Context, modelName,
 	return cloneReasoningReplayItems(entry.Items), snapshot, true, nil
 }
 
-// reserveReasoningReplayAbsentLocked fences a local miss with a
-// per-key tombstone so eviction of an unrelated key cannot invalidate it.
-// reasoningReplayMu must be held by the caller.
+// reserveReasoningReplayAbsentLocked 用一个按键粒度的
+// 墓碑把本地未命中隔离起来，因此驱逐无关的键不会使其失效。
+// 调用方必须持有 reasoningReplayMu。
 func reserveReasoningReplayAbsentLocked(key string, now time.Time) ReasoningReplaySnapshot {
 	if len(reasoningReplayEntries) >= ReasoningReplayCacheMaxEntries {
 		evictOldestReasoningReplayEntries(ReasoningReplayCacheEvictBatchSize)
@@ -276,8 +276,8 @@ func reserveReasoningReplayAbsentLocked(key string, now time.Time) ReasoningRepl
 	}
 }
 
-// ReplaceReasoningReplayItemsIfUnchanged publishes a completed chain
-// only when no newer request has changed the state read by this request.
+// ReplaceReasoningReplayItemsIfUnchanged 仅当没有更新的
+// 请求改动过本请求读取到的状态时，才发布已完成的链。
 func ReplaceReasoningReplayItemsIfUnchanged(ctx context.Context, modelName, sessionKey string, snapshot ReasoningReplaySnapshot, items [][]byte) (bool, error) {
 	key := reasoningReplayCacheKey(modelName, sessionKey)
 	if key == "" {
@@ -354,8 +354,8 @@ func ReplaceReasoningReplayItemsIfUnchanged(ctx context.Context, modelName, sess
 	return true, nil
 }
 
-// DeleteReasoningReplayItemsIfUnchanged clears replay state only when
-// it still matches the state read for this request.
+// DeleteReasoningReplayItemsIfUnchanged 仅当重放状态仍与
+// 本请求读取到的状态一致时才清除它。
 func DeleteReasoningReplayItemsIfUnchanged(ctx context.Context, modelName, sessionKey string, snapshot ReasoningReplaySnapshot) (bool, error) {
 	key := reasoningReplayCacheKey(modelName, sessionKey)
 	if key == "" {
@@ -386,15 +386,15 @@ func DeleteReasoningReplayItemsIfUnchanged(ctx context.Context, modelName, sessi
 	return true, nil
 }
 
-// DeleteReasoningReplayItem removes one replay item after upstream rejects
-// it or the caller otherwise knows it is stale.
+// DeleteReasoningReplayItem 在上游拒绝某个重放条目或
+// 调用方以其他方式得知其已过期后，移除该条目。
 func DeleteReasoningReplayItem(modelName, sessionKey string) {
 	if errDelete := DeleteReasoningReplayItemRequired(context.Background(), modelName, sessionKey); errDelete != nil {
 		return
 	}
 }
 
-// DeleteReasoningReplayItemRequired removes one replay item for request-time paths.
+// DeleteReasoningReplayItemRequired 为请求时路径移除一个重放条目。
 func DeleteReasoningReplayItemRequired(ctx context.Context, modelName, sessionKey string) error {
 	key := reasoningReplayCacheKey(modelName, sessionKey)
 	if key == "" {
@@ -476,7 +476,7 @@ func newReasoningReplayTombstone() []byte {
 	return raw
 }
 
-// ClearReasoningReplayCache clears all reasoning replay state.
+// ClearReasoningReplayCache 清除所有推理重放状态。
 func ClearReasoningReplayCache() {
 	reasoningReplayMu.Lock()
 	reasoningReplayEntries = make(map[string]reasoningReplayEntry)
@@ -490,14 +490,14 @@ func reasoningReplayCacheKey(modelName, sessionKey string) string {
 	if modelName == "" || sessionKey == "" {
 		return ""
 	}
-	// The session key is the continuity boundary. Keep this independent from
-	// the selected upstream Codex credential so auth failover can preserve replay.
+	// 会话键是连续性边界。让它独立于所选的上游
+	// Codex 凭据，这样认证故障转移也能保住重放。
 	return strings.Join([]string{"reasoning-replay", modelName, sessionKey}, "\x00")
 }
 
 func reasoningReplayKVKey(modelName, sessionKey string) string {
-	// The Home KV namespace keeps its historical spelling for compatibility with
-	// existing stored values.
+	// Home KV 命名空间保留其历史拼写，以兼容
+	// 已存储的值。
 	return "cpa:antigravity:reasoning-replay:" + homekv.HashKeyPart(strings.TrimSpace(modelName)) + ":" + homekv.HashKeyPart(strings.TrimSpace(sessionKey))
 }
 

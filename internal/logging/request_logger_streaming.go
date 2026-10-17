@@ -9,103 +9,103 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// FileStreamingLogWriter implements StreamingLogWriter for file-based streaming logs.
-// It spools streaming response chunks to a temporary file to avoid retaining large responses in memory.
-// The final log file is assembled when Close is called.
+// FileStreamingLogWriter 为基于文件的流式日志实现了 StreamingLogWriter。
+// 它将流式响应分块暂存到临时文件，以避免在内存中保留大型响应。
+// 最终的日志文件在调用 Close 时组装完成。
 type FileStreamingLogWriter struct {
-	// logsDir is the target directory for log files.
+	// logsDir 是日志文件的目标目录。
 	logsDir string
 
-	// logFilename is the target log file name.
+	// logFilename 是目标日志文件名。
 	logFilename string
 
-	// url is the request URL (masked upstream in middleware).
+	// url 是请求 URL（中间件中已对上游进行遮蔽）。
 	url string
 
-	// method is the HTTP method.
+	// method 是 HTTP 方法。
 	method string
 
-	// timestamp is captured when the streaming log is initialized.
+	// timestamp 在流式日志初始化时捕获。
 	timestamp time.Time
 
-	// requestHeaders stores the request headers.
+	// requestHeaders 存储请求头。
 	requestHeaders map[string][]string
 
-	// requestBodyPath is a temporary file path holding the request body.
+	// requestBodyPath 是保存请求体的临时文件路径。
 	requestBodyPath string
 
-	// responseBodyPath is a temporary file path holding the streaming response body.
+	// responseBodyPath 是保存流式响应体的临时文件路径。
 	responseBodyPath string
 
-	// responseBodyFile is the temp file where chunks are appended by the async writer.
+	// responseBodyFile 是异步写入器追加分块的临时文件。
 	responseBodyFile *os.File
 
-	// chunkChan is a channel for receiving response chunks to spool.
+	// chunkChan 是接收待暂存响应分块的通道。
 	chunkChan chan []byte
 
-	// closeChan is a channel for signaling when the writer is closed.
+	// closeChan 是用于通知写入器已关闭的通道。
 	closeChan chan struct{}
 
-	// errorChan is a channel for reporting errors during writing.
+	// errorChan 是用于报告写入期间错误的通道。
 	errorChan chan error
 
-	// responseStatus stores the HTTP status code.
+	// responseStatus 存储 HTTP 状态码。
 	responseStatus int
 
-	// statusWritten indicates whether a non-zero status was recorded.
+	// statusWritten 表示是否已记录非零状态。
 	statusWritten bool
 
-	// responseHeaders stores the response headers.
+	// responseHeaders 存储响应头。
 	responseHeaders map[string][]string
 
-	// apiRequest stores the upstream API request data.
+	// apiRequest 存储上游 API 请求数据。
 	apiRequest []byte
 
-	// apiRequestSource stores file-backed upstream API request data.
+	// apiRequestSource 存储由文件支撑的上游 API 请求数据。
 	apiRequestSource *FileBodySource
 
-	// apiResponse stores the upstream API response data.
+	// apiResponse 存储上游 API 响应数据。
 	apiResponse []byte
 
-	// apiResponseSource stores file-backed upstream API response data.
+	// apiResponseSource 存储由文件支撑的上游 API 响应数据。
 	apiResponseSource *FileBodySource
 
-	// apiWebsocketTimeline stores the upstream websocket event timeline.
+	// apiWebsocketTimeline 存储上游 websocket 事件时间线。
 	apiWebsocketTimeline []byte
 
-	// apiResponseTimestamp captures when the API response was received.
+	// apiResponseTimestamp 记录 API 响应被接收的时间。
 	apiResponseTimestamp time.Time
 }
 
-// WriteChunkAsync writes a response chunk asynchronously (non-blocking).
+// WriteChunkAsync 以异步（非阻塞）方式写入一个响应分块。
 //
-// Parameters:
-//   - chunk: The response chunk to write
+// 参数：
+//   - chunk: 要写入的响应分块
 func (w *FileStreamingLogWriter) WriteChunkAsync(chunk []byte) {
 	if w.chunkChan == nil {
 		return
 	}
 
-	// Make a copy of the chunk to avoid data races
+	// 复制分块以避免数据竞争
 	chunkCopy := make([]byte, len(chunk))
 	copy(chunkCopy, chunk)
 
-	// Non-blocking send
+	// 非阻塞发送
 	select {
 	case w.chunkChan <- chunkCopy:
 	default:
-		// Channel is full, skip this chunk to avoid blocking
+		// 通道已满，跳过该分块以避免阻塞
 	}
 }
 
-// WriteStatus buffers the response status and headers for later writing.
+// WriteStatus 缓冲响应状态和响应头，以便稍后写入。
 //
-// Parameters:
-//   - status: The response status code
-//   - headers: The response headers
+// 参数：
+//   - status: 响应状态码
+//   - headers: 响应头
 //
-// Returns:
-//   - error: Always returns nil (buffering cannot fail)
+// 返回：
+//   - error: 始终返回 nil（缓冲不会失败）
 func (w *FileStreamingLogWriter) WriteStatus(status int, headers map[string][]string) error {
 	if status == 0 {
 		return nil
@@ -124,13 +124,13 @@ func (w *FileStreamingLogWriter) WriteStatus(status int, headers map[string][]st
 	return nil
 }
 
-// WriteAPIRequest buffers the upstream API request details for later writing.
+// WriteAPIRequest 缓冲上游 API 请求详情，以便稍后写入。
 //
-// Parameters:
-//   - apiRequest: The API request data (typically includes URL, headers, body sent upstream)
+// 参数：
+//   - apiRequest: API 请求数据（通常包含发往上游的 URL、请求头和请求体）
 //
-// Returns:
-//   - error: Always returns nil (buffering cannot fail)
+// 返回：
+//   - error: 始终返回 nil（缓冲不会失败）
 func (w *FileStreamingLogWriter) WriteAPIRequest(apiRequest []byte) error {
 	if len(apiRequest) == 0 {
 		return nil
@@ -139,7 +139,7 @@ func (w *FileStreamingLogWriter) WriteAPIRequest(apiRequest []byte) error {
 	return nil
 }
 
-// WriteAPIRequestSource buffers a file-backed upstream API request for final writing.
+// WriteAPIRequestSource 缓冲由文件支撑的上游 API 请求，以便最终写入。
 func (w *FileStreamingLogWriter) WriteAPIRequestSource(apiRequestSource *FileBodySource) error {
 	if apiRequestSource == nil || !apiRequestSource.HasPayload() {
 		return nil
@@ -148,13 +148,13 @@ func (w *FileStreamingLogWriter) WriteAPIRequestSource(apiRequestSource *FileBod
 	return nil
 }
 
-// WriteAPIResponse buffers the upstream API response details for later writing.
+// WriteAPIResponse 缓冲上游 API 响应详情，以便稍后写入。
 //
-// Parameters:
-//   - apiResponse: The API response data
+// 参数：
+//   - apiResponse: API 响应数据
 //
-// Returns:
-//   - error: Always returns nil (buffering cannot fail)
+// 返回：
+//   - error: 始终返回 nil（缓冲不会失败）
 func (w *FileStreamingLogWriter) WriteAPIResponse(apiResponse []byte) error {
 	if len(apiResponse) == 0 {
 		return nil
@@ -163,7 +163,7 @@ func (w *FileStreamingLogWriter) WriteAPIResponse(apiResponse []byte) error {
 	return nil
 }
 
-// WriteAPIResponseSource buffers a file-backed upstream API response for final writing.
+// WriteAPIResponseSource 缓冲由文件支撑的上游 API 响应，以便最终写入。
 func (w *FileStreamingLogWriter) WriteAPIResponseSource(apiResponseSource *FileBodySource) error {
 	if apiResponseSource == nil || !apiResponseSource.HasPayload() {
 		return nil
@@ -172,13 +172,13 @@ func (w *FileStreamingLogWriter) WriteAPIResponseSource(apiResponseSource *FileB
 	return nil
 }
 
-// WriteAPIWebsocketTimeline buffers the upstream websocket timeline for later writing.
+// WriteAPIWebsocketTimeline 缓冲上游 websocket 时间线，以便稍后写入。
 //
-// Parameters:
-//   - apiWebsocketTimeline: The upstream websocket event timeline
+// 参数：
+//   - apiWebsocketTimeline: 上游 websocket 事件时间线
 //
-// Returns:
-//   - error: Always returns nil (buffering cannot fail)
+// 返回：
+//   - error: 始终返回 nil（缓冲不会失败）
 func (w *FileStreamingLogWriter) WriteAPIWebsocketTimeline(apiWebsocketTimeline []byte) error {
 	if len(apiWebsocketTimeline) == 0 {
 		return nil
@@ -193,18 +193,18 @@ func (w *FileStreamingLogWriter) SetFirstChunkTimestamp(timestamp time.Time) {
 	}
 }
 
-// Close finalizes the log file and cleans up resources.
-// It writes all buffered data to the file in the correct order:
-// API WEBSOCKET TIMELINE -> API REQUEST -> API RESPONSE -> RESPONSE (status, headers, body chunks)
+// Close 完成日志文件的收尾并清理资源。
+// 它按正确顺序将所有缓冲数据写入文件：
+// API WEBSOCKET TIMELINE -> API REQUEST -> API RESPONSE -> RESPONSE（状态、响应头、响应体分块）
 //
-// Returns:
-//   - error: An error if closing fails, nil otherwise
+// 返回：
+//   - error: 关闭失败时返回错误，否则返回 nil
 func (w *FileStreamingLogWriter) Close() error {
 	if w.chunkChan != nil {
 		close(w.chunkChan)
 	}
 
-	// Wait for async writer to finish spooling chunks
+	// 等待异步写入器完成分块暂存
 	if w.closeChan != nil {
 		<-w.closeChan
 		w.chunkChan = nil
@@ -240,8 +240,8 @@ func (w *FileStreamingLogWriter) Close() error {
 	return writeErr
 }
 
-// asyncWriter runs in a goroutine to buffer chunks from the channel.
-// It continuously reads chunks from the channel and appends them to a temp file for later assembly.
+// asyncWriter 在 goroutine 中运行，从通道缓冲分块。
+// 它持续从通道读取分块并追加到临时文件，以便稍后组装。
 func (w *FileStreamingLogWriter) asyncWriter() {
 	defer close(w.closeChan)
 
@@ -319,65 +319,65 @@ func (w *FileStreamingLogWriter) cleanupTempFiles() {
 	}
 }
 
-// NoOpStreamingLogWriter is a no-operation implementation for when logging is disabled.
-// It implements the StreamingLogWriter interface but performs no actual logging operations.
+// NoOpStreamingLogWriter 是在日志被禁用时使用的无操作实现。
+// 它实现了 StreamingLogWriter 接口，但不执行任何实际的日志操作。
 type NoOpStreamingLogWriter struct{}
 
-// WriteChunkAsync is a no-op implementation that does nothing.
+// WriteChunkAsync 是无操作实现，不执行任何动作。
 //
-// Parameters:
-//   - chunk: The response chunk (ignored)
+// 参数：
+//   - chunk: 响应分块（被忽略）
 func (w *NoOpStreamingLogWriter) WriteChunkAsync(_ []byte) {}
 
-// WriteStatus is a no-op implementation that does nothing and always returns nil.
+// WriteStatus 是无操作实现，不执行任何动作且始终返回 nil。
 //
-// Parameters:
-//   - status: The response status code (ignored)
-//   - headers: The response headers (ignored)
+// 参数：
+//   - status: 响应状态码（被忽略）
+//   - headers: 响应头（被忽略）
 //
-// Returns:
-//   - error: Always returns nil
+// 返回：
+//   - error: 始终返回 nil
 func (w *NoOpStreamingLogWriter) WriteStatus(_ int, _ map[string][]string) error {
 	return nil
 }
 
-// WriteAPIRequest is a no-op implementation that does nothing and always returns nil.
+// WriteAPIRequest 是无操作实现，不执行任何动作且始终返回 nil。
 //
-// Parameters:
-//   - apiRequest: The API request data (ignored)
+// 参数：
+//   - apiRequest: API 请求数据（被忽略）
 //
-// Returns:
-//   - error: Always returns nil
+// 返回：
+//   - error: 始终返回 nil
 func (w *NoOpStreamingLogWriter) WriteAPIRequest(_ []byte) error {
 	return nil
 }
 
-// WriteAPIResponse is a no-op implementation that does nothing and always returns nil.
+// WriteAPIResponse 是无操作实现，不执行任何动作且始终返回 nil。
 //
-// Parameters:
-//   - apiResponse: The API response data (ignored)
+// 参数：
+//   - apiResponse: API 响应数据（被忽略）
 //
-// Returns:
-//   - error: Always returns nil
+// 返回：
+//   - error: 始终返回 nil
 func (w *NoOpStreamingLogWriter) WriteAPIResponse(_ []byte) error {
 	return nil
 }
 
-// WriteAPIWebsocketTimeline is a no-op implementation that does nothing and always returns nil.
+// WriteAPIWebsocketTimeline 是无操作实现，不执行任何动作且始终返回 nil。
 //
-// Parameters:
-//   - apiWebsocketTimeline: The upstream websocket event timeline (ignored)
+// 参数：
+//   - apiWebsocketTimeline: 上游 websocket 事件时间线（被忽略）
 //
-// Returns:
-//   - error: Always returns nil
+// 返回：
+//   - error: 始终返回 nil
 func (w *NoOpStreamingLogWriter) WriteAPIWebsocketTimeline(_ []byte) error {
 	return nil
 }
 
 func (w *NoOpStreamingLogWriter) SetFirstChunkTimestamp(_ time.Time) {}
 
-// Close is a no-op implementation that does nothing and always returns nil.
+// Close 是无操作实现，不执行任何动作且始终返回 nil。
 //
-// Returns:
-//   - error: Always returns nil
+// 返回：
+//   - error: 始终返回 nil
 func (w *NoOpStreamingLogWriter) Close() error { return nil }

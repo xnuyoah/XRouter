@@ -1,72 +1,72 @@
-// Claude thinking signature validation.
+// Claude thinking 签名验证。
 //
-// Spec reference: SIGNATURE-CHANNEL-SPEC.md
+// 规范参考：SIGNATURE-CHANNEL-SPEC.md
 //
-// Encoding detection (Spec section 3)
+// 编码检测（规范第 3 节）
 //
-// Claude signatures use base64 encoding in one or two layers. The raw string's
-// first character determines the encoding depth. This is mathematically
-// equivalent to the spec's "decode first, check byte" approach:
+// Claude 签名使用一层或两层的 base64 编码。原始字符串的
+// 首字符决定编码深度。这在数学上等价于规范中
+// "先解码，再检查字节" 的做法：
 //
-//   - E prefix: single-layer, payload[0] == 0x12, first 6 bits = 000100,
-//     base64 index 4 = E.
-//   - R prefix: double-layer, inner[0] == E (0x45), first 6 bits = 010001,
-//     base64 index 17 = R.
-//   - Q prefix: double-layer CAQS, inner[0] == C (0x43); inspected separately
-//     with the observed Google version-4 thinking channel schema.
+//   - E 前缀：单层，payload[0] == 0x12，前 6 位 = 000100，
+//     base64 索引 4 = E。
+//   - R 前缀：双层，inner[0] == E (0x45)，前 6 位 = 010001，
+//     base64 索引 17 = R。
+//   - Q 前缀：双层 CAQS，inner[0] == C (0x43)；需结合观测到的
+//     Google 版本 4 的 thinking channel schema 单独检查。
 //
-// Classic signatures normalize to R-form before Antigravity replay. Valid
-// Q-form signatures keep their original wrapper unchanged.
+// Classic 签名在 Antigravity 重放前会归一化为 R 形式。有效的
+// Q 形式签名保持其原始外层包装不变。
 //
-// # Protobuf structure (Spec sections 4.1 and 4.2) in strict mode only
+// # Protobuf 结构（规范第 4.1 与 4.2 节），仅在 strict 模式下
 //
-// After base64 decoding to raw bytes, the first byte must be 0x12:
+// base64 解码为原始字节后，首字节必须为 0x12：
 //
-//	Top-level protobuf
+//	顶层 protobuf
 //	|- Field 2 (bytes): container                    -> extractClaudeBytesField(payload, 2)
 //	|  |- Field 1 (bytes): channel block             -> extractClaudeBytesField(container, 1)
 //	|  |  |- Field 1 (varint): channel_id [required] -> routing_class (11 | 12)
 //	|  |  |- Field 2 (varint): infra [optional]      -> infrastructure_class (aws=1 | google=2)
-//	|  |  |- Field 3 (varint): version=2             -> skipped
-//	|  |  |- Field 5 (bytes): ECDSA sig              -> skipped, per Spec section 11
+//	|  |  |- Field 3 (varint): version=2             -> 跳过
+//	|  |  |- Field 5 (bytes): ECDSA sig              -> 跳过，见规范第 11 节
 //	|  |  |- Field 6 (bytes): model_text [optional]  -> schema_features
 //	|  |  `- Field 7 (varint): unknown [optional]    -> schema_features
-//	|  |- Field 2 (bytes): nonce 12B                 -> skipped
-//	|  |- Field 3 (bytes): session 12B               -> skipped
-//	|  |- Field 4 (bytes): SHA-384 48B               -> skipped
-//	|  `- Field 5 (bytes): metadata                  -> skipped, per Spec section 11
-//	`- Field 3 (varint): =1                          -> skipped
+//	|  |- Field 2 (bytes): nonce 12B                 -> 跳过
+//	|  |- Field 3 (bytes): session 12B               -> 跳过
+//	|  |- Field 4 (bytes): SHA-384 48B               -> 跳过
+//	|  `- Field 5 (bytes): metadata                  -> 跳过，见规范第 11 节
+//	`- Field 3 (varint): =1                          -> 跳过
 //
-// Output dimensions (Spec section 8)
+// 输出维度（规范第 8 节）
 //
 //	routing_class:        routing_class_11 | routing_class_12 | unknown
 //	infrastructure_class: infra_default (absent) | infra_aws (1) | infra_google (2) | infra_unknown
 //	schema_features:      compact_schema (len 70-72, no f6/f7) | extended_model_tagged_schema (f6 exists) | unknown
 //	legacy_route_hint:    only for ch=11, legacy_default_group | legacy_aws_group | legacy_vertex_direct/proxy
 //
-// # Compatibility
+// # 兼容性
 //
-// Verified against all confirmed spec samples (Anthropic Max 20x, Azure,
-// Bedrock) and legacy ch=11 signatures. Both single-layer (E) and
-// double-layer (R) encodings are supported. Historical cache-mode modelGroup#
-// prefixes are stripped.
+// 已针对所有已确认的规范样本（Anthropic Max 20x、Azure、
+// Bedrock）以及 legacy ch=11 签名完成验证。单层（E）与
+// 双层（R）两种编码均受支持。历史 cache-mode 的 modelGroup#
+// 前缀会被剥离。
 //
-// # CAIS envelope (newest Claude Code models)
+// # CAIS 外层封装（最新的 Claude Code 模型）
 //
-// Newer Claude Code models wrap the channel block in a CAIS envelope whose
-// decoded payload starts with 0x08 (top-level field 1 varint) instead of 0x12,
-// so the base64 string starts with 'C' instead of 'E'/'R'. The envelope version
-// varint in top-level field 1 is the ONLY structural difference from the layout
-// above; everything below it is unchanged.
+// 较新的 Claude Code 模型将 channel block 包在 CAIS 外层封装中，其
+// 解码后的载荷以 0x08（顶层字段 1 的 varint）开头而非 0x12，
+// 因此 base64 字符串以 'C' 开头而非 'E'/'R'。顶层字段 1 中的
+// 封装版本 varint 是相对于上述布局的唯一结构差异；
+// 其下的所有内容均不变。
 //
-// The channel block itself belongs to a newer schema generation that is shared
-// by both envelopes: channel_id 16, no infra field 2, plus a block kind (field
-// 8) and a context id (field 11). Observed traffic confirms this schema
-// appears under the classic 0x12 envelope too (opus-4-6/4-7/4-8, sonnet-5) and
-// under the CAIS envelope (opus-5, fable-5), so envelope form and channel schema
-// generation vary independently and must not be inferred from each other:
+// channel block 本身属于一种较新的 schema 世代，被两种封装
+// 共享：channel_id 16、没有 infra 字段 2，另有一个 block kind（字段
+// 8）和一个 context id（字段 11）。观测到的流量证实该 schema
+// 也出现在 classic 0x12 封装下（opus-4-6/4-7/4-8、sonnet-5），并
+// 出现在 CAIS 封装下（opus-5、fable-5），因此封装形式与 channel schema
+// 世代彼此独立变化，不能互相推断：
 //
-//	Top-level protobuf
+//	顶层 protobuf
 //	|- Field 1 (varint): envelope version [required marker, observed as 2]
 //	|- Field 2 (bytes): container [required]
 //	|  `- Field 1 (bytes): channel block [required]
@@ -79,38 +79,38 @@
 //	|     `- Field 11 (bytes):  context id [optional, canonical UUID]
 //	`- Field 3 (varint): trailer [optional, observed as 1]
 //
-// CAIS validation is structural rather than an exact replay of the observed
-// bytes. The payload is an opaque upstream-issued blob and rejecting it drops
-// the whole thinking block, so only the fields that actually identify the format
-// are required: the 0x08 marker, the nested container/channel block, the
-// signature bytes, and (for EnvelopeVersion < 4) the "claude-" model text. Observed-but-incidental values
-// such as channel_id 16/17 are recorded for debugging.
+// CAIS 验证是结构性的，而非对观测字节的精确重放。
+// 载荷是上游颁发的不可解析 blob，拒绝它会丢掉
+// 整个 thinking 块，因此只要求真正能标识该格式的字段：
+// 0x08 标记、嵌套的 container/channel block、
+// 签名字节，以及（EnvelopeVersion < 4 时）"claude-" 模型文本。观测到但
+// 非必要的取值（如 channel_id 16/17）会记录下来用于调试。
 //
-// In EnvelopeVersion >= 4 (CAQS, e.g. claude-fable-5-1 / claude-fable-5-1-max),
-// signature bytes are located in Container Field 5 (Field 2.5), plaintext model_text
-// is omitted, and block kind supports both "thinking" and "narration".
+// 在 EnvelopeVersion >= 4（CAQS，例如 claude-fable-5-1 / claude-fable-5-1-max）中，
+// 签名字节位于 Container Field 5（Field 2.5），明文 model_text
+// 被省略，block kind 同时支持 "thinking" 与 "narration"。
 //
-// # Which provider emits which envelope
+// # 哪个供应商发出哪种封装
 //
-// Three providers serve Claude models, and the envelope depends on the model
-// generation rather than on the provider:
+// 有三个供应商提供 Claude 模型，而封装取决于模型
+// 世代而非供应商：
 //
-//   - Claude Code OAuth subscription (Claude Code Max): opus-4-5, sonnet-4-6 and
-//     every later model up to opus-5 and fable-5. Emits the CAIS envelope for
-//     the newest models (opus-5, fable-5) and the single-layer E envelope for the
-//     opus-4-6/4-7/4-8 and sonnet-5 generation — but both carry the same
-//     channel_id 16 channel schema, so only the envelope differs.
-//   - Claude Messages API: the full Claude model range, same envelopes as the
-//     Claude Code OAuth subscription.
-//   - Antigravity: legacy Claude models use double-layer R form on Google
-//     infrastructure. Claude 5.5 also emits double-layer CAQS (Q-form): one
-//     base64 decode yields CAQS, and the second yields an envelope version 4
-//     protobuf with Google infrastructure in the channel block. Preserve that
-//     wrapper on replay; bare native CAIS/CAQS is not an Antigravity wrapper.
+//   - Claude Code OAuth 订阅（Claude Code Max）：opus-4-5、sonnet-4-6 及
+//     直到 opus-5 和 fable-5 的所有后续模型。对最新模型
+//     （opus-5、fable-5）发出 CAIS 封装，对
+//     opus-4-6/4-7/4-8 和 sonnet-5 世代发出单层 E 封装 — 但两者携带相同的
+//     channel_id 16 channel schema，因此只有封装不同。
+//   - Claude Messages API：覆盖完整 Claude 模型范围，封装与
+//     Claude Code OAuth 订阅相同。
+//   - Antigravity：legacy Claude 模型在 Google
+//     基础设施上使用双层 R 形式。Claude 5.5 还会发出双层 CAQS（Q 形式）：一次
+//     base64 解码得到 CAQS，第二次得到版本 4 的封装
+//     protobuf，其 channel block 中带有 Google 基础设施。重放时保留
+//     该外层包装；裸的原生 CAIS/CAQS 不是 Antigravity 的外层包装。
 //
-// A single conversation therefore mixes envelopes whenever a user switches model
-// generations or providers, and every form must stay replayable toward the
-// provider that issued it.
+// 因此，当用户切换模型世代或供应商时，同一次会话会混合
+// 多种封装，每种形式都必须能向发出它的供应商
+// 保持可重放。
 package signature
 
 import (
@@ -125,28 +125,28 @@ import (
 
 const MaxClaudeThinkingSignatureLen = 32 * 1024 * 1024
 
-// ClaudeSignatureValidationOptions controls how far Claude thinking signatures
-// are inspected. The base validation always checks the cache prefix, base64
-// layers, and decoded 0x12 Claude payload marker. Strict mode additionally
-// verifies the classic protobuf tree. Q-form always receives full structural
-// validation, regardless of these legacy validation options.
+// ClaudeSignatureValidationOptions 控制 Claude thinking 签名被检查的深度。
+// 基础校验始终检查缓存前缀、base64 层，
+// 以及解码后的 0x12 Claude 载荷标记。Strict 模式额外
+// 校验 classic protobuf 树。无论这些 legacy 校验选项如何，
+// Q 形式始终接受完整的结构校验。
 type ClaudeSignatureValidationOptions struct {
-	// PrefixOnly checks the legacy E/R prefix or a fully validated Q envelope.
-	// Use it to preserve legacy shallow cleanup without blindly allowing Q.
+	// PrefixOnly 检查 legacy E/R 前缀或通过完整校验的 Q 封装。
+	// 用它可以在不盲目放行 Q 的前提下保留 legacy 的浅层清理。
 	PrefixOnly bool
-	// Base64Only checks the optional cache prefix, E/R Claude signature prefix,
-	// and base64 layers without validating the decoded Claude marker or protobuf
-	// tree for legacy E/R; Q envelopes always receive structural validation.
-	// Use it for conservative request cleanup.
+	// Base64Only 检查可选的缓存前缀、E/R Claude 签名前缀
+	// 以及 base64 层，但对 legacy E/R 不校验解码后的 Claude 标记或 protobuf
+	// 树；Q 封装始终接受结构校验。
+	// 用于保守的请求清理。
 	Base64Only bool
-	// AllowEmptySignatureWithEmptyText preserves empty thinking placeholders with
-	// no signature and no thinking/text payload during strip operations.
+	// AllowEmptySignatureWithEmptyText 在剥离操作中保留既无签名
+	// 也无 thinking/text 载荷的空 thinking 占位符。
 	AllowEmptySignatureWithEmptyText bool
 	Strict                           bool
 }
 
-// ClaudeSignatureTree describes the protobuf fields currently used for Claude
-// thinking signature routing.
+// ClaudeSignatureTree 描述当前用于 Claude thinking
+// 签名路由的 protobuf 字段。
 type ClaudeSignatureTree struct {
 	EncodingLayers      int
 	ChannelID           uint64
@@ -166,8 +166,8 @@ func claudeSignatureValidationOptions(opts []ClaudeSignatureValidationOptions) C
 	return opts[0]
 }
 
-// IsValidClaudeThinkingSignature returns whether rawSignature is a valid Claude
-// thinking signature under the requested validation options.
+// IsValidClaudeThinkingSignature 返回在请求的校验选项下 rawSignature
+// 是否为有效的 Claude thinking 签名。
 func IsValidClaudeThinkingSignature(rawSignature string, opts ...ClaudeSignatureValidationOptions) bool {
 	opt := claudeSignatureValidationOptions(opts)
 	if opt.PrefixOnly {
@@ -180,8 +180,8 @@ func IsValidClaudeThinkingSignature(rawSignature string, opts ...ClaudeSignature
 	return err == nil
 }
 
-// HasDecodableClaudeThinkingSignature checks legacy E/R encoding or a strictly
-// validated Antigravity double-layer CAQS envelope.
+// HasDecodableClaudeThinkingSignature 检查 legacy E/R 编码或经过严格
+// 校验的 Antigravity 双层 CAQS 封装。
 func HasDecodableClaudeThinkingSignature(rawSignature string) bool {
 	sig := stripClaudeSignaturePrefix(rawSignature)
 	if sig == "" || len(sig) > MaxClaudeThinkingSignatureLen {
@@ -207,8 +207,8 @@ func HasDecodableClaudeThinkingSignature(rawSignature string) bool {
 	}
 }
 
-// HasClaudeThinkingSignaturePrefix reports whether rawSignature has the Claude
-// E/R prefix or a structurally validated Q envelope after cache-prefix removal.
+// HasClaudeThinkingSignaturePrefix 报告在移除缓存前缀后 rawSignature 是否
+// 具有 Claude E/R 前缀或通过结构校验的 Q 封装。
 func HasClaudeThinkingSignaturePrefix(rawSignature string) bool {
 	sig := stripClaudeSignaturePrefix(rawSignature)
 	if sig == "" {
@@ -232,8 +232,8 @@ func stripClaudeSignaturePrefix(rawSignature string) string {
 	return sig
 }
 
-// ValidateClaudeThinkingSignatures validates every thinking block signature in a
-// Claude messages payload.
+// ValidateClaudeThinkingSignatures 校验 Claude messages
+// 载荷中每个 thinking 块的签名。
 func ValidateClaudeThinkingSignatures(inputRawJSON []byte, opts ...ClaudeSignatureValidationOptions) error {
 	messages := gjson.GetBytes(inputRawJSON, "messages")
 	if !messages.IsArray() {
@@ -268,9 +268,9 @@ func ValidateClaudeThinkingSignatures(inputRawJSON []byte, opts ...ClaudeSignatu
 	return nil
 }
 
-// NormalizeClaudeThinkingSignature strips any cache prefix, validates the
-// signature, and returns the double-layer R or Q form expected by Antigravity.
-// Q envelopes always require structural validation, even in shallow modes.
+// NormalizeClaudeThinkingSignature 剥离任何缓存前缀，校验签名，
+// 并返回 Antigravity 期望的双层 R 或 Q 形式。
+// 即使处于浅层模式，Q 封装也始终要求结构校验。
 func NormalizeClaudeThinkingSignature(rawSignature string, opts ...ClaudeSignatureValidationOptions) (string, error) {
 	opt := claudeSignatureValidationOptions(opts)
 	sig := stripClaudeSignaturePrefix(rawSignature)
@@ -303,9 +303,9 @@ func NormalizeClaudeThinkingSignature(rawSignature string, opts ...ClaudeSignatu
 	}
 }
 
-// NormalizeClaudeProviderNativeThinkingSignature strips any cache prefix,
-// validates the signature, and returns the single-layer E-form expected by
-// Claude-native providers.
+// NormalizeClaudeProviderNativeThinkingSignature 剥离任何缓存前缀，
+// 校验签名，并返回 Claude 原生供应商期望的
+// 单层 E 形式。
 func NormalizeClaudeProviderNativeThinkingSignature(rawSignature string, opts ...ClaudeSignatureValidationOptions) (string, error) {
 	opt := claudeSignatureValidationOptions(opts)
 	sig := stripClaudeSignaturePrefix(rawSignature)
@@ -373,8 +373,8 @@ func validateClaudeSingleLayerSignatureContent(sig string, encodingLayers int, o
 	return err
 }
 
-// InspectClaudeDoubleLayerSignature decodes and inspects a double-layer Claude
-// thinking signature.
+// InspectClaudeDoubleLayerSignature 解码并检查双层 Claude
+// thinking 签名。
 func InspectClaudeDoubleLayerSignature(sig string) (*ClaudeSignatureTree, error) {
 	decoded, err := base64.StdEncoding.DecodeString(sig)
 	if err != nil {
@@ -389,8 +389,8 @@ func InspectClaudeDoubleLayerSignature(sig string) (*ClaudeSignatureTree, error)
 	return inspectClaudeSingleLayerSignatureWithLayers(string(decoded), 2)
 }
 
-// InspectClaudeSingleLayerSignature decodes and inspects a single-layer Claude
-// thinking signature.
+// InspectClaudeSingleLayerSignature 解码并检查单层 Claude
+// thinking 签名。
 func InspectClaudeSingleLayerSignature(sig string) (*ClaudeSignatureTree, error) {
 	return inspectClaudeSingleLayerSignatureWithLayers(sig, 1)
 }
@@ -406,8 +406,8 @@ func inspectClaudeSingleLayerSignatureWithLayers(sig string, encodingLayers int)
 	return InspectClaudeSignaturePayload(decoded, encodingLayers)
 }
 
-// InspectClaudeSignaturePayload inspects the decoded Claude thinking signature
-// protobuf payload.
+// InspectClaudeSignaturePayload 检查已解码的 Claude thinking
+// 签名 protobuf 载荷。
 func InspectClaudeSignaturePayload(payload []byte, encodingLayers int) (*ClaudeSignatureTree, error) {
 	if len(payload) == 0 {
 		return nil, fmt.Errorf("invalid Claude signature: empty payload")
@@ -594,16 +594,16 @@ func decodeClaudeBytesField(raw []byte, label string) ([]byte, error) {
 	return value, nil
 }
 
-// claudeCAISSignatureMarker is the decoded first byte identifying the CAIS
-// envelope (protobuf tag for top-level field 1, varint).
+// claudeCAISSignatureMarker 是标识 CAIS 封装（顶层字段 1 的 protobuf
+// tag，varint）的解码后首字节。
 const claudeCAISSignatureMarker = 0x08
 
-// claudeCAISModelTextPrefix is the model_text prefix that distinguishes a CAIS
-// channel block from an arbitrary protobuf payload.
+// claudeCAISModelTextPrefix 是用于区分 CAIS channel block
+// 与任意 protobuf 载荷的 model_text 前缀。
 const claudeCAISModelTextPrefix = "claude-"
 
-// ClaudeCAISSignatureInfo describes the locally inspected structure of a Claude
-// CAIS thinking signature.
+// ClaudeCAISSignatureInfo 描述本地检查出的 Claude
+// CAIS thinking 签名结构。
 type ClaudeCAISSignatureInfo struct {
 	FirstByte       byte
 	EnvelopeVersion uint64
@@ -617,16 +617,16 @@ type ClaudeCAISSignatureInfo struct {
 	SignatureInContainer bool
 }
 
-// IsValidClaudeCAISSignature returns whether rawSignature is a valid Claude CAIS
-// thinking signature.
+// IsValidClaudeCAISSignature 返回 rawSignature 是否为有效的 Claude CAIS
+// thinking 签名。
 func IsValidClaudeCAISSignature(rawSignature string) bool {
 	_, err := InspectClaudeCAISSignature(rawSignature)
 	return err == nil
 }
 
-// InspectClaudeCAISSignature decodes and validates a Claude CAIS thinking
-// signature. See the CAIS envelope section in this file's package comment for
-// the layout and for why validation is structural rather than exact.
+// InspectClaudeCAISSignature 解码并校验 Claude CAIS thinking
+// 签名。布局以及为何校验是结构性的而非精确匹配，见
+// 本文件包注释中的 CAIS 封装一节。
 func InspectClaudeCAISSignature(rawSignature string) (*ClaudeCAISSignatureInfo, error) {
 	sig := stripClaudeSignaturePrefix(rawSignature)
 	if sig == "" {
@@ -635,10 +635,10 @@ func InspectClaudeCAISSignature(rawSignature string) (*ClaudeCAISSignatureInfo, 
 	if len(sig) > MaxClaudeThinkingSignatureLen {
 		return nil, fmt.Errorf("signature exceeds maximum length (%d bytes)", MaxClaudeThinkingSignatureLen)
 	}
-	// A payload whose first byte is 0x08 always base64-encodes to a string
-	// starting with 'C' (0x08>>2 == 2). Checking that first keeps this validator
-	// cheap on the hot paths that probe every signature, since classic Claude
-	// (E/R) envelopes are rejected without a base64 decode.
+	// 首字节为 0x08 的载荷经 base64 编码后总是得到以 'C' 开头的字符串
+	// （0x08>>2 == 2）。先检查这一点能让该校验器在探测每个签名的
+	// 热路径上保持廉价，因为 classic Claude (E/R) 封装会被直接拒绝，
+	// 无需进行 base64 解码。
 	if sig[0] != 'C' {
 		return nil, fmt.Errorf("invalid Claude CAIS signature: expected 'C' prefix, got %q", string(sig[0]))
 	}
@@ -650,8 +650,8 @@ func InspectClaudeCAISSignature(rawSignature string) (*ClaudeCAISSignatureInfo, 
 	return inspectClaudeCAISPayload(decoded, false)
 }
 
-// inspectClaudeCAISPayload shares native envelope parsing with the Q replay gate.
-// Only Q rejects duplicate submessages; native CAIS/CAQS behavior is unchanged.
+// inspectClaudeCAISPayload 与 Q 重放门共享原生封装解析。
+// 只有 Q 会拒绝重复的子消息；原生 CAIS/CAQS 行为不变。
 func inspectClaudeCAISPayload(decoded []byte, rejectDuplicateMessages bool) (*ClaudeCAISSignatureInfo, error) {
 	if len(decoded) == 0 {
 		return nil, fmt.Errorf("invalid Claude CAIS signature: empty after decode")

@@ -12,7 +12,7 @@ import (
 	cliproxysession "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/session"
 )
 
-// 1. Explicit Header Fast Path (Pi, Claude Code, OpenCode)
+// 1. 显式 Header 快速路径（Pi、Claude Code、OpenCode）
 func BenchmarkSessionExplicitHeaderFastPath(b *testing.B) {
 	log.SetLevel(log.WarnLevel)
 	defer log.SetLevel(log.InfoLevel)
@@ -35,14 +35,14 @@ func BenchmarkSessionExplicitHeaderFastPath(b *testing.B) {
 		Metadata:        map[string]any{},
 	}
 
-	// Warmup and bind
+	// 预热并绑定
 	ctx := context.Background()
 	_, _ = selector.Pick(ctx, "openai", "gpt-5", opts, auths)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for b.Loop() {
-		// Clear transient metadata
+		// 清理瞬态元数据
 		delete(opts.Metadata, cliproxyexecutor.CanonicalSessionIDMetadataKey)
 		delete(opts.Metadata, cliproxyexecutor.ParentSessionIDMetadataKey)
 		delete(opts.Metadata, cliproxyexecutor.IsForkMetadataKey)
@@ -51,7 +51,7 @@ func BenchmarkSessionExplicitHeaderFastPath(b *testing.B) {
 	}
 }
 
-// 2. Codex Multi-Agent v2 Path (Header + JSON Turn Metadata + Subagent Isolation)
+// 2. Codex 多智能体 v2 路径（Header + JSON 轮次元数据 + 子智能体隔离）
 func BenchmarkSessionCodexMultiAgentV2Path(b *testing.B) {
 	log.SetLevel(log.WarnLevel)
 	defer log.SetLevel(log.InfoLevel)
@@ -66,7 +66,7 @@ func BenchmarkSessionCodexMultiAgentV2Path(b *testing.B) {
 		{ID: "auth-codex-2", Provider: "openai", Status: StatusActive},
 	}
 
-	// Parent binding
+	// 父级绑定
 	parentOpts := cliproxyexecutor.Options{
 		Headers: http.Header{
 			"Session-Id": []string{"parent-session-100"},
@@ -76,7 +76,7 @@ func BenchmarkSessionCodexMultiAgentV2Path(b *testing.B) {
 	ctx := context.Background()
 	_, _ = selector.Pick(ctx, "openai", "codex-5", parentOpts, auths)
 
-	// Child subagent request
+	// 子智能体请求
 	childOpts := cliproxyexecutor.Options{
 		Headers: http.Header{
 			"Session-Id":               []string{"parent-session-100"},
@@ -102,7 +102,7 @@ func BenchmarkSessionCodexMultiAgentV2Path(b *testing.B) {
 	}
 }
 
-// 3. Codex Fork Path (Header + Turn Metadata Fork Derivation)
+// 3. Codex 分叉路径（Header + 轮次元数据分叉推导）
 func BenchmarkSessionCodexForkPath(b *testing.B) {
 	log.SetLevel(log.WarnLevel)
 	defer log.SetLevel(log.InfoLevel)
@@ -117,7 +117,7 @@ func BenchmarkSessionCodexForkPath(b *testing.B) {
 		{ID: "auth-codex-2", Provider: "openai", Status: StatusActive},
 	}
 
-	// Parent
+	// 父级
 	parentOpts := cliproxyexecutor.Options{
 		Headers: http.Header{
 			"Session-Id": []string{"parent-thread-alpha"},
@@ -149,7 +149,7 @@ func BenchmarkSessionCodexForkPath(b *testing.B) {
 	}
 }
 
-// 4. Body-Only Fallback Path (GJSON payload parsing for thread_id & forked_from_thread_id)
+// 4. 仅 Body 回退路径（用 GJSON 解析 thread_id 与 forked_from_thread_id）
 func BenchmarkSessionBodyOnlyForkPath(b *testing.B) {
 	log.SetLevel(log.WarnLevel)
 	defer log.SetLevel(log.InfoLevel)
@@ -163,7 +163,7 @@ func BenchmarkSessionBodyOnlyForkPath(b *testing.B) {
 		{ID: "auth-1", Provider: "openai", Status: StatusActive},
 	}
 
-	// Parent in body
+	// 父级位于 body 中
 	parentOpts := cliproxyexecutor.Options{
 		OriginalRequest: []byte(`{"thread_id":"body-parent-100","messages":[{"role":"user","content":"hello"}]}`),
 		Metadata:        map[string]any{},
@@ -187,12 +187,12 @@ func BenchmarkSessionBodyOnlyForkPath(b *testing.B) {
 	}
 }
 
-// 5. SessionCache Concurrent High QPS Stress (simulating multi-threaded worker pool)
+// 5. SessionCache 并发高 QPS 压力（模拟多线程工作池）
 func BenchmarkSessionCacheConcurrentHighQPS(b *testing.B) {
 	cache := NewSessionCache(time.Hour)
 	defer cache.Stop()
 
-	// Pre-populate 1000 active sessions
+	// 预填充 1000 个活跃会话
 	for i := 0; i < 1000; i++ {
 		cache.Set(fmt.Sprintf("session-%04d", i), fmt.Sprintf("auth-%d", i%10))
 	}
@@ -203,7 +203,7 @@ func BenchmarkSessionCacheConcurrentHighQPS(b *testing.B) {
 		idx := 0
 		for pb.Next() {
 			key := fmt.Sprintf("session-%04d", idx%1000)
-			// 90% read/touch, 10% write
+			// 90% 读取/触碰，10% 写入
 			if idx%10 == 0 {
 				cache.Set(key, fmt.Sprintf("auth-%d", idx%10))
 			} else {
@@ -215,11 +215,11 @@ func BenchmarkSessionCacheConcurrentHighQPS(b *testing.B) {
 	})
 }
 
-// 6. MerklePrefixMatcher Concurrent High QPS (simulating parallel LCP lookups)
+// 6. MerklePrefixMatcher 并发高 QPS（模拟并行 LCP 查找）
 func BenchmarkMerklePrefixMatcherConcurrentHighQPS(b *testing.B) {
 	matcher := cliproxysession.NewMerklePrefixMatcher(time.Hour)
 
-	// Pre-populate trunk conversation
+	// 预填充主干对话
 	texts := make([]string, 16)
 	for i := 0; i < 16; i++ {
 		texts[i] = fmt.Sprintf("system instruction turn %d", i)
@@ -244,7 +244,7 @@ func BenchmarkMerklePrefixMatcherConcurrentHighQPS(b *testing.B) {
 	})
 }
 
-// 7. Large Scale Memory & LRU Eviction Benchmark (Simulates continuous session churn)
+// 7. 大规模内存与 LRU 淘汰基准（模拟持续的会话更替）
 func BenchmarkSessionCacheScale100kEviction(b *testing.B) {
 	cache := NewSessionCacheWithCapacity(time.Hour, 10000)
 	defer cache.Stop()
@@ -257,7 +257,7 @@ func BenchmarkSessionCacheScale100kEviction(b *testing.B) {
 	}
 }
 
-// 8. MerklePrefixMatcher Large Scale LRU Eviction (Simulates continuous conversation churn with maxGroups=1000)
+// 8. MerklePrefixMatcher 大规模 LRU 淘汰（模拟持续的对话更替，maxGroups=1000）
 func BenchmarkMerkleMatcherScaleLRUEviction(b *testing.B) {
 	matcher := cliproxysession.NewMerklePrefixMatcherWithConfig(cliproxysession.MerklePrefixMatcherConfig{
 		TTL:       time.Hour,

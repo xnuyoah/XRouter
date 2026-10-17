@@ -103,8 +103,8 @@ func TestApplyPayloadConfigWithRoot_DisableImageGenerationPassthrough_KeepsPaylo
 	}
 	payload := []byte(`{"tools":[{"type":"image_generation"},{"type":"function","name":"f1"}],"tool_choice":{"type":"image_generation"}}`)
 
-	// Passthrough must never inject or strip image_generation. The payload is forwarded as-is on
-	// non-images endpoints, and /v1/images/* endpoints behave like "chat" (also no removal).
+	// 透传绝不应注入或剥离 image_generation。载荷在非图片端点上
+	// 原样转发，而 /v1/images/* 端点的行为与 "chat" 相同（同样不做移除）。
 	for _, requestPath := range []string{"", "/v1/responses", "/v1/images/generations"} {
 		out := ApplyPayloadConfigWithRoot(cfg, "gpt-5.4", "openai-response", "", payload, nil, "", requestPath)
 

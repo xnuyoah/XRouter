@@ -389,7 +389,7 @@ func TestApplyModelRouterSkipsHostsWithoutRouters(t *testing.T) {
 	}
 }
 
-// routeModelOnlyHost implements PluginModelRouterHost without HasModelRouters (conservative default).
+// routeModelOnlyHost 实现 PluginModelRouterHost 但不含 HasModelRouters（保守默认）。
 type routeModelOnlyHost struct {
 	called bool
 }
@@ -432,8 +432,8 @@ func TestApplyModelRouterRestoresQueryFromContext(t *testing.T) {
 	handler := NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, nil)
 	handler.SetModelRouterHost(host)
 
-	// execOptions.Query is intentionally empty; the inbound query must be recovered
-	// from the embedded gin context, mirroring plain HTTP requests.
+	// execOptions.Query 有意留空；入站查询必须从
+	// 内嵌的 gin 上下文中恢复，以镜像普通 HTTP 请求。
 	ctx := contextWithQuery(url.Values{"session": []string{"abc"}})
 	handler.applyModelRouter(ctx, "openai", "model", []byte(`{"model":"model"}`), false, modelExecutionOptions{})
 
@@ -614,8 +614,8 @@ func TestHandlerModelRouterProviderRouteUsesAuthManager(t *testing.T) {
 	handler.AuthManager = coreauth.NewManager(nil, nil, nil)
 
 	_, _, errMsg := handler.ExecuteWithAuthManager(context.Background(), "openai", originalModel, []byte(fmt.Sprintf(`{"model":%q}`, originalModel)), "")
-	// The empty AuthManager has no claude auth, so execution surfaces an auth selection error
-	// rather than succeeding. The point is that the request reached the AuthManager path.
+	// 空的 AuthManager 没有 claude auth，因此执行会报出 auth 选择错误
+	// 而非成功。关键在于该请求到达了 AuthManager 路径。
 	if errMsg == nil {
 		t.Fatal("ExecuteWithAuthManager() error = nil, want auth selection error for routed provider")
 	}

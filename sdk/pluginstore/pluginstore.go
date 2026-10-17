@@ -1,5 +1,5 @@
-// Package pluginstore exposes plugin registry and artifact installation helpers
-// for embedders such as CLIProxyAPIHome.
+// Package pluginstore 为 CLIProxyAPIHome 之类的嵌入方
+// 暴露插件注册表与制品安装辅助功能。
 package pluginstore
 
 import (
@@ -91,10 +91,10 @@ func NewClientWithResolvedAuthExpiry(httpClient HTTPDoer, registryURL string, au
 	}}
 }
 
-// WithNetworkScope returns a copy with the given proxy/egress identity for shared
-// GitHub API cooldowns. Use the same scope for clients with the same egress and
-// credentials; an empty scope denotes direct connections. This does not configure
-// the HTTP transport, which must use the corresponding proxy/egress separately.
+// WithNetworkScope 返回带有给定代理/出口标识的副本，用于共享的
+// GitHub API 冷却。对具有相同出口和凭据的客户端使用相同作用域；
+// 空作用域表示直连。这不会配置
+// HTTP transport，后者必须单独使用对应的代理/出口。
 func (c Client) WithNetworkScope(networkScope string) Client {
 	c.inner.NetworkScope = strings.TrimSpace(networkScope)
 	return c

@@ -2,7 +2,7 @@ package executionregistry
 
 import "time"
 
-// Observation is an immutable in-flight execution snapshot entry.
+// Observation 是不可变的在途执行快照条目。
 type Observation struct {
 	RequestID    string
 	CredentialID string
@@ -12,14 +12,14 @@ type Observation struct {
 	Accounted    bool
 }
 
-// Freeze is an immutable in-flight execution snapshot.
+// Freeze 是不可变的在途执行快照。
 type Freeze struct {
 	Revision        int64
 	BarrierRevision int64
 	Executions      []Observation
 }
 
-// ObserveBarrier records the latest Home observation barrier.
+// ObserveBarrier 记录最新的 Home 观测屏障。
 func (r *Registry) ObserveBarrier(revision int64) {
 	if r == nil || revision <= 0 {
 		return
@@ -33,7 +33,7 @@ func (r *Registry) ObserveBarrier(revision int64) {
 	}
 }
 
-// FreezeInFlight copies all active executions into an immutable snapshot.
+// FreezeInFlight 将所有活动执行复制为不可变快照。
 func (r *Registry) FreezeInFlight(_ time.Time) Freeze {
 	if r == nil {
 		return Freeze{}

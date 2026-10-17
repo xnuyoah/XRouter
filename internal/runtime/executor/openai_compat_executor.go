@@ -36,23 +36,23 @@ const (
 	openAICompatMultipartMemory       int64 = 32 << 20
 )
 
-// OpenAICompatExecutor implements a stateless executor for OpenAI-compatible providers.
-// It performs request/response translation and executes against the provider base URL
-// using per-auth credentials (API key) and per-auth HTTP transport (proxy) from context.
+// OpenAICompatExecutor 为 OpenAI 兼容供应商实现无状态执行器。
+// 它执行请求/响应转换，并使用来自 context 的按 auth 凭据
+// （API key）和按 auth HTTP transport（代理）向供应商 base URL 发起执行。
 type OpenAICompatExecutor struct {
 	provider string
 	cfg      *config.Config
 }
 
-// NewOpenAICompatExecutor creates an executor bound to a provider key (e.g., "openrouter").
+// NewOpenAICompatExecutor 创建一个绑定到供应商 key 的执行器（例如 "openrouter"）。
 func NewOpenAICompatExecutor(provider string, cfg *config.Config) *OpenAICompatExecutor {
 	return &OpenAICompatExecutor{provider: provider, cfg: cfg}
 }
 
-// Identifier implements cliproxyauth.ProviderExecutor.
+// Identifier 实现 cliproxyauth.ProviderExecutor。
 func (e *OpenAICompatExecutor) Identifier() string { return e.provider }
 
-// PrepareRequest injects OpenAI-compatible credentials into the outgoing HTTP request.
+// PrepareRequest 将 OpenAI 兼容凭据注入到发出的 HTTP 请求中。
 func (e *OpenAICompatExecutor) PrepareRequest(req *http.Request, auth *cliproxyauth.Auth) error {
 	if req == nil {
 		return nil
@@ -69,7 +69,7 @@ func (e *OpenAICompatExecutor) PrepareRequest(req *http.Request, auth *cliproxya
 	return nil
 }
 
-// HttpRequest injects OpenAI-compatible credentials into the request and executes it.
+// HttpRequest 将 OpenAI 兼容凭据注入请求并执行它。
 func (e *OpenAICompatExecutor) HttpRequest(ctx context.Context, auth *cliproxyauth.Auth, req *http.Request) (*http.Response, error) {
 	if req == nil {
 		return nil, fmt.Errorf("openai compat executor: request is nil")
@@ -208,8 +208,8 @@ func (e *OpenAICompatExecutor) Execute(ctx context.Context, auth *cliproxyauth.A
 	}
 	helps.AppendAPIResponseChunk(ctx, e.cfg, body)
 	reporter.ObserveResponseModel(body)
-	// Ensure we at least record the request even if upstream doesn't return usage
-	// Translate response back to source format when needed
+	// 确保即使上游不返回 usage 也至少记录该请求
+	// 需要时将响应转换回源格式
 	var param any
 	out := sdktranslator.TranslateNonStream(ctx, to, responseFormat, req.Model, helps.ApplyPatchOriginalRequest(req, opts), translated, body, &param)
 	if helps.ApplyPatchTranslationError(param) != nil || len(out) == 0 {
@@ -367,8 +367,8 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 		}
 	}
 
-	// Request usage data in the final streaming chunk so that token statistics
-	// are captured even when the upstream is an OpenAI-compatible provider.
+	// 在最后的流式分块中请求 usage 数据，以便即使上游
+	// 是 OpenAI 兼容供应商也能捕获 token 统计。
 	translated = helps.SetBoolIfDifferent(translated, "stream_options.include_usage", true)
 	reporter.SetTranslatedReasoningEffort(translated, to.String())
 
@@ -409,7 +409,7 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 	})
 
 	httpClient := helps.NewProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
-	// Early role/empty frames are only first-packet fallbacks, not effective tokens.
+	// 早期的 role/空帧只是首包回退，不是有效的 token。
 	httpClient = reporter.TrackHTTPClientRoundTripOnly(httpClient)
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
@@ -500,7 +500,7 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 				}
 			}
 
-			// Observe complete upstream frames before translation or downstream backpressure.
+			// 在转换或下游背压之前观测完整的上游帧。
 			helps.ObserveChatTokenEvent(reporter, dataPayload)
 			streamLine := append([]byte("data: "), dataPayload...)
 			chunks := helps.TranslateStreamWithClaudeInputTokens(ctx, to, responseFormat, req.Model, helps.ApplyPatchOriginalRequest(req, opts), translated, streamLine, &param, claudeInputTokens)
@@ -586,8 +586,8 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 			case <-ctx.Done():
 			}
 		} else if !seenDone {
-			// Without a translator-confirmed terminal state, a clean Responses EOF
-			// without [DONE] remains a failed stream instead of completing it.
+			// 在没有转换器确认的终止状态时，干净但不含 [DONE] 的
+			// Responses EOF 仍是失败的流，而不会被视为完成。
 			if responseFormat == sdktranslator.FormatOpenAIResponse {
 				streamErr := statusErr{code: http.StatusBadGateway, msg: "upstream stream closed before [DONE]"}
 				helps.RecordAPIResponseError(ctx, e.cfg, streamErr)
@@ -599,7 +599,7 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 				return
 			}
 
-			// Other protocols retain compatibility with providers that omit [DONE].
+			// 其他协议保留与省略 [DONE] 的供应商的兼容性。
 			chunks := helps.TranslateStreamWithClaudeInputTokens(ctx, to, responseFormat, req.Model, helps.ApplyPatchOriginalRequest(req, opts), translated, []byte("data: [DONE]"), &param, claudeInputTokens)
 			helps.RecordApplyPatchStreamFailure(ctx, param, reporter, statusErr{code: http.StatusBadGateway, msg: helps.ApplyPatchUpstreamErrorMessage})
 			for i := range chunks {
@@ -610,7 +610,7 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 				}
 			}
 		}
-		// Ensure we record the request if no usage chunk was ever seen.
+		// 如果始终没有看到 usage 分块，确保我们记录该请求。
 		streamUsage.Publish(ctx, reporter)
 		reporter.EnsurePublished(ctx)
 	}()
@@ -780,9 +780,9 @@ func (e *OpenAICompatExecutor) CountTokens(ctx context.Context, auth *cliproxyau
 	return cliproxyexecutor.Response{Payload: translatedUsage}, nil
 }
 
-// Refresh is a no-op for API-key based compatibility providers.
-// OAuth-style credentials with a refresh token cannot be rotated here; callers
-// that need plugin/Home refresh must bind a refresh-capable executor instead.
+// 对于基于 API key 的兼容供应商，Refresh 是空操作。
+// 带刷新令牌的 OAuth 风格凭据无法在这里轮换；需要
+// 插件/Home 刷新的调用方必须改为绑定支持刷新的执行器。
 func (e *OpenAICompatExecutor) Refresh(ctx context.Context, auth *cliproxyauth.Auth) (*cliproxyauth.Auth, error) {
 	log.Debugf("openai compat executor: refresh called")
 	if refreshed, handled, err := helps.RefreshAuthViaHome(ctx, e.cfg, auth); handled {
@@ -992,14 +992,14 @@ func (e *OpenAICompatExecutor) resolveCompatConfig(auth *cliproxyauth.Auth, req 
 	if auth == nil || e.cfg == nil {
 		return nil
 	}
-	// Native OpenAI-wire providers (openai, deepseek, nvidia) resolve their
-	// capability view from their own config family.
+	// 原生 OpenAI wire 供应商（openai、deepseek、nvidia）从其自身的
+	// 配置族解析能力视图。
 	if compat := nativeAPICompatConfig(e.cfg, auth, req); compat != nil {
 		return compat
 	}
 	if e.cfg.Home.Enabled {
-		// Home excludes provider credentials from the global configuration. These
-		// non-secret options belong to the credential selected for this attempt.
+		// Home 从全局配置中排除供应商凭据。这些
+		// 非机密选项属于本次尝试所选中的凭据。
 		var options struct {
 			SupportPromptCacheKey bool                              `json:"support-prompt-cache-key"`
 			Models                []config.OpenAICompatibilityModel `json:"models"`
@@ -1135,10 +1135,10 @@ func newOpenAICompatStatusError(status int, headers http.Header, body []byte) st
 	}
 }
 
-// openAICompatRetryAfter preserves the provider's standard Retry-After signal.
-// Some OpenAI-compatible providers omit that header for explicit per-minute
-// token limits; in that narrow case a one-minute fallback prevents immediate
-// replay of the same large request while keeping the retry wait bounded.
+// openAICompatRetryAfter 保留供应商标准的 Retry-After 信号。
+// 一些 OpenAI 兼容供应商在显式的每分钟 token 限额场景下
+// 会省略该头；在这种狭窄情形下，一分钟的回退可防止
+// 立即重放同样的大请求，同时让重试等待保持有界。
 func openAICompatRetryAfter(status int, headers http.Header, body []byte, now time.Time) *time.Duration {
 	if status != http.StatusTooManyRequests {
 		return nil
@@ -1167,7 +1167,7 @@ func openAICompatRetryAfter(status int, headers http.Header, body []byte, now ti
 	return nil
 }
 
-// SupportsApplyPatch reports the actual executor contract, independent of its provider name.
+// SupportsApplyPatch 报告实际的执行器约定，与其供应商名无关。
 func (e *OpenAICompatExecutor) SupportsApplyPatch() bool { return e != nil }
 
 func sourceFormatEqual(from, want sdktranslator.Format) bool {

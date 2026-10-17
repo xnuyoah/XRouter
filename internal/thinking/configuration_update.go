@@ -11,7 +11,7 @@ func isResponsesFormat(format string) bool {
 	return format == "codex" || format == "openai-response"
 }
 
-// extractConfigurationUpdateConfig returns the last nonempty Responses effort update.
+// extractConfigurationUpdateConfig 返回最后一个非空的 Responses effort 更新。
 func extractConfigurationUpdateConfig(body []byte) ThinkingConfig {
 	if len(body) == 0 || !gjson.ValidBytes(body) {
 		return ThinkingConfig{}
@@ -45,16 +45,16 @@ func extractConfigurationUpdateConfig(body []byte) ThinkingConfig {
 	}
 }
 
-// CollapseConfigurationUpdates removes every configuration_update input item.
-// Unless keepTopLevelEffort is true, the last nonempty update effort is also
-// promoted into the top-level reasoning.effort. Targets that reject
-// configuration_update items entirely (for example Sign in with ChatGPT
-// subscriptions) use it to degrade to the classic request-level effort,
-// accepting the resulting prompt-cache loss. Keep the top-level effort when
-// an explicit model thinking suffix already resolved the operator's override
-// into it. A body without array input or without any configuration_update
-// item is returned unchanged, and the top-level effort is only touched when
-// an update carries a usable effort.
+// CollapseConfigurationUpdates 移除所有 configuration_update 输入条目。
+// 除非 keepTopLevelEffort 为 true，否则最后一个非空更新的 effort 也会
+// 被提升到顶层 reasoning.effort。完全拒绝
+// configuration_update 条目的目标（例如 Sign in with ChatGPT
+// 订阅）借此降级为经典的请求级 effort，
+// 并接受由此带来的 prompt 缓存损失。当显式的模型 thinking 后缀
+// 已将操作者的覆盖解析到顶层 effort 时，
+// 保持该顶层 effort。不含数组 input 或不含任何 configuration_update
+// 条目的 body 原样返回，且仅当某个更新携带可用的 effort 时
+// 才会改动顶层 effort。
 func CollapseConfigurationUpdates(body []byte, keepTopLevelEffort ...bool) []byte {
 	updated := stripConfigurationUpdates(body)
 	if len(keepTopLevelEffort) > 0 && keepTopLevelEffort[0] {
@@ -71,13 +71,13 @@ func CollapseConfigurationUpdates(body []byte, keepTopLevelEffort ...bool) []byt
 	return collapsed
 }
 
-// StripConfigurationUpdates removes configuration_update input items without changing reasoning.
+// StripConfigurationUpdates 移除 configuration_update 输入条目而不改变 reasoning。
 func StripConfigurationUpdates(body []byte) []byte {
 	return stripConfigurationUpdates(body)
 }
 
-// stripConfigurationUpdates removes unsupported Responses input items without
-// modifying other input items or introducing an input field.
+// stripConfigurationUpdates 移除不支持的 Responses 输入条目，
+// 不修改其他输入条目，也不引入 input 字段。
 func stripConfigurationUpdates(body []byte) []byte {
 	if len(body) == 0 || !gjson.ValidBytes(body) {
 		return body
@@ -107,7 +107,7 @@ func stripConfigurationUpdates(body []byte) []byte {
 	return updated
 }
 
-// stripResponsesEffort leaves summary and unrelated reasoning fields intact.
+// stripResponsesEffort 保持 summary 与无关的 reasoning 字段不变。
 func stripResponsesEffort(body []byte) []byte {
 	if len(body) == 0 || !gjson.ValidBytes(body) || !gjson.GetBytes(body, "reasoning.effort").Exists() {
 		return body

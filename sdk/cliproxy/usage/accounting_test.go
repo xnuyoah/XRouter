@@ -165,7 +165,7 @@ func TestEnsureTokenBreakdownDoesNotOverrideCanonicalZeroCacheRead(t *testing.T)
 }
 
 func TestTokenBreakdown_Valid_RejectsArithmeticOverflow(t *testing.T) {
-	// MaxInt64 + MaxInt64 + 2 wraps to 0 in int64 arithmetic:
+	// 在 int64 运算中 MaxInt64 + MaxInt64 + 2 回绕为 0：
 	// math.MaxInt64 (0x7fff_ffff_ffff_ffff) + math.MaxInt64 + 2 = -2 + 2 = 0
 	b := TokenBreakdown{
 		SchemaVersion: TokenAccountingSchemaVersion,
@@ -187,7 +187,7 @@ func TestTokenBreakdown_Valid_RejectsArithmeticOverflow(t *testing.T) {
 		Quality:       TokenAccountingQualityComplete,
 		TotalTokens:   0,
 		Output: TokenOutputBreakdown{
-			TotalTokens:        -2, // will overflow if nonNegativeSum not used or negative
+			TotalTokens:        -2, // 若不使用 nonNegativeSum 或值为负则会溢出
 			NonReasoningTokens: math.MaxInt64,
 			ReasoningTokens:    math.MaxInt64,
 		},
@@ -198,9 +198,9 @@ func TestTokenBreakdown_Valid_RejectsArithmeticOverflow(t *testing.T) {
 }
 
 func TestNewSubsetTokenBreakdown_RejectsArithmeticOverflow(t *testing.T) {
-	// Passing MaxInt64 for cacheRead and cacheWrite will overflow cacheRead + cacheWrite to negative (-2).
-	// If unchecked, cacheRead + cacheWrite > inputTotal comparison evaluates -2 > MaxInt64 (false),
-	// returning complete quality with negative uncached tokens.
+	// 为 cacheRead 和 cacheWrite 传入 MaxInt64 会使 cacheRead + cacheWrite 溢出为负值（-2）。
+	// 若不检查，cacheRead + cacheWrite > inputTotal 的比较会得出 -2 > MaxInt64（false），
+	// 从而以负的未缓存 token 返回 complete 质量。
 	b := NewSubsetTokenBreakdown(math.MaxInt64, math.MaxInt64, math.MaxInt64, 0, 0, math.MaxInt64)
 	if b.Quality == TokenAccountingQualityComplete {
 		t.Fatalf("expected inconsistent quality for overflowing breakdown, got Complete: %+v", b)
@@ -211,7 +211,7 @@ func TestNewSubsetTokenBreakdown_RejectsArithmeticOverflow(t *testing.T) {
 }
 
 func TestNewSeparateReasoningTokenBreakdown_RejectsArithmeticOverflow(t *testing.T) {
-	// Passing MaxInt64 for cacheRead and cacheWrite will overflow cacheRead + cacheWrite to negative (-2).
+	// 为 cacheRead 和 cacheWrite 传入 MaxInt64 会使 cacheRead + cacheWrite 溢出为负值（-2）。
 	b := NewSeparateReasoningTokenBreakdown(math.MaxInt64, math.MaxInt64, math.MaxInt64, 0, 0, math.MaxInt64)
 	if b.Quality == TokenAccountingQualityComplete {
 		t.Fatalf("expected inconsistent quality for overflowing breakdown, got Complete: %+v", b)

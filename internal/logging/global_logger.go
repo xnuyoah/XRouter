@@ -45,12 +45,12 @@ func logV8MigrationWarning(section, msg string) {
 	}
 }
 
-// LogFormatter defines a custom log format for logrus.
-// This formatter adds timestamp, level, request ID, and source location to each log entry.
-// Format: [2025-12-23 20:14:04] [debug] [manager.go:524] | a1b2c3d4 | Use API key sk-9...0RHO for model gpt-5.2
+// LogFormatter 为 logrus 定义自定义日志格式。
+// 该格式器为每条日志条目添加时间戳、级别、请求 ID 与源码位置。
+// 格式：[2025-12-23 20:14:04] [debug] [manager.go:524] | a1b2c3d4 | Use API key sk-9...0RHO for model gpt-5.2
 type LogFormatter struct{}
 
-// logFieldOrder defines the display order for common log fields.
+// logFieldOrder 定义常见日志字段的显示顺序。
 var logFieldOrder = []string{
 	"provider", "model",
 	"plugin_id", "plugin_name", "source_id",
@@ -88,7 +88,7 @@ func formatLogFieldValue(key string, value any) string {
 	return fmt.Sprint(value)
 }
 
-// Format renders a single log entry with custom formatting.
+// Format 以自定义格式渲染单条日志条目。
 func (m *LogFormatter) Format(entry *log.Entry) ([]byte, error) {
 	var buffer *bytes.Buffer
 	if entry.Buffer != nil {
@@ -111,7 +111,7 @@ func (m *LogFormatter) Format(entry *log.Entry) ([]byte, error) {
 	}
 	levelStr := fmt.Sprintf("%-5s", level)
 
-	// Build fields string (only print fields in logFieldOrder)
+	// 构建字段字符串（仅打印 logFieldOrder 中的字段）
 	var fieldsStr string
 	if len(entry.Data) > 0 {
 		var fields []string
@@ -143,8 +143,8 @@ func (m *LogFormatter) Format(entry *log.Entry) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-// SetupBaseLogger configures the shared logrus instance and Gin writers.
-// It is safe to call multiple times; initialization happens only once.
+// SetupBaseLogger 配置共享的 logrus 实例与 Gin 写入器。
+// 可安全地多次调用；初始化只发生一次。
 func SetupBaseLogger() {
 	setupOnce.Do(func() {
 		log.SetOutput(os.Stdout)
@@ -164,7 +164,7 @@ func SetupBaseLogger() {
 	})
 }
 
-// isDirWritable checks if the specified directory exists and is writable by attempting to create and remove a test file.
+// isDirWritable 通过尝试创建并删除测试文件来检查指定目录是否存在且可写。
 func isDirWritable(dir string) bool {
 	info, err := os.Stat(dir)
 	if err != nil || !info.IsDir() {
@@ -184,7 +184,7 @@ func isDirWritable(dir string) bool {
 	return true
 }
 
-// ResolveLogDirectory determines the directory used for application logs.
+// ResolveLogDirectory 确定应用日志使用的目录。
 func ResolveLogDirectory(cfg *config.Config) string {
 	logDir := "logs"
 	if base := util.WritablePath(); base != "" {
@@ -205,9 +205,9 @@ func ResolveLogDirectory(cfg *config.Config) string {
 	return logDir
 }
 
-// ConfigureLogOutput switches the global log destination between rotating files and stdout.
-// When logsMaxTotalSizeMB > 0, a background cleaner removes the oldest log files in the logs directory
-// until the total size is within the limit.
+// ConfigureLogOutput 在轮转文件与 stdout 之间切换全局日志输出目标。
+// 当 logsMaxTotalSizeMB > 0 时，后台清理器会删除日志目录中最旧的日志文件，
+// 直到总大小处于限制之内。
 func ConfigureLogOutput(cfg *config.Config) error {
 	SetupBaseLogger()
 

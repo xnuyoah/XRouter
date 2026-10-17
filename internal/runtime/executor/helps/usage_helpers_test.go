@@ -348,7 +348,7 @@ func TestParseClaudeUsageFallsBackCachedTokensToCacheCreation(t *testing.T) {
 }
 
 func TestParseClaudeUsagePreservesThinkingTokensAsReasoningSubset(t *testing.T) {
-	// Sanitized shape from local Anthropic request logs under ~/.config/cpa/logs.
+	// 来自 ~/.config/cpa/logs 下本地 Anthropic 请求日志的脱敏形态。
 	data := []byte(`{"usage":{"input_tokens":2,"cache_creation_input_tokens":831,"cache_read_input_tokens":44225,"output_tokens":244,"output_tokens_details":{"thinking_tokens":40}}}`)
 	detail := ParseClaudeUsage(data)
 	if detail.OutputTokens != 244 {
@@ -631,12 +631,12 @@ func TestUsageReporterTrackHTTPClientRoundTripOnly_DoesNotTriggerOnBodyRead(t *t
 		t.Fatalf("response body close error = %v", errClose)
 	}
 
-	// 1. Plain body reading must NOT set TTFT
+	// 1. 纯 body 读取不得设置 TTFT
 	if reporter.IsTTFTSet() {
 		t.Fatalf("TrackHTTPClientRoundTripOnly must not set TTFT on plain body read")
 	}
 
-	// 2. Observing metadata event records fallback, but does NOT set effective TTFT
+	// 2. 观察到 metadata 事件会记录回退值，但不设置有效 TTFT
 	ObserveResponsesTokenEvent(reporter, bodyBytes)
 	if reporter.IsTTFTSet() {
 		t.Fatalf("Observing metadata event must not set effective TTFT")
@@ -645,7 +645,7 @@ func TestUsageReporterTrackHTTPClientRoundTripOnly_DoesNotTriggerOnBodyRead(t *t
 		t.Fatalf("Fallback TTFT should be recorded and > 0, got %v", reporter.ttftDuration())
 	}
 
-	// 3. Observing substantive token event sets effective TTFT
+	// 3. 观察到实质性 token 事件会设置有效 TTFT
 	ObserveResponsesTokenEvent(reporter, []byte(`{"type":"response.output_text.delta","delta":"hello"}`))
 	if !reporter.IsTTFTSet() {
 		t.Fatalf("Observing token event must set effective TTFT")
@@ -692,12 +692,12 @@ func TestUsageReporterObserveTokenEvent_FastPathNonTokenAndToken(t *testing.T) {
 	reporter := NewUsageReporter(context.Background(), "codex", "gpt-5.6-luna", nil)
 	reporter.StartResponseTTFT()
 
-	// 1. Initial state
+	// 1. 初始状态
 	if reporter.IsTTFTSet() {
 		t.Fatalf("expected IsTTFTSet() == false initially")
 	}
 
-	// 2. First non-token event records firstPacketDuration, but does not mark TTFT set
+	// 2. 首个非 token 事件记录 firstPacketDuration，但不标记 TTFT 已设置
 	reporter.ObserveTokenEvent(false)
 	if reporter.IsTTFTSet() {
 		t.Fatalf("ObserveTokenEvent(false) must not set TTFT")
@@ -707,20 +707,20 @@ func TestUsageReporterObserveTokenEvent_FastPathNonTokenAndToken(t *testing.T) {
 	}
 	firstPacketDuration := reporter.firstPacketDuration
 
-	// 3. Subsequent non-token event is a fast-path return and does not alter firstPacketDuration
+	// 3. 后续非 token 事件走快速路径返回，不改变 firstPacketDuration
 	reporter.ObserveTokenEvent(false)
 	if reporter.firstPacketDuration != firstPacketDuration {
 		t.Fatalf("subsequent ObserveTokenEvent(false) must preserve original firstPacketDuration")
 	}
 
-	// 4. Substantive token event sets effective TTFT
+	// 4. 实质性 token 事件设置有效 TTFT
 	reporter.ObserveTokenEvent(true)
 	if !reporter.IsTTFTSet() {
 		t.Fatalf("ObserveTokenEvent(true) must set IsTTFTSet() == true")
 	}
 	tokenTTFT := reporter.ttft
 
-	// 5. Subsequent token event is a fast-path return and does not alter TTFT
+	// 5. 后续 token 事件走快速路径返回，不改变 TTFT
 	reporter.ObserveTokenEvent(true)
 	if reporter.ttft != tokenTTFT {
 		t.Fatalf("subsequent ObserveTokenEvent(true) must not alter already recorded TTFT")
@@ -1056,7 +1056,7 @@ func TestStreamUsageBufferObserveClaudeStream_FailurePreservesUsage(t *testing.T
 		t.Errorf("CacheCreationTokens = %d, want 7185", record.Detail.CacheCreationTokens)
 	}
 
-	// Verify buffer.PublishFailure succeeds with the accumulated usage detail
+	// 验证 buffer.PublishFailure 携带累积的用量明细成功
 	if !buffer.PublishFailure(context.Background(), reporter, context.Canceled) {
 		t.Fatal("expected PublishFailure to return true")
 	}
@@ -1086,28 +1086,28 @@ func TestUsageReporterPropagatesSessionHierarchy(t *testing.T) {
 		t.Fatalf("record session hierarchy = (%q, %q), want (claude:sess-1:agent:sub-1, claude:sess-1)", record.SessionID, record.ParentSessionID)
 	}
 
-	// Test explicit override via SetSessionHierarchy
+	// 测试通过 SetSessionHierarchy 显式覆盖
 	reporter.SetSessionHierarchy("override:child", "override:parent")
 	record2 := reporter.buildRecord(usage.Detail{TotalTokens: 100}, false, usage.Failure{})
 	if record2.SessionID != "override:child" || record2.ParentSessionID != "override:parent" {
 		t.Fatalf("overridden record session hierarchy = (%q, %q), want (override:child, override:parent)", record2.SessionID, record2.ParentSessionID)
 	}
 
-	// Test self-loop elimination in SetSessionHierarchy
+	// 测试 SetSessionHierarchy 中的自环消除
 	reporter.SetSessionHierarchy("loop:node", "loop:node")
 	record3 := reporter.buildRecord(usage.Detail{TotalTokens: 100}, false, usage.Failure{})
 	if record3.SessionID != "loop:node" || record3.ParentSessionID != "" {
 		t.Fatalf("self loop record session hierarchy = (%q, %q), want (loop:node, empty)", record3.SessionID, record3.ParentSessionID)
 	}
 
-	// Test orphan parent elimination when sessionID is empty
+	// 测试 sessionID 为空时孤立父级的消除
 	reporter.SetSessionHierarchy("", "orphan:parent")
 	record4 := reporter.buildRecord(usage.Detail{TotalTokens: 100}, false, usage.Failure{})
 	if record4.SessionID != "" || record4.ParentSessionID != "" {
 		t.Fatalf("orphan parent record session hierarchy = (%q, %q), want empty both", record4.SessionID, record4.ParentSessionID)
 	}
 
-	// Test cross-prefix alias rejection (e.g. pck:* and conv:* are aliases, not parent-child)
+	// 测试跨前缀别名拒绝（例如 pck:* 和 conv:* 是别名，而非父子关系）
 	ctxAlias := logging.WithClientRequestMetadata(context.Background(), logging.ClientRequestMetadata{
 		SessionID:       "pck:prompt-key-123",
 		ParentSessionID: "conv:conv-456",
@@ -1154,7 +1154,7 @@ func TestUsageReporterPropagatesBaseURL(t *testing.T) {
 		t.Fatalf("recordMeta.BaseURL = %q, want %q", recordMeta.BaseURL, "https://meta.endpoint.example.com/v1")
 	}
 
-	// Attribute precedence over metadata
+	// 属性优先于元数据
 	authBoth := &cliproxyauth.Auth{
 		ID:       "auth-both-test",
 		Provider: "openai",
@@ -1171,7 +1171,7 @@ func TestUsageReporterPropagatesBaseURL(t *testing.T) {
 		t.Fatalf("recordBoth.BaseURL = %q, want %q", recordBoth.BaseURL, "https://attr.example.com")
 	}
 
-	// Blank attribute falls back to metadata
+	// 空属性回退到元数据
 	authBlankAttr := &cliproxyauth.Auth{
 		ID:       "auth-blank-test",
 		Provider: "openai",
@@ -1188,7 +1188,7 @@ func TestUsageReporterPropagatesBaseURL(t *testing.T) {
 		t.Fatalf("recordBlankAttr.BaseURL = %q, want %q", recordBlankAttr.BaseURL, "https://meta.example.com")
 	}
 
-	// Nil auth or unconfigured auth leaves BaseURL empty
+	// nil auth 或未配置的 auth 会让 BaseURL 保持为空
 	reporterNilAuth := NewUsageReporter(ctx, "openai", "gpt-5.4", nil)
 	recordNilAuth := reporterNilAuth.buildRecord(usage.Detail{TotalTokens: 10}, false, usage.Failure{})
 	if recordNilAuth.BaseURL != "" {
@@ -1199,11 +1199,11 @@ func TestUsageReporterPropagatesBaseURL(t *testing.T) {
 func TestUsageReporter_AllocatesUniqueUUIDPerAttemptWithSharedTraceID(t *testing.T) {
 	ctx := logging.WithRequestID(context.Background(), "00000042")
 
-	// First execution attempt
+	// 第一次执行尝试
 	reporter1 := NewUsageReporter(ctx, "openai", "gpt-5.4", nil)
 	record1 := reporter1.buildRecord(usage.Detail{TotalTokens: 10}, false, usage.Failure{})
 
-	// Second execution attempt (retry)
+	// 第二次执行尝试（重试）
 	reporter2 := NewUsageReporter(ctx, "claude", "claude-3-7-sonnet", nil)
 	record2 := reporter2.buildRecord(usage.Detail{TotalTokens: 20}, false, usage.Failure{})
 
@@ -1225,7 +1225,7 @@ func TestUsageReporter_AllocatesUniqueUUIDPerAttemptWithSharedTraceID(t *testing
 		t.Fatalf("consecutive attempts must have distinct UUID RequestIDs: got %q and %q", record1.RequestID, record2.RequestID)
 	}
 
-	// Verify UUID format and version 4
+	// 验证 UUID 格式及版本 4
 	u1, err1 := uuid.Parse(record1.RequestID)
 	if err1 != nil || u1.Version() != 4 {
 		t.Fatalf("record1.RequestID %q is not valid UUID v4: %v", record1.RequestID, err1)

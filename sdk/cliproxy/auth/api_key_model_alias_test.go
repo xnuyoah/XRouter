@@ -33,23 +33,23 @@ func TestLookupAPIKeyUpstreamModel(t *testing.T) {
 		input  string
 		want   string
 	}{
-		// Fast path + suffix preservation
+		// 快速路径 + 后缀保留
 		{"alias with suffix", "a1", "g5p(8192)", "gpt-5.5(8192)"},
 		{"alias without suffix", "a1", "g5p", "gpt-5.5"},
 
-		// Config suffix takes priority
+		// 配置后缀优先
 		{"config suffix priority", "a1", "g5m(high)", "gpt-5-mini(low)"},
 		{"config suffix no user suffix", "a1", "g5m", "gpt-5-mini(low)"},
 
-		// Case insensitive
+		// 大小写不敏感
 		{"uppercase alias", "a1", "G5P", "gpt-5.5"},
 		{"mixed case with suffix", "a1", "G5p(4096)", "gpt-5.5(4096)"},
 
-		// Direct name lookup
+		// 直接按名称查找
 		{"upstream name direct", "a1", "gpt-5.5", "gpt-5.5"},
 		{"upstream name with suffix", "a1", "gpt-5.5(8192)", "gpt-5.5(8192)"},
 
-		// Cache miss scenarios
+		// 缓存未命中场景
 		{"non-existent auth", "non-existent", "g5p", ""},
 		{"unknown alias", "a1", "unknown-alias", ""},
 		{"empty auth ID", "", "g5p", ""},
@@ -82,12 +82,12 @@ func TestAPIKeyModelAlias_ConfigHotReload(t *testing.T) {
 	ctx := context.Background()
 	_, _ = mgr.Register(ctx, &Auth{ID: "a1", Provider: "openai", Attributes: map[string]string{"api_key": "k"}})
 
-	// Initial alias
+	// 初始别名
 	if resolved := mgr.lookupAPIKeyUpstreamModel("a1", "g5p"); resolved != "gpt-5.5" {
 		t.Fatalf("before reload: got %q, want %q", resolved, "gpt-5.5")
 	}
 
-	// Hot reload with new alias
+	// 使用新别名热重载
 	mgr.SetConfig(&internalconfig.Config{
 		OpenAIKey: []internalconfig.OpenAIKey{
 			{
@@ -97,7 +97,7 @@ func TestAPIKeyModelAlias_ConfigHotReload(t *testing.T) {
 		},
 	})
 
-	// New alias should take effect
+	// 新别名应生效
 	if resolved := mgr.lookupAPIKeyUpstreamModel("a1", "g5p"); resolved != "gpt-5-mini" {
 		t.Fatalf("after reload: got %q, want %q", resolved, "gpt-5-mini")
 	}

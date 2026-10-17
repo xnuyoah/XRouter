@@ -17,15 +17,15 @@ import (
 	tls "github.com/refraction-networking/utls"
 )
 
-// newResumptionTestCertificate mints a short-lived self-signed leaf for the
-// loopback TLS server used by the resumption test.
+// newResumptionTestCertificate 为回环 TLS 服务器签发一个短期自签名叶证书，
+// 该服务器用于会恢复（resumption）测试。
 func newResumptionTestCertificate(t *testing.T) gotls.Certificate {
 	return newResumptionTestCertificateAt(t, time.Now())
 }
 
-// newResumptionTestCertificateAt mints a test leaf valid around now. Tests
-// running inside synctest pass its fake epoch so certificate verification
-// sees the same clock as the handshake timers.
+// newResumptionTestCertificateAt 签发一个在当前时间附近有效的测试叶证书。
+// 在 synctest 内运行的测试会传入其伪造的时间基准，使证书校验
+// 与握手计时器看到相同的时钟。
 func newResumptionTestCertificateAt(t *testing.T, now time.Time) gotls.Certificate {
 	t.Helper()
 	key, errKey := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -53,10 +53,10 @@ func newResumptionTestCertificateAt(t *testing.T, now time.Time) gotls.Certifica
 	return gotls.Certificate{Certificate: [][]byte{der}, PrivateKey: key, Leaf: leaf}
 }
 
-// TestClaudeCodeTLSSessionResumptionCompletesHandshake proves the Claude Code
-// inference ClientHello can actually resume: the spec places pre_shared_key
-// after the padding extension, so a malformed ordering or padding interaction
-// would surface here as a handshake failure rather than a silent regression.
+// TestClaudeCodeTLSSessionResumptionCompletesHandshake 证明 Claude Code 的
+// 推理 ClientHello 确实可以恢复会话：规范要求 pre_shared_key
+// 位于 padding 扩展之后，因此顺序错误或 padding 交互异常
+// 会在这里表现为握手失败，而不是悄无声息的回归。
 func TestClaudeCodeTLSSessionResumptionCompletesHandshake(t *testing.T) {
 	certificate := newResumptionTestCertificate(t)
 	roots := x509.NewCertPool()
@@ -88,8 +88,8 @@ func TestClaudeCodeTLSSessionResumptionCompletesHandshake(t *testing.T) {
 					_ = conn.Close()
 					return
 				}
-				// The greeting flushes the post-handshake NewSessionTicket
-				// messages the client needs in order to resume.
+				// 该问候消息会冲刷握手后的 NewSessionTicket
+				// 消息，客户端需要它们才能恢复会话。
 				_, _ = server.Write([]byte("ok\n"))
 				_, _ = server.Read(make([]byte, 8))
 				_ = server.Close()
@@ -135,8 +135,8 @@ func TestClaudeCodeTLSSessionResumptionCompletesHandshake(t *testing.T) {
 		t.Fatal("second handshake did not resume, so the session cache is not effective")
 	}
 
-	// The padding extension absorbs the pre_shared_key bytes, so a resumed
-	// ClientHello keeps the same BoringSSL padding boundary as a fresh one.
+	// padding 扩展会吸收 pre_shared_key 字节，因此恢复的
+	// ClientHello 与全新的 ClientHello 保持相同的 BoringSSL padding 边界。
 	if firstLength != secondLength {
 		t.Fatalf("resumed ClientHello length = %d, want %d to match the fresh handshake", secondLength, firstLength)
 	}

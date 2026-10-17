@@ -11,7 +11,7 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-// DeleteJSONField removes a top-level or nested JSON field from a payload.
+// DeleteJSONField 从载荷中删除顶层或嵌套的 JSON 字段。
 func DeleteJSONField(body []byte, key string) []byte {
 	if key == "" || len(body) == 0 {
 		return body
@@ -23,7 +23,7 @@ func DeleteJSONField(body []byte, key string) []byte {
 	return updated
 }
 
-// ParseRetryDelay extracts the retry delay from a Google API 429 error response.
+// ParseRetryDelay 从 Google API 的 429 错误响应中提取重试延迟。
 func ParseRetryDelay(errorBody []byte) (*time.Duration, error) {
 	details := gjson.GetBytes(errorBody, "error.details")
 	if details.Exists() && details.IsArray() {

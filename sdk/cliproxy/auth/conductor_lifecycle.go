@@ -13,7 +13,7 @@ import (
 	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
-// SetRetryConfig updates additional credential retry rounds, the per-round credential limit, and the cooldown wait interval.
+// SetRetryConfig 更新额外的凭据重试轮数、每轮凭据上限以及冷却等待间隔。
 func (m *Manager) SetRetryConfig(retry int, maxRetryInterval time.Duration, maxRetryCredentials int) {
 	if m == nil {
 		return
@@ -32,7 +32,7 @@ func (m *Manager) SetRetryConfig(retry int, maxRetryInterval time.Duration, maxR
 	m.maxRetryInterval.Store(maxRetryInterval.Nanoseconds())
 }
 
-// RegisterExecutor registers a provider executor with the manager.
+// RegisterExecutor 向管理器注册一个供应商执行器。
 func (m *Manager) RegisterExecutor(executor ProviderExecutor) {
 	if executor == nil {
 		return
@@ -69,7 +69,7 @@ func (m *Manager) RegisterExecutor(executor ProviderExecutor) {
 	}
 }
 
-// UnregisterExecutor removes the executor associated with the provider key.
+// UnregisterExecutor 移除与供应商 key 关联的执行器。
 func (m *Manager) UnregisterExecutor(provider string) {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	if provider == "" {
@@ -80,7 +80,7 @@ func (m *Manager) UnregisterExecutor(provider string) {
 	m.mu.Unlock()
 }
 
-// Register inserts a new auth entry into the manager.
+// Register 向管理器中插入一条新的 auth 条目。
 func (m *Manager) Register(ctx context.Context, auth *Auth) (*Auth, error) {
 	if auth == nil {
 		return nil, nil
@@ -128,9 +128,9 @@ func (m *Manager) Register(ctx context.Context, auth *Auth) (*Auth, error) {
 		auth.CredentialVersion = 1
 	}
 	auth.Generation = 1
-	// Serialize this credential, but release the manager lock during store I/O.
-	// Persist failures stay non-fatal, but must not be silent: a restart would
-	// lose the credential that only exists in memory.
+	// 序列化此凭据，但在存储 I/O 期间释放管理器锁。
+	// 持久化失败保持非致命，但不能静默：一次重启会
+	// 丢失仅存在于内存中的凭据。
 	if errPersist := m.persistLocked(ctx, auth); errPersist != nil {
 		log.WithFields(log.Fields{"auth_id": auth.ID, "credential": auth.ID, "provider": auth.Provider}).Warnf("failed to persist registered auth %s (%s): %v", auth.Provider, auth.ID, errPersist)
 	}
@@ -141,7 +141,7 @@ func (m *Manager) Register(ctx context.Context, auth *Auth) (*Auth, error) {
 	authClone := auth.Clone()
 	m.auths[auth.ID] = authClone
 	m.notifyAuthChangeLocked(auth.ID)
-	// Snapshot before unlocking: MarkResult mutates the published auth in place.
+	// 解锁前先做快照：MarkResult 会就地修改已发布的 auth。
 	var schedulerSnapshot *Auth
 	if m.scheduler != nil {
 		schedulerSnapshot = authClone.Clone()
@@ -171,19 +171,19 @@ const (
 	updateModePrepare
 )
 
-// UpdatePreparedAuth atomically merges request preparation results into the latest runtime auth
-// under the manager lock, preserving concurrent modifications without modifying refresh lifecycle fields.
+// UpdatePreparedAuth 在管理器锁下将请求准备结果原子地合并到最新的运行时 auth 中，
+// 同时保留并发修改，且不修改刷新生命周期相关字段。
 func (m *Manager) UpdatePreparedAuth(ctx context.Context, base, updated *Auth) (*Auth, error) {
 	return m.updateInternal(ctx, base, updated, updateModePrepare)
 }
 
-// UpdateRefreshedAuth atomically merges refresh results into the latest runtime auth
-// under the manager lock, preserving concurrent modifications (proxy_url, notes, weights, etc.).
+// UpdateRefreshedAuth 在管理器锁下将刷新结果原子地合并到最新的运行时 auth 中，
+// 同时保留并发修改（proxy_url、notes、weights 等）。
 func (m *Manager) UpdateRefreshedAuth(ctx context.Context, base, updated *Auth) (*Auth, error) {
 	return m.updateInternal(ctx, base, updated, updateModeRefresh)
 }
 
-// Update replaces an existing auth entry and notifies hooks.
+// Update 替换已有的 auth 条目并通知钩子。
 func (m *Manager) Update(ctx context.Context, auth *Auth) (*Auth, error) {
 	return m.updateInternal(ctx, nil, auth, updateModeReplace)
 }
@@ -204,9 +204,9 @@ func (m *Manager) updateInternal(ctx context.Context, base, auth *Auth, mode upd
 	return committedAuth, err
 }
 
-// finishAuthUpdate runs post-commit side effects after the per-auth mutation
-// gate has been released, preserving the original update ordering in which
-// hooks and scheduler updates could re-enter manager operations.
+// finishAuthUpdate 在单条 auth 的变更闸门释放之后运行提交后的副作用，
+// 从而保持原有的更新顺序——在该顺序中，
+// 钩子和调度器更新可以重入管理器操作。
 func (m *Manager) finishAuthUpdate(ctx context.Context, committed *Auth, persistCooldown bool) {
 	if committed == nil {
 		return
@@ -225,14 +225,14 @@ func (m *Manager) finishAuthUpdate(ctx context.Context, committed *Auth, persist
 	}
 }
 
-// updateInternalLocked assumes the caller already holds the per-auth
-// mutation lock. It only commits manager state; callers run
-// finishAuthUpdate after releasing the gate. persistCooldownStates is also
-// deferred by callers because it may re-enter manager operations.
-// updateInternalLocked commits an update while the caller holds the gate.
-// The second return value reports whether this call actually committed new
-// state (versus returning the current snapshot for a discarded stale
-// update); only real commits may run post-commit side effects.
+// updateInternalLocked 假定调用方已持有单条 auth 的
+// 变更锁。它只提交管理器状态；调用方在释放闸门后
+// 运行 finishAuthUpdate。persistCooldownStates 同样
+// 由调用方延后执行，因为它可能重入管理器操作。
+// updateInternalLocked 在调用方持有闸门时提交一次更新。
+// 第二个返回值表示本次调用是否真正提交了新的
+// 状态（相对于为被丢弃的过期更新返回当前快照）；
+// 只有真正的提交才能运行提交后的副作用。
 func (m *Manager) updateInternalLocked(ctx context.Context, base, auth *Auth, mode updateAuthMode) (committedAuth *Auth, committed bool, persistCooldown bool, err error) {
 	if auth == nil || auth.ID == "" {
 		return nil, false, false, nil
@@ -257,12 +257,12 @@ func (m *Manager) updateInternalLocked(ctx context.Context, base, auth *Auth, mo
 		m.mu.Unlock()
 		return nil, false, false, fmt.Errorf("update auth %s: stale registration epoch %d != %d", auth.ID, base.RegistrationEpoch, existing.RegistrationEpoch)
 	}
-	// Do not let an in-flight refresh overwrite credentials committed after its snapshot.
+	// 不要让进行中的刷新覆盖在其快照之后提交的凭据。
 	if mode == updateModeRefresh && base != nil && (existing.CredentialVersion != base.CredentialVersion || CredentialsChanged(base, existing)) {
 		current := existing.Clone()
 		m.mu.Unlock()
-		// Discarded stale refresh: committed=false so callers do not
-		// run finishAuthUpdate for a state this call did not change.
+		// 丢弃过期的刷新：committed=false，这样调用方不会
+		// 为本次调用并未改变的状态运行 finishAuthUpdate。
 		return current, false, false, nil
 	}
 	if mode == updateModeRefresh {
@@ -346,17 +346,17 @@ func (m *Manager) updateInternalLocked(ctx context.Context, base, auth *Auth, mo
 		cooldownStateChanged = clearCooldownStateForAuth(auth, now) || cooldownStateChanged
 	}
 	auth.EnsureIndex()
-	// Save before publication, including the transactional Meta mint path.
-	// Runtime-only changes made during I/O are merged below, never overwritten.
+	// 在发布之前保存，包括事务性的 Meta 铸造路径。
+	// I/O 期间产生的仅运行时变更会在下方被合并，绝不被覆盖。
 	existingBeforeSave := existing.Clone()
 	persistMetaMint := (mode == updateModePrepare || mode == updateModeRefresh) && strings.EqualFold(strings.TrimSpace(auth.Provider), "meta")
 	if errPersist := m.persistLocked(ctx, auth); errPersist != nil {
-		// A minted Meta key must reach the store before requests can use it.
+		// 铸造出的 Meta key 必须先写入存储，请求才能使用它。
 		if persistMetaMint {
 			m.mu.Unlock()
 			return nil, false, false, fmt.Errorf("persist meta auth: %w", errPersist)
 		}
-		// Ordinary persistence failures remain non-fatal, but never silent.
+		// 普通的持久化失败仍然是非致命的，但绝不静默。
 		log.WithFields(log.Fields{"auth_id": auth.ID, "credential": auth.ID, "provider": auth.Provider}).Warnf("failed to persist updated auth %s (%s): %v", auth.Provider, auth.ID, errPersist)
 	}
 	if m.authEpochs[auth.ID] != auth.RegistrationEpoch {
@@ -370,7 +370,7 @@ func (m *Manager) updateInternalLocked(ctx context.Context, base, auth *Auth, mo
 	authClone := auth.Clone()
 	m.auths[auth.ID] = authClone
 	m.notifyAuthChangeLocked(auth.ID)
-	// Snapshot before unlocking: MarkResult mutates the published auth in place.
+	// 解锁前先做快照：MarkResult 会就地修改已发布的 auth。
 	var schedulerSnapshot *Auth
 	if m.scheduler != nil {
 		schedulerSnapshot = authClone.Clone()
@@ -380,8 +380,8 @@ func (m *Manager) updateInternalLocked(ctx context.Context, base, auth *Auth, mo
 	return auth.Clone(), true, cooldownStateChanged, nil
 }
 
-// Remove deletes an auth from runtime state without persisting.
-// Disk and token-store deletion must be handled by the caller.
+// Remove 仅从运行时状态删除一条 auth，不做持久化。
+// 磁盘和令牌存储的删除必须由调用方处理。
 func (m *Manager) Remove(ctx context.Context, id string) {
 	if m == nil {
 		return
@@ -458,10 +458,10 @@ func (m *Manager) invalidateSessionAffinity(authID string) {
 	}
 }
 
-// Load resets manager state from the backing store.
+// Load 从底层存储重置管理器状态。
 func (m *Manager) Load(ctx context.Context) error {
-	// Exclude complete Save/publication transactions, including new registrations
-	// not yet present in auths. Never wait for this barrier while holding m.mu.
+	// 排除完整的 Save/发布事务，包括尚未出现在 auths 中的
+	// 新注册。绝不要在持有 m.mu 时等待此屏障。
 	lockCtx := ctx
 	if lockCtx == nil {
 		lockCtx = context.Background()
@@ -572,7 +572,7 @@ func (m *Manager) persist(ctx context.Context, auth *Auth) error {
 	if IsPluginVirtualAuth(auth) {
 		return nil
 	}
-	// Skip persistence when metadata is absent (e.g., runtime-only auths).
+	// 当 metadata 不存在时跳过持久化（例如仅运行时的 auth）。
 	if auth.Metadata == nil {
 		return nil
 	}

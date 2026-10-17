@@ -82,7 +82,7 @@ func (m *mockQuotaProvider) ResetQuota(ctx context.Context, req pluginapi.QuotaR
 func TestGetQuotaProviders_Endpoint(t *testing.T) {
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, nil)
 
-	// Case 1: No plugin host
+	// 场景 1：没有插件宿主
 	rec := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/v0/management/quota/providers", nil)
@@ -100,7 +100,7 @@ func TestGetQuotaProviders_Endpoint(t *testing.T) {
 		t.Fatalf("expected 0 providers, got %#v", emptyResp)
 	}
 
-	// Case 2: With quota plugin
+	// 场景 2：带有额度插件
 	host := pluginhost.New()
 	host.RegisterPluginForTest("opencode-plugin", pluginapi.Plugin{
 		Metadata: pluginapi.Metadata{Name: "OpenCode Plugin"},
@@ -152,7 +152,7 @@ func TestFetchCredentialQuota_Endpoint(t *testing.T) {
 	h := NewHandlerWithoutConfigFilePath(&config.Config{AuthDir: t.TempDir()}, manager)
 	h.SetPluginHost(host)
 
-	// Missing auth_index -> 400
+	// 缺少 auth_index -> 400
 	rec := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(rec)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{}`))
@@ -162,7 +162,7 @@ func TestFetchCredentialQuota_Endpoint(t *testing.T) {
 		t.Fatalf("expected status 400, got %d", rec.Code)
 	}
 
-	// Unknown auth_index -> 404
+	// 未知的 auth_index -> 404
 	recNotFound := httptest.NewRecorder()
 	ctxNotFound, _ := gin.CreateTestContext(recNotFound)
 	ctxNotFound.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"non-existent"}`))
@@ -172,7 +172,7 @@ func TestFetchCredentialQuota_Endpoint(t *testing.T) {
 		t.Fatalf("expected status 404, got %d", recNotFound.Code)
 	}
 
-	// Valid auth_index -> 200 with normalized shape
+	// 合法的 auth_index -> 200，返回规范化后的结构
 	recSuccess := httptest.NewRecorder()
 	ctxSuccess, _ := gin.CreateTestContext(recSuccess)
 	ctxSuccess.Request = httptest.NewRequest(http.MethodPost, "/v0/management/quota/fetch", strings.NewReader(`{"auth_index":"`+authIndex+`"}`))
@@ -246,7 +246,7 @@ func TestResetCredentialQuota_Endpoint(t *testing.T) {
 		t.Fatalf("unexpected reset payload: %+v", resetPayload)
 	}
 
-	// Verify coreauth manager quota is reset
+	// 校验 coreauth 管理器的额度已被重置
 	updated, ok := manager.GetByID(auth.ID)
 	if !ok || updated.Unavailable || updated.Status == coreauth.StatusError {
 		t.Fatalf("expected core auth quota to be cleared, got %+v", updated)
@@ -419,7 +419,7 @@ func TestAuthFilesListV8_QuotaPluginIDAndNoQuotaProbe(t *testing.T) {
 	}
 
 	host := pluginhost.New()
-	// "a-multi-quota" sorts first, but a first-pass identifier match must still win for "foo".
+	// "a-multi-quota" 排序在前，但对 "foo" 而言首轮标识符匹配仍必须胜出。
 	host.RegisterPluginForTest("a-multi-quota", pluginapi.Plugin{
 		Capabilities: pluginapi.Capabilities{
 			QuotaProvider: &mockQuotaProvider{identifier: "multi-quota", supported: []string{"foo", "bar"}},
@@ -534,7 +534,7 @@ func TestResetCredentialQuota_FailureDoesNotClearCooldown(t *testing.T) {
 		t.Fatalf("expected status 502, got %d: %s", rec.Code, rec.Body.String())
 	}
 
-	// Verify local coreauth manager quota was NOT cleared
+	// 校验本地 coreauth 管理器的额度未被清除
 	record, ok := manager.GetByID(auth.ID)
 	if !ok || !record.Unavailable || record.Status != coreauth.StatusError {
 		t.Fatalf("expected quota cooldown to remain intact, got %+v", record)
@@ -782,7 +782,7 @@ func TestFetchCredentialQuota_DeclarativeProbeWithMapping(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Date", futureServerTime.Format(http.TimeFormat))
-		// Upstream returns raw non-normalized billing format
+		// 上游返回原始、未规范化的计费格式
 		_, _ = w.Write([]byte(`{
 			"user": {"tier": "Enterprise"},
 			"Summary": [{"key": "credits_used", "label": "Credits used", "value": 40}],
@@ -861,7 +861,7 @@ func TestFetchCredentialQuota_DeclarativeProbeWithMapping(t *testing.T) {
 	if bucket.RemainingFraction != 0.8 {
 		t.Fatalf("expected remaining fraction 0.8, got %f", bucket.RemainingFraction)
 	}
-	// Verify serverTimeOffsetMs is positive since server clock is in the future
+	// 由于服务器时钟处于未来，校验 serverTimeOffsetMs 为正
 	if quotaResp.ServerTimeOffsetMs <= 0 {
 		t.Fatalf("expected positive serverTimeOffsetMs for future server clock, got %d", quotaResp.ServerTimeOffsetMs)
 	}
@@ -906,7 +906,7 @@ func TestFetchCredentialQuota_DeclarativeProbeInvalidReturnsError(t *testing.T) 
 func TestFetchCredentialQuota_DeclarativeProbeMissingPathReturnsError(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		// Empty JSON object, missing all declared paths
+		// 空的 JSON 对象，缺少所有已声明的路径
 		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer upstream.Close()
@@ -995,7 +995,7 @@ func TestFetchCredentialQuota_DeclarativeProbeNonJSONWithMappingReturnsError(t *
 func TestFetchCredentialQuota_MalformedNormalizedGroupsReturnsError(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		// Malformed normalized shape with empty group and no buckets or plan
+		// 格式错误的规范化结构：空 group 且既无 buckets 也无 plan
 		_, _ = w.Write([]byte(`{"groups": [{}]}`))
 	}))
 	defer upstream.Close()
@@ -1032,7 +1032,7 @@ func TestFetchCredentialQuota_MalformedNormalizedGroupsReturnsError(t *testing.T
 func TestFetchCredentialQuota_NonNumericFractionReturnsError(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		// Non-numeric string value for fraction
+		// fraction 为非数值字符串
 		_, _ = w.Write([]byte(`{
 			"quota": {
 				"remaining": "unknown",
@@ -1086,7 +1086,7 @@ func TestFetchCredentialQuota_NonNumericFractionReturnsError(t *testing.T) {
 func TestFetchCredentialQuota_EmptyBucketsNormalizedReturnsError(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		// Malformed normalized shape with group containing an empty bucket object
+		// 格式错误的规范化结构：group 中包含空的 bucket 对象
 		_, _ = w.Write([]byte(`{"groups":[{"buckets":[{}]}]}`))
 	}))
 	defer upstream.Close()
@@ -1123,7 +1123,7 @@ func TestFetchCredentialQuota_EmptyBucketsNormalizedReturnsError(t *testing.T) {
 func TestFetchCredentialQuota_LegitimateZeroQuotaAccepted(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		// Legitimate exhausted quota with remainingFraction: 0
+		// 合法的已耗尽额度，remainingFraction: 0
 		_, _ = w.Write([]byte(`{"groups":[{"displayName":"Daily","buckets":[{"window":"daily","remainingFraction":0}]}]}`))
 	}))
 	defer upstream.Close()
@@ -1167,7 +1167,7 @@ func TestFetchCredentialQuota_LegitimateZeroQuotaAccepted(t *testing.T) {
 func TestFetchCredentialQuota_WindowOnlyBucketReturnsError(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		// Bucket has window label but completely lacks remaining fraction or amount
+		// bucket 带有 window 标签但完全缺少剩余比例或数量
 		_, _ = w.Write([]byte(`{"groups":[{"displayName":"Weekly","buckets":[{"window":"weekly"}]}]}`))
 	}))
 	defer upstream.Close()
@@ -1204,7 +1204,7 @@ func TestFetchCredentialQuota_WindowOnlyBucketReturnsError(t *testing.T) {
 func TestFetchCredentialQuota_MixedValidAndInvalidBuckets(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		// Mixed valid bucket and invalid bucket without remaining fraction
+		// 混合了合法 bucket 和缺少剩余比例的非法 bucket
 		_, _ = w.Write([]byte(`{"groups":[{"displayName":"Limits","buckets":[
 			{"window":"daily","remainingFraction":0.8,"description":"valid"},
 			{"window":"weekly","description":"missing fraction"}
@@ -1246,7 +1246,7 @@ func TestFetchCredentialQuota_MixedValidAndInvalidBuckets(t *testing.T) {
 	if len(quotaResp.Groups) != 1 {
 		t.Fatalf("expected 1 group, got %d", len(quotaResp.Groups))
 	}
-	// Crucial: The invalid second bucket must be filtered out, leaving exactly 1 bucket
+	// 关键：非法的第二个 bucket 必须被过滤掉，只留下 1 个 bucket
 	if len(quotaResp.Groups[0].Buckets) != 1 {
 		t.Fatalf("expected invalid bucket to be filtered out, got %d buckets: %+v", len(quotaResp.Groups[0].Buckets), quotaResp.Groups[0].Buckets)
 	}
@@ -1265,7 +1265,7 @@ func TestFetchCredentialQuota_MissingTokenDoesNotHitUpstream(t *testing.T) {
 	defer upstream.Close()
 
 	manager := coreauth.NewManager(nil, nil, nil)
-	// Auth with NO token/api_key
+	// 没有任何 token/api_key 的 Auth
 	auth := &coreauth.Auth{
 		ID:       "probe-no-token-auth",
 		FileName: "probe-no-token.json",
@@ -1295,7 +1295,7 @@ func TestFetchCredentialQuota_MissingTokenDoesNotHitUpstream(t *testing.T) {
 	if rec.Code != http.StatusBadGateway {
 		t.Fatalf("expected status 502 Bad Gateway when token is missing, got %d", rec.Code)
 	}
-	// Upstream must NEVER be contacted
+	// 绝不能联系上游
 	if upstreamHit {
 		t.Fatal("upstream server must NOT be contacted when template requires token but token is missing")
 	}

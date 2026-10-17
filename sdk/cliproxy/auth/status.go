@@ -1,19 +1,19 @@
 package auth
 
-// Status represents the lifecycle state of an Auth entry.
+// Status 表示 Auth 条目的生命周期状态。
 type Status string
 
 const (
-	// StatusUnknown means the auth state could not be determined.
+	// StatusUnknown 表示无法确定认证状态。
 	StatusUnknown Status = "unknown"
-	// StatusActive indicates the auth is valid and ready for execution.
+	// StatusActive 表示认证有效且可以执行。
 	StatusActive Status = "active"
-	// StatusPending indicates the auth is waiting for an external action, such as MFA.
+	// StatusPending 表示认证正在等待外部操作，例如 MFA。
 	StatusPending Status = "pending"
-	// StatusRefreshing indicates the auth is undergoing a refresh flow.
+	// StatusRefreshing 表示认证正在进行刷新流程。
 	StatusRefreshing Status = "refreshing"
-	// StatusError indicates the auth is temporarily unavailable due to errors.
+	// StatusError 表示认证因错误而暂时不可用。
 	StatusError Status = "error"
-	// StatusDisabled marks the auth as intentionally disabled.
+	// StatusDisabled 表示认证被有意禁用。
 	StatusDisabled Status = "disabled"
 )

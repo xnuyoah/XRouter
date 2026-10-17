@@ -33,8 +33,8 @@ type oaiToResponsesState struct {
 	CompletionPending  bool
 	ReasoningID        string
 	ReasoningIndex     int
-	// aggregation buffers for response.output
-	// Per-output message text buffers by index
+	// response.output 的聚合缓冲区
+	// 按索引存放每个输出的消息文本缓冲区
 	MsgTextBuf            map[int]*strings.Builder
 	ReasoningBuf          strings.Builder
 	Reasonings            []oaiToResponsesStateReasoning
@@ -46,20 +46,20 @@ type oaiToResponsesState struct {
 	FuncArgsSent          map[string]int
 	MsgOutputIx           map[int]int
 	NextOutputIx          int
-	// message item state per output index
-	MsgItemAdded    map[int]bool // whether response.output_item.added emitted for message
-	MsgContentAdded map[int]bool // whether response.content_part.added emitted for message
-	MsgItemDone     map[int]bool // whether message done events were emitted
-	// function item state
+	// 按输出索引记录 message item 状态
+	MsgItemAdded    map[int]bool // 是否已为该 message 发出 response.output_item.added
+	MsgContentAdded map[int]bool // 是否已为该 message 发出 response.content_part.added
+	MsgItemDone     map[int]bool // 是否已发出 message 的 done 事件
+	// function item 状态
 	FuncItemAdded  map[string]bool
 	FuncItemCustom map[string]bool
 	FuncArgsDone   map[string]bool
 	FuncItemDone   map[string]bool
-	// names of freeform ("custom") tools from the original request; calls to
-	// these are emitted as custom_tool_call items instead of function_call
+	// 原始请求中自由格式（"custom"）工具的名称；对这些工具的调用
+	// 会以 custom_tool_call item 而不是 function_call 发出
 	CustomToolNames map[string]struct{}
 	FinishReason    string
-	// usage aggregation
+	// usage 聚合
 	PromptTokens     int64
 	CachedTokens     int64
 	CompletionTokens int64
@@ -68,7 +68,7 @@ type oaiToResponsesState struct {
 	UsageSeen        bool
 }
 
-// responseIDCounter provides a process-wide unique counter for synthesized response identifiers.
+// responseIDCounter 为合成响应标识符提供一个进程范围内唯一的计数器。
 var responseIDCounter uint64
 
 func emitRespEvent(event string, payload []byte) []byte {
@@ -104,7 +104,7 @@ func buildResponsesCompletedEvent(st *oaiToResponsesState, requestRawJSON []byte
 	if len(incompleteDetails) > 0 {
 		completed, _ = sjson.SetRawBytes(completed, "response.incomplete_details", incompleteDetails)
 	}
-	// Inject original request fields into response as per docs/response.completed.json
+	// 按 docs/response.completed.json 将原始请求字段注入 response
 	if requestRawJSON != nil {
 		req := gjson.ParseBytes(requestRawJSON)
 		if v := req.Get("instructions"); v.Exists() {
@@ -270,8 +270,8 @@ func buildResponsesCompletedEvent(st *oaiToResponsesState, requestRawJSON []byte
 	return emitRespEvent(eventType, completed)
 }
 
-// ConvertOpenAIChatCompletionsResponseToOpenAIResponses converts OpenAI Chat Completions streaming chunks
-// to OpenAI Responses SSE events (response.*).
+// ConvertOpenAIChatCompletionsResponseToOpenAIResponses 将 OpenAI Chat Completions 的流式分片
+// 转换为 OpenAI Responses SSE 事件（response.*）。
 func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, modelName string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) [][]byte {
 	if *param == nil {
 		*param = &oaiToResponsesState{
@@ -465,7 +465,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 	if !st.Started {
 		st.ResponseID = root.Get("id").String()
 		st.Created = root.Get("created").Int()
-		// reset aggregation state for a new streaming response
+		// 为新的流式响应重置聚合状态
 		st.MsgTextBuf = make(map[int]*strings.Builder)
 		st.ReasoningBuf.Reset()
 		st.ReasoningID = ""
@@ -522,7 +522,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 	}
 
 	stopReasoning := func(text string) {
-		// Emit reasoning done events
+		// 发出 reasoning done 事件
 		textDone := []byte(`{"type":"response.reasoning_summary_text.done","sequence_number":0,"item_id":"","output_index":0,"summary_index":0,"text":""}`)
 		textDone, _ = sjson.SetBytes(textDone, "sequence_number", nextSeq())
 		textDone, _ = sjson.SetBytes(textDone, "item_id", st.ReasoningID)
@@ -626,9 +626,9 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 			_, isIncomplete := incompleteByFinishReason(st.FinishReason)
 			isExplicitToolFinish := st.FinishReason == "tool_calls" || st.FinishReason == "stop"
 
-			// If stream ended without finish_reason:
-			// If no arguments or partial/invalid JSON arguments were received, do not synthesize empty arguments
-			// or complete the in-flight tool call item as successfully completed.
+			// 如果流在没有 finish_reason 的情况下结束：
+			// 若没有收到参数，或收到部分/无效的 JSON 参数，则不要合成空参数，
+			// 也不要把进行中的工具调用 item 完成为成功状态。
 			name := st.ToolIndex.canonicalName(st.FuncNames[key])
 			if name == "" {
 				name, _ = st.ToolIndex.singleCustomName()
@@ -761,13 +761,13 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 			idx := int(choice.Get("index").Int())
 			delta := choice.Get("delta")
 			if delta.Exists() {
-				// reasoning_content (OpenAI reasoning incremental text)
+				// reasoning_content（OpenAI reasoning 增量文本）
 				rc := delta.Get("reasoning_content")
 				if !rc.Exists() || rc.String() == "" {
 					rc = delta.Get("reasoning")
 				}
 				if rc.Exists() && rc.String() != "" {
-					// On first appearance, add reasoning item and part
+					// 首次出现时，添加 reasoning item 与 part
 					if st.ReasoningID == "" {
 						st.ReasoningID = fmt.Sprintf("rs_%s_%d", st.ResponseID, idx)
 						st.ReasoningIndex = allocOutputIndex()
@@ -782,7 +782,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 						part, _ = sjson.SetBytes(part, "output_index", st.ReasoningIndex)
 						out = append(out, emitRespEvent("response.reasoning_summary_part.added", part))
 					}
-					// Append incremental text to reasoning buffer
+					// 将增量文本追加到 reasoning 缓冲区
 					st.ReasoningBuf.WriteString(rc.String())
 					msg := []byte(`{"type":"response.reasoning_summary_text.delta","sequence_number":0,"item_id":"","output_index":0,"summary_index":0,"delta":""}`)
 					msg, _ = sjson.SetBytes(msg, "sequence_number", nextSeq())
@@ -793,7 +793,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 				}
 
 				if c := delta.Get("content"); c.Exists() && c.String() != "" {
-					// Ensure the message item and its first content part are announced before any text deltas
+					// 确保在任何文本增量之前先声明 message item 及其首个 content part
 					if st.ReasoningID != "" {
 						stopReasoning(st.ReasoningBuf.String())
 						st.ReasoningBuf.Reset()
@@ -827,21 +827,21 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 					msg, _ = sjson.SetBytes(msg, "content_index", 0)
 					msg, _ = sjson.SetBytes(msg, "delta", c.String())
 					out = append(out, emitRespEvent("response.output_text.delta", msg))
-					// aggregate for response.output
+					// 为 response.output 聚合
 					if st.MsgTextBuf[idx] == nil {
 						st.MsgTextBuf[idx] = &strings.Builder{}
 					}
 					st.MsgTextBuf[idx].WriteString(c.String())
 				}
 
-				// tool calls
+				// 工具调用
 				if tcs := delta.Get("tool_calls"); tcs.Exists() && tcs.IsArray() && len(tcs.Array()) > 0 {
 					if st.ReasoningID != "" {
 						stopReasoning(st.ReasoningBuf.String())
 						st.ReasoningBuf.Reset()
 					}
-					// Before emitting any function events, if a message is open for this index,
-					// close its text/content to match Codex expected ordering.
+					// 在发出任何 function 事件之前，若该索引上仍有打开的 message，
+					// 则关闭其 text/content，以符合 Codex 期望的顺序。
 					emitMessageItemDone(idx)
 
 					tcs.ForEach(func(_, tc gjson.Result) bool {
@@ -853,7 +853,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 						}
 						newID, newName := tc.Get("id").String(), st.ToolIndex.canonicalName(tc.Get("function.name").String())
 						oldID, oldName := st.FuncCallIDs[key], st.ToolIndex.canonicalName(st.FuncNames[key])
-						// Retain conflicting nonempty IDs until the winning tool is known.
+						// 在胜出工具确定之前，保留冲突的非空 ID。
 						if newID != "" && oldID != "" && newID != oldID {
 							st.FuncIdentityConflicts[key] = true
 						}
@@ -885,9 +885,9 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 				return false
 			}
 
-			// finish_reason triggers item-level finalization. The terminal event is
-			// deferred until [DONE] or transport finalization so late usage-only chunks
-			// can still populate response.usage.
+			// finish_reason 触发 item 级别的收尾。终止事件会
+			// 推迟到 [DONE] 或传输收尾时发出，以便迟到的仅含 usage 的分片
+			// 仍能填充 response.usage。
 			if fr := choice.Get("finish_reason"); fr.Exists() && fr.String() != "" {
 				st.FinishReason = fr.String()
 				finalizeOpenItems()
@@ -901,8 +901,8 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 	return out
 }
 
-// ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream builds a single Responses JSON
-// from a non-streaming OpenAI Chat Completions response.
+// ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream 从非流式
+// OpenAI Chat Completions 响应构建单个 Responses JSON。
 func ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(_ context.Context, _ string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) []byte {
 	root := gjson.ParseBytes(rawJSON)
 	requestForNamespace := pickRequestJSON(originalRequestRawJSON, requestRawJSON)
@@ -920,28 +920,28 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(_ context.Co
 		respStatus = "incomplete"
 	}
 
-	// Basic response scaffold
+	// 基础 response 骨架
 	resp := []byte(`{"id":"","object":"response","created_at":0,"status":"completed","background":false,"error":null,"incomplete_details":null}`)
 	resp, _ = sjson.SetBytes(resp, "status", respStatus)
 	if isIncomplete {
 		resp, _ = sjson.SetRawBytes(resp, "incomplete_details", incompleteDetails)
 	}
 
-	// id: use provider id if present, otherwise synthesize
+	// id：若存在则使用供应商 id，否则合成
 	id := root.Get("id").String()
 	if id == "" {
 		id = fmt.Sprintf("resp_%x_%d", time.Now().UnixNano(), atomic.AddUint64(&responseIDCounter, 1))
 	}
 	resp, _ = sjson.SetBytes(resp, "id", id)
 
-	// created_at: map from chat.completion created
+	// created_at：映射自 chat.completion 的 created
 	created := root.Get("created").Int()
 	if created == 0 {
 		created = time.Now().Unix()
 	}
 	resp, _ = sjson.SetBytes(resp, "created_at", created)
 
-	// Echo request fields when available (aligns with streaming path behavior)
+	// 在可用时回显请求字段（与流式路径的行为保持一致）
 	if len(requestRawJSON) > 0 {
 		req := gjson.ParseBytes(requestRawJSON)
 		if v := req.Get("instructions"); v.Exists() {
@@ -950,7 +950,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(_ context.Co
 		if v := req.Get("max_output_tokens"); v.Exists() {
 			resp, _ = sjson.SetBytes(resp, "max_output_tokens", v.Int())
 		} else {
-			// Also support max_tokens from chat completion style
+			// 同时支持 chat completion 风格的 max_tokens
 			if v = req.Get("max_tokens"); v.Exists() {
 				resp, _ = sjson.SetBytes(resp, "max_output_tokens", v.Int())
 			}
@@ -1012,13 +1012,13 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(_ context.Co
 			resp, _ = sjson.SetBytes(resp, "metadata", v.Value())
 		}
 	} else if v := root.Get("model"); v.Exists() {
-		// Fallback model from response
+		// 从 response 回退获取 model
 		resp, _ = sjson.SetBytes(resp, "model", v.String())
 	}
 
-	// Build output list from choices[...]
+	// 从 choices[...] 构建 output 列表
 	var outputItems [][]byte
-	// Detect and capture reasoning content if present (with fallback to reasoning)
+	// 检测并捕获 reasoning 内容（若存在，否则回退到 reasoning）
 	rc := gjson.GetBytes(rawJSON, "choices.0.message.reasoning_content")
 	if !rc.Exists() || rc.String() == "" {
 		rc = gjson.GetBytes(rawJSON, "choices.0.message.reasoning")
@@ -1033,7 +1033,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(_ context.Co
 		if strings.HasPrefix(rid, "resp_") {
 			rid = strings.TrimPrefix(rid, "resp_")
 		}
-		// Prefer summary_text from reasoning_content; encrypted_content is optional
+		// 优先使用 reasoning_content 中的 summary_text；encrypted_content 为可选
 		reasoningItem := []byte(`{"id":"","type":"reasoning","encrypted_content":"","summary":[]}`)
 		reasoningItem, _ = sjson.SetBytes(reasoningItem, "id", fmt.Sprintf("rs_%s", rid))
 		if rcText != "" {
@@ -1047,7 +1047,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(_ context.Co
 		choices.ForEach(func(_, choice gjson.Result) bool {
 			msg := choice.Get("message")
 			if msg.Exists() {
-				// Text message part
+				// 文本消息部分
 				if c := msg.Get("content"); c.Exists() && c.String() != "" {
 					itemStatus := "completed"
 					if isIncomplete {
@@ -1060,14 +1060,14 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(_ context.Co
 					outputItems = append(outputItems, item)
 				}
 
-				// Function/tool calls
+				// 函数/工具调用
 				if tcs := msg.Get("tool_calls"); tcs.Exists() && tcs.IsArray() {
 					customToolNames := toolIndex.custom
 					tcs.ForEach(func(tcIndex, tc gjson.Result) bool {
 						callID := tc.Get("id").String()
 						if callID == "" {
-							// Providers may omit tool_call ids; synthesize one so the
-							// function_call item stays usable for Codex round-trips.
+							// 供应商可能省略 tool_call id；合成一个，
+							// 使 function_call item 在 Codex 往返中依然可用。
 							callID = fmt.Sprintf("call_%s_%d_%d", id, choice.Get("index").Int(), tcIndex.Int())
 						}
 						name := toolIndex.canonicalName(tc.Get("function.name").String())
@@ -1128,22 +1128,22 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(_ context.Co
 		resp, _ = sjson.SetRawBytes(resp, "output", translatorcommon.JoinRawArray(outputItems))
 	}
 
-	// usage mapping
+	// usage 映射
 	if usage := root.Get("usage"); usage.Exists() {
-		// Map common tokens
+		// 映射常见 token 字段
 		if usage.Get("prompt_tokens").Exists() || usage.Get("completion_tokens").Exists() || usage.Get("total_tokens").Exists() {
 			resp, _ = sjson.SetBytes(resp, "usage.input_tokens", usage.Get("prompt_tokens").Int())
 			if d := usage.Get("prompt_tokens_details.cached_tokens"); d.Exists() {
 				resp, _ = sjson.SetBytes(resp, "usage.input_tokens_details.cached_tokens", d.Int())
 			}
 			resp, _ = sjson.SetBytes(resp, "usage.output_tokens", usage.Get("completion_tokens").Int())
-			// Reasoning tokens not available in Chat Completions; set only if present under output_tokens_details
+			// Chat Completions 不提供 reasoning token；仅在 output_tokens_details 下存在时设置
 			if d := usage.Get("output_tokens_details.reasoning_tokens"); d.Exists() {
 				resp, _ = sjson.SetBytes(resp, "usage.output_tokens_details.reasoning_tokens", d.Int())
 			}
 			resp, _ = sjson.SetBytes(resp, "usage.total_tokens", usage.Get("total_tokens").Int())
 		} else {
-			// Fallback to raw usage object if structure differs
+			// 若结构不同，则回退为原始 usage 对象
 			resp, _ = sjson.SetBytes(resp, "usage", usage.Value())
 		}
 	}
@@ -1168,12 +1168,12 @@ func (st *oaiToResponsesState) canFinalizeResponse() bool {
 	return st.ReasoningID == ""
 }
 
-// CanFinalizeResponseStream reports whether EOF can safely synthesize the source terminator.
+// CanFinalizeResponseStream 报告 EOF 时是否可以安全地合成源终止符。
 func (st *oaiToResponsesState) CanFinalizeResponseStream() bool {
 	return st.ToolInputError() == nil && !st.CompletedEmitted && st.CompletionPending
 }
 
-// FinalizeToolInput rejects a patch-enabled stream lacking its source terminator.
+// FinalizeToolInput 会拒绝缺少源终止符的、启用 patch 的流。
 func (st *oaiToResponsesState) FinalizeToolInput() [][]byte {
 	if st.ToolInputError() != nil || st.CompletedEmitted {
 		return nil

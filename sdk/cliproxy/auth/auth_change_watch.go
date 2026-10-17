@@ -1,10 +1,10 @@
 package auth
 
-// WatchAuthChanges observes structural changes to one runtime credential,
-// including token preparation/refresh, replacement, removal and store reload.
-// Notifications are coalesced: consumers must inspect the latest manager state.
-// The caller must unsubscribe when its work ends. Request result accounting does
-// not notify watchers, so ordinary Generation increments do not invalidate work.
+// WatchAuthChanges 观测单个运行时凭据的结构性变化，
+// 包括令牌准备/刷新、替换、移除以及存储重载。
+// 通知会被合并：消费者必须检查最新的管理器状态。
+// 调用方必须在工作结束时取消订阅。请求结果记账不会
+// 通知监听方，因此普通的 Generation 递增不会使工作失效。
 func (m *Manager) WatchAuthChanges(authID string) (<-chan struct{}, func()) {
 	changes := make(chan struct{}, 1)
 	if m == nil || authID == "" {
@@ -35,7 +35,7 @@ func (m *Manager) WatchAuthChanges(authID string) (<-chan struct{}, func()) {
 	}
 }
 
-// Caller holds m.mu. No user callback or blocking work runs under the manager lock.
+// 调用方持有 m.mu。管理器锁下不运行任何用户回调或阻塞性工作。
 func (m *Manager) notifyAuthChangeLocked(authID string) {
 	for changes := range m.authChangeWatchers[authID] {
 		select {

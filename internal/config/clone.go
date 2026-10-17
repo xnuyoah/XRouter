@@ -8,7 +8,7 @@ import (
 
 var yamlNodeType = reflect.TypeOf(yaml.Node{})
 
-// CloneForRuntime returns an independent in-memory snapshot of the full config.
+// CloneForRuntime 返回完整配置的独立内存快照。
 func (cfg *Config) CloneForRuntime() *Config {
 	if cfg == nil {
 		return nil

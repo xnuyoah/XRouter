@@ -136,7 +136,7 @@ func (r *executionResources) Close() error {
 	return result
 }
 
-// HomeDispatchSelection keeps a Home execution scope separate from its auth.
+// HomeDispatchSelection 将 Home 执行作用域与其 auth 分离保存。
 type HomeDispatchSelection struct {
 	Auth                       *Auth
 	Executor                   ProviderExecutor
@@ -187,7 +187,7 @@ func newHomeDispatchSelection(auth *Auth, executor ProviderExecutor, provider st
 	}, nil
 }
 
-// Bind adds a resource to be closed when this selection ends or drains.
+// Bind 添加一个资源，在该选择结束或排空时关闭。
 func (s *HomeDispatchSelection) Bind(closeFn func() error) error {
 	if s == nil || s.resources == nil {
 		if closeFn != nil {
@@ -198,7 +198,7 @@ func (s *HomeDispatchSelection) Bind(closeFn func() error) error {
 	return s.resources.Add(closeFn)
 }
 
-// AttemptContext creates a selection-owned context and returns its release function.
+// AttemptContext 创建由该选择拥有的上下文，并返回其释放函数。
 func (s *HomeDispatchSelection) AttemptContext(ctx context.Context) (context.Context, func(), error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -216,7 +216,7 @@ func (s *HomeDispatchSelection) AttemptContext(ctx context.Context) (context.Con
 	return attemptCtx, release, nil
 }
 
-// Retain transfers selection ownership from a request to an execution session.
+// Retain 将选择的所有权从请求转移到执行会话。
 func (s *HomeDispatchSelection) Retain() {
 	if s == nil || s.ended.Load() {
 		return
@@ -224,22 +224,22 @@ func (s *HomeDispatchSelection) Retain() {
 	s.retained.Store(true)
 }
 
-// Retained reports whether an executor transferred this selection to a session.
+// Retained 报告执行器是否已将该选择转移给某个会话。
 func (s *HomeDispatchSelection) Retained() bool {
 	return s != nil && s.retained.Load() && !s.ended.Load()
 }
 
-// Active reports whether the selection has not ended.
+// Active 报告该选择是否尚未结束。
 func (s *HomeDispatchSelection) Active() bool {
 	return s != nil && !s.ended.Load()
 }
 
-// End closes all bound resources and releases the Home execution scope once.
+// End 关闭所有已绑定的资源，并释放一次 Home 执行作用域。
 func (s *HomeDispatchSelection) End(reason string) {
 	_ = s.EndWithRelease(reason)
 }
 
-// EndWithRelease closes all bound resources and returns the Home release ticket.
+// EndWithRelease 关闭所有已绑定的资源，并返回 Home 释放凭据。
 func (s *HomeDispatchSelection) EndWithRelease(reason string) *executionregistry.ReleaseTicket {
 	if s == nil {
 		return nil
@@ -257,7 +257,7 @@ func (s *HomeDispatchSelection) EndWithRelease(reason string) *executionregistry
 	return s.scope.EndWithRelease("")
 }
 
-// ReplaceAuth updates the selection after Home returns refreshed credentials.
+// ReplaceAuth 在 Home 返回刷新后的凭据后更新该选择。
 func (s *HomeDispatchSelection) ReplaceAuth(auth *Auth) {
 	if s == nil || auth == nil {
 		return
@@ -283,7 +283,7 @@ func preserveHomeRoutingAttributes(updated, previous *Auth) {
 	}
 }
 
-// CloneAuth returns a standalone auth copy without the selection handle.
+// CloneAuth 返回不带选择句柄的独立 auth 副本。
 func (s *HomeDispatchSelection) CloneAuth() *Auth {
 	if s == nil {
 		return nil
@@ -296,7 +296,7 @@ func (s *HomeDispatchSelection) CloneAuth() *Auth {
 	return s.Auth.Clone()
 }
 
-// CloneAuthForRoute returns an auth copy adapted for a retained canonical route.
+// CloneAuthForRoute 返回适配保留下来的规范路由的 auth 副本。
 func (s *HomeDispatchSelection) CloneAuthForRoute(routeModel string) *Auth {
 	auth := s.CloneAuth()
 	if auth == nil || !s.Retained() {

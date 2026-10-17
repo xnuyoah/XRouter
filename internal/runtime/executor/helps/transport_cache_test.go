@@ -50,8 +50,8 @@ func TestTransportCacheReusesEntriesPerKey(t *testing.T) {
 	}
 }
 
-// TestTransportCacheBoundsEntries is the regression test for unbounded pool growth:
-// every cached transport owns a connection pool, so churning keys must evict.
+// TestTransportCacheBoundsEntries 是连接池无限增长的回归测试：
+// 每个被缓存的 transport 都持有一个连接池，因此键频繁更替时必须淘汰。
 func TestTransportCacheBoundsEntries(t *testing.T) {
 	const capacity = 4
 	cache := NewTransportCache[cacheKey](capacity)
@@ -67,15 +67,15 @@ func TestTransportCacheBoundsEntries(t *testing.T) {
 	}
 }
 
-// TestTransportCacheEvictsLeastRecentlyUsed proves recency is honoured, so a hot
-// credential is not evicted by a burst of one-off keys.
+// TestTransportCacheEvictsLeastRecentlyUsed 证明最近使用优先得到遵守，因此热点
+// 凭据不会被一批一次性键淘汰。
 func TestTransportCacheEvictsLeastRecentlyUsed(t *testing.T) {
 	cache := NewTransportCache[cacheKey](2)
 	build := func() (*http.Transport, error) { return &http.Transport{}, nil }
 
 	hot, _ := cache.Get(cacheKey{"hot", ""}, build)
 	cache.Get(cacheKey{"cold", ""}, build)
-	// Touch hot so cold becomes the least recently used entry.
+	// 触碰热点项，使冷项成为最近最少使用的条目。
 	if again, _ := cache.Get(cacheKey{"hot", ""}, build); again != hot {
 		t.Fatal("expected the hot entry to still be cached")
 	}
@@ -86,8 +86,8 @@ func TestTransportCacheEvictsLeastRecentlyUsed(t *testing.T) {
 	}
 }
 
-// TestTransportCacheDoesNotCacheBuildFailures ensures a transient failure neither
-// occupies a cache slot nor becomes permanent.
+// TestTransportCacheDoesNotCacheBuildFailures 确保瞬时失败既不
+// 占用缓存槽位，也不会变成永久状态。
 func TestTransportCacheDoesNotCacheBuildFailures(t *testing.T) {
 	cache := NewTransportCache[cacheKey](4)
 	key := cacheKey{"auth", "broken"}
@@ -98,7 +98,7 @@ func TestTransportCacheDoesNotCacheBuildFailures(t *testing.T) {
 	if got := cache.Len(); got != 0 {
 		t.Fatalf("a failed build must not occupy a cache slot, Len() = %d", got)
 	}
-	// A build returning (nil, nil) must be reported rather than cached as usable.
+	// 返回 (nil, nil) 的构建必须被上报，而不能当作可用条目缓存。
 	if _, err := cache.Get(key, func() (*http.Transport, error) { return nil, nil }); err == nil {
 		t.Fatal("expected an error when build returns no transport")
 	}
@@ -144,7 +144,7 @@ func TestTransportCachePurgeAndNilSafety(t *testing.T) {
 	if got := cache.Len(); got != 0 {
 		t.Fatalf("Len() after Purge() = %d, want 0", got)
 	}
-	// The cache stays usable after a purge.
+	// 清空后缓存仍然可用。
 	if transport, err := cache.Get(cacheKey{"a", ""}, build); err != nil || transport == nil {
 		t.Fatalf("Get() after Purge() = (%p, %v)", transport, err)
 	}
@@ -156,7 +156,7 @@ func TestTransportCachePurgeAndNilSafety(t *testing.T) {
 	if got := nilCache.Len(); got != 0 {
 		t.Fatalf("nil cache Len() = %d, want 0", got)
 	}
-	nilCache.Purge() // must not panic
+	nilCache.Purge() // 不得 panic
 
 	if _, err := cache.Get(cacheKey{"nil-build", ""}, nil); err == nil {
 		t.Fatal("expected an error for a nil build function")
@@ -183,12 +183,12 @@ func TestTransportCacheCloseKeyAndCloseMatching(t *testing.T) {
 		t.Fatalf("Len() = %d, want 3", got)
 	}
 
-	// Close non-existent key
+	// 关闭不存在的键
 	if closed := cache.CloseKey(cacheKey{"auth-nonexistent", ""}); closed {
 		t.Fatal("expected CloseKey on missing entry to return false")
 	}
 
-	// Close specific key
+	// 关闭指定的键
 	if closed := cache.CloseKey(cacheKey{"auth-2", "p1"}); !closed {
 		t.Fatal("expected CloseKey on existing entry to return true")
 	}
@@ -196,7 +196,7 @@ func TestTransportCacheCloseKeyAndCloseMatching(t *testing.T) {
 		t.Fatalf("Len() after CloseKey = %d, want 2", got)
 	}
 
-	// Close matching all auth-1
+	// 关闭所有匹配 auth-1 的项
 	closedCount := cache.CloseMatching(func(key cacheKey) bool {
 		return key.scope == "auth-1"
 	})
@@ -207,7 +207,7 @@ func TestTransportCacheCloseKeyAndCloseMatching(t *testing.T) {
 		t.Fatalf("Len() after CloseMatching = %d, want 0", got)
 	}
 
-	// Nil cache safety
+	// nil 缓存安全性
 	var nilCache *TransportCache[cacheKey]
 	if nilCache.CloseKey(cacheKey{}) {
 		t.Fatal("expected CloseKey on nil cache to return false")
@@ -229,7 +229,7 @@ func TestTransportCacheEvictionClosesIdleConnections(t *testing.T) {
 		return &http.Transport{}, nil
 	}
 
-	// Fill 2 entries
+	// 填充 2 个条目
 	t1, err1 := cache.Get(cacheKey{"auth-1", ""}, build)
 	if err1 != nil {
 		t.Fatal(err1)
@@ -239,7 +239,7 @@ func TestTransportCacheEvictionClosesIdleConnections(t *testing.T) {
 		t.Fatal(err2)
 	}
 
-	// Make request with t1 to establish an idle connection
+	// 用 t1 发起请求以建立空闲连接
 	c1 := &http.Client{Transport: t1}
 	resp, errReq := c1.Get(srv.URL)
 	if errReq != nil {
@@ -247,7 +247,7 @@ func TestTransportCacheEvictionClosesIdleConnections(t *testing.T) {
 	}
 	_ = resp.Body.Close()
 
-	// Push 3rd entry: t1 should be evicted and its idle connections closed
+	// 推入第 3 个条目：t1 应被淘汰并关闭其空闲连接
 	_, err3 := cache.Get(cacheKey{"auth-3", ""}, build)
 	if err3 != nil {
 		t.Fatal(err3)

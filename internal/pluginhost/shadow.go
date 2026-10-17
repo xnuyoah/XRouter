@@ -15,11 +15,11 @@ import (
 	"sync"
 )
 
-// Plugin dynamic libraries are loaded from content-addressed shadow copies.
-// A loaded Go plugin image must stay mapped for the lifetime of the host
-// process (its runtime cannot be unloaded), so loading from a shadow copy
-// keeps the original artifact replaceable and gives every distinct plugin
-// build its own path, which dynamic loaders map as a fresh image.
+// 插件动态库从内容寻址的影子副本加载。
+// 已加载的 Go 插件映像必须在宿主进程的整个生命周期内保持映射
+// （其运行时无法卸载），因此从影子副本加载
+// 既能保持原始产物可替换，又能让每个不同的插件
+// 构建拥有自己的路径，动态加载器会将其映射为全新映像。
 
 const (
 	shadowPluginPrefix           = "cliproxy-plugin-"
@@ -42,10 +42,10 @@ func shadowCopyPlugin(file pluginFile) (string, error) {
 	return shadowCopyPluginToDir(file, dir)
 }
 
-// removeStaleShadowPluginDirs removes shadow directories left behind by
-// host processes that already exited. Directories whose owner process is
-// still alive are kept, because that process may reuse the resident plugin
-// images inside them.
+// removeStaleShadowPluginDirs 删除已退出的宿主进程遗留的
+// 影子目录。所有者进程仍然存活的目录会被保留，
+// 因为该进程可能会复用其中的常驻
+// 插件映像。
 func removeStaleShadowPluginDirs(baseDir string, currentPID int) {
 	entries, errRead := os.ReadDir(baseDir)
 	if errRead != nil {

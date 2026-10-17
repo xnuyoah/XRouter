@@ -23,7 +23,7 @@ import (
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
-// Download single auth file by name
+// 按名称下载单个 auth 文件
 func (h *Handler) DownloadAuthFile(c *gin.Context) {
 	name := strings.TrimSpace(c.Query("name"))
 	if isUnsafeAuthFileName(name) {
@@ -48,7 +48,7 @@ func (h *Handler) DownloadAuthFile(c *gin.Context) {
 	c.Data(200, "application/json", data)
 }
 
-// Upload auth file: multipart or raw JSON with ?name=
+// 上传 auth 文件：multipart 或带 ?name= 的原始 JSON
 func (h *Handler) UploadAuthFile(c *gin.Context) {
 	if h.authManager == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "core auth manager unavailable"})
@@ -129,7 +129,7 @@ func (h *Handler) UploadAuthFile(c *gin.Context) {
 	c.JSON(200, gin.H{"status": "ok"})
 }
 
-// Delete auth files: single by name or all
+// 删除 auth 文件：按名称删除单个或全部删除
 func (h *Handler) DeleteAuthFile(c *gin.Context) {
 	if h.authManager == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "core auth manager unavailable"})
@@ -453,7 +453,7 @@ func (h *Handler) authIDForPath(path string) string {
 			}
 		}
 	}
-	// On Windows, normalize ID casing to avoid duplicate auth entries caused by case-insensitive paths.
+	// 在 Windows 上规范化 ID 大小写，避免因路径大小写不敏感而产生重复的 auth 条目。
 	if runtime.GOOS == "windows" {
 		id = strings.ToLower(id)
 	}

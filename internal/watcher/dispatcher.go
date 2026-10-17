@@ -1,5 +1,5 @@
-// dispatcher.go implements auth update dispatching and queue management.
-// It batches, deduplicates, and delivers auth updates to registered consumers.
+// dispatcher.go 实现认证更新的分发与队列管理。
+// 它对认证更新进行批处理、去重，并分发给已注册的消费者。
 package watcher
 
 import (
@@ -147,8 +147,8 @@ func (w *Watcher) refreshAuthState(force bool) {
 	auths := snapshotCoreAuthsFunc(cfg, authDir, parser)
 	w.clientsMutex.Lock()
 	w.activeAuthScans--
-	// A full scan may finish after a newer file or persisted-auth update. Keep
-	// those concurrent changes, including deletions, instead of publishing stale data.
+	// 全量扫描可能在更新的文件或持久化认证更新之后完成。应保留
+	// 这些并发变更（包括删除），而不是发布陈旧数据。
 	changedDuringScan := func(auth *coreauth.Auth) bool {
 		path := auth.Attributes[coreauth.AttributePath]
 		if path == "" {
@@ -204,8 +204,8 @@ func (w *Watcher) prepareAuthUpdatesLocked(auths []*coreauth.Auth, force bool) [
 			updates = append(updates, AuthUpdate{Action: AuthUpdateActionModify, ID: id, Auth: auth.Clone()})
 		}
 	}
-	// A missing ID in a full scan does not imply its source file was removed.
-	// Leave these deletes unmarked so content/config changes still remove auths.
+	// 全量扫描中缺失的 ID 并不意味着其源文件已被删除。
+	// 这些删除不作标记，以便内容/配置变更仍能移除认证。
 	for id := range w.currentAuths {
 		if _, ok := newState[id]; !ok {
 			updates = append(updates, AuthUpdate{Action: AuthUpdateActionDelete, ID: id})
@@ -219,8 +219,8 @@ func (w *Watcher) prepareAuthUpdatesLocked(auths []*coreauth.Auth, force bool) [
 	return updates
 }
 
-// stampAuthUpdatesLocked records observations even without a queue and retains
-// deletion revisions so a scan cannot resurrect an auth that appeared then vanished.
+// stampAuthUpdatesLocked 即使没有队列也会记录观测，并保留
+// 删除修订版本，使扫描无法复活曾出现又消失的认证。
 func (w *Watcher) stampAuthUpdatesLocked(updates []AuthUpdate) {
 	if len(updates) == 0 {
 		return
@@ -245,7 +245,7 @@ func (w *Watcher) dispatchAuthUpdates(updates []AuthUpdate) {
 	if len(updates) == 0 {
 		return
 	}
-	// Keep revision validation and enqueue atomic with respect to state changes.
+	// 保持修订版本校验与入队相对于状态变更的原子性。
 	w.clientsMutex.RLock()
 	defer w.clientsMutex.RUnlock()
 	if w.authQueue == nil {

@@ -1,6 +1,6 @@
-// Package cliproxy provides the core service implementation for XRouter.
-// It includes service lifecycle management, authentication handling, file watching,
-// and integration with various AI service providers through a unified interface.
+// Package cliproxy 提供 XRouter 的核心服务实现。
+// 它包括服务生命周期管理、认证处理、文件监听，
+// 以及通过统一接口与各种 AI 服务供应商的集成。
 package cliproxy
 
 import (
@@ -17,160 +17,160 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
 
-// Builder constructs a Service instance with customizable providers.
-// It provides a fluent interface for configuring all aspects of the service
-// including authentication, file watching, HTTP server options, and lifecycle hooks.
+// Builder 使用可自定义的供应商构造 Service 实例。
+// 它提供流式接口来配置服务的各个方面，
+// 包括认证、文件监听、HTTP 服务器选项和生命周期钩子。
 type Builder struct {
-	// cfg holds the application configuration.
+	// cfg 保存应用配置。
 	cfg *config.Config
 
-	// configPath is the path to the configuration file.
+	// configPath 是配置文件的路径。
 	configPath string
 
-	// tokenProvider handles loading token-based clients.
+	// tokenProvider 处理基于令牌的客户端加载。
 	tokenProvider TokenClientProvider
 
-	// apiKeyProvider handles loading API key-based clients.
+	// apiKeyProvider 处理基于 API 密钥的客户端加载。
 	apiKeyProvider APIKeyClientProvider
 
-	// watcherFactory creates file watcher instances.
+	// watcherFactory 创建文件监听器实例。
 	watcherFactory WatcherFactory
 
-	// hooks provides lifecycle callbacks.
+	// hooks 提供生命周期回调。
 	hooks Hooks
 
-	// authManager handles legacy authentication operations.
+	// authManager 处理旧版认证操作。
 	authManager *sdkAuth.Manager
 
-	// accessManager handles request authentication providers.
+	// accessManager 处理请求认证供应商。
 	accessManager *sdkaccess.Manager
 
-	// coreManager handles core authentication and execution.
+	// coreManager 处理核心认证与执行。
 	coreManager *coreauth.Manager
 
-	// cooldownStateStore overrides runtime cooldown persistence.
+	// cooldownStateStore 覆盖运行时冷却持久化。
 	cooldownStateStore coreauth.CooldownStateStore
 
-	// pluginHost owns dynamic plugin lifecycle and adapters.
+	// pluginHost 负责动态插件生命周期与适配器。
 	pluginHost *pluginhost.Host
 
-	// postAuthHook is called after auth record creation and before persistence.
+	// postAuthHook 在 auth 记录创建之后、持久化之前被调用。
 	postAuthHook coreauth.PostAuthHook
 
-	// resultPolicy intercepts execution results before quota mutation and persistence.
+	// resultPolicy 在额度变更和持久化之前拦截执行结果。
 	resultPolicy coreauth.ResultPolicy
 
-	// serverOptions contains additional server configuration options.
+	// serverOptions 包含额外的服务器配置选项。
 	serverOptions []api.ServerOption
 }
 
-// Hooks allows callers to plug into service lifecycle stages.
-// These callbacks provide opportunities to perform custom initialization
-// and cleanup operations during service startup and shutdown.
+// Hooks 允许调用方接入服务的生命周期阶段。
+// 这些回调提供了在服务启动和关闭期间执行自定义初始化
+// 和清理操作的机会。
 type Hooks struct {
-	// OnBeforeStart is called before the service starts, allowing configuration
-	// modifications or additional setup.
+	// OnBeforeStart 在服务启动前被调用，允许修改配置
+	// 或进行额外设置。
 	OnBeforeStart func(*config.Config)
 
-	// OnAfterStart is called after the service has started successfully,
-	// providing access to the service instance for additional operations.
+	// OnAfterStart 在服务成功启动后被调用，
+	// 提供对服务实例的访问以进行额外操作。
 	OnAfterStart func(*Service)
 }
 
-// NewBuilder creates a Builder with default dependencies left unset.
-// Use the fluent interface methods to configure the service before calling Build().
+// NewBuilder 创建一个 Builder，默认依赖保持未设置状态。
+// 在调用 Build() 之前使用流式接口方法配置服务。
 //
-// Returns:
-//   - *Builder: A new builder instance ready for configuration
+// 返回：
+//   - *Builder: 可供配置的新 builder 实例
 func NewBuilder() *Builder {
 	return &Builder{}
 }
 
-// WithConfig sets the configuration instance used by the service.
+// WithConfig 设置服务使用的配置实例。
 //
-// Parameters:
-//   - cfg: The application configuration
+// 参数：
+//   - cfg: 应用配置
 //
-// Returns:
-//   - *Builder: The builder instance for method chaining
+// 返回：
+//   - *Builder: 用于方法链式调用的 builder 实例
 func (b *Builder) WithConfig(cfg *config.Config) *Builder {
 	b.cfg = cfg
 	return b
 }
 
-// WithConfigPath sets the absolute configuration file path used for reload watching.
+// WithConfigPath 设置用于重载监听的绝对配置文件路径。
 //
-// Parameters:
-//   - path: The absolute path to the configuration file
+// 参数：
+//   - path: 配置文件的绝对路径
 //
-// Returns:
-//   - *Builder: The builder instance for method chaining
+// 返回：
+//   - *Builder: 用于方法链式调用的 builder 实例
 func (b *Builder) WithConfigPath(path string) *Builder {
 	b.configPath = path
 	return b
 }
 
-// WithTokenClientProvider overrides the provider responsible for token-backed clients.
+// WithTokenClientProvider 覆盖负责基于令牌的客户端的供应商。
 func (b *Builder) WithTokenClientProvider(provider TokenClientProvider) *Builder {
 	b.tokenProvider = provider
 	return b
 }
 
-// WithAPIKeyClientProvider overrides the provider responsible for API key-backed clients.
+// WithAPIKeyClientProvider 覆盖负责基于 API 密钥的客户端的供应商。
 func (b *Builder) WithAPIKeyClientProvider(provider APIKeyClientProvider) *Builder {
 	b.apiKeyProvider = provider
 	return b
 }
 
-// WithWatcherFactory allows customizing the watcher factory that handles reloads.
+// WithWatcherFactory 允许自定义处理重载的监听器工厂。
 func (b *Builder) WithWatcherFactory(factory WatcherFactory) *Builder {
 	b.watcherFactory = factory
 	return b
 }
 
-// WithHooks registers lifecycle hooks executed around service startup.
+// WithHooks 注册在服务启动前后执行的生命周期钩子。
 func (b *Builder) WithHooks(h Hooks) *Builder {
 	b.hooks = h
 	return b
 }
 
-// WithAuthManager overrides the authentication manager used for token lifecycle operations.
+// WithAuthManager 覆盖用于令牌生命周期操作的认证管理器。
 func (b *Builder) WithAuthManager(mgr *sdkAuth.Manager) *Builder {
 	b.authManager = mgr
 	return b
 }
 
-// WithRequestAccessManager overrides the request authentication manager.
+// WithRequestAccessManager 覆盖请求认证管理器。
 func (b *Builder) WithRequestAccessManager(mgr *sdkaccess.Manager) *Builder {
 	b.accessManager = mgr
 	return b
 }
 
-// WithCoreAuthManager overrides the runtime auth manager responsible for request execution.
+// WithCoreAuthManager 覆盖负责请求执行的运行时 auth 管理器。
 func (b *Builder) WithCoreAuthManager(mgr *coreauth.Manager) *Builder {
 	b.coreManager = mgr
 	return b
 }
 
-// WithCooldownStateStore overrides the store used for runtime cooldown persistence.
+// WithCooldownStateStore 覆盖用于运行时冷却持久化的存储。
 func (b *Builder) WithCooldownStateStore(store coreauth.CooldownStateStore) *Builder {
 	b.cooldownStateStore = store
 	return b
 }
 
-// WithPluginHost overrides the dynamic plugin host used by the service.
+// WithPluginHost 覆盖服务使用的动态插件宿主。
 func (b *Builder) WithPluginHost(host *pluginhost.Host) *Builder {
 	b.pluginHost = host
 	return b
 }
 
-// WithServerOptions appends server configuration options used during construction.
+// WithServerOptions 追加构造期间使用的服务器配置选项。
 func (b *Builder) WithServerOptions(opts ...api.ServerOption) *Builder {
 	b.serverOptions = append(b.serverOptions, opts...)
 	return b
 }
 
-// WithLocalManagementPassword configures a password that is only accepted from localhost management requests.
+// WithLocalManagementPassword 配置一个仅接受来自 localhost 管理请求的密码。
 func (b *Builder) WithLocalManagementPassword(password string) *Builder {
 	if password == "" {
 		return b
@@ -179,8 +179,8 @@ func (b *Builder) WithLocalManagementPassword(password string) *Builder {
 	return b
 }
 
-// WithPostAuthHook registers a hook to be called after an Auth record is created
-// but before it is persisted to storage.
+// WithPostAuthHook 注册一个在 Auth 记录创建之后、
+// 持久化到存储之前被调用的钩子。
 func (b *Builder) WithPostAuthHook(hook coreauth.PostAuthHook) *Builder {
 	if hook == nil {
 		return b
@@ -189,13 +189,13 @@ func (b *Builder) WithPostAuthHook(hook coreauth.PostAuthHook) *Builder {
 	return b
 }
 
-// WithResultPolicy sets an execution result policy invoked before in-memory quota mutations and persistence.
+// WithResultPolicy 设置一个在内存额度变更和持久化之前调用的执行结果策略。
 func (b *Builder) WithResultPolicy(policy coreauth.ResultPolicy) *Builder {
 	b.resultPolicy = policy
 	return b
 }
 
-// Build validates inputs, applies defaults, and returns a ready-to-run service.
+// Build 校验输入、应用默认值，并返回可直接运行的服务。
 func (b *Builder) Build() (*Service, error) {
 	if b.cfg == nil {
 		return nil, fmt.Errorf("cliproxy: configuration is required")
@@ -265,7 +265,7 @@ func (b *Builder) Build() (*Service, error) {
 		coreManager = coreauth.NewManager(tokenStore, newRoutingSelector(routingState), nil)
 		appliedRoutingState = &routingState
 	}
-	// Attach a default RoundTripper provider so providers can opt-in per-auth transports.
+	// 附加默认 RoundTripper 供应商，使各供应商可以按 auth 选择传输方式。
 	coreManager.SetRoundTripperProvider(newDefaultRoundTripperProvider())
 	coreManager.SetConfig(b.cfg)
 	coreManager.SetOAuthModelAlias(b.cfg.OAuthModelAlias)
@@ -327,9 +327,9 @@ func (s *Service) runtimeAuthSyncHook() coreauth.PostAuthHook {
 				update.SetRevision(rev)
 			}
 		}
-		// Detach from request cancellation so runtime model registration always completes
-		// once the credential has been persisted to disk. If the watcher consumer already
-		// claimed this revision, handleAuthUpdate waits for that registration to finish.
+		// 与请求取消解耦，使凭据持久化到磁盘后运行时模型注册总能完成。
+		// 如果监听器消费者已经认领了该修订号，
+		// handleAuthUpdate 会等待该注册完成。
 		syncCtx := coreauth.WithSkipPersist(context.Background())
 		s.handleAuthUpdate(syncCtx, update)
 		return nil

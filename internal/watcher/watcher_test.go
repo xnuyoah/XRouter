@@ -214,7 +214,7 @@ func TestReloadConfigIfChanged_TriggersOnChangeAndSkipsUnchanged(t *testing.T) {
 		t.Fatalf("expected first reload to trigger callback once, got %d", reloads)
 	}
 
-	// Same content should be skipped by hash check.
+	// 相同内容应被哈希检查跳过。
 	w.reloadConfigIfChanged()
 	if reloads != 1 {
 		t.Fatalf("expected unchanged config to be skipped, callback count %d", reloads)
@@ -346,7 +346,7 @@ func TestAddOrUpdateClientSkipsUnchanged(t *testing.T) {
 		},
 	}
 	w.SetConfig(&config.Config{AuthDir: tmpDir})
-	// Use normalizeAuthPath to match how addOrUpdateClient stores the key
+	// 使用 normalizeAuthPath 以匹配 addOrUpdateClient 存储键的方式
 	w.lastAuthHashes[w.normalizeAuthPath(authFile)] = hexString(sum[:])
 
 	w.addOrUpdateClient(authFile)
@@ -377,7 +377,7 @@ func TestAddOrUpdateClientTriggersReloadAndHash(t *testing.T) {
 	if got := atomic.LoadInt32(&reloads); got != 0 {
 		t.Fatalf("expected no reload callback for auth update, got %d", got)
 	}
-	// Use normalizeAuthPath to match how addOrUpdateClient stores the key
+	// 使用 normalizeAuthPath 以匹配 addOrUpdateClient 存储键的方式
 	normalized := w.normalizeAuthPath(authFile)
 	if _, ok := w.lastAuthHashes[normalized]; !ok {
 		t.Fatalf("expected hash to be stored for %s", normalized)
@@ -397,7 +397,7 @@ func TestRemoveClientRemovesHash(t *testing.T) {
 		},
 	}
 	w.SetConfig(&config.Config{AuthDir: tmpDir})
-	// Use normalizeAuthPath to set up the hash with the correct key format
+	// 使用 normalizeAuthPath 以正确的键格式设置哈希
 	w.lastAuthHashes[w.normalizeAuthPath(authFile)] = "hash"
 
 	w.removeClient(authFile)
@@ -617,7 +617,7 @@ func TestAuthFileUnchangedUsesHash(t *testing.T) {
 	}
 
 	sum := sha256.Sum256(content)
-	// Use normalizeAuthPath to match how authFileUnchanged looks up the key
+	// 使用 normalizeAuthPath 以匹配 authFileUnchanged 查找键的方式
 	w.lastAuthHashes[w.normalizeAuthPath(authFile)] = hexString(sum[:])
 
 	unchanged, err = w.authFileUnchanged(authFile)
@@ -823,7 +823,7 @@ func TestHandleEventRemovesAuthFile(t *testing.T) {
 			atomic.AddInt32(&reloads, 1)
 		},
 	}
-	// Use normalizeAuthPath to set up the hash with the correct key format
+	// 使用 normalizeAuthPath 以正确的键格式设置哈希
 	w.lastAuthHashes[w.normalizeAuthPath(authFile)] = "hash"
 
 	w.handleEvent(fsnotify.Event{Name: authFile, Op: fsnotify.Remove})
@@ -862,7 +862,7 @@ func TestDispatchAuthUpdatesFlushesQueue(t *testing.T) {
 }
 
 func TestDispatchLoopExitsOnContextDoneWhileSending(t *testing.T) {
-	queue := make(chan AuthUpdate) // unbuffered to block sends
+	queue := make(chan AuthUpdate) // 无缓冲，以便阻塞发送
 	w := &Watcher{
 		authQueue: queue,
 		pendingUpdates: map[string]AuthUpdate{
@@ -1190,7 +1190,7 @@ func TestHandleEventAtomicReplaceDelayedStatPreservesClient(t *testing.T) {
 		normalized: {"token.json": mockAuth},
 	}
 
-	// Delay writing the new file until 60ms (after the initial 50ms check, within retry window)
+	// 将新文件的写入延迟到 60ms（在初始 50ms 检查之后，且在重试窗口内）
 	errChan := make(chan error, 1)
 	go func() {
 		time.Sleep(60 * time.Millisecond)
@@ -1202,7 +1202,7 @@ func TestHandleEventAtomicReplaceDelayedStatPreservesClient(t *testing.T) {
 		t.Fatalf("async WriteFile failed: %v", errWrite)
 	}
 
-	// If the retry loop settles and detects the replaced file, it should NOT have been removed.
+	// 如果重试循环稳定下来并检测到被替换的文件，它不应被移除。
 	w.clientsMutex.RLock()
 	_, stillKnown := w.lastAuthHashes[normalized]
 	_, stillInCurrent := w.currentAuths["token.json"]
@@ -1332,7 +1332,7 @@ func TestAddOrUpdateClientEdgeCases(t *testing.T) {
 		t.Fatalf("expected no reloads for missing/empty file, got %d", reloads)
 	}
 
-	w.addOrUpdateClient(authFile) // config nil -> should not panic or update
+	w.addOrUpdateClient(authFile) // config 为 nil -> 不应 panic 或更新
 	if len(w.lastAuthHashes) != 0 {
 		t.Fatalf("expected no hash entries without config, got %d", len(w.lastAuthHashes))
 	}
@@ -1370,14 +1370,14 @@ func TestReloadConfigIfChangedHandlesMissingAndEmpty(t *testing.T) {
 		configPath: filepath.Join(tmpDir, "missing.yaml"),
 		authDir:    authDir,
 	}
-	w.reloadConfigIfChanged() // missing file -> log + return
+	w.reloadConfigIfChanged() // 文件缺失 -> 记录日志并返回
 
 	emptyPath := filepath.Join(tmpDir, "empty.yaml")
 	if err := os.WriteFile(emptyPath, []byte(""), 0o644); err != nil {
 		t.Fatalf("failed to write empty config: %v", err)
 	}
 	w.configPath = emptyPath
-	w.reloadConfigIfChanged() // empty file -> early return
+	w.reloadConfigIfChanged() // 空文件 -> 提前返回
 }
 
 func TestReloadConfigUsesMirroredAuthDir(t *testing.T) {
@@ -1419,7 +1419,7 @@ func TestReloadConfigFiltersAffectedOAuthProviders(t *testing.T) {
 	}
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	// Ensure SnapshotCoreAuths yields a provider that is NOT affected, so we can assert it survives.
+	// 确保 SnapshotCoreAuths 产出一个不受影响的供应商，以便我们断言它仍然存在。
 	if err := os.WriteFile(filepath.Join(authDir, "provider-b.json"), []byte(`{"type":"provider-b","email":"b@example.com"}`), 0o644); err != nil {
 		t.Fatalf("failed to write auth file: %v", err)
 	}
@@ -1581,7 +1581,7 @@ func TestNormalizeAuthNil(t *testing.T) {
 	}
 }
 
-// stubStore implements coreauth.Store plus watcher-specific persistence helpers.
+// stubStore 实现 coreauth.Store 以及监听器特有的持久化辅助方法。
 type stubStore struct {
 	mu              sync.Mutex
 	authDir         string

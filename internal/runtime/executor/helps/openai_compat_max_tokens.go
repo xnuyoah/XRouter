@@ -8,8 +8,8 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
-// ShouldUseMaxCompletionTokensForModel reports whether the resolved model under an
-// OpenAI compatibility configuration has use-max-completion-tokens set to true.
+// ShouldUseMaxCompletionTokensForModel 报告在 OpenAI 兼容配置下解析出的模型
+// 是否将 use-max-completion-tokens 设为 true。
 func ShouldUseMaxCompletionTokensForModel(compat *config.OpenAICompatibility, upstreamModel, requestedModel string) bool {
 	if compat == nil {
 		return false
@@ -41,9 +41,9 @@ func openAICompatibilityModelUsesMaxCompletionTokens(models []config.OpenAICompa
 	return false, false
 }
 
-// NormalizeOpenAIMaxTokens normalizes max_tokens and max_completion_tokens according to the model's preference.
-// When useMaxCompletionTokens is true, it ensures max_completion_tokens is set and max_tokens is removed.
-// When useMaxCompletionTokens is false, it ensures max_tokens is used and max_completion_tokens is removed.
+// NormalizeOpenAIMaxTokens 按模型的偏好规范化 max_tokens 与 max_completion_tokens。
+// 当 useMaxCompletionTokens 为 true 时，确保设置 max_completion_tokens 并移除 max_tokens。
+// 当 useMaxCompletionTokens 为 false 时，确保使用 max_tokens 并移除 max_completion_tokens。
 func NormalizeOpenAIMaxTokens(payload []byte, useMaxCompletionTokens bool) []byte {
 	if len(payload) == 0 {
 		return payload

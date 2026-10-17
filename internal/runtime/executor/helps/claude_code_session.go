@@ -19,7 +19,7 @@ const (
 
 var claudeCodeSessionSuffixPattern = regexp.MustCompile(`_session_([a-f0-9-]+)$`)
 
-// ExtractClaudeCodeSessionID resolves a Claude Code session ID, preferring X-Claude-Code-Session-Id over payload metadata.
+// ExtractClaudeCodeSessionID 解析 Claude Code 会话 ID，优先使用 X-Claude-Code-Session-Id 而非载荷元数据。
 func ExtractClaudeCodeSessionID(ctx context.Context, payload []byte, headers http.Header) string {
 	if sessionID := claudeCodeHeader(ctx, headers, ClaudeCodeSessionHeader); sessionID != "" {
 		return sessionID
@@ -27,7 +27,7 @@ func ExtractClaudeCodeSessionID(ctx context.Context, payload []byte, headers htt
 	return extractClaudeCodeSessionIDFromPayload(payload)
 }
 
-// ExtractClaudeCodeAgentID resolves the Claude Code agent ID and uses a stable sentinel for the root agent.
+// ExtractClaudeCodeAgentID 解析 Claude Code agent ID，并为根 agent 使用固定哨兵值。
 func ExtractClaudeCodeAgentID(ctx context.Context, headers http.Header) string {
 	if agentID := claudeCodeHeader(ctx, headers, ClaudeCodeAgentHeader); agentID != "" {
 		return agentID
@@ -35,7 +35,7 @@ func ExtractClaudeCodeAgentID(ctx context.Context, headers http.Header) string {
 	return ClaudeCodeMainAgentID
 }
 
-// ClaudeCodeExecutionScope returns the stable root-session and agent identity used by Codex execution state.
+// ClaudeCodeExecutionScope 返回 Codex 执行状态使用的固定根会话与 agent 标识。
 func ClaudeCodeExecutionScope(ctx context.Context, payload []byte, headers http.Header) (string, bool) {
 	sessionID := ExtractClaudeCodeSessionID(ctx, payload, headers)
 	if sessionID == "" {
@@ -56,12 +56,12 @@ func claudeCodeHeader(ctx context.Context, headers http.Header, name string) str
 	return ""
 }
 
-// HeaderValueCaseInsensitive returns the first non-empty header value matching name case-insensitively.
+// HeaderValueCaseInsensitive 返回按名称不区分大小写匹配的第一个非空请求头值。
 func HeaderValueCaseInsensitive(headers http.Header, name string) string {
 	return headerValueCaseInsensitive(headers, name)
 }
 
-// HeaderValuesCaseInsensitive returns all non-empty header values matching name case-insensitively.
+// HeaderValuesCaseInsensitive 返回按名称不区分大小写匹配的所有非空请求头值。
 func HeaderValuesCaseInsensitive(headers http.Header, name string) []string {
 	if headers == nil {
 		return nil
@@ -116,7 +116,7 @@ func extractClaudeCodeSessionIDFromPayload(payload []byte) string {
 	return ""
 }
 
-// ClaudeCodePromptCache derives a deterministic upstream prompt_cache_key for one Claude Code agent.
+// ClaudeCodePromptCache 为单个 Claude Code agent 推导确定性的上游 prompt_cache_key。
 func ClaudeCodePromptCache(ctx context.Context, modelName string, payload []byte, headers http.Header) (CodexCache, bool, error) {
 	modelName = strings.TrimSpace(modelName)
 	executionScope, ok := ClaudeCodeExecutionScope(ctx, payload, headers)

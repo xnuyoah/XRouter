@@ -70,11 +70,11 @@ func TestManager_AvailableProvidersAndHasProviderAuth_ExcludeDisabled(t *testing
 	if _, err := manager.Register(ctx, &Auth{ID: "active", Provider: "claude", Status: StatusActive}); err != nil {
 		t.Fatalf("register active auth: %v", err)
 	}
-	// Provider openai only has an auth with the Disabled flag set.
+	// 供应商 openai 只有一个设置了 Disabled 标志的 auth。
 	if _, err := manager.Register(ctx, &Auth{ID: "flag-disabled", Provider: "openai", Disabled: true}); err != nil {
 		t.Fatalf("register flag-disabled auth: %v", err)
 	}
-	// Provider codex only has an auth whose Status is StatusDisabled.
+	// 供应商 codex 只有一个 Status 为 StatusDisabled 的 auth。
 	if _, err := manager.Register(ctx, &Auth{ID: "status-disabled", Provider: "codex", Status: StatusDisabled}); err != nil {
 		t.Fatalf("register status-disabled auth: %v", err)
 	}

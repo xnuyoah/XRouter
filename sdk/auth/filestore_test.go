@@ -462,7 +462,7 @@ func TestFileTokenStoreSaveAllowsDeletingNonCredentialMetadata(t *testing.T) {
 	store := NewFileTokenStore()
 	store.SetBaseDir(baseDir)
 
-	// Operator clears proxy_url from Metadata and saves
+	// 运维人员从 Metadata 中清除 proxy_url 并保存
 	auth := &cliproxyauth.Auth{
 		ID:       fileName,
 		FileName: fileName,

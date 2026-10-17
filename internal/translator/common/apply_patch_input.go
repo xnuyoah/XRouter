@@ -24,8 +24,8 @@ const (
 	patchComplete
 )
 
-// ApplyPatchInputDecoder decodes the input string from streamed function arguments.
-// A decoder belongs to one call and must not be copied after use.
+// ApplyPatchInputDecoder 从流式函数参数中解码输入字符串。
+// 一个解码器属于单次调用，使用后不得复制。
 type ApplyPatchInputDecoder struct {
 	phase         applyPatchJSONPhase
 	keyRaw        []byte
@@ -37,7 +37,7 @@ type ApplyPatchInputDecoder struct {
 	err           error
 }
 
-// Push scans each fragment once, emitting only complete, validated characters.
+// Push 对每个片段只扫描一次，仅输出完整且已校验的字符。
 func (d *ApplyPatchInputDecoder) Push(fragment string) (string, error) {
 	if d.err != nil {
 		return "", d.err
@@ -132,7 +132,7 @@ func (d *ApplyPatchInputDecoder) Push(fragment string) (string, error) {
 
 func (d *ApplyPatchInputDecoder) consumeValue(c byte) error {
 	if len(d.utf8Pending) != 0 || c >= utf8.RuneSelf {
-		// Pending escapes and surrogate pairs cannot consume raw UTF-8.
+		// 待处理的转义和代理对不能消耗原始 UTF-8。
 		if len(d.escapeRaw) != 0 || d.highSurrogate != 0 {
 			return errors.New("invalid Unicode escape in apply_patch input")
 		}
@@ -221,7 +221,7 @@ func (d *ApplyPatchInputDecoder) consumeValue(c byte) error {
 	return nil
 }
 
-// Finish validates the final wrapper and emits only the previously unsent suffix.
+// Finish 校验最终的包装，并仅输出此前未发送的后缀。
 func (d *ApplyPatchInputDecoder) Finish(arguments string) (string, error) {
 	if d.err != nil {
 		return "", d.err
@@ -230,8 +230,8 @@ func (d *ApplyPatchInputDecoder) Finish(arguments string) (string, error) {
 	if errUnwrapInput != nil {
 		return "", d.fail(errUnwrapInput)
 	}
-	// encoding/json replaces invalid UTF-8 and unpaired surrogates. The final
-	// snapshot needs the same strict character validation as streamed fragments.
+	// encoding/json 会替换无效的 UTF-8 和不成对的代理项。最终
+	// 快照需要与流式片段相同的严格字符校验。
 	var final ApplyPatchInputDecoder
 	if _, errPush := final.Push(arguments); errPush != nil {
 		return "", d.fail(errPush)
@@ -256,7 +256,7 @@ func (d *ApplyPatchInputDecoder) Finish(arguments string) (string, error) {
 	return tail, nil
 }
 
-// Input returns the decoded input, preserving its original whitespace.
+// Input 返回已解码的输入，并保留其原始空白。
 func (d *ApplyPatchInputDecoder) Input() string {
 	return d.input.String()
 }

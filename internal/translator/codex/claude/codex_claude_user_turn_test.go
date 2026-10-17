@@ -109,8 +109,8 @@ func TestConvertClaudeRequestToCodex_NonEmptyTextBesideAttachmentStillSucceeds(t
 	}
 }
 
-// claudeImageTurnToCodex translates a conversation of two history turns followed by
-// a final user turn holding the given content parts.
+// claudeImageTurnToCodex 转换由两个历史轮次加上
+// 携带给定内容 parts 的最终用户轮次组成的对话。
 func claudeImageTurnToCodex(finalContent string) sdktranslator.RequestEnvelope {
 	input := `{"model":"m","messages":[{"role":"user","content":"a"},{"role":"assistant","content":"b"},{"role":"user","content":[` + finalContent + `]}]}`
 	return sdktranslator.TranslateRequestEnvelope(context.Background(), sdktranslator.FormatClaude, sdktranslator.FormatCodex, sdktranslator.RequestEnvelope{

@@ -15,8 +15,8 @@ type streamDelivery struct {
 	err       error
 }
 
-// WithStreamDelivery lets the HTTP consumer acknowledge delivery independently
-// of request cancellation. The consumer must resolve the outcome on every exit.
+// WithStreamDelivery 让 HTTP 消费者独立于请求取消
+// 确认投递。消费者必须在每条退出路径上确定结果。
 func WithStreamDelivery(ctx context.Context) (context.Context, func(error)) {
 	delivery := &streamDelivery{done: make(chan struct{})}
 	return context.WithValue(ctx, streamDeliveryKey{}, delivery), func(err error) {
@@ -27,9 +27,9 @@ func WithStreamDelivery(ctx context.Context) (context.Context, func(error)) {
 	}
 }
 
-// WithoutStreamDelivery isolates an internal execution from its caller's HTTP
-// acknowledgment. Internal consumers retain EOF-based accounting completion;
-// cancellation and all unrelated context values remain inherited.
+// WithoutStreamDelivery 将内部执行与其调用方的 HTTP
+// 确认隔离。内部消费者保留基于 EOF 的计量完成机制；
+// 取消与所有无关上下文值仍会继承。
 func WithoutStreamDelivery(ctx context.Context) context.Context {
 	if ctx == nil {
 		return nil
@@ -37,14 +37,14 @@ func WithoutStreamDelivery(ctx context.Context) context.Context {
 	return context.WithValue(ctx, streamDeliveryKey{}, struct{}{})
 }
 
-// StreamDeliveryTracked reports whether a consumer will acknowledge delivery.
+// StreamDeliveryTracked 报告消费者是否会确认投递。
 func StreamDeliveryTracked(ctx context.Context) bool {
 	_, ok := ctx.Value(streamDeliveryKey{}).(*streamDelivery)
 	return ok
 }
 
-// WaitStreamDelivery waits for the consumer, not the upstream reader, to finish.
-// Producers must close their output channel before waiting to avoid deadlocks.
+// WaitStreamDelivery 等待消费者（而非上游读取方）结束。
+// 生产者必须先关闭其输出 channel 再等待，以免死锁。
 func WaitStreamDelivery(ctx context.Context) (error, bool) {
 	delivery, ok := ctx.Value(streamDeliveryKey{}).(*streamDelivery)
 	if !ok {
@@ -54,8 +54,8 @@ func WaitStreamDelivery(ctx context.Context) (error, bool) {
 	return delivery.err, true
 }
 
-// SupportStreamDelivery opts an active producer into early terminal cancellation.
-// The producer must reconcile cancellation with WaitStreamDelivery.
+// SupportStreamDelivery 让活跃生产者选择支持提前终止取消。
+// 生产者必须协调取消与 WaitStreamDelivery。
 func SupportStreamDelivery(ctx context.Context) func() {
 	delivery, ok := ctx.Value(streamDeliveryKey{}).(*streamDelivery)
 	if !ok {
@@ -66,7 +66,7 @@ func SupportStreamDelivery(ctx context.Context) func() {
 	return func() { once.Do(func() { delivery.supported.Add(-1) }) }
 }
 
-// StreamDeliverySupported reports whether an active producer understands delivery.
+// StreamDeliverySupported 报告活跃生产者是否理解投递协议。
 func StreamDeliverySupported(ctx context.Context) bool {
 	delivery, ok := ctx.Value(streamDeliveryKey{}).(*streamDelivery)
 	return ok && delivery.supported.Load() > 0

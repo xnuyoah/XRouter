@@ -9,7 +9,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/clienterror"
 )
 
-// Quota exceeded toggles
+// 额度超限开关
 func (h *Handler) GetSwitchProject(c *gin.Context) {
 	c.JSON(200, gin.H{"switch-project": h.cfg.QuotaExceeded.SwitchProject})
 }
@@ -24,7 +24,7 @@ func (h *Handler) PutSwitchPreviewModel(c *gin.Context) {
 	h.updateBoolField(c, func(v bool) { h.cfg.QuotaExceeded.SwitchPreviewModel = v })
 }
 
-// ResetQuota clears quota/cooldown routing state for one auth index.
+// ResetQuota 清除某个 auth 索引的额度/冷却路由状态。
 func (h *Handler) ResetQuota(c *gin.Context) {
 	if h.authManager == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "core auth manager unavailable"})

@@ -10,9 +10,9 @@ const (
 	streamEventLineOverhead          = 32
 )
 
-// StreamResponseModelObserver accumulates streaming chunks using a bounded buffer
-// and extracts complete SSE lines or events to observe the response model,
-// ensuring extraction does not depend on network chunk boundaries.
+// StreamResponseModelObserver 使用有界缓冲区累积流式分块，
+// 并提取完整的 SSE 行或事件以观测响应模型，
+// 确保提取不依赖于网络分块边界。
 type StreamResponseModelObserver struct {
 	reporter      *UsageReporter
 	buf           []byte
@@ -23,8 +23,8 @@ type StreamResponseModelObserver struct {
 	eventOverflow bool
 }
 
-// NewStreamResponseModelObserver creates an observer for tracking response models
-// from arbitrary streaming network chunks.
+// NewStreamResponseModelObserver 创建一个观测器，用于从任意的
+// 流式网络分块中跟踪响应模型。
 func NewStreamResponseModelObserver(reporter *UsageReporter) *StreamResponseModelObserver {
 	return &StreamResponseModelObserver{
 		reporter: reporter,
@@ -39,7 +39,7 @@ func (o *StreamResponseModelObserver) bound() int {
 	return o.maxBound
 }
 
-// Feed ingests a raw chunk of bytes from a stream, splitting into lines and events.
+// Feed 从流中接收一个原始字节分块，并拆分为行和事件。
 func (o *StreamResponseModelObserver) Feed(chunk []byte) {
 	if o == nil || o.reporter == nil || len(chunk) == 0 {
 		return
@@ -108,7 +108,7 @@ func (o *StreamResponseModelObserver) Feed(chunk []byte) {
 	}
 }
 
-// Finish flushes any pending buffered line or event at the end of the stream.
+// Finish 在流结束时刷新任何待处理的缓冲行或事件。
 func (o *StreamResponseModelObserver) Finish() {
 	if o == nil || o.reporter == nil {
 		return
@@ -132,7 +132,7 @@ func (o *StreamResponseModelObserver) handleLine(line []byte) {
 		return
 	}
 
-	// Always attempt to observe the line directly (e.g. data: {"model":"..."}, {"model":"..."}).
+	// 始终尝试直接观测该行（例如 data: {"model":"..."}、{"model":"..."}）。
 	o.reporter.ObserveResponseModel(line)
 
 	if bytes.HasPrefix(trimmed, []byte("data:")) {

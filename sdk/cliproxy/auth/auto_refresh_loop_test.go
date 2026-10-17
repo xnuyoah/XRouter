@@ -41,7 +41,7 @@ func TestNextRefreshCheckAt_DisabledWithInvalidGrantUnschedule(t *testing.T) {
 		return &d
 	})
 
-	// Case 1: Normal disabled credential WITHOUT invalid_grant is scheduled for token refresh (expected behavior)
+	// 情况 1：不含 invalid_grant 的普通禁用凭据会被安排令牌刷新（预期行为）
 	normalDisabledAuth := &Auth{
 		ID:       "normal-disabled",
 		Provider: "disabled-schedule",
@@ -61,7 +61,7 @@ func TestNextRefreshCheckAt_DisabledWithInvalidGrantUnschedule(t *testing.T) {
 		t.Fatalf("nextRefreshCheckAt() = %s, want %s", got, want)
 	}
 
-	// Case 2: Disabled credential WITH invalid_grant is permanently unscheduled (never refreshed)
+	// 情况 2：含 invalid_grant 的禁用凭据会被永久取消调度（永不刷新）
 	invalidGrantDisabledAuth := &Auth{
 		ID:       "invalid-grant-disabled",
 		Provider: "disabled-schedule",
@@ -117,7 +117,7 @@ func TestNextRefreshCheckAt_PreferredInterval_PicksEarliestCandidate(t *testing.
 		Metadata: map[string]any{
 			"email":                    "x@example.com",
 			"expires_at":               expiry.Format(time.RFC3339),
-			"refresh_interval_seconds": 900, // 15m
+			"refresh_interval_seconds": 900, // 15 分钟
 		},
 	}
 	got, ok := nextRefreshCheckAt(now, auth, 15*time.Minute)
@@ -221,7 +221,7 @@ func TestAuthAutoRefreshLoop_TimerWaitClampedForLongNextExpiry(t *testing.T) {
 		t.Fatalf("nextWait() = %v, want exactly %v", got, maxRefreshTimerWait)
 	}
 
-	// Short wait should not be clamped
+	// 较短的等待不应被截断
 	shortNext := now.Add(10 * time.Second)
 	loop.upsert("a2", shortNext)
 	gotShort, okShort := loop.nextWait(now)
@@ -234,26 +234,26 @@ func TestAuthAutoRefreshLoop_PopDue_AfterSystemSuspendResume(t *testing.T) {
 	loop := newAuthAutoRefreshLoop(nil, 5*time.Second, 1)
 	beforeSleep := time.Date(2026, 4, 12, 10, 0, 0, 0, time.UTC)
 
-	// Credential scheduled to refresh 50 minutes later
+	// 凭据被安排在 50 分钟后刷新
 	scheduledRefresh := beforeSleep.Add(50 * time.Minute)
 	loop.upsert("gpt-oauth", scheduledRefresh)
 
-	// Before sleep, wait is clamped to maxRefreshTimerWait
+	// 休眠前，等待时间被截断为 maxRefreshTimerWait
 	wait, ok := loop.nextWait(beforeSleep)
 	if !ok || wait != maxRefreshTimerWait {
 		t.Fatalf("nextWait() before sleep = (%v, %t), want (%v, true)", wait, ok, maxRefreshTimerWait)
 	}
 
-	// Not due yet before sleep
+	// 休眠前尚未到期
 	dueBefore := loop.popDue(beforeSleep)
 	if len(dueBefore) != 0 {
 		t.Fatalf("popDue() before sleep = %v, want empty", dueBefore)
 	}
 
-	// System resumes 2 hours later (monotonic clock froze, but wall clock jumped)
+	// 系统在 2 小时后恢复（单调时钟冻结，但墙上时钟发生了跳变）
 	afterResume := beforeSleep.Add(2 * time.Hour)
 
-	// Upon wake, the clamped timer fires within maxRefreshTimerWait and checks with current wall clock
+	// 唤醒后，被截断的定时器在 maxRefreshTimerWait 内触发，并用当前墙上时钟进行检查
 	waitAfter, okAfter := loop.nextWait(afterResume)
 	if !okAfter || waitAfter != 0 {
 		t.Fatalf("nextWait() after resume = (%v, %t), want (0, true)", waitAfter, okAfter)

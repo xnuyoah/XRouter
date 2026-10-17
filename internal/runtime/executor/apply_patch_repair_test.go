@@ -19,7 +19,7 @@ import (
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
 
-// task6RepairSource completes tool input without implicitly completing the response.
+// task6RepairSource 在不隐式完成响应的前提下补全工具输入。
 func task6RepairSource(mode string) [][]byte {
 	if mode == "empty" {
 		return nil
@@ -137,7 +137,7 @@ func task6RepairAwait(t *testing.T, ch <-chan struct{}, label string) {
 }
 
 func TestApplyPatchRepairGatewayInitializesGinTestMode(t *testing.T) {
-	// Simulate an isolated fixture starting in Gin's default mode, not suite order.
+	// 模拟一个以 Gin 默认模式启动的隔离 fixture，而非依赖测试套件顺序。
 	gin.SetMode(gin.DebugMode)
 	defer gin.SetMode(gin.TestMode)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

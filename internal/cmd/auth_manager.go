@@ -4,11 +4,11 @@ import (
 	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
 )
 
-// newAuthManager creates a new authentication manager instance with a
-// file-based token store.
+// newAuthManager 创建一个新的认证管理器实例，
+// 使用基于文件的令牌存储。
 //
-// Returns:
-//   - *sdkAuth.Manager: A configured authentication manager instance
+// 返回：
+//   - *sdkAuth.Manager: 已配置的认证管理器实例
 func newAuthManager() *sdkAuth.Manager {
 	store := sdkAuth.GetTokenStore()
 	return sdkAuth.NewManager(store)

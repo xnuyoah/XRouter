@@ -30,13 +30,13 @@ const (
 	logCursorFingerprintMax = 4 * 1024
 )
 
-// GetLogs returns log lines with optional incremental loading.
+// GetLogs 返回日志行，可选择增量加载。
 //
-// The legacy timestamp path keeps line-count as the total scanned line count for
-// compatibility. Cursor and tail reads avoid scanning older files, so line-count
-// is the number of returned lines there. A cursor emitted by the legacy path
-// points at the latest complete log boundary; combining after with limit is
-// therefore tail semantics and does not replay lines trimmed by limit.
+// 旧版时间戳路径为保持兼容，将 line-count 保留为扫描到的总行数。
+// 游标与 tail 读取会避免扫描更旧的文件，因此那里的 line-count
+// 是返回的行数。旧版路径产生的游标指向最新的完整日志边界；
+// 因此将 after 与 limit 组合即为 tail 语义，
+// 不会重放被 limit 截断的行。
 func (h *Handler) GetLogs(c *gin.Context) {
 	if h == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "handler unavailable"})
@@ -131,7 +131,7 @@ func (h *Handler) GetLogs(c *gin.Context) {
 	writeLogsResponse(c, lines, total, latest, nextCursor, false)
 }
 
-// DeleteLogs removes all rotated log files and truncates the active log.
+// DeleteLogs 删除所有轮转日志文件并清空当前活动日志。
 func (h *Handler) DeleteLogs(c *gin.Context) {
 	if h == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "handler unavailable"})
@@ -192,8 +192,8 @@ func (h *Handler) DeleteLogs(c *gin.Context) {
 	})
 }
 
-// GetRequestErrorLogs lists error request log files when RequestLog is disabled.
-// It returns an empty list when RequestLog is enabled.
+// GetRequestErrorLogs 在 RequestLog 关闭时列出错误请求日志文件。
+// 当 RequestLog 启用时返回空列表。
 func (h *Handler) GetRequestErrorLogs(c *gin.Context) {
 	if h == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "handler unavailable"})
@@ -256,8 +256,8 @@ func (h *Handler) GetRequestErrorLogs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"files": files})
 }
 
-// GetRequestLogByID finds and downloads a request log file by its request ID.
-// The ID is matched against the suffix of log file names (format: *-{requestID}.log).
+// GetRequestLogByID 根据请求 ID 查找并下载对应的请求日志文件。
+// 该 ID 会与日志文件名后缀进行匹配（格式：*-{requestID}.log）。
 func (h *Handler) GetRequestLogByID(c *gin.Context) {
 	if h == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "handler unavailable"})
@@ -402,9 +402,9 @@ func parseLogMetadata(filename string) logFileMeta {
 	}
 }
 
-// logFileIsNewer determines whether candidate should take precedence over current.
-// It compares file modification times, and on ties, compares the embedded timestamp
-// and collision sequence for matching prefixes.
+// logFileIsNewer 判断 candidate 是否应优先于 current。
+// 它比较文件修改时间，若相同，则比较内嵌时间戳
+// 与匹配前缀的冲突序号。
 func logFileIsNewer(candidateName string, candidateMod time.Time, currentName string, currentMod time.Time) bool {
 	if candidateMod.After(currentMod) {
 		return true
@@ -426,7 +426,7 @@ func logFileIsNewer(candidateName string, candidateMod time.Time, currentName st
 	return candidateName > currentName
 }
 
-// DownloadRequestErrorLog downloads a specific error request log file by name.
+// DownloadRequestErrorLog 按名称下载指定的错误请求日志文件。
 func (h *Handler) DownloadRequestErrorLog(c *gin.Context) {
 	if h == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "handler unavailable"})

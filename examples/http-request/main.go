@@ -1,9 +1,9 @@
-// Package main demonstrates how to use coreauth.Manager.HttpRequest/NewHttpRequest
-// to execute arbitrary HTTP requests with provider credentials injected.
+// Package main 演示如何使用 coreauth.Manager.HttpRequest/NewHttpRequest
+// 在注入供应商凭据的情况下执行任意 HTTP 请求。
 //
-// This example registers a minimal custom executor that injects an Authorization
-// header from auth.Attributes["api_key"], then performs two requests against
-// httpbin.org to show the injected headers.
+// 本示例注册一个最小的自定义执行器，它从 auth.Attributes["api_key"]
+// 注入 Authorization 头，然后对 httpbin.org 发起两个请求
+// 以展示注入的头。
 package main
 
 import (
@@ -23,7 +23,7 @@ import (
 
 const providerKey = "echo"
 
-// EchoExecutor is a minimal provider implementation for demonstration purposes.
+// EchoExecutor 是一个用于演示目的的最小供应商实现。
 type EchoExecutor struct{}
 
 func (EchoExecutor) Identifier() string { return providerKey }
@@ -87,7 +87,7 @@ func main() {
 		},
 	}
 
-	// Example 1: Build a prepared request and execute it using your own http.Client.
+	// 示例 1：构建一个准备好的请求，并使用你自己的 http.Client 执行它。
 	reqPrepared, errReqPrepared := core.NewHttpRequest(
 		ctx,
 		auth,
@@ -114,7 +114,7 @@ func main() {
 	}
 	fmt.Printf("Prepared request status: %d\n%s\n\n", respPrepared.StatusCode, bodyPrepared)
 
-	// Example 2: Execute a raw request via core.HttpRequest (auto inject + do).
+	// 示例 2：通过 core.HttpRequest 执行原始请求（自动注入 + 发起）。
 	rawBody := []byte(`{"hello":"world"}`)
 	rawReq, errRawReq := http.NewRequestWithContext(ctx, http.MethodPost, "https://httpbin.org/anything", bytes.NewReader(rawBody))
 	if errRawReq != nil {
