@@ -105,7 +105,7 @@ func TestBuildModelStatusMergesAliasesAndZeroFills(t *testing.T) {
 		Failed:   1,
 		Buckets:  template,
 	}}
-	models := buildModelStatus("nvidia", catalog, stats, template)
+	models := buildModelStatus(catalog, stats, template)
 	if len(models) != 1 {
 		t.Fatalf("models = %d, want 1", len(models))
 	}

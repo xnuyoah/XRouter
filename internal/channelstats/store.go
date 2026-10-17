@@ -318,10 +318,10 @@ func (s *Store) Close() error {
 	s.closeOnce.Do(func() {
 		close(s.stopCh)
 		<-s.doneCh
-		errClose = s.Flush()
 		s.mu.Lock()
 		s.closed = true
 		s.mu.Unlock()
+		errClose = s.Flush()
 	})
 	return errClose
 }

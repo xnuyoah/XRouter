@@ -91,7 +91,7 @@ func (h *Handler) GetChannelStatus(c *gin.Context) {
 			Failed:      channel.Failed,
 			SuccessRate: channel.SuccessRate,
 			Buckets:     channel.Buckets,
-			Models:      buildModelStatus(provider, catalogs[provider], modelStats[provider], channel.Buckets),
+			Models:      buildModelStatus(catalogs[provider], modelStats[provider], channel.Buckets),
 		})
 	}
 	for _, provider := range channelStatusModelProviders {
@@ -108,7 +108,7 @@ func (h *Handler) GetChannelStatus(c *gin.Context) {
 			Name:        llmChannelName(provider),
 			SuccessRate: 0,
 			Buckets:     emptyBuckets,
-			Models:      buildModelStatus(provider, catalog, nil, emptyBuckets),
+			Models:      buildModelStatus(catalog, nil, emptyBuckets),
 		})
 	}
 
@@ -169,7 +169,10 @@ func (h *Handler) configSnapshot() *config.Config {
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	return h.cfg
+	if h.cfg == nil {
+		return nil
+	}
+	return h.cfg.CloneForRuntime()
 }
 
 func buildModelCatalogs(cfg *config.Config) map[string][]modelCatalogEntry {
@@ -233,7 +236,7 @@ type modelAggregate struct {
 	buckets map[int64]*channelstats.Bucket
 }
 
-func buildModelStatus(provider string, catalog []modelCatalogEntry, stats []channelstats.Channel, template []channelstats.Bucket) []channelStatusModel {
+func buildModelStatus(catalog []modelCatalogEntry, stats []channelstats.Channel, template []channelstats.Bucket) []channelStatusModel {
 	if len(catalog) == 0 && len(stats) == 0 {
 		return nil
 	}

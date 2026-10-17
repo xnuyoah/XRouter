@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
@@ -319,6 +320,11 @@ func (m *Manager) notifyResultObserver(ctx context.Context, result Result, at ti
 	if holder == nil || holder.observer == nil {
 		return
 	}
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			log.Errorf("auth: result observer panic recovered: %v", recovered)
+		}
+	}()
 	holder.observer(ctx, result, at)
 }
 

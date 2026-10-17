@@ -163,8 +163,15 @@ func (s *accountImportSummary) appendError(row int, reason string) {
 // Credentials are masked unless include_credentials=true is explicitly set.
 func (h *Handler) ExportWebSearchAccounts(c *gin.Context) {
 	h.mu.Lock()
-	cfg := h.cfg
+	var cfg *config.Config
+	if h.cfg != nil {
+		cfg = h.cfg.CloneForRuntime()
+	}
 	h.mu.Unlock()
+	if cfg == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "config_unavailable"})
+		return
+	}
 	summary := buildAccountExport(cfg, exportAccountOptions{
 		Format:             strings.ToLower(strings.TrimSpace(c.DefaultQuery("format", "csv"))),
 		IncludeCredentials: parseBoolQuery(c.Query("include_credentials")),
