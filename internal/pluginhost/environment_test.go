@@ -44,7 +44,8 @@ func TestInspectPluginFilesCountsMatchedAndSkipped(t *testing.T) {
 		filepath.Join(platformDir, "beta"+extension):  "",
 		filepath.Join(platformDir, "notes.txt"):       "",
 		filepath.Join(otherDir, "gamma"+extension):    "",
-		// 平台目录下的非本平台扩展名文件不应计入任何一侧。
+		// Files under the platform directory with a foreign extension count
+		// for neither side.
 		filepath.Join(platformDir, "delta"+otherExtension): "",
 	}
 	for path := range writeFiles {
@@ -56,6 +57,32 @@ func TestInspectPluginFilesCountsMatchedAndSkipped(t *testing.T) {
 	matched, skipped := inspectPluginFiles(root)
 	if matched != 2 {
 		t.Fatalf("matched = %d, want 2", matched)
+	}
+	if skipped != 1 {
+		t.Fatalf("skipped = %d, want 1", skipped)
+	}
+}
+
+func TestInspectPluginFilesCountsForeignBinariesAsSkipped(t *testing.T) {
+	root := t.TempDir()
+	// A container carrying only binaries built for another platform must
+	// report the mismatch instead of appearing plugin-free.
+	foregoos := "darwin"
+	if runtime.GOOS == "darwin" {
+		foregoos = "linux"
+	}
+	foreignDir := filepath.Join(root, foregoos, "amd64")
+	if err := os.MkdirAll(foreignDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	foreignExt := pluginExtension(foregoos)
+	if err := os.WriteFile(filepath.Join(foreignDir, "gamma"+foreignExt), nil, 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	matched, skipped := inspectPluginFiles(root)
+	if matched != 0 {
+		t.Fatalf("matched = %d, want 0", matched)
 	}
 	if skipped != 1 {
 		t.Fatalf("skipped = %d, want 1", skipped)

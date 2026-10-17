@@ -29,7 +29,10 @@ export const LOGS_TIMEOUT_MS = 60 * 1000;
 export const MAX_AUTH_FILE_SIZE = 10 * 1024 * 1024;
 
 // 本地存储键名
+// STORAGE_KEY_AUTH 专供扩展页面读取（旧版盐编码的管理凭据）；
+// 主面板会话持久化使用独立 key，避免两种格式互相覆盖。
 export const STORAGE_KEY_AUTH = 'cli-proxy-auth';
+export const STORAGE_KEY_SESSION = 'cli-proxy-session';
 export const STORAGE_KEY_THEME = 'cli-proxy-theme';
 export const STORAGE_KEY_LANGUAGE = 'cli-proxy-language';
 

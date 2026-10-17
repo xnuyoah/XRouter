@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AuthState, LoginCredentials, ConnectionStatus } from '@/types';
-import { STORAGE_KEY_AUTH } from '@/utils/constants';
+import { STORAGE_KEY_AUTH, STORAGE_KEY_SESSION } from '@/utils/constants';
 import { obfuscatedStorage } from '@/services/storage/secureStorage';
 import { apiClient } from '@/services/api/client';
 import { LegacyBackendError, probeLegacyBackend } from '@/services/api/legacyBackendProbe';
@@ -15,10 +15,10 @@ import { useModelsStore } from './useModelsStore';
 import { detectApiBaseFromLocation, normalizeApiBase } from '@/utils/connection';
 import { obfuscateData } from '@/utils/encryption';
 
-// 插件页面（如扩展提供的 dashboard iframe）与主面板同源共享 localStorage。
-// 它们读取 cli-proxy-auth 时使用旧版盐 cli-proxy-api-webui，与主面板当前
-// 使用的盐不同；persist 每次落盘时同步补写一份插件兼容凭据，扩展页即可
-// 持续免密加载（登出或未记住密码时清除）。
+// 主面板会话持久化使用独立 key；cli-proxy-auth 这个 key 专供扩展页面
+// （如插件提供的 dashboard iframe）读取——它们与主面板同源共享 localStorage，
+// 且解码时使用旧版盐 cli-proxy-api-webui。persist 每次落盘时按主状态同步
+// 重写该 key，扩展页即可持续免密加载（登出或未记住密码时清除）。
 const PLUGIN_COMPAT_SALT = 'cli-proxy-api-webui::secure-storage';
 
 const writePluginCompatAuth = (apiBase: string, managementKey: string, remember: boolean) => {
@@ -49,6 +49,21 @@ interface AuthStoreState extends AuthState {
 }
 
 let restoreSessionPromise: Promise<boolean> | null = null;
+
+// 一次性迁移：主面板会话持久化从旧的 cli-proxy-auth key 挪到独立的
+// cli-proxy-session key（旧 key 现在专供扩展页面使用）。必须在 store
+// 创建前同步执行，persist 首次 hydrate 才能读到既有会话。
+const migrateSessionKey = () => {
+  try {
+    const legacy = obfuscatedStorage.getItem<Record<string, unknown>>(STORAGE_KEY_AUTH);
+    if (legacy && !obfuscatedStorage.getItem(STORAGE_KEY_SESSION)) {
+      obfuscatedStorage.setItem(STORAGE_KEY_SESSION, legacy);
+    }
+  } catch {
+    // 迁移失败仅影响旧会话自动恢复，用户重新登录即可。
+  }
+};
+migrateSessionKey();
 
 export const useAuthStore = create<AuthStoreState>()(
   persist(
@@ -231,25 +246,25 @@ export const useAuthStore = create<AuthStoreState>()(
       },
     }),
     {
-      name: STORAGE_KEY_AUTH,
+      name: STORAGE_KEY_SESSION,
       storage: createJSONStorage(() => ({
         getItem: (name) => {
           const data = obfuscatedStorage.getItem<AuthStoreState>(name);
           return data ? JSON.stringify(data) : null;
         },
         setItem: (name, value) => {
-          // persist 传入的顶层结构是 { state: partialize(...), version }。
-          const persisted = JSON.parse(value) as {
+          // persist 传入的顶层结构是 { state: partialize(...), version }；
+          // 必须原样落盘（丢掉包裹会让下次 hydrate 因缺 version 而失败），
+          // 仅解出 state 用于同步补写插件盐凭据。
+          const envelope = JSON.parse(value) as {
             state?: {
               apiBase?: string;
               managementKey?: string;
               rememberPassword?: boolean;
             };
           };
-          const inner = persisted.state ?? {};
-          obfuscatedStorage.setItem(name, inner);
-          // persist 的每次落盘都会用主盐重写该 key，这里同步补写插件盐
-          // 版本，避免版本头等状态更新覆盖掉插件免密凭据。
+          obfuscatedStorage.setItem(name, envelope);
+          const inner = envelope.state ?? {};
           writePluginCompatAuth(
             inner.apiBase ?? '',
             inner.managementKey ?? '',

@@ -8,8 +8,9 @@ import (
 	"strings"
 )
 
-// Environment 描述宿主运行环境与插件目录的平台匹配情况，
-// 供管理面板解释“为什么插件在容器里不可用”。
+// Environment describes the host runtime and how the plugin directory maps
+// to the current platform, so the management panel can explain why plugins
+// are unavailable inside a container.
 type Environment struct {
 	GOOS         string `json:"goos"`
 	GOARCH       string `json:"goarch"`
@@ -20,13 +21,13 @@ type Environment struct {
 	SkippedFiles int    `json:"skipped_platform_files"`
 }
 
-// containerMarkerFiles 是主流容器运行时会创建的标记文件。
+// containerMarkerFiles are marker files created by common container runtimes.
 var containerMarkerFiles = []string{
 	"/.dockerenv",
 	"/run/.containerenv",
 }
 
-// runningInContainer 检测进程是否运行在容器内。
+// runningInContainer reports whether the process runs inside a container.
 func runningInContainer() bool {
 	for _, marker := range containerMarkerFiles {
 		if _, err := os.Stat(marker); err == nil {
@@ -36,7 +37,8 @@ func runningInContainer() bool {
 	return false
 }
 
-// platformDirPath 返回按平台分层的插件目录（可能不存在）。
+// platformDirPath returns the platform-specific plugin directory (which may
+// not exist).
 func platformDirPath(root string) string {
 	root = strings.TrimSpace(root)
 	if root == "" {
@@ -45,9 +47,23 @@ func platformDirPath(root string) string {
 	return filepath.Join(root, runtime.GOOS, runtime.GOARCH)
 }
 
-// inspectPluginFiles 巡检插件目录整棵树：统计当前平台可见的插件文件数量
-// （平台目录与根目录兜底，与发现规则一致），以及位于其他平台目录下、
-// 会被发现规则静默跳过的文件数量。检测失败不阻断列表，两个计数归零即可。
+// isPluginBinary reports whether the file name carries any supported plugin
+// library extension, regardless of the platform it was built for.
+func isPluginBinary(name string) bool {
+	lower := strings.ToLower(name)
+	for _, goos := range []string{"darwin", "windows", "linux"} {
+		if strings.HasSuffix(lower, pluginExtension(goos)) {
+			return true
+		}
+	}
+	return false
+}
+
+// inspectPluginFiles walks the whole plugin tree: it counts plugin files
+// visible to the current platform (platform directory and root fallback,
+// matching the discovery rules) and files under other platform directories
+// that discovery silently skips. Failures never block listing; both counts
+// stay zero in that case.
 func inspectPluginFiles(root string) (matched, skipped int) {
 	extension := pluginExtension(runtime.GOOS)
 	platformDir := platformDirPath(root)
@@ -58,12 +74,18 @@ func inspectPluginFiles(root string) (matched, skipped int) {
 		if !entry.Type().IsRegular() {
 			return nil
 		}
-		if !strings.HasSuffix(strings.ToLower(entry.Name()), extension) {
+		// Matched files must carry the current platform extension; skipped
+		// files count every plugin binary built for another platform so a
+		// container holding only foreign binaries reports the mismatch.
+		currentPlatform := strings.HasSuffix(strings.ToLower(entry.Name()), extension)
+		if !currentPlatform && !isPluginBinary(entry.Name()) {
 			return nil
 		}
 		dir := filepath.Dir(path)
 		if dir == platformDir || dir == root {
-			matched++
+			if currentPlatform {
+				matched++
+			}
 		} else {
 			skipped++
 		}
@@ -75,7 +97,8 @@ func inspectPluginFiles(root string) (matched, skipped int) {
 	return matched, skipped
 }
 
-// InspectEnvironment 汇总宿主环境信息。root 是插件根目录。
+// InspectEnvironment summarizes the host environment. root is the plugin
+// directory root.
 func InspectEnvironment(root string) Environment {
 	root = strings.TrimSpace(root)
 	if root == "" {
