@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -24,20 +25,36 @@ const (
 )
 
 // Handler 是搜索渠道的客户端入口处理器。
+//
+// 路由在服务启动时一次性注册；配置热重载只会替换这里绑定的服务实例，
+// 因此「启动时未启用、之后通过配置启用」也能立即生效。
 type Handler struct {
+	mu      sync.RWMutex
 	service *corewebsearch.Service
 }
 
-// NewHandler 创建处理器。
+// NewHandler 创建处理器；service 可以为 nil（表示子系统未启用）。
 func NewHandler(service *corewebsearch.Service) *Handler {
 	return &Handler{service: service}
 }
 
-// Service 返回底层服务，供管理接口复用。
+// SetService 替换当前绑定的服务实例（配置热重载时调用）。
+func (h *Handler) SetService(service *corewebsearch.Service) {
+	if h == nil {
+		return
+	}
+	h.mu.Lock()
+	h.service = service
+	h.mu.Unlock()
+}
+
+// Service 返回当前绑定的服务实例，供管理接口复用。
 func (h *Handler) Service() *corewebsearch.Service {
 	if h == nil {
 		return nil
 	}
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.service
 }
 
@@ -46,7 +63,8 @@ func (h *Handler) Service() *corewebsearch.Service {
 // 鉴权由外层复用 XRouter 的 access.api-keys 中间件完成；这里只负责请求体校验、
 // 调用上游并原样回传响应。
 func (h *Handler) Gateway(c *gin.Context) {
-	if h == nil || h.service == nil || !h.service.Enabled() {
+	service := h.Service()
+	if service == nil || !service.Enabled() {
 		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
 			"error":   corewebsearch.ErrorCodeChannelDisabled,
 			"message": "搜索渠道未启用",
@@ -91,7 +109,7 @@ func (h *Handler) Gateway(c *gin.Context) {
 	}
 
 	started := time.Now()
-	result, errExecute := h.service.Execute(corewebsearch.Request{
+	result, errExecute := service.Execute(corewebsearch.Request{
 		Channel: corewebsearch.Channel(strings.ToLower(strings.TrimSpace(channelRaw))),
 		Method:  c.Request.Method,
 		Path:    path,
@@ -112,14 +130,15 @@ func (h *Handler) Gateway(c *gin.Context) {
 	}
 	// 搜索结果是实时数据，禁止任何中间层缓存。
 	c.Header("Cache-Control", "no-store")
-	h.logRequest(c, channelRaw, c.Request.Method, path, result.StatusCode, len(result.Attempts),
+	logRequest(service, c, channelRaw, c.Request.Method, path, result.StatusCode, len(result.Attempts),
 		time.Since(started).Milliseconds(), result.ErrorCode, result.ProxyUsed, result.AccountID, result.AccountName)
 	c.Data(result.StatusCode, "application/json; charset=utf-8", result.Body)
 }
 
 // MCP 处理 `/mcp/:channel` MCP 镜像请求。
 func (h *Handler) MCP(c *gin.Context) {
-	if h == nil || h.service == nil || !h.service.Enabled() {
+	service := h.Service()
+	if service == nil || !service.Enabled() {
 		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
 			"error":   corewebsearch.ErrorCodeChannelDisabled,
 			"message": "搜索渠道未启用",
@@ -138,7 +157,7 @@ func (h *Handler) MCP(c *gin.Context) {
 		return
 	}
 
-	response, errHandle := h.service.HandleMCP(channelRaw, body)
+	response, errHandle := service.HandleMCP(channelRaw, body)
 	if errHandle != nil {
 		writeGatewayError(c, channelRaw, "/mcp", errHandle)
 		return
@@ -175,8 +194,11 @@ func writeGatewayError(c *gin.Context, channelRaw, path string, err error) {
 }
 
 // logRequest 写一条调用日志。日志只记录方法与路径，不记录请求体、查询串与密钥。
-func (h *Handler) logRequest(c *gin.Context, channelRaw, method, path string, statusCode, attempts int, durationMS int64, errorCode string, proxyUsed bool, accountID, accountName string) {
-	store := h.service.Store()
+func logRequest(service *corewebsearch.Service, c *gin.Context, channelRaw, method, path string, statusCode, attempts int, durationMS int64, errorCode string, proxyUsed bool, accountID, accountName string) {
+	if service == nil {
+		return
+	}
+	store := service.Store()
 	if store == nil {
 		return
 	}

@@ -192,9 +192,6 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 	}
 	// 搜索渠道视图跟随配置热重载；配置启用且尚未创建时会在此创建。
 	s.refreshWebSearchService(cfg)
-	if s.mgmt != nil {
-		s.mgmt.SetWebSearchService(s.webSearch)
-	}
 	s.refreshPluginManagementRoutes()
 
 	// 统计来自配置和 auth store 的客户端来源数量。

@@ -226,9 +226,10 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	}
 	s.localPassword = optionState.localPassword
 
-	// 搜索渠道子系统：仅在配置启用时创建，失败不阻断服务启动。
+	// 搜索渠道：处理器始终创建并注册路由，服务实例由配置决定是否启用。
+	// 这样配置热重载启用该功能时无需重启进程。
+	s.webSearchHandler = websearchHandlers.NewHandler(nil)
 	s.refreshWebSearchService(cfg)
-	s.mgmt.SetWebSearchService(s.webSearch)
 
 	// Home 心跳门控：启用 home 后，在 subscribe-config 心跳连接健康之前，
 	// 使用 503 阻塞所有端点。
