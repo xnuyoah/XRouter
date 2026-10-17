@@ -366,7 +366,6 @@ func (e *Executor) attempt(cfg ChannelConfig, spec channelSpec, req Request, pay
 	}
 
 	header := cloneHeader(resp.Header)
-	header.Del("Set-Cookie")
 	body := RedactResponse(rawBody, []string{account.APIKey})
 	body = rewriteJobLinks(body, cfg, spec, baseURL)
 	return attemptOutcome{statusCode: resp.StatusCode, header: header, body: body}
@@ -521,10 +520,35 @@ func extractJobBinding(body []byte) (string, string) {
 	return "", ""
 }
 
+// 透传响应时丢弃的响应头：它们描述的是上游原始表示，而网关会重新序列化
+// （脱敏、任务链接改写）响应体，保留会导致 Content-Length 截断或缓存语义错误。
+var droppedResponseHeaders = map[string]bool{
+	"content-length":    true,
+	"content-encoding":  true,
+	"transfer-encoding": true,
+	"connection":        true,
+	"keep-alive":        true,
+	"trailer":           true,
+	"upgrade":           true,
+	"content-md5":       true,
+	"etag":              true,
+	"last-modified":     true,
+	"content-range":     true,
+	"accept-ranges":     true,
+	"cache-control":     true,
+	"expires":           true,
+	"vary":              true,
+	"set-cookie":        true,
+}
+
 // cloneHeader 复制响应头，避免调用方与上游共用同一个 map。
+// 表示相关与逐跳头会被丢弃，由网关按实际返回的响应体重新决定。
 func cloneHeader(source http.Header) http.Header {
 	out := make(http.Header, len(source))
 	for name, values := range source {
+		if droppedResponseHeaders[strings.ToLower(name)] {
+			continue
+		}
 		out[name] = append([]string(nil), values...)
 	}
 	return out

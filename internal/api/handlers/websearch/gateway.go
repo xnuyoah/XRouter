@@ -123,7 +123,14 @@ func (h *Handler) Gateway(c *gin.Context) {
 		return
 	}
 
+	contentType := strings.TrimSpace(result.Header.Get("Content-Type"))
+	if contentType == "" {
+		contentType = "application/json; charset=utf-8"
+	}
 	for name, values := range result.Header {
+		if strings.EqualFold(name, "Content-Type") {
+			continue
+		}
 		for _, value := range values {
 			c.Writer.Header().Add(name, value)
 		}
@@ -132,7 +139,8 @@ func (h *Handler) Gateway(c *gin.Context) {
 	c.Header("Cache-Control", "no-store")
 	logRequest(service, c, channelRaw, c.Request.Method, path, result.StatusCode, len(result.Attempts),
 		time.Since(started).Milliseconds(), result.ErrorCode, result.ProxyUsed, result.AccountID, result.AccountName)
-	c.Data(result.StatusCode, "application/json; charset=utf-8", result.Body)
+	// 使用上游的 Content-Type（响应体可能被脱敏/改写，长度由这里重新计算）。
+	c.Data(result.StatusCode, contentType, result.Body)
 }
 
 // MCP 处理 `/mcp/:channel` MCP 镜像请求。
@@ -157,7 +165,7 @@ func (h *Handler) MCP(c *gin.Context) {
 		return
 	}
 
-	response, errHandle := service.HandleMCP(channelRaw, body)
+	response, errHandle := service.HandleMCP(c.Request.Context(), channelRaw, body)
 	if errHandle != nil {
 		writeGatewayError(c, channelRaw, "/mcp", errHandle)
 		return

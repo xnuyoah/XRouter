@@ -1,6 +1,7 @@
 package websearch
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -56,7 +57,7 @@ func TestMCPInitializeAdvertisesToolsCapability(t *testing.T) {
 	account := testAccount(ChannelExa, "acc")
 	cfg := testChannelConfig(ChannelExa, "", account)
 
-	response := mirror.Handle(cfg, mcpRequest(t, "initialize", nil))
+	response := mirror.Handle(context.Background(), cfg, mcpRequest(t, "initialize", nil))
 	var parsed struct {
 		Result struct {
 			ProtocolVersion string         `json:"protocolVersion"`
@@ -83,7 +84,7 @@ func TestMCPInitializeAdvertisesToolsCapability(t *testing.T) {
 func TestMCPNotificationHasNoBody(t *testing.T) {
 	store, _ := NewStore(t.TempDir())
 	mirror := NewMCPMirror(store)
-	if response := mirror.Handle(testChannelConfig(ChannelExa, "", testAccount(ChannelExa, "a")), mcpRequest(t, "notifications/initialized", nil)); len(response) != 0 {
+	if response := mirror.Handle(context.Background(), testChannelConfig(ChannelExa, "", testAccount(ChannelExa, "a")), mcpRequest(t, "notifications/initialized", nil)); len(response) != 0 {
 		t.Fatalf("通知不应产生响应体: %s", response)
 	}
 }
@@ -108,7 +109,7 @@ func TestMCPListToolsPaginates(t *testing.T) {
 	_ = store.SaveAccountState(availableState(ChannelExa, account))
 	mirror := newTestMirror(t, store, ChannelExa, upstream.URL)
 
-	response := mirror.Handle(testChannelConfig(ChannelExa, "", account), mcpRequest(t, "tools/list", nil))
+	response := mirror.Handle(context.Background(), testChannelConfig(ChannelExa, "", account), mcpRequest(t, "tools/list", nil))
 	var parsed struct {
 		Result struct {
 			Tools []map[string]any `json:"tools"`
@@ -140,11 +141,11 @@ func TestMCPListToolsIsCached(t *testing.T) {
 	mirror := newTestMirror(t, store, ChannelExa, upstream.URL)
 	cfg := testChannelConfig(ChannelExa, "", account)
 
-	_, errTools := mirror.tools(cfg)
+	_, errTools := mirror.tools(context.Background(), cfg)
 	if errTools != nil {
 		t.Fatal(errTools)
 	}
-	_, errSecond := mirror.tools(cfg)
+	_, errSecond := mirror.tools(context.Background(), cfg)
 	if errSecond != nil {
 		t.Fatal(errSecond)
 	}
@@ -153,7 +154,7 @@ func TestMCPListToolsIsCached(t *testing.T) {
 	}
 
 	mirror.InvalidateToolCache(ChannelExa)
-	if _, errThird := mirror.tools(cfg); errThird != nil {
+	if _, errThird := mirror.tools(context.Background(), cfg); errThird != nil {
 		t.Fatal(errThird)
 	}
 	if calls != 2 {
@@ -181,7 +182,7 @@ func TestMCPCallToolReturnsUpstreamResult(t *testing.T) {
 	_ = store.SaveAccountState(availableState(ChannelExa, account))
 	mirror := newTestMirror(t, store, ChannelExa, upstream.URL)
 
-	response := mirror.Handle(testChannelConfig(ChannelExa, "", account),
+	response := mirror.Handle(context.Background(), testChannelConfig(ChannelExa, "", account),
 		mcpRequest(t, "tools/call", map[string]any{"name": "web_search", "arguments": map[string]any{"query": "golang"}}))
 	if gotMethod != "tools/call" {
 		t.Fatalf("上游方法 = %q", gotMethod)
@@ -203,7 +204,7 @@ func TestMCPUnknownToolReturnsErrorResult(t *testing.T) {
 	_ = store.SaveAccountState(availableState(ChannelExa, account))
 	mirror := newTestMirror(t, store, ChannelExa, upstream.URL)
 
-	response := mirror.Handle(testChannelConfig(ChannelExa, "", account),
+	response := mirror.Handle(context.Background(), testChannelConfig(ChannelExa, "", account),
 		mcpRequest(t, "tools/call", map[string]any{"name": "unknown_tool"}))
 	var parsed struct {
 		Result struct {
@@ -225,7 +226,7 @@ func TestMCPUnknownToolReturnsErrorResult(t *testing.T) {
 func TestMCPMissingToolNameIsInvalidParams(t *testing.T) {
 	store, _ := NewStore(t.TempDir())
 	mirror := NewMCPMirror(store)
-	response := mirror.Handle(testChannelConfig(ChannelExa, "", testAccount(ChannelExa, "a")),
+	response := mirror.Handle(context.Background(), testChannelConfig(ChannelExa, "", testAccount(ChannelExa, "a")),
 		mcpRequest(t, "tools/call", map[string]any{"arguments": map[string]any{}}))
 	var parsed struct {
 		Error *rpcError `json:"error"`
@@ -246,14 +247,14 @@ func TestMCPUnknownMethodAndMalformedBody(t *testing.T) {
 	var parsed struct {
 		Error *rpcError `json:"error"`
 	}
-	if errUnmarshal := json.Unmarshal(mirror.Handle(cfg, mcpRequest(t, "resources/list", nil)), &parsed); errUnmarshal != nil {
+	if errUnmarshal := json.Unmarshal(mirror.Handle(context.Background(), cfg, mcpRequest(t, "resources/list", nil)), &parsed); errUnmarshal != nil {
 		t.Fatal(errUnmarshal)
 	}
 	if parsed.Error == nil || parsed.Error.Code != mcpCodeMethodNotFound {
 		t.Fatalf("未知方法错误 = %+v", parsed.Error)
 	}
 
-	if errUnmarshal := json.Unmarshal(mirror.Handle(cfg, []byte("not json")), &parsed); errUnmarshal != nil {
+	if errUnmarshal := json.Unmarshal(mirror.Handle(context.Background(), cfg, []byte("not json")), &parsed); errUnmarshal != nil {
 		t.Fatal(errUnmarshal)
 	}
 	if parsed.Error == nil || parsed.Error.Code != mcpCodeParseError {
@@ -290,7 +291,7 @@ func TestMCPToolCallFailsOverToSecondAccount(t *testing.T) {
 	_ = store.SaveAccountState(availableState(ChannelExa, second))
 	mirror := newTestMirror(t, store, ChannelExa, upstream.URL)
 
-	response := mirror.Handle(testChannelConfig(ChannelExa, "", first, second),
+	response := mirror.Handle(context.Background(), testChannelConfig(ChannelExa, "", first, second),
 		mcpRequest(t, "tools/call", map[string]any{"name": "t", "arguments": map[string]any{}}))
 	if !strings.Contains(string(response), "ok") {
 		t.Fatalf("换号后应当成功: %s", response)
@@ -351,7 +352,7 @@ func TestMCPReadsSSEResponse(t *testing.T) {
 	_ = store.SaveAccountState(availableState(ChannelExa, account))
 	mirror := newTestMirror(t, store, ChannelExa, upstream.URL)
 
-	tools, errTools := mirror.tools(testChannelConfig(ChannelExa, "", account))
+	tools, errTools := mirror.tools(context.Background(), testChannelConfig(ChannelExa, "", account))
 	if errTools != nil {
 		t.Fatal(errTools)
 	}

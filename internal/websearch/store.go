@@ -207,9 +207,9 @@ func (s *Store) SaveAccountState(state AccountState) error {
 	}
 	state.UpdatedAt = time.Now().UTC()
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.state.Accounts[AccountKey(state.Channel, state.AccountID)] = state
-	s.mu.Unlock()
-	return s.persist()
+	return s.persistLocked()
 }
 
 // EnsureAccountState 在账号状态缺失时按传入的默认值初始化，并返回最终状态。
@@ -220,17 +220,15 @@ func (s *Store) EnsureAccountState(state AccountState) (AccountState, error) {
 	}
 	key := AccountKey(state.Channel, state.AccountID)
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	existing, ok := s.state.Accounts[key]
-	if !ok {
-		state.QuotaRefreshStatus = QuotaRefreshNever
-		state.UpdatedAt = time.Now().UTC()
-		s.state.Accounts[key] = state
-	}
-	s.mu.Unlock()
 	if ok {
 		return existing, nil
 	}
-	return state, s.persist()
+	state.QuotaRefreshStatus = QuotaRefreshNever
+	state.UpdatedAt = time.Now().UTC()
+	s.state.Accounts[key] = state
+	return state, s.persistLocked()
 }
 
 // UpdateStatus 更新账号状态。只有当存储中的指纹与期望指纹一致（或期望指纹为空）
@@ -277,13 +275,13 @@ func (s *Store) mutate(channel Channel, accountID, fingerprint string, apply fun
 	}
 	key := AccountKey(channel, accountID)
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	state, ok := s.state.Accounts[key]
 	if !ok {
 		state = AccountState{Channel: channel, AccountID: accountID, Status: AccountStatusPending}
 	}
 	if fingerprint != "" && state.CredentialFingerprint != "" && state.CredentialFingerprint != fingerprint {
 		// 账号密钥已被替换，丢弃本次陈旧结果。
-		s.mu.Unlock()
 		return nil
 	}
 	if fingerprint != "" {
@@ -292,8 +290,7 @@ func (s *Store) mutate(channel Channel, accountID, fingerprint string, apply fun
 	apply(&state)
 	state.UpdatedAt = time.Now().UTC()
 	s.state.Accounts[key] = state
-	s.mu.Unlock()
-	return s.persist()
+	return s.persistLocked()
 }
 
 // BindJob 记录异步任务与账号的绑定。
@@ -302,9 +299,9 @@ func (s *Store) BindJob(binding JobBinding) error {
 		return fmt.Errorf("状态存储未初始化")
 	}
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.state.Jobs[jobKey(binding.Channel, binding.JobID)] = binding
-	s.mu.Unlock()
-	return s.persist()
+	return s.persistLocked()
 }
 
 // JobBinding 返回异步任务的绑定关系。
@@ -324,9 +321,9 @@ func (s *Store) DeleteJob(channel Channel, jobID string) error {
 		return fmt.Errorf("状态存储未初始化")
 	}
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	delete(s.state.Jobs, jobKey(channel, jobID))
-	s.mu.Unlock()
-	return s.persist()
+	return s.persistLocked()
 }
 
 // DropChannelAccounts 删除某渠道下已不在配置中的账号状态与任务绑定。
@@ -337,6 +334,7 @@ func (s *Store) DropChannelAccounts(channel Channel, keep map[string]bool) error
 	prefix := string(channel) + "/"
 	changed := false
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	for key, state := range s.state.Accounts {
 		if strings.HasPrefix(key, prefix) && !keep[state.AccountID] {
 			delete(s.state.Accounts, key)
@@ -349,11 +347,10 @@ func (s *Store) DropChannelAccounts(channel Channel, keep map[string]bool) error
 			changed = true
 		}
 	}
-	s.mu.Unlock()
 	if !changed {
 		return nil
 	}
-	return s.persist()
+	return s.persistLocked()
 }
 
 func jobKey(channel Channel, jobID string) string {
@@ -361,10 +358,18 @@ func jobKey(channel Channel, jobID string) string {
 }
 
 // persist 原子重写 state.json。
+//
+// 序列化、写临时文件与 rename 全程持有写锁：并发探测/额度刷新不会共用同一个
+// state.json.tmp，落盘顺序也与内存中的变更顺序一致，避免旧快照覆盖新快照。
 func (s *Store) persist() error {
-	s.mu.RLock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.persistLocked()
+}
+
+// persistLocked 在已持有 s.mu 写锁时原子重写 state.json。
+func (s *Store) persistLocked() error {
 	encoded, errMarshal := json.MarshalIndent(s.state, "", "  ")
-	s.mu.RUnlock()
 	if errMarshal != nil {
 		return fmt.Errorf("序列化搜索渠道状态失败: %w", errMarshal)
 	}
