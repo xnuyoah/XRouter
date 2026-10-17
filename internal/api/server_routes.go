@@ -20,8 +20,8 @@ import (
 
 const oauthCallbackSuccessHTML = `<html><head><meta charset="utf-8"><title>Authentication successful</title><link rel="icon" href="/favicon.ico"><script>setTimeout(function(){window.close();},5000);</script></head><body><h1>Authentication successful!</h1><p>You can close this window.</p><p>This window will close automatically in 5 seconds.</p></body></html>`
 
-// setupRoutes configures the API routes for the server.
-// It defines the endpoints and associates them with their respective handlers.
+// setupRoutes 为服务器配置 API 路由。
+// 它定义各端点并将它们与各自的处理器关联起来。
 func (s *Server) setupRoutes() {
 	healthzHandler := func(c *gin.Context) {
 		if c.Request.Method == http.MethodHead {
@@ -34,13 +34,15 @@ func (s *Server) setupRoutes() {
 	s.engine.GET("/healthz", healthzHandler)
 	s.engine.HEAD("/healthz", healthzHandler)
 
-	s.engine.GET("/management.html", s.serveManagementControlPanel)
+	// 管理面板入口：index.html 为主入口，management.html 保留为历史别名。
+	s.engine.GET(exampleAPIKeyManagementPath, s.serveManagementControlPanel)
+	s.engine.GET(exampleAPIKeyManagementAliasPath, s.serveManagementControlPanel)
 	s.engine.GET("/favicon.ico", s.serveFavicon)
 	openaiHandlers := openai.NewOpenAIAPIHandler(s.handlers)
 	claudeCodeHandlers := claude.NewClaudeCodeAPIHandler(s.handlers)
 	openaiResponsesHandlers := openai.NewOpenAIResponsesAPIHandler(s.handlers)
 
-	// OpenAI compatible API routes
+	// OpenAI 兼容 API 路由
 	v1 := s.engine.Group("/v1")
 	v1.Use(AuthMiddleware(s.accessManager))
 	{
@@ -60,7 +62,7 @@ func (s *Server) setupRoutes() {
 		v1.POST("/responses/compact", openaiResponsesHandlers.Compact)
 	}
 
-	// Codex CLI direct route aliases (chatgpt_base_url compatible)
+	// Codex CLI 直连路由别名（兼容 chatgpt_base_url）
 	codexDirect := s.engine.Group("/backend-api/codex")
 	codexDirect.Use(AuthMiddleware(s.accessManager))
 	{
@@ -69,17 +71,30 @@ func (s *Server) setupRoutes() {
 		codexDirect.POST("/responses/compact", openaiResponsesHandlers.Compact)
 	}
 
-	// Root endpoint redirects to the management control panel.
+	// 搜索渠道透传网关与 MCP 镜像端点。
+	// 客户端鉴权复用 access.api-keys（与 /v1 相同的中间件），因此不需要额外的渠道密钥。
+	if s.webSearchHandler != nil {
+		gateway := s.engine.Group("/gateway")
+		gateway.Use(AuthMiddleware(s.accessManager))
+		// gin 支持末位通配：:channel 取渠道标识，*path 取上游路径（含前导 "/"）。
+		gateway.Any("/:channel/*path", s.webSearchHandler.Gateway)
+
+		mcp := s.engine.Group("/mcp")
+		mcp.Use(AuthMiddleware(s.accessManager))
+		mcp.POST("/:channel", s.webSearchHandler.MCP)
+	}
+
+	// 根路径重定向到管理面板。
 	s.engine.GET("/", func(c *gin.Context) {
-		c.Redirect(http.StatusFound, "/management.html")
+		c.Redirect(http.StatusFound, exampleAPIKeyManagementPath)
 	})
 
-	// Management routes are registered lazily by registerManagementRoutes when a secret is configured.
+	// 管理路由由 registerManagementRoutes 在配置了密钥时惰性注册。
 }
 
-// isAnthropicModelsRequest reports whether a /v1/models request should be served in
-// Anthropic format. Anthropic API clients send the Anthropic-Version header; Claude
-// Code additionally uses a claude-cli User-Agent.
+// isAnthropicModelsRequest 报告一个 /v1/models 请求是否应以
+// Anthropic 格式提供。Anthropic API 客户端会发送 Anthropic-Version 报头；
+// Claude Code 还使用 claude-cli 的 User-Agent。
 func isAnthropicModelsRequest(c *gin.Context) bool {
 	if c.GetHeader("Anthropic-Version") != "" {
 		return true
@@ -87,10 +102,10 @@ func isAnthropicModelsRequest(c *gin.Context) bool {
 	return strings.HasPrefix(c.GetHeader("User-Agent"), "claude-cli")
 }
 
-// unifiedModelsHandler creates a unified handler for the /v1/models endpoint
-// that routes to different handlers based on the request.
-// Anthropic API requests (Anthropic-Version header, or a claude-cli User-Agent)
-// route to the Claude handler, otherwise they route to the OpenAI handler.
+// unifiedModelsHandler 为 /v1/models 端点创建一个统一处理器，
+// 根据请求将其路由到不同的处理器。
+// Anthropic API 请求（Anthropic-Version 报头或 claude-cli 的 User-Agent）
+// 路由到 Claude 处理器，否则路由到 OpenAI 处理器。
 func (s *Server) unifiedModelsHandler(openaiHandler *openai.OpenAIAPIHandler, claudeHandler *claude.ClaudeCodeAPIHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		cfg := s.getConfig()
@@ -99,7 +114,7 @@ func (s *Server) unifiedModelsHandler(openaiHandler *openai.OpenAIAPIHandler, cl
 			return
 		}
 
-		// Route to Claude handler for Anthropic API requests.
+		// 将 Anthropic API 请求路由到 Claude 处理器。
 		if isAnthropicModelsRequest(c) {
 			claudeHandler.ClaudeModels(c)
 		} else {
@@ -250,9 +265,9 @@ func (s *Server) loadHomeModelEntries(c *gin.Context) ([]homeModelEntry, bool) {
 	return entries, true
 }
 
-// homeModelsAuthStatus inspects a home models response for an authentication/error envelope.
-// It returns the HTTP status code to surface (401 for credential issues, 502 otherwise)
-// and true when the payload is an error response rather than model data.
+// homeModelsAuthStatus 检查 home models 响应中是否存在认证/错误信封。
+// 它返回应对外暴露的 HTTP 状态码（凭据问题为 401，否则为 502），
+// 以及当载荷是错误响应而非模型数据时为 true。
 func homeModelsAuthStatus(raw []byte) (int, bool) {
 	errType := homeModelsErrorType(raw)
 	if errType == "" {

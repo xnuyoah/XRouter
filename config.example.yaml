@@ -612,6 +612,76 @@ plugins:
       config-object:
         mode: "safe"
 
+# 搜索渠道（tavily / exa / anysearch / firecrawl / tinyfish）。
+# 这些渠道不提供对话模型，只做搜索/抓取类 HTTP 透传；客户端使用 access.api-keys
+# 中的密钥访问 /gateway/<channel>/... 与 /mcp/<channel>，无需额外申请渠道密钥。
+# 启用规则：只要声明了至少一个渠道即视为开启；删掉全部渠道或把 disabled 设为 true
+# 即关闭整个子系统（客户端路由、MCP 镜像、测活与管理接口一起关闭）。
+web-search:
+# 显式关闭整个子系统；留空且声明了渠道时即为开启。
+  disabled: false
+# 探测（测活 / 渠道状态 / 额度刷新）使用的出站代理，支持 http、https、socks5、socks5h。
+# 为空时回退到顶层 requests.proxy-url；两者都为空时探测直接失败，绝不回退直连。
+  proxy-url: ""
+  gateway:
+# 单次请求最多尝试的账号数（额度不足 / 鉴权失效 / 限流时自动换号）。
+    max-attempts: 3
+  probe:
+# 定时任务间隔（秒）：渠道状态检测 + 额度刷新。
+    interval-seconds: 3600
+# 探测并发上限。
+    concurrency: 4
+# 单次探测请求超时（秒）。
+    timeout-seconds: 20
+# 渠道状态历史保留天数。
+    history-days: 90
+  quota:
+# 额度快照被视为“新鲜”的时长（秒）；到期后会被定时任务重新拉取。
+    fresh-seconds: 3600
+  channels:
+    - id: tavily
+      name: Tavily
+      # 停用该渠道；停用后客户端请求返回 503，探测也会跳过。
+      disabled: false
+      # 可选：覆盖默认上游主机（用于自建代理或灰度环境），填写时不含路径。
+      # base-url: "https://api.tavily.com"
+      # 可选：覆盖本渠道的出站代理，留空继承上面的 web-search.proxy-url。
+      # proxy-url: "socks5://127.0.0.1:1080"
+      accounts:
+        - name: "tavily-1"
+          # 上游服务商密钥。Tavily 会按 key / plan / paygo 三个维度返回用量。
+          api-key: "tvly-your-key"
+          weight: 1
+          # 可选：停用该账号（不参与选号与探测）。
+          # disabled: false
+          # note: "预留"
+    - id: exa
+      name: Exa
+      accounts:
+        - name: "exa-1"
+          api-key: "your-exa-key"
+    - id: anysearch
+      name: AnySearch
+      accounts:
+        - name: "anysearch-1"
+          api-key: "your-anysearch-key"
+          # AnySearch 的 API key 探测端点不返回余额；填写网页登录账号密码后，
+          # 测活会额外登录控制台读取余额（登录/查询失败不影响鉴权结论）。
+          username: "your-login-id"
+          password: "your-password"
+    - id: firecrawl
+      name: Firecrawl
+      accounts:
+        - name: "firecrawl-1"
+          # Firecrawl 在账号透支时会返回负的 remainingCredits：面板按原值展示，
+          # 选号时按 0 处理（视为已耗尽）。
+          api-key: "fc-your-key"
+    - id: tinyfish
+      name: Tinyfish
+      accounts:
+        - name: "tinyfish-1"
+          api-key: "your-tinyfish-key"
+
 # Legacy compatibility reference (comments only; not part of this v8 template).
 # Old files and /v0/management still work without a v8 write. Existing legacy-only
 # fields remain in their old locations until a successful v8 configuration write.

@@ -1,5 +1,5 @@
-// Package management provides the management API handlers and middleware
-// for configuring the server and managing auth files.
+// Package management 提供用于配置服务器和管理 auth 文件的
+// 管理 API 处理器与中间件。
 package management
 
 import (
@@ -18,6 +18,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/buildinfo"
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
+	"github.com/xnuyoah/XRouter/v8/internal/websearch"
 	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 	"golang.org/x/crypto/bcrypt"
@@ -26,16 +27,16 @@ import (
 type attemptInfo struct {
 	count        int
 	blockedUntil time.Time
-	lastActivity time.Time // track last activity for cleanup
+	lastActivity time.Time // 记录最后活动时间以便清理
 }
 
-// attemptCleanupInterval controls how often stale IP entries are purged
+// attemptCleanupInterval 控制多久清理一次过期的 IP 条目
 const attemptCleanupInterval = 1 * time.Hour
 
-// attemptMaxIdleTime controls how long an IP can be idle before cleanup
+// attemptMaxIdleTime 控制一个 IP 在被清理前可以空闲多久
 const attemptMaxIdleTime = 2 * time.Hour
 
-// Handler aggregates config reference, persistence path and helpers.
+// Handler 聚合配置引用、持久化路径和辅助方法。
 type Handler struct {
 	cfg                     *config.Config
 	configFilePath          string
@@ -45,7 +46,7 @@ type Handler struct {
 	reloadGeneration        uint64
 	appliedReloadGeneration uint64
 	attemptsMu              sync.Mutex
-	failedAttempts          map[string]*attemptInfo // keyed by client IP
+	failedAttempts          map[string]*attemptInfo // 以客户端 IP 为键
 	authManager             *coreauth.Manager
 	tokenStore              coreauth.Store
 	localPassword           string
@@ -56,6 +57,8 @@ type Handler struct {
 	postAuthPersistHook     coreauth.PostAuthHook
 	pluginHost              *pluginhost.Host
 	configReloadHook        func(context.Context, *config.Config)
+	// webSearch 是搜索渠道服务；未启用该功能时为 nil。
+	webSearch *websearch.Service
 }
 
 type configReloadSnapshot struct {
@@ -63,7 +66,7 @@ type configReloadSnapshot struct {
 	generation uint64
 }
 
-// NewHandler creates a new management handler instance.
+// NewHandler 创建一个新的管理处理器实例。
 func NewHandler(cfg *config.Config, configFilePath string, manager *coreauth.Manager) *Handler {
 	envSecret, _ := os.LookupEnv("MANAGEMENT_PASSWORD")
 	envSecret = strings.TrimSpace(envSecret)
@@ -81,8 +84,8 @@ func NewHandler(cfg *config.Config, configFilePath string, manager *coreauth.Man
 	return h
 }
 
-// startAttemptCleanup launches a background goroutine that periodically
-// removes stale IP entries from failedAttempts to prevent memory leaks.
+// startAttemptCleanup 启动一个后台 goroutine，周期性地
+// 从 failedAttempts 中移除过期 IP 条目以防止内存泄漏。
 func (h *Handler) startAttemptCleanup() {
 	go func() {
 		ticker := time.NewTicker(attemptCleanupInterval)
@@ -93,32 +96,32 @@ func (h *Handler) startAttemptCleanup() {
 	}()
 }
 
-// purgeStaleAttempts removes IP entries that have been idle beyond attemptMaxIdleTime
-// and whose ban (if any) has expired.
+// purgeStaleAttempts 移除空闲超过 attemptMaxIdleTime
+// 且封禁（若有）已过期的 IP 条目。
 func (h *Handler) purgeStaleAttempts() {
 	now := time.Now()
 	h.attemptsMu.Lock()
 	defer h.attemptsMu.Unlock()
 	for ip, ai := range h.failedAttempts {
-		// Skip if still banned
+		// 仍处于封禁中则跳过
 		if !ai.blockedUntil.IsZero() && now.Before(ai.blockedUntil) {
 			continue
 		}
-		// Remove if idle too long
+		// 空闲过久则移除
 		if now.Sub(ai.lastActivity) > attemptMaxIdleTime {
 			delete(h.failedAttempts, ip)
 		}
 	}
 }
 
-// NewHandler creates a new management handler instance.
+// NewHandler 创建一个新的管理处理器实例。
 func NewHandlerWithoutConfigFilePath(cfg *config.Config, manager *coreauth.Manager) *Handler {
 	return NewHandler(cfg, "", manager)
 }
 
-// SetConfig updates the in-memory config reference when the server hot-reloads.
-// A config parsed from an older version of the config file is ignored: a later
-// save already changed the file, and the reload for that save publishes it.
+// SetConfig 在服务器热重载时更新内存中的配置引用。
+// 由旧版本配置文件解析出的配置会被忽略：稍后的保存
+// 已经改动了该文件，而那次保存对应的重载会发布它。
 func (h *Handler) SetConfig(cfg *config.Config) {
 	if h == nil {
 		return
@@ -133,9 +136,9 @@ func (h *Handler) SetConfig(cfg *config.Config) {
 	h.cfg = cloned
 }
 
-// isStaleConfigFileSnapshotLocked reports whether cfg was parsed from config file
-// bytes that are no longer on disk. Management saves hold h.mu, so none can land
-// during the check. Callers must hold h.mu.
+// isStaleConfigFileSnapshotLocked 报告 cfg 是否由不再位于
+// 磁盘上的配置文件字节解析而来。管理端保存持有 h.mu，因此检查期间
+// 不会有保存落地。调用方必须持有 h.mu。
 func (h *Handler) isStaleConfigFileSnapshotLocked(cfg *config.Config) bool {
 	if cfg == nil || cfg.SourceHash == "" || h.configFilePath == "" {
 		return false
@@ -147,7 +150,7 @@ func (h *Handler) isStaleConfigFileSnapshotLocked(cfg *config.Config) bool {
 	return config.ComputeSourceHash(data) != cfg.SourceHash
 }
 
-// SetAuthManager updates the auth manager reference used by management endpoints.
+// SetAuthManager 更新管理端点使用的认证管理器引用。
 func (h *Handler) SetAuthManager(manager *coreauth.Manager) {
 	if h == nil {
 		return
@@ -159,7 +162,7 @@ func (h *Handler) SetAuthManager(manager *coreauth.Manager) {
 	h.mu.Unlock()
 }
 
-// SetPluginHost updates the plugin host used by plugin-backed management endpoints.
+// SetPluginHost 更新插件支撑的管理端点所使用的插件宿主。
 func (h *Handler) SetPluginHost(host *pluginhost.Host) {
 	if h == nil {
 		return
@@ -171,7 +174,7 @@ func (h *Handler) SetPluginHost(host *pluginhost.Host) {
 	h.mu.Unlock()
 }
 
-// SetConfigReloadHook updates the callback used after management saves config changes.
+// SetConfigReloadHook 更新管理端保存配置变更后使用的回调。
 func (h *Handler) SetConfigReloadHook(hook func(context.Context, *config.Config)) {
 	if h == nil {
 		return
@@ -181,8 +184,8 @@ func (h *Handler) SetConfigReloadHook(hook func(context.Context, *config.Config)
 	h.mu.Unlock()
 }
 
-// reloadSnapshotConfigLocked clones the runtime config and assigns a reload generation.
-// Callers must hold h.mu.
+// reloadSnapshotConfigLocked 克隆运行时配置并分配一个重载代次。
+// 调用方必须持有 h.mu。
 func (h *Handler) reloadSnapshotConfigLocked() configReloadSnapshot {
 	if h == nil || h.cfg == nil {
 		return configReloadSnapshot{}
@@ -194,8 +197,8 @@ func (h *Handler) reloadSnapshotConfigLocked() configReloadSnapshot {
 	}
 }
 
-// saveConfigAndSnapshotLocked saves h.cfg and returns a full runtime config snapshot.
-// Callers must hold h.mu.
+// saveConfigAndSnapshotLocked 保存 h.cfg 并返回完整的运行时配置快照。
+// 调用方必须持有 h.mu。
 func (h *Handler) saveConfigAndSnapshotLocked(c *gin.Context) (configReloadSnapshot, bool) {
 	if errSave := config.SaveConfigPreserveComments(h.configFilePath, h.cfg, c.GetBool(ConfigV8ContextKey)); errSave != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to save config: %v", errSave)})
@@ -204,8 +207,8 @@ func (h *Handler) saveConfigAndSnapshotLocked(c *gin.Context) (configReloadSnaps
 	return h.reloadSnapshotConfigLocked(), true
 }
 
-// reloadConfigAfterManagementSave reloads from an independent config snapshot.
-// Callers must pass a full Config clone captured immediately after a successful save.
+// reloadConfigAfterManagementSave 从独立的配置快照重新加载。
+// 调用方必须传入在成功保存后立即捕获的完整 Config 克隆。
 func (h *Handler) reloadConfigAfterManagementSave(ctx context.Context, snapshot configReloadSnapshot) {
 	if h == nil || snapshot.cfg == nil || snapshot.generation == 0 {
 		return
@@ -234,8 +237,8 @@ func (h *Handler) reloadConfigAfterManagementSave(ctx context.Context, snapshot 
 	h.mu.Unlock()
 }
 
-// reloadConfigAfterManagementSaveAsync reloads from an independent config snapshot.
-// Callers must pass a full Config clone captured immediately after a successful save.
+// reloadConfigAfterManagementSaveAsync 从独立的配置快照重新加载。
+// 调用方必须传入在成功保存后立即捕获的完整 Config 克隆。
 func (h *Handler) reloadConfigAfterManagementSaveAsync(ctx context.Context, snapshot configReloadSnapshot) {
 	if h == nil || snapshot.cfg == nil || snapshot.generation == 0 {
 		return
@@ -254,10 +257,10 @@ func (h *Handler) reloadConfigAfterManagementSaveAsync(ctx context.Context, snap
 	}()
 }
 
-// SetLocalPassword configures the runtime-local password accepted for localhost requests.
+// SetLocalPassword 配置本机请求可接受的运行时本地密码。
 func (h *Handler) SetLocalPassword(password string) { h.localPassword = password }
 
-// SetLogDirectory updates the directory where main.log should be looked up.
+// SetLogDirectory 更新查找 main.log 的目录。
 func (h *Handler) SetLogDirectory(dir string) {
 	if dir == "" {
 		return
@@ -270,19 +273,19 @@ func (h *Handler) SetLogDirectory(dir string) {
 	h.logDir = dir
 }
 
-// SetPostAuthHook registers a hook to be called after auth record creation but before persistence.
+// SetPostAuthHook 注册一个在认证记录创建之后、持久化之前调用的钩子。
 func (h *Handler) SetPostAuthHook(hook coreauth.PostAuthHook) {
 	h.postAuthHook = hook
 }
 
-// SetPostAuthPersistHook registers a hook to be called after auth persistence.
+// SetPostAuthPersistHook 注册一个在认证持久化之后调用的钩子。
 func (h *Handler) SetPostAuthPersistHook(hook coreauth.PostAuthHook) {
 	h.postAuthPersistHook = hook
 }
 
-// Middleware enforces access control for management endpoints.
-// All requests (local and remote) require a valid management key.
-// Additionally, remote access requires allow-remote-management=true.
+// Middleware 为管理端点实施访问控制。
+// 所有请求（本地和远程）都需要有效的管理密钥。
+// 此外，远程访问需要 allow-remote-management=true。
 func (h *Handler) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("X-CPA-VERSION", buildinfo.Version)
@@ -293,7 +296,7 @@ func (h *Handler) Middleware() gin.HandlerFunc {
 		clientIP := c.ClientIP()
 		localClient := clientIP == "127.0.0.1" || clientIP == "::1"
 
-		// Accept either Authorization: Bearer <key> or X-Management-Key
+		// 接受 Authorization: Bearer <key> 或 X-Management-Key
 		var provided string
 		if ah := c.GetHeader("Authorization"); ah != "" {
 			parts := strings.SplitN(ah, " ", 2)
@@ -316,8 +319,8 @@ func (h *Handler) Middleware() gin.HandlerFunc {
 	}
 }
 
-// AuthenticateManagementKey verifies the provided management key for the given client.
-// It mirrors the behaviour of Middleware() so non-HTTP callers can reuse the same logic.
+// AuthenticateManagementKey 校验给定客户端提供的管理密钥。
+// 它镜像 Middleware() 的行为，使非 HTTP 调用方可以复用同样的逻辑。
 func (h *Handler) AuthenticateManagementKey(clientIP string, localClient bool, provided string) (bool, int, string) {
 	const maxFailures = 5
 	const banDuration = 30 * time.Minute
@@ -351,7 +354,7 @@ func (h *Handler) AuthenticateManagementKey(clientIP string, localClient bool, p
 			h.attemptsMu.Unlock()
 			return false, http.StatusForbidden, fmt.Sprintf("IP banned due to too many failed attempts. Try again in %s", remaining)
 		}
-		// Ban expired, reset state
+		// 封禁已过期，重置状态
 		ai.blockedUntil = time.Time{}
 		ai.count = 0
 	}
@@ -419,10 +422,10 @@ func (h *Handler) AuthenticateManagementKey(clientIP string, localClient bool, p
 	return true, 0, ""
 }
 
-// persistLocked saves the current in-memory config to disk.
-// It expects the caller to hold h.mu.
+// persistLocked 把当前内存中的配置保存到磁盘。
+// 它期望调用方持有 h.mu。
 func (h *Handler) persistLocked(c *gin.Context) bool {
-	// Preserve comments when writing
+	// 写入时保留注释
 	if err := config.SaveConfigPreserveComments(h.configFilePath, h.cfg, c.GetBool(ConfigV8ContextKey)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to save config: %v", err)})
 		return false
@@ -437,8 +440,8 @@ func (h *Handler) persistLocked(c *gin.Context) bool {
 	return true
 }
 
-// Helper methods for simple types. The setter and the save run under h.mu, so a
-// reload publishing h.cfg cannot replace it between the change and the save.
+// 简单类型的辅助方法。setter 和保存都在 h.mu 下运行，因此
+// 发布 h.cfg 的重载无法在改动与保存之间替换它。
 func (h *Handler) updateBoolField(c *gin.Context, set func(bool)) {
 	var body struct {
 		Value *bool `json:"value"`

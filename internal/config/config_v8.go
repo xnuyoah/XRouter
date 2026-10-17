@@ -11,8 +11,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config remains the effective runtime/wire representation. Layout translation is
-// confined to YAML boundaries so older SDK and Home consumers keep their contract.
+// Config 仍是有效的运行时/传输表示。布局转换
+// 仅限于 YAML 边界，以便较旧的 SDK 与 Home 消费方保持其契约。
 type legacyConfig Config
 
 type configPath struct{ old, current string }
@@ -21,11 +21,11 @@ var v8FieldIndexes = make(map[string][]int)
 var v8StructPaths []configPath
 var v8Paths = buildV8Paths()
 
-// Historical spellings are YAML-boundary aliases, not provider runtime fields.
-// The canonical client path wins by presence (including explicit false/null).
+// 历史拼写是 YAML 边界别名，而非供应商运行时字段。
+// 规范客户端路径以是否存在为准获胜（包括显式的 false/null）。
 var v8ClientPaths = []configPath{}
 
-// Canonical upstream fields win by presence; historical OAuth fields precede globals.
+// 规范上游字段以是否存在为准获胜；历史 OAuth 字段优先于全局字段。
 var v8SharedPaths = []configPath{}
 
 var v8Aliases = append(append([]configPath(nil), v8ClientPaths...), v8SharedPaths...)
@@ -62,6 +62,10 @@ func buildV8Paths() []configPath {
 		{"usage-statistics-enabled", "observability.usage.usage-statistics-enabled"},
 		{"redis-usage-queue-retention-seconds", "observability.usage.redis-usage-queue-retention-seconds"}, {"pprof", "observability.pprof"},
 	}
+	// 注意：web-search 段在 v8 与 legacy 布局中同名，因此**不能**登记为前缀映射。
+	// 前缀表要求 old 与 current 不同：同名前缀会让 NormalizeConfigLayout 在删除旧
+	// 路径后又因 current 非空而跳过回写，最终整段配置被删掉。该段改为登记在
+	// v8AllowedRoots() 的基础白名单里（见 v8AllowedRoots）。
 	var out []configPath
 	var walk func(reflect.Type, string, []int)
 	walk = func(t reflect.Type, path string, indexes []int) {
@@ -123,8 +127,8 @@ func setYAMLPath(root *yaml.Node, path string, value *yaml.Node) {
 	*dst = *deepCopyNode(value)
 }
 
-// setYAMLPathWithComments attaches leading comments to the destination key;
-// yaml.v3 does not render a scalar value's HeadComment.
+// setYAMLPathWithComments 把前置注释附加到目标键上；
+// yaml.v3 不会渲染标量值的 HeadComment。
 func setYAMLPathWithComments(root *yaml.Node, path string, value *yaml.Node) {
 	setYAMLPath(root, path, value)
 	parts := strings.Split(path, ".")
@@ -138,7 +142,7 @@ func setYAMLPathWithComments(root *yaml.Node, path string, value *yaml.Node) {
 	yamlPath(root, path).FootComment = ""
 }
 
-// copyYAMLPathValue carries key comments and comments of pruned ancestors.
+// copyYAMLPathValue 会携带键注释以及被裁剪祖先的注释。
 func copyYAMLPathValue(root *yaml.Node, path string) *yaml.Node {
 	copy := deepCopyNode(yamlPath(root, path))
 	parts := strings.Split(path, ".")
@@ -155,8 +159,8 @@ func copyYAMLPathValue(root *yaml.Node, path string) *yaml.Node {
 		copy.HeadComment = strings.TrimSpace(key.HeadComment + "\n" + key.LineComment + "\n" + copy.HeadComment)
 		copy.FootComment = strings.TrimSpace(copy.FootComment + "\n" + key.FootComment)
 	}
-	// A move also prunes single-child ancestors. Carry their comments with the
-	// field; section line comments become leading comments at the destination.
+	// 移动操作也会裁剪单子节点祖先。把这些祖先的注释随字段
+	// 一起携带；段的行注释在目标处变为前置注释。
 	for i := len(parents) - 1; i > 0 && len(parents[i].Content) == 2; i-- {
 		idx := findMapKeyIndex(parents[i-1], parts[i-1])
 		key := parents[i-1].Content[idx]
@@ -193,8 +197,8 @@ func legacyPath(root *yaml.Node, path string) *yaml.Node {
 	return node
 }
 
-// UnmarshalYAML accepts both layouts, including partially migrated documents.
-// Presence, rather than Go zero values, determines which setting wins.
+// UnmarshalYAML 接受两种布局，包括部分迁移的文档。
+// 决定哪个设置生效的是字段是否存在，而不是 Go 的零值。
 func (cfg *Config) UnmarshalYAML(node *yaml.Node) error {
 	root, err := flattenV8(node)
 	if err != nil {
@@ -222,8 +226,8 @@ func flattenV8(node *yaml.Node) (*yaml.Node, error) {
 	if node.Kind != yaml.MappingNode {
 		return nil, fmt.Errorf("config must be a mapping")
 	}
-	// Decode once before transformation to reject duplicate keys even when a
-	// winning v8 value would otherwise hide the malformed legacy subtree.
+	// 在转换前先解码一次，以便即使某个获胜的 v8 值
+	// 会掩盖格式错误的 legacy 子树，也能拒绝重复键。
 	var shape map[string]any
 	if err := node.Decode(&shape); err != nil {
 		return nil, err
@@ -236,7 +240,7 @@ func flattenV8(node *yaml.Node) (*yaml.Node, error) {
 			if parent == nil {
 				break
 			}
-			// Routing is shared with the legacy layout, where null means defaults.
+			// routing 与 legacy 布局共用，其中 null 表示使用默认值。
 			if i == 1 && parts[0] == "routing" && parent.Tag == "!!null" {
 				break
 			}
@@ -275,7 +279,7 @@ func flattenV8(node *yaml.Node) (*yaml.Node, error) {
 	if version := yamlPath(root, "config-version"); version != nil && (version.Tag != "!!int" || version.Value != "8") {
 		return nil, fmt.Errorf("unsupported config-version (expected 8)")
 	}
-	// The v8 upstream map reuses the legacy client-key field name.
+	// v8 上游映射复用了 legacy 客户端键的字段名。
 	if keys := yamlPath(root, "api-keys"); keys != nil && keys.Kind == yaml.MappingNode {
 		deleteYAMLPath(root, "api-keys")
 	}
@@ -334,8 +338,8 @@ func expandV8Groups(groups *yaml.Node, provider string) (*yaml.Node, error) {
 			out.Content = append(out.Content, item)
 			continue
 		}
-		// The native OpenAI-wire families support a group-level disable switch and
-		// prompt-cache derivation flag that every contained key inherits.
+		// 原生 OpenAI 协议族支持组级禁用开关，
+		// 以及组内每个 key 都会继承的 prompt-cache 推导标志。
 		nativeFamily := provider == "openai" || provider == "deepseek" || provider == "nvidia" || provider == "agnes"
 		nativeGroupFields := map[string]bool{"disabled": true, "support-prompt-cache-key": true}
 		for i := 0; i < len(group.Content); i += 2 {
@@ -372,8 +376,8 @@ func expandV8Groups(groups *yaml.Node, provider string) (*yaml.Node, error) {
 	return out, nil
 }
 
-// groupLegacyKeys deliberately keeps one group per legacy entry: equal endpoints
-// do not imply equal routing, headers, models, or credential policies.
+// groupLegacyKeys 有意为每个 legacy 条目保留一个分组：端点相同
+// 并不意味着路由、请求头、模型或凭据策略相同。
 func groupLegacyKeys(keys *yaml.Node, provider string) *yaml.Node {
 	out := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
 	for index, entry := range keys.Content {
@@ -403,8 +407,8 @@ func groupLegacyKeys(keys *yaml.Node, provider string) *yaml.Node {
 	return out
 }
 
-// NormalizeConfigLayout removes conflicting legacy fields. migrate also moves
-// legacy-only fields; callers use it only for an explicit v8 configuration write.
+// NormalizeConfigLayout 移除冲突的 legacy 字段。migrate 还会迁移
+// 仅属于 legacy 的字段；调用方仅在显式写入 v8 配置时使用它。
 func NormalizeConfigLayout(data []byte, migrate bool) ([]byte, bool, error) {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(data, &doc); err != nil {
@@ -423,8 +427,8 @@ func NormalizeConfigLayout(data []byte, migrate bool) ([]byte, bool, error) {
 	root = expandConfigAliases(root)
 	doc.Content[0] = root
 	changed := false
-	// Empty legacy structs have no leaf fields to move. Preserve them as empty v8
-	// mappings; null structs also mean defaults. User-owned maps are not included.
+	// 空的 legacy 结构体没有可迁移的叶子字段。将它们保留为空 v8
+	// 映射；null 结构体同样表示使用默认值。用户自有的 map 不包含在内。
 	paths := append(append([]configPath(nil), v8Aliases...), v8Paths...)
 	for _, path := range append(append([]configPath(nil), v8StructPaths...), v8SharedStructPaths...) {
 		old := yamlPath(root, path.old)
@@ -470,8 +474,8 @@ func NormalizeConfigLayout(data []byte, migrate bool) ([]byte, bool, error) {
 		changed = true
 	}
 	if migrate {
-		// Existing unknown fields are ignored by the runtime. Retain their
-		// contents as comments while keeping new v8 writes strictly validated.
+		// 运行时忽略已存在的未知字段。将其内容保留为
+		// 注释，同时对新的 v8 写入保持严格校验。
 		if err := commentUnknownV8Sections(root); err != nil {
 			return nil, false, err
 		}
@@ -485,15 +489,16 @@ func NormalizeConfigLayout(data []byte, migrate bool) ([]byte, bool, error) {
 	return out, true, err
 }
 
-// IsV8ConfigLayout identifies a validated document by its version or v8 paths.
-// Roots shared with the legacy runtime schema do not alone indicate v8.
+// IsV8ConfigLayout 通过版本号或 v8 路径识别已校验的文档。
+// 与 legacy 运行时 schema 共用的根节点本身并不表明是 v8。
 func IsV8ConfigLayout(root *yaml.Node) bool {
 	if root == nil || root.Kind != yaml.MappingNode {
 		return false
 	}
 	root = expandConfigAliases(root)
 	sections := v8AllowedRoots()
-	for _, shared := range []string{"api-keys", "plugins", "quota-exceeded", "routing", "client"} {
+	// web-search 与这些段一样在两种布局中同名，单靠它不能断定文档是 v8 布局。
+	for _, shared := range []string{"api-keys", "plugins", "quota-exceeded", "routing", "client", "web-search"} {
 		delete(sections, shared)
 	}
 	for i := 0; i < len(root.Content); i += 2 {
@@ -523,7 +528,9 @@ func IsV8ConfigLayout(root *yaml.Node) bool {
 }
 
 func v8AllowedRoots() map[string]bool {
-	allowed := map[string]bool{"models": true, "config-version": true, "api-keys": true, "plugins": true, "quota-exceeded": true, "client": true}
+	// web-search 在 v8 与 legacy 布局中同名，没有重映射前缀条目，
+	// 因此需要在这里显式登记，否则 v8 迁移会把它整段注释掉。
+	allowed := map[string]bool{"models": true, "config-version": true, "api-keys": true, "plugins": true, "quota-exceeded": true, "client": true, "web-search": true}
 	for _, path := range v8Paths {
 		section, _, _ := strings.Cut(path.current, ".")
 		allowed[section] = true
@@ -536,7 +543,7 @@ var (
 	v8WarnFunc func(section, msg string)
 )
 
-// SetV8MigrationWarnFunc sets a custom warning handler (e.g. from logging package).
+// SetV8MigrationWarnFunc 设置自定义警告处理器（例如来自 logging 包）。
 func SetV8MigrationWarnFunc(fn func(section, msg string)) {
 	v8WarnMu.Lock()
 	defer v8WarnMu.Unlock()
@@ -571,7 +578,7 @@ func commentUnknownV8Sections(root *yaml.Node) error {
 			children[parent][parts[i]] = true
 		}
 	}
-	// Some structs already live at their v8 path and therefore have no remap entry.
+	// 有些结构体本身就位于其 v8 路径上，因此没有重映射条目。
 	allowedRoots := v8AllowedRoots()
 	var includeNative func(reflect.Type, string)
 	includeNative = func(t reflect.Type, path string) {
@@ -651,15 +658,15 @@ func commentUnknownV8Fields(node *yaml.Node, archive *yaml.Node, allowed map[str
 		comments = append(comments, "# "+strings.ReplaceAll(text, "\n", "\n# "))
 		node.Content = append(node.Content[:i], node.Content[i+2:]...)
 	}
-	// Archive at the root so deleting a neighboring nested field cannot drop it.
+	// 归档到根节点，这样删除相邻的嵌套字段也不会丢失它。
 	if len(comments) > 0 {
 		archive.FootComment = strings.TrimSpace(archive.FootComment + "\n" + strings.Join(comments, "\n"))
 	}
 	return nil
 }
 
-// restoreV8Layout lets v0 handlers update the effective runtime fields without
-// reintroducing their legacy spellings into an existing v8 document.
+// restoreV8Layout 让 v0 处理器更新有效的运行时字段，
+// 而不会把其 legacy 拼写重新引入已有的 v8 文档。
 func restoreV8Layout(root, layout *yaml.Node, original []byte, generated *yaml.Node) error {
 	for _, path := range v8Paths {
 		upstreams := yamlPath(layout, "api-keys")
@@ -732,10 +739,10 @@ func preserveV8Comments(dst, src *yaml.Node) {
 	}
 }
 
-// Expand aliases and YAML merge keys before moving paths. Keeping an alias to a
-// removed legacy anchor would produce an unreadable file, and updating a shared
-// anchor in place could unintentionally change an unrelated setting.
-// Callers first decode the document so yaml.v3 rejects cyclic/invalid aliases.
+// 在移动路径之前展开别名与 YAML merge key。保留指向已被移除的
+// legacy 锚点的别名会产生不可读的文件，而就地更新共享
+// 锚点可能意外改变无关设置。
+// 调用方会先解码文档，以便 yaml.v3 拒绝循环/无效别名。
 func expandConfigAliases(node *yaml.Node) *yaml.Node {
 	if node.Kind == yaml.AliasNode {
 		return expandConfigAliases(node.Alias)
@@ -771,8 +778,8 @@ func expandConfigAliases(node *yaml.Node) *yaml.Node {
 	return &copy
 }
 
-// ValidateV8Config accepts only the v8 layout in management writes.
-// Plugin-owned configuration remains extensible through its existing decoder.
+// ValidateV8Config 在管理写入中只接受 v8 布局。
+// 插件自有的配置仍可通过其现有解码器扩展。
 func ValidateV8Config(data []byte) error {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(data, &doc); err != nil {
@@ -813,8 +820,8 @@ func ValidateV8Config(data []byte) error {
 		}
 	}
 	deleteYAMLPath(flat, "config-version")
-	// Empty struct containers are valid replacements. Only strip known structural
-	// paths; empty user maps (headers, aliases, plugin options) carry real values.
+	// 空的结构体容器是合法替换值。只剥离已知的结构化
+	// 路径；空的用户 map（headers、aliases、插件选项）承载真实取值。
 	for _, path := range v8Paths {
 		parts := strings.Split(path.current, ".")
 		for end := len(parts) - 1; end > 0; end-- {
