@@ -23,6 +23,10 @@ plugins
 config.yaml
 
 # Runtime assets and development scripts
+
+# Frontend source for the management panel; only the built single-file
+# artifact under static/ is needed to serve the panel.
+webui
 # static/ is intentionally kept in the build context: the management panel ships
 # with the image so /management.html works without any download.
 scripts

@@ -26,9 +26,9 @@ COPY --from=builder ./app/xrouter /xrouter/xrouter
 
 COPY config.example.yaml /xrouter/config.example.yaml
 
-# Ship the management panel inside the image: it is served from disk as-is and
-# is never downloaded at runtime.
-COPY static/management.html /xrouter/static/management.html
+# 管理面板产物随镜像分发：由 webui/ 源码构建为单文件后直接读盘提供，
+# 运行时不会下载或自动更新。
+COPY static/index.html /xrouter/static/index.html
 
 WORKDIR /xrouter
 

@@ -27,8 +27,8 @@ var corsExposedResponseHeaders = []string{
 	"X-SERVER-BUILD-DATE",
 	"Location",
 	"Retry-After",
-	// Cross-origin management clients must read the config version token to
-	// send it back as If-Match on writes.
+	// 跨源管理客户端必须读取配置版本令牌，
+	// 以便在写入时作为 If-Match 回传。
 	"ETag",
 	"X-Request-Id",
 	"OpenAI-Request-Id",
@@ -37,9 +37,18 @@ var corsExposedResponseHeaders = []string{
 var corsExposedResponseHeadersJoined = strings.Join(corsExposedResponseHeaders, ", ")
 
 const (
-	exampleAPIKeyManagementPath = "/management.html"
-	exampleAPIKeyManagementURL  = "/management.html?safe-mode=configure"
+	// 管理面板主入口。面板是单文件产物（static/index.html），由后端读盘提供。
+	exampleAPIKeyManagementPath = "/index.html"
+	// 历史入口，保留为同一处理器的别名，避免旧书签与既有链接失效。
+	exampleAPIKeyManagementAliasPath = "/management.html"
+	// 安全模式下引导用户前往面板修改 api-keys。
+	exampleAPIKeyManagementURL = exampleAPIKeyManagementPath + "?safe-mode=configure"
 )
+
+// isManagementPanelPath 判断请求路径是否命中管理面板入口（含历史别名）。
+func isManagementPanelPath(path string) bool {
+	return path == exampleAPIKeyManagementPath || path == exampleAPIKeyManagementAliasPath
+}
 
 func (s *Server) maxRequestBodyBytes() int64 {
 	if s == nil {
@@ -82,7 +91,7 @@ func (s *Server) homeHeartbeatMiddleware() gin.HandlerFunc {
 		}
 		if c != nil && c.Request != nil {
 			path := c.Request.URL.Path
-			if strings.HasPrefix(path, "/v0/management/") || path == "/v0/management" || strings.HasPrefix(path, "/v8/management/") || path == "/v8/management" || strings.HasPrefix(path, "/v0/resource/plugins/") || path == "/management.html" {
+			if strings.HasPrefix(path, "/v0/management/") || path == "/v0/management" || strings.HasPrefix(path, "/v8/management/") || path == "/v8/management" || strings.HasPrefix(path, "/v0/resource/plugins/") || isManagementPanelPath(path) {
 				c.Next()
 				return
 			}
@@ -108,11 +117,11 @@ func (s *Server) exampleAPIKeySafeModeMiddleware() gin.HandlerFunc {
 		}
 
 		path := c.Request.URL.Path
-		if path == exampleAPIKeyManagementPath && c.Query("safe-mode") == "configure" {
+		if isManagementPanelPath(path) && c.Query("safe-mode") == "configure" {
 			c.Next()
 			return
 		}
-		if (path == "/" || path == exampleAPIKeyManagementPath) && (c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead) {
+		if (path == "/" || isManagementPanelPath(path)) && (c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead) {
 			s.serveExampleAPIKeyWarningPage(c)
 			return
 		}
@@ -124,7 +133,7 @@ func (s *Server) exampleAPIKeySafeModeMiddleware() gin.HandlerFunc {
 		c.Header("X-CPA-SAFE-MODE", "example-api-key")
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 			"error":   "unsafe_example_api_key",
-			"message": "Proxy API endpoints are disabled because api-keys contains template values. Open /management.html?safe-mode=configure, update api-keys in Management, then retry.",
+			"message": "Proxy API endpoints are disabled because api-keys contains template values. Open /index.html?safe-mode=configure, update api-keys in Management, then retry.",
 		})
 	}
 }
@@ -159,11 +168,11 @@ func isExampleAPIKeySafeModeProxyPath(path string) bool {
 	}
 }
 
-// corsMiddleware returns a Gin middleware handler that adds CORS headers
-// to every response, allowing cross-origin requests.
+// corsMiddleware 返回一个 Gin 中间件处理器，它为每个响应
+// 添加 CORS header，从而允许跨源请求。
 //
-// Returns:
-//   - gin.HandlerFunc: The CORS middleware handler
+// 返回：
+//   - gin.HandlerFunc：CORS 中间件处理器
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
@@ -180,9 +189,9 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
-// AuthMiddleware returns a Gin middleware handler that authenticates requests
-// using the configured authentication providers. When no providers are available,
-// it allows all requests (legacy behaviour).
+// AuthMiddleware 返回一个 Gin 中间件处理器，它使用已配置的认证
+// 供应商对请求进行认证。当没有可用供应商时，
+// 它允许所有请求（旧版行为）。
 func AuthMiddleware(manager *sdkaccess.Manager) gin.HandlerFunc {
 	return accessAuthMiddleware(manager)
 }

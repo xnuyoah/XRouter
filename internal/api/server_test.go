@@ -719,11 +719,13 @@ func TestHomeEnabledHidesManagementEndpointsAndControlPanel(t *testing.T) {
 	})
 
 	t.Run("management control panel returns 404", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/management.html", nil)
-		rr := httptest.NewRecorder()
-		server.engine.ServeHTTP(rr, req)
-		if rr.Code != http.StatusNotFound {
-			t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusNotFound, rr.Body.String())
+		for _, path := range []string{"/index.html", "/management.html"} {
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			rr := httptest.NewRecorder()
+			server.engine.ServeHTTP(rr, req)
+			if rr.Code != http.StatusNotFound {
+				t.Fatalf("%s status = %d, want %d body=%s", path, rr.Code, http.StatusNotFound, rr.Body.String())
+			}
 		}
 	})
 }
@@ -732,7 +734,7 @@ func TestExampleAPIKeySafeModeShowsWarningAndKeepsManagement(t *testing.T) {
 	t.Setenv("MANAGEMENT_PASSWORD", "test-management-key")
 	staticDir := t.TempDir()
 	t.Setenv("MANAGEMENT_STATIC_PATH", staticDir)
-	if err := os.WriteFile(filepath.Join(staticDir, "management.html"), []byte("<html>management app</html>"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(staticDir, "index.html"), []byte("<html>management app</html>"), 0o600); err != nil {
 		t.Fatalf("failed to write management asset: %v", err)
 	}
 
@@ -749,7 +751,7 @@ func TestExampleAPIKeySafeModeShowsWarningAndKeepsManagement(t *testing.T) {
 			t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
 		}
 		body := rr.Body.String()
-		for _, want := range []string{"Example API key detected", "Open Management", `href="/management.html?safe-mode=configure"`} {
+		for _, want := range []string{"Example API key detected", "Open Management", `href="/index.html?safe-mode=configure"`} {
 			if !strings.Contains(body, want) {
 				t.Fatalf("warning page missing %q: %s", want, body)
 			}
@@ -757,6 +759,18 @@ func TestExampleAPIKeySafeModeShowsWarningAndKeepsManagement(t *testing.T) {
 	})
 
 	t.Run("management html defaults to warning page", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/index.html", nil)
+		rr := httptest.NewRecorder()
+		server.engine.ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+		}
+		if !strings.Contains(rr.Body.String(), "Example API key detected") {
+			t.Fatalf("index.html did not show warning page: %s", rr.Body.String())
+		}
+	})
+
+	t.Run("legacy management html alias defaults to warning page", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/management.html", nil)
 		rr := httptest.NewRecorder()
 		server.engine.ServeHTTP(rr, req)
@@ -764,12 +778,12 @@ func TestExampleAPIKeySafeModeShowsWarningAndKeepsManagement(t *testing.T) {
 			t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
 		}
 		if !strings.Contains(rr.Body.String(), "Example API key detected") {
-			t.Fatalf("management.html did not show warning page: %s", rr.Body.String())
+			t.Fatalf("management.html alias did not show warning page: %s", rr.Body.String())
 		}
 	})
 
 	t.Run("management html head stops at warning page", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodHead, "/management.html", nil)
+		req := httptest.NewRequest(http.MethodHead, "/index.html", nil)
 		rr := httptest.NewRecorder()
 		server.engine.ServeHTTP(rr, req)
 		if rr.Code != http.StatusOK {
@@ -784,6 +798,18 @@ func TestExampleAPIKeySafeModeShowsWarningAndKeepsManagement(t *testing.T) {
 	})
 
 	t.Run("management button query opens control panel", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/index.html?safe-mode=configure", nil)
+		rr := httptest.NewRecorder()
+		server.engine.ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+		}
+		if !strings.Contains(rr.Body.String(), "management app") {
+			t.Fatalf("management panel body missing: %s", rr.Body.String())
+		}
+	})
+
+	t.Run("legacy alias query opens control panel", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/management.html?safe-mode=configure", nil)
 		rr := httptest.NewRecorder()
 		server.engine.ServeHTTP(rr, req)
@@ -811,7 +837,7 @@ func TestExampleAPIKeySafeModeShowsWarningAndKeepsManagement(t *testing.T) {
 		if strings.Contains(rr.Body.String(), "management_url") {
 			t.Fatalf("body should not include management_url field: %s", rr.Body.String())
 		}
-		if !strings.Contains(rr.Body.String(), "/management.html?safe-mode=configure") {
+		if !strings.Contains(rr.Body.String(), "/index.html?safe-mode=configure") {
 			t.Fatalf("body missing management link in message: %s", rr.Body.String())
 		}
 		if got := rr.Header().Get(internallogging.CPATraceIDHeader); got != "" {
@@ -873,7 +899,7 @@ func TestModelsDispatchByAnthropicVersionHeader(t *testing.T) {
 
 	server := newTestServer(t)
 
-	// Anthropic API request (Anthropic-Version header, non-claude-cli User-Agent) -> Claude format.
+	// Anthropic API 请求（带 Anthropic-Version 头、非 claude-cli 的 User-Agent）-> Claude 格式。
 	t.Run("anthropic version header routes to claude format", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/v1/models", nil)
 		req.Header.Set("Authorization", "Bearer test-key")
@@ -927,7 +953,7 @@ func TestModelsDispatchByAnthropicVersionHeader(t *testing.T) {
 		}
 	})
 
-	// Plain request (no Anthropic-Version, non-claude-cli User-Agent) -> OpenAI format, unaffected.
+	// 普通请求（无 Anthropic-Version、非 claude-cli 的 User-Agent）-> OpenAI 格式，不受影响。
 	t.Run("plain request stays on openai format", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/v1/models", nil)
 		req.Header.Set("Authorization", "Bearer test-key")
@@ -1036,7 +1062,7 @@ func TestDefaultRequestLoggerFactory_UsesResolvedLogDirectory(t *testing.T) {
 		}
 	}()
 
-	// Force ResolveLogDirectory to fallback to auth-dir/logs by making ./logs not a writable directory.
+	// 通过让 ./logs 变成不可写目录，强制 ResolveLogDirectory 回退到 auth-dir/logs。
 	if errWriteFile := os.WriteFile(filepath.Join(tmpDir, "logs"), []byte("not-a-directory"), 0o644); errWriteFile != nil {
 		t.Fatalf("failed to create blocking logs file: %v", errWriteFile)
 	}

@@ -24,7 +24,7 @@ objectstore/*
 
 # Static assets
 static/*
-!static/management.html
+!static/index.html
 
 # Authentication data
 auths/*
@@ -34,6 +34,7 @@ auths/*
 # Documentation
 docs/*
 !docs/management-api-v8.md
+!docs/web-search.md
 AGENTS.md
 CLAUDE.md
 GEMINI.md

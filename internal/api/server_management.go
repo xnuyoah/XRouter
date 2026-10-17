@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -185,7 +186,7 @@ func (s *Server) refreshPluginManagementRoutes() {
 	s.pluginHost.RegisterManagementRoutes(context.Background(), s.registeredManagementRouteKeys())
 }
 
-// RefreshPluginManagementRoutes rebuilds plugin-owned Management API routes.
+// RefreshPluginManagementRoutes 重建插件所有的 Management API 路由。
 func (s *Server) RefreshPluginManagementRoutes() {
 	s.refreshPluginManagementRoutes()
 }
@@ -283,5 +284,33 @@ func (s *Server) serveManagementControlPanel(c *gin.Context) {
 		return
 	}
 
-	c.File(filePath)
+	file, errOpen := os.Open(filePath)
+	if errOpen != nil {
+		if os.IsNotExist(errOpen) {
+			log.WithField("path", filePath).Warn("management control panel asset is missing")
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+		log.WithError(errOpen).Error("failed to open management control panel asset")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	defer func() {
+		if errClose := file.Close(); errClose != nil {
+			log.WithError(errClose).Warn("failed to close management control panel asset")
+		}
+	}()
+
+	info, errStat := file.Stat()
+	if errStat != nil {
+		log.WithError(errStat).Error("failed to stat management control panel asset")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	// 这里刻意不用 gin 的 c.File：它内部走 http.ServeFile，而 ServeFile 会把任何以
+	// "/index.html" 结尾的请求路径 301 重定向到 "./"，导致面板主入口无法直接访问。
+	// ServeContent 保留 Range 与 Last-Modified 语义，且没有该重定向行为。
+	c.Header("Cache-Control", "no-store")
+	http.ServeContent(c.Writer, c.Request, filepath.Base(filePath), info.ModTime(), file)
 }

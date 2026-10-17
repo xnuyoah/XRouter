@@ -39,8 +39,8 @@ func TestExampleAPIKeysIgnoresSimilarValues(t *testing.T) {
 }
 
 func TestExampleAPIKeyWarningPageIncludesManagementButton(t *testing.T) {
-	body := ExampleAPIKeyWarningPageHTML([]string{"your-api-key-1"}, "/management.html?safe-mode=configure")
-	for _, want := range []string{"Example API key detected", "your-api-key-1", "Open Management", `href="/management.html?safe-mode=configure"`, "Proxy API endpoints are disabled"} {
+	body := ExampleAPIKeyWarningPageHTML([]string{"your-api-key-1"}, "/index.html?safe-mode=configure")
+	for _, want := range []string{"Example API key detected", "your-api-key-1", "Open Management", `href="/index.html?safe-mode=configure"`, "Proxy API endpoints are disabled"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("warning page missing %q: %s", want, body)
 		}
