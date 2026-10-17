@@ -1059,5 +1059,8 @@
     "success_short": "✓",
     "failure_short": "✗",
     "no_requests": "No requests"
+  },
+  "plugin_display_names": {
+    "tokens-statistic": "Request Log"
   }
 }

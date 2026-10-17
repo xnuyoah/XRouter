@@ -243,7 +243,7 @@ export function PluginsPage() {
   const handleDeletePlugin = (plugin: PluginListEntry) => {
     if (!connected || mutatingID || openingConfigID || deletingID) return;
 
-    const name = getPluginTitle(plugin);
+    const name = getPluginTitle(plugin, t);
     showConfirmation({
       title: t('plugin_management.delete_confirm_title'),
       message: t('plugin_management.delete_confirm_message', { name, id: plugin.id }),
@@ -654,7 +654,7 @@ export function PluginsPage() {
                 {/* Info */}
                 <div className={styles.pluginInfo}>
                   <div className={styles.pluginName}>
-                    <h2>{getPluginTitle(plugin)}</h2>
+                    <h2>{getPluginTitle(plugin, t)}</h2>
                     <div className={styles.badgeRow}>
                       <span
                         className={
@@ -765,7 +765,7 @@ export function PluginsPage() {
         size="lg"
         title={
           editingPlugin
-            ? t('plugin_management.config_title', { name: getPluginTitle(editingPlugin) })
+            ? t('plugin_management.config_title', { name: getPluginTitle(editingPlugin, t) })
             : t('plugin_management.edit_config')
         }
         description={editingPlugin?.id}

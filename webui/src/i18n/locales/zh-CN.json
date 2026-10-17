@@ -1059,5 +1059,8 @@
     "success_short": "✓",
     "failure_short": "✗",
     "no_requests": "无请求"
+  },
+  "plugin_display_names": {
+    "tokens-statistic": "请求日志"
   }
 }

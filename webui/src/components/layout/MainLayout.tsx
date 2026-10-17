@@ -332,11 +332,11 @@ export function MainLayout() {
 
     try {
       const plugins = await pluginsApi.list();
-      setPluginResources(collectPluginResourceEntries(plugins.plugins));
+      setPluginResources(collectPluginResourceEntries(plugins.plugins, t));
     } catch {
       setPluginResources([]);
     }
-  }, [connectionStatus, supportsPlugin]);
+  }, [connectionStatus, supportsPlugin, t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -513,9 +513,10 @@ export function MainLayout() {
         label: item.label ?? (item.labelKey ? t(item.labelKey) : ''),
         meta: item.meta ?? (item.metaKey ? t(item.metaKey) : ''),
       }));
-      // 扩展管理不再出现在侧边栏，但路由仍有效；当动态扩展分组为空时
-      // 这里是唯一入口，保证全局搜索始终可达。
-      if (supportsPlugin && !fromNav.some((item) => item.path === '/plugins')) {
+      // 扩展管理不在侧边栏，但路由始终可达（页面自身渲染 no-CGO /
+      // 平台不匹配诊断）。动态扩展分组为空时这里是唯一 UI 入口，
+      // 保证全局搜索始终可达。
+      if (!fromNav.some((item) => item.path === '/plugins')) {
         fromNav.push({
           path: '/plugins',
           label: t('nav.plugins'),
@@ -526,7 +527,7 @@ export function MainLayout() {
     },
     // navItems 每次渲染都是新建数组，这里依赖 t 与导航内容本身即可。
     // eslint-disable-next-line react-hooks/exhaustive-deps -- navItems is rebuilt every render; key on the translated strings instead.
-    [t, pluginPageNavItems, supportsPlugin]
+    [t, pluginPageNavItems]
   );
   const searchResults = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase();

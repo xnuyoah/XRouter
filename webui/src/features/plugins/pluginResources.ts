@@ -18,17 +18,27 @@ export interface PluginResourceEntry {
   route: string;
 }
 
-// 内置扩展的前端展示名映射：覆盖插件二进制自带的 metadata.name 与菜单名，
-// 让侧边栏与扩展管理页显示产品化的名称。
-const PLUGIN_DISPLAY_NAMES: Record<string, string> = {
-  'tokens-statistic': '请求日志',
+// Built-in extension display names override the plugin binary's own
+// metadata.name and menu label so the sidebar and management page show
+// the productized name. Resolved through i18n so the label follows the
+// active language.
+const PLUGIN_DISPLAY_NAME_KEYS: Record<string, string> = {
+  'tokens-statistic': 'plugin_display_names.tokens-statistic',
 };
 
-export const getPluginDisplayName = (pluginID: string): string | undefined =>
-  PLUGIN_DISPLAY_NAMES[pluginID.trim()];
+export const getPluginDisplayName = (
+  pluginID: string,
+  t: (key: string) => string
+): string | undefined => {
+  const key = PLUGIN_DISPLAY_NAME_KEYS[pluginID.trim()];
+  if (!key) return undefined;
+  const translated = t(key);
+  // Missing translations echo the key itself; fall back to no override.
+  return translated === key ? undefined : translated;
+};
 
-export const getPluginTitle = (plugin: PluginListEntry) =>
-  getPluginDisplayName(plugin.id) ?? (plugin.metadata?.name.trim() || plugin.id);
+export const getPluginTitle = (plugin: PluginListEntry, t: (key: string) => string) =>
+  getPluginDisplayName(plugin.id, t) ?? (plugin.metadata?.name.trim() || plugin.id);
 
 export const buildPluginResourceRoute = (pluginID: string, menuIndex: number) =>
   `/plugin-pages/${encodeURIComponent(pluginID)}/${menuIndex}`;
@@ -42,11 +52,14 @@ export const resolvePluginAssetURL = (value: string, apiBase: string) => {
   return base ? `${base}${trimmed}` : trimmed;
 };
 
-export const collectPluginResourceEntries = (plugins: PluginListEntry[]): PluginResourceEntry[] =>
+export const collectPluginResourceEntries = (
+  plugins: PluginListEntry[],
+  t: (key: string) => string
+): PluginResourceEntry[] =>
   plugins.flatMap((plugin) => {
     if (!plugin.effectiveEnabled) return [];
 
-    const pluginTitle = getPluginTitle(plugin);
+    const pluginTitle = getPluginTitle(plugin, t);
     const pluginLogo = plugin.logo || plugin.metadata?.logo || '';
 
     return plugin.menus
@@ -54,7 +67,7 @@ export const collectPluginResourceEntries = (plugins: PluginListEntry[]): Plugin
         const path = menu.path.trim();
         if (!path) return null;
 
-        const menuLabel = getPluginDisplayName(plugin.id) ?? menu.menu.trim();
+        const menuLabel = getPluginDisplayName(plugin.id, t) ?? menu.menu.trim();
         return {
           pluginID: plugin.id,
           pluginTitle,
