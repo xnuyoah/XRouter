@@ -57,17 +57,27 @@
     "unsaved_changes_message": "You have unsaved changes. Leaving now will discard them. Do you want to leave?"
   },
   "title": {
-    "login": "XRouter Management Center",
+    "login": "XRouter",
     "abbr": "XRouter"
   },
   "splash": {
     "title": "XRouter",
-    "subtitle": "Management Center"
+    "eyebrow": "AI GATEWAY CONTROL PLANE",
+    "status": "Restoring session…",
+    "status_success": "Entering console…"
   },
   "login": {
-    "subtitle": "Connect to XRouter v8 or later",
-    "connection_current": "Current URL",
-    "connection_auto_hint": "The system will automatically use the current URL for connection",
+    "subtitle": "Enter your management key to continue",
+    "brand_eyebrow": "AI GATEWAY CONTROL PLANE",
+    "brand_title_line1": "One gateway.",
+    "brand_title_line2": "Every model and search channel under control.",
+    "brand_description": "Manage credentials, routing, channel health and usage from a single control plane — every request visible and accountable.",
+    "feature_routing": "OpenAI / Claude compatible entrypoints",
+    "feature_credentials": "Credential rotation, cooldown and failover",
+    "feature_observability": "Request-level channel status and live usage",
+    "brand_footer": "Management API v8",
+    "form_eyebrow": "SECURE ACCESS",
+    "security_note": "Your management key stays in this browser",
     "custom_connection_label": "Custom Connection URL:",
     "custom_connection_placeholder": "Eg: https://example.com:8317",
     "custom_connection_hint": "By default the current URL is used. Override it here if needed.",
@@ -87,7 +97,8 @@
     "error_legacy_backend": "This backend accepts v0 Management API but does not provide v8. Upgrade XRouter to v8 or later to use this management page.",
     "error_server": "Backend failed while handling the management request, check the server logs",
     "error_cors": "Cross-origin request blocked, please check server configuration",
-    "error_ssl": "SSL/TLS certificate verification failed"
+    "error_ssl": "SSL/TLS certificate verification failed",
+    "connection_settings": "Connection settings"
   },
   "header": {
     "refresh_all": "Refresh All",
@@ -103,7 +114,8 @@
     "plugins": "Extensions",
     "config_management": "Config Panel",
     "logs": "Logs Viewer",
-    "web_search": "Web Tools"
+    "web_search": "Web Tools",
+    "channel_status": "Channel Status"
   },
   "nav_groups": {
     "operate": "Operate",
@@ -117,7 +129,8 @@
     "plugins": "Extension toggles, config fields and resource entries",
     "logs": "Request tracing",
     "config_management": "Gateway configuration",
-    "web_search": "Search channels, account pool, probes and access"
+    "web_search": "Search channels, account pool, probes and access",
+    "channel_status": "Request success rates and 24-hour availability"
   },
   "dashboard": {
     "hero_verdict_good": "All systems steady",
@@ -912,6 +925,73 @@
     "light": "Light",
     "dark": "Dark"
   },
+  "channelStatus": {
+    "title": "Channel Status",
+    "subtitle": "Aggregates all historical requests by channel and shows availability for the last 24 hours in 20-minute segments.",
+    "lastUpdated": "Last updated",
+    "refresh": "Refresh",
+    "tabs": {
+      "llm": "Model Providers",
+      "webSearch": "Search Channels"
+    },
+    "legend": {
+      "good": "Healthy (success ≥ 85%)",
+      "warning": "Warning (50%–<85%)",
+      "critical": "Critical (< 50%)",
+      "idle": "No requests"
+    },
+    "status": {
+      "good": "Healthy",
+      "warning": "Warning",
+      "critical": "Critical",
+      "idle": "No requests"
+    },
+    "card": {
+      "allEndpoints": "All endpoints combined",
+      "allCredentials": "All credentials and endpoints combined",
+      "models": "Models ({{count}})",
+      "accounts": "Accounts / keys ({{count}})"
+    },
+    "metrics": {
+      "total": "All-time requests",
+      "successRate": "Success rate",
+      "success": "Success",
+      "failed": "Failed"
+    },
+    "strip": {
+      "past24h": "Past 24 hours",
+      "now": "Now"
+    },
+    "detail": {
+      "range": "Time range",
+      "total": "Total requests",
+      "successFailed": "Success / failed",
+      "noRequests": "No requests"
+    },
+    "probe": {
+      "lastChecked": "Last probe",
+      "latency": "Latency",
+      "http": "HTTP",
+      "noStatus": "No status check yet"
+    },
+    "account": {
+      "empty": "No accounts",
+      "cooldown": "Cooling down until"
+    },
+    "quota": {
+      "refresh": "Refresh balance",
+      "trend": "Balance trend",
+      "resetAt": "Resets",
+      "loading": "Loading balance history…",
+      "empty": "No balance history",
+      "chart": "Balance history trend"
+    },
+    "actionSummary": "Probe finished: {{succeeded}} succeeded, {{failed}} failed",
+    "empty": {
+      "title": "No channel data",
+      "description": "Counters start accumulating once the gateway handles requests."
+    }
+  },
   "webSearch": {
     "title": "Web Tools",
     "subtitle": "Manage search channels and account pools: probes, status, quota and gateway access",
@@ -928,6 +1008,16 @@
       "refreshQuota": "Refresh quota",
       "save": "Save",
       "remove": "Remove"
+    },
+    "importExport": {
+      "import": "Import CSV",
+      "export": "Export",
+      "format": "Export format",
+      "includeCredentials": "Include credentials",
+      "confirmCredentials": "The export will contain plaintext API keys, usernames and passwords. Continue?",
+      "summaryTitle": "Import result",
+      "summary": "Added {{added}} · Updated {{updated}} · Duplicate {{duplicate}} · Other channels {{other}} · Invalid {{invalid}}",
+      "llmNote": "NVIDIA / Agnes rows are written to the native provider configuration and do not appear in the search account table."
     },
     "metrics": {
       "accounts": "Accounts",

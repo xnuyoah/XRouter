@@ -16,6 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/xnuyoah/XRouter/v8/internal/buildinfo"
+	"github.com/xnuyoah/XRouter/v8/internal/channelstats"
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
 	"github.com/xnuyoah/XRouter/v8/internal/websearch"
@@ -59,6 +60,8 @@ type Handler struct {
 	configReloadHook        func(context.Context, *config.Config)
 	// webSearch 是搜索渠道服务；未启用该功能时为 nil。
 	webSearch *websearch.Service
+	// channelStats 是请求级渠道统计存储；未初始化时为 nil。
+	channelStats *channelstats.Store
 }
 
 type configReloadSnapshot struct {

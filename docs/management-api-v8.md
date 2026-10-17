@@ -81,6 +81,11 @@ retain the corresponding business operation's fields.
 | `/observability/logs/requests/<id>` | GET | Get a request log. |
 | `/observability/usage/api-keys` | GET | Get API-key usage. |
 | `/observability/usage/queue` | GET | Get queued usage events. |
+| `/observability/channel-status` | GET | Get lifetime request counters and 24-hour, 20-minute buckets for LLM providers/models and web-search channels. |
+| `/web-search/accounts/import` | POST | Import an OpenRegister CSV into search accounts and NVIDIA/Agnes native credentials. |
+| `/web-search/accounts/export` | GET | Export search accounts and NVIDIA/Agnes keys as CSV or JSON; masked unless `include_credentials=true`. |
+| `/web-search/quota/history` | GET | Get balance history for one web-search key (`channel` and `account_id` required). |
+| `/web-search/status/check` | POST | Start a probe-based channel status check; pass `channel` to limit it to one channel. |
 | `/credentials` | GET, POST, DELETE | List, upload, or delete credential files. |
 | `/credentials/models` | GET | Get credential models. |
 | `/credentials/download` | GET | Download a credential file. |

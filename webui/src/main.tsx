@@ -4,7 +4,7 @@ import '@/styles/global.scss';
 import { INLINE_LOGO } from '@/assets/logoInline';
 import App from './App.tsx';
 
-document.title = 'XRouter Management Center';
+document.title = 'XRouter';
 document.documentElement.setAttribute('translate', 'no');
 document.documentElement.classList.add('notranslate');
 

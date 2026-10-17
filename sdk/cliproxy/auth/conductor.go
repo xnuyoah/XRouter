@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	internalconfig "github.com/xnuyoah/XRouter/v8/internal/config"
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
@@ -98,6 +99,14 @@ type Result struct {
 	ExecutionSeq uint64
 }
 
+// ResultObserver receives every counted routing result. It is used for
+// external accounting such as the channel status dashboard.
+type ResultObserver func(ctx context.Context, result Result, at time.Time)
+
+type resultObserverHolder struct {
+	observer ResultObserver
+}
+
 // Selector 为执行选择 auth 候选。
 type Selector interface {
 	Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*Auth) (*Auth, error)
@@ -173,6 +182,7 @@ type Manager struct {
 	executors                 map[string]ProviderExecutor
 	selector                  Selector
 	hook                      Hook
+	resultObserver            atomic.Pointer[resultObserverHolder]
 	resultPolicy              atomic.Pointer[resultPolicyHolder]
 	mu                        sync.RWMutex
 	selectorMu                sync.Mutex
@@ -287,6 +297,35 @@ func (m *Manager) SetResultPolicy(policy ResultPolicy) {
 		return
 	}
 	m.resultPolicy.Store(&resultPolicyHolder{policy: policy})
+}
+
+// SetResultObserver installs a callback that receives every counted routing
+// result. Passing nil removes the observer.
+func (m *Manager) SetResultObserver(observer ResultObserver) {
+	if m == nil {
+		return
+	}
+	if observer == nil {
+		m.resultObserver.Store(nil)
+		return
+	}
+	m.resultObserver.Store(&resultObserverHolder{observer: observer})
+}
+
+func (m *Manager) notifyResultObserver(ctx context.Context, result Result, at time.Time) {
+	if m == nil {
+		return
+	}
+	holder := m.resultObserver.Load()
+	if holder == nil || holder.observer == nil {
+		return
+	}
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			log.Errorf("auth: result observer panic recovered: %v", recovered)
+		}
+	}()
+	holder.observer(ctx, result, at)
 }
 
 // ResultPolicy 返回当前的执行结果策略，未配置时返回 nil。

@@ -799,6 +799,12 @@ func (m *Manager) MarkResult(ctx context.Context, result Result) {
 	var authSnapshot *Auth
 	cooldownStateChanged := false
 	now := time.Now()
+	observed := false
+	defer func() {
+		if observed {
+			m.notifyResultObserver(ctx, result, now)
+		}
+	}()
 
 	releaseMutation := m.lockAuthMutation(result.AuthID)
 	defer releaseMutation()
@@ -833,6 +839,7 @@ func (m *Manager) MarkResult(ctx context.Context, result Result) {
 		} else {
 			auth.Failed++
 		}
+		observed = true
 		wasTerminalUnauthorized := hasUnauthorizedAuthFailure(auth)
 
 		// retainModelCooldown 会保留仍然有效的模型冷却，以对抗来自
@@ -1172,6 +1179,7 @@ func (m *Manager) reportHomeResult(ctx context.Context, result Result, auth *Aut
 		snapshot = auth.Clone()
 	}
 	m.hook.OnResult(ctx, result)
+	m.notifyResultObserver(ctx, result, time.Now())
 	m.publishErrorEvent(result, snapshot)
 	m.updateSessionAffinity(result)
 }
@@ -1182,6 +1190,7 @@ func (m *Manager) recordAvailabilityNeutralResult(ctx context.Context, result Re
 	}
 
 	var authSnapshot *Auth
+	var observedAt time.Time
 	releaseMutation := m.lockAuthMutation(result.AuthID)
 	defer releaseMutation()
 	m.mu.Lock()
@@ -1200,6 +1209,7 @@ func (m *Manager) recordAvailabilityNeutralResult(ctx context.Context, result Re
 		} else {
 			auth.Failed++
 		}
+		observedAt = now
 		auth.Generation++
 		auth.UpdatedAt = now
 		_ = m.persistLocked(ctx, auth)
@@ -1208,6 +1218,9 @@ func (m *Manager) recordAvailabilityNeutralResult(ctx context.Context, result Re
 	m.mu.Unlock()
 	releaseMutation()
 
+	if !observedAt.IsZero() {
+		m.notifyResultObserver(ctx, result, observedAt)
+	}
 	m.hook.OnResult(ctx, result)
 	m.publishErrorEvent(result, authSnapshot)
 }

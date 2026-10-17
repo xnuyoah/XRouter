@@ -5,7 +5,18 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
-import { IconEye, IconEyeOff } from '@/components/ui/icons';
+import {
+  IconActivity,
+  IconAlertTriangle,
+  IconChevronDown,
+  IconChevronUp,
+  IconEye,
+  IconEyeOff,
+  IconKey,
+  IconNetwork,
+  IconShield,
+  IconSlidersHorizontal,
+} from '@/components/ui/icons';
 import { useAuthStore, useLanguageStore, useNotificationStore } from '@/stores';
 import { detectApiBaseFromLocation, normalizeApiBase } from '@/utils/connection';
 import { LANGUAGE_LABEL_KEYS, LANGUAGE_ORDER } from '@/utils/constants';
@@ -208,26 +219,72 @@ export function LoginPage() {
   return (
     <div className={styles.container}>
       {showSplash ? (
-        /* 启动动画 */
-        <div className={styles.splashContent}>
-          <img src={INLINE_LOGO} alt="XRouter" className={styles.splashLogo} />
-          <h1 className={styles.splashTitle}>{t('splash.title')}</h1>
-          <p className={styles.splashSubtitle}>{t('splash.subtitle')}</p>
-          <div className={styles.splashLoader}>
-            <div className={styles.splashLoaderBar} />
+        <div className={styles.splash}>
+          <div className={styles.splashGrid} aria-hidden="true" />
+          <div className={styles.splashOrb} aria-hidden="true" />
+          <div className={styles.splashContent}>
+            <span className={styles.splashLogoWrap}>
+              <img src={INLINE_LOGO} alt="XRouter" className={styles.splashLogo} />
+            </span>
+            <span className={styles.splashEyebrow}>{t('splash.eyebrow')}</span>
+            <h1 className={styles.splashTitle}>{t('splash.title')}</h1>
+            <div className={styles.splashLoader}>
+              <div className={styles.splashLoaderBar} />
+            </div>
+            <span className={styles.splashStatus}>
+              {t(autoLoginSuccess ? 'splash.status_success' : 'splash.status')}
+            </span>
           </div>
         </div>
       ) : (
-        /* 登录卡片 */
-        <div className={styles.formContent}>
-          <div className={styles.authBrand}>
-            <img src={INLINE_LOGO} alt="" />
-            <span>XRouter</span>
-          </div>
+        <div className={styles.shell}>
+          <aside className={styles.brandPanel}>
+            <div className={styles.brandGrid} aria-hidden="true" />
+            <div className={styles.brandOrb} aria-hidden="true" />
+            <div className={styles.brandTop}>
+              <span className={styles.brandLogo}>
+                <img src={INLINE_LOGO} alt="" />
+              </span>
+              <span className={styles.brandName}>XRouter</span>
+              <span className={styles.versionBadge}>v8</span>
+            </div>
 
-          <div className={styles.loginHeader}>
-            <div className={styles.titleRow}>
-              <div className={styles.title}>{t('title.login')}</div>
+            <div className={styles.brandCopy}>
+              <span className={styles.eyebrow}>{t('login.brand_eyebrow')}</span>
+              <h1>
+                <span>{t('login.brand_title_line1')}</span>
+                <span>{t('login.brand_title_line2')}</span>
+              </h1>
+              <p>{t('login.brand_description')}</p>
+            </div>
+
+            <ul className={styles.features}>
+              <li>
+                <span className={styles.featureIcon}><IconNetwork size={15} /></span>
+                {t('login.feature_routing')}
+              </li>
+              <li>
+                <span className={styles.featureIcon}><IconKey size={15} /></span>
+                {t('login.feature_credentials')}
+              </li>
+              <li>
+                <span className={styles.featureIcon}><IconActivity size={15} /></span>
+                {t('login.feature_observability')}
+              </li>
+            </ul>
+
+            <div className={styles.brandFooter}>
+              <span className={styles.liveDot} />
+              {t('login.brand_footer')}
+            </div>
+          </aside>
+
+          <main className={styles.formPanel}>
+            <div className={styles.formTop}>
+              <div className={styles.mobileBrand}>
+                <img src={INLINE_LOGO} alt="" />
+                <span>XRouter</span>
+              </div>
               <Select
                 className={styles.languageSelect}
                 value={language}
@@ -237,81 +294,101 @@ export function LoginPage() {
                 ariaLabel={t('language.switch')}
               />
             </div>
-            <div className={styles.subtitle}>{t('login.subtitle')}</div>
-          </div>
 
-          <div className={styles.connectionBox}>
-            <div className={styles.label}>{t('login.connection_current')}</div>
-            <div className={styles.value}>{apiBase || detectedBase}</div>
-            <div className={styles.hint}>{t('login.connection_auto_hint')}</div>
-          </div>
+            <div className={styles.formBody}>
+              <header className={styles.formHeader}>
+                <span className={styles.eyebrow}>{t('login.form_eyebrow')}</span>
+                <h2>{t('title.login')}</h2>
+                <p>{t('login.subtitle')}</p>
+              </header>
 
-          <div className={styles.toggleAdvanced}>
-            <SelectionCheckbox
-              checked={showCustomBase}
-              onChange={setShowCustomBase}
-              ariaLabel={t('login.custom_connection_label')}
-              label={t('login.custom_connection_label')}
-              labelClassName={styles.toggleLabel}
-            />
-          </div>
-
-          {showCustomBase && (
-            <Input
-              label={t('login.custom_connection_label')}
-              placeholder={t('login.custom_connection_placeholder')}
-              value={apiBase}
-              onChange={(e) => setApiBase(e.target.value)}
-              hint={t('login.custom_connection_hint')}
-            />
-          )}
-
-          <Input
-            autoFocus
-            label={t('login.management_key_label')}
-            placeholder={t('login.management_key_placeholder')}
-            type={showKey ? 'text' : 'password'}
-            name="cpa-management-key"
-            autoComplete="current-password"
-            value={managementKey}
-            onChange={(e) => setManagementKey(e.target.value)}
-            onKeyDown={handleSubmitKeyDown}
-            rightElement={
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => setShowKey((prev) => !prev)}
-                aria-label={
-                  showKey
-                    ? t('login.hide_key', { defaultValue: '隐藏密钥' })
-                    : t('login.show_key', { defaultValue: '显示密钥' })
+              <Input
+                autoFocus
+                label={t('login.management_key_label')}
+                placeholder={t('login.management_key_placeholder')}
+                type={showKey ? 'text' : 'password'}
+                name="cpa-management-key"
+                autoComplete="current-password"
+                value={managementKey}
+                onChange={(e) => setManagementKey(e.target.value)}
+                onKeyDown={handleSubmitKeyDown}
+                rightElement={
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setShowKey((prev) => !prev)}
+                    aria-label={
+                      showKey
+                        ? t('login.hide_key', { defaultValue: '隐藏密钥' })
+                        : t('login.show_key', { defaultValue: '显示密钥' })
+                    }
+                    title={
+                      showKey
+                        ? t('login.hide_key', { defaultValue: '隐藏密钥' })
+                        : t('login.show_key', { defaultValue: '显示密钥' })
+                    }
+                  >
+                    {showKey ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+                  </button>
                 }
-                title={
-                  showKey
-                    ? t('login.hide_key', { defaultValue: '隐藏密钥' })
-                    : t('login.show_key', { defaultValue: '显示密钥' })
-                }
-              >
-                {showKey ? <IconEyeOff size={16} /> : <IconEye size={16} />}
-              </button>
-            }
-          />
+              />
 
-          <div className={styles.toggleAdvanced}>
-            <SelectionCheckbox
-              checked={rememberPassword}
-              onChange={setRememberPassword}
-              ariaLabel={t('login.remember_password_label')}
-              label={t('login.remember_password_label')}
-              labelClassName={styles.toggleLabel}
-            />
-          </div>
+              <div className={styles.optionsRow}>
+                <SelectionCheckbox
+                  checked={rememberPassword}
+                  onChange={setRememberPassword}
+                  ariaLabel={t('login.remember_password_label')}
+                  label={t('login.remember_password_label')}
+                  labelClassName={styles.toggleLabel}
+                />
+                <span className={styles.secureHint}>
+                  <IconShield size={13} />
+                  {t('login.security_note')}
+                </span>
+              </div>
 
-          <Button fullWidth onClick={handleSubmit} loading={loading}>
-            {loading ? t('login.submitting') : t('login.submit_button')}
-          </Button>
+              <Button className={styles.submitButton} fullWidth onClick={handleSubmit} loading={loading}>
+                {loading ? t('login.submitting') : t('login.submit_button')}
+              </Button>
 
-          {error && <div className={styles.errorBox}>{error}</div>}
+              {error && (
+                <div className={styles.errorBox}>
+                  <IconAlertTriangle size={16} />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <div className={styles.advanced}>
+                <button
+                  type="button"
+                  className={styles.connectionToggle}
+                  onClick={() => setShowCustomBase((prev) => !prev)}
+                  aria-expanded={showCustomBase}
+                >
+                  <IconSlidersHorizontal size={13} />
+                  {t('login.connection_settings')}
+                  {showCustomBase ? <IconChevronUp size={13} /> : <IconChevronDown size={13} />}
+                </button>
+                {showCustomBase && (
+                  <div className={styles.advancedPanel}>
+                    <Input
+                      label={t('login.custom_connection_label')}
+                      placeholder={t('login.custom_connection_placeholder')}
+                      value={apiBase}
+                      onChange={(e) => setApiBase(e.target.value)}
+                    />
+                    <p className={styles.connectionHint}>{t('login.custom_connection_hint')}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <footer className={styles.formFooter}>
+              <span>XRouter</span>
+              <span className={styles.footerDot} />
+              <span>{t('login.brand_footer')}</span>
+            </footer>
+          </main>
         </div>
       )}
     </div>

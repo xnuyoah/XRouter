@@ -39,6 +39,7 @@ func (s *Server) registerManagementV8Routes() {
 	v8.GET("/observability/logs/requests/:id", s.mgmt.GetRequestLogByID)
 	v8.GET("/observability/usage/api-keys", s.mgmt.GetAPIKeyUsage)
 	v8.GET("/observability/usage/queue", s.mgmt.GetUsageQueue)
+	v8.GET("/observability/channel-status", s.mgmt.GetChannelStatus)
 
 	v8.GET("/credentials", s.mgmt.ListAuthFiles)
 	v8.POST("/credentials", s.mgmt.UploadAuthFile)
@@ -63,6 +64,8 @@ func (s *Server) registerManagementV8Routes() {
 	// 账号的新增/修改/删除会写回 config.yaml 的 web-search 段。
 	v8.GET("/web-search/channels", s.mgmt.GetWebSearchChannels)
 	v8.GET("/web-search/accounts", s.mgmt.GetWebSearchAccounts)
+	v8.POST("/web-search/accounts/import", s.mgmt.ImportWebSearchAccounts)
+	v8.GET("/web-search/accounts/export", s.mgmt.ExportWebSearchAccounts)
 	v8.PUT("/web-search/accounts", s.mgmt.PutWebSearchAccount)
 	v8.POST("/web-search/accounts", s.mgmt.PutWebSearchAccount)
 	v8.DELETE("/web-search/accounts", s.mgmt.DeleteWebSearchAccount)
@@ -71,5 +74,6 @@ func (s *Server) registerManagementV8Routes() {
 	v8.POST("/web-search/status/check", s.mgmt.PostWebSearchStatusCheck)
 	v8.GET("/web-search/monitoring", s.mgmt.GetWebSearchMonitoring)
 	v8.POST("/web-search/quota/refresh", s.mgmt.PostWebSearchQuotaRefresh)
+	v8.GET("/web-search/quota/history", s.mgmt.GetWebSearchQuotaHistory)
 	v8.GET("/web-search/requests", s.mgmt.GetWebSearchRequests)
 }

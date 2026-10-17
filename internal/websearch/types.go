@@ -128,6 +128,10 @@ type AccountState struct {
 	QuotaRefreshMessage string `json:"quota_refresh_message,omitempty"`
 	// LastCheckedAt 是最近一次测活时间。
 	LastCheckedAt *time.Time `json:"last_checked_at,omitempty"`
+	// LastLatencyMS 是最近一次测活耗时（毫秒）。
+	LastLatencyMS int64 `json:"last_latency_ms"`
+	// LastHTTPStatus 是最近一次测活的上游状态码；0 表示未到达上游。
+	LastHTTPStatus int `json:"last_http_status"`
 	// LastUsedAt 是最远一次被选中的时间，用于“最久未用优先”排序。
 	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
 	// CooldownUntil 是限流冷却截止时间；未到期时不参与选号。

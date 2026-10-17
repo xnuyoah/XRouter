@@ -9,3 +9,4 @@ export * from './logs';
 export * from './models';
 export * from './plugins';
 export * from './webSearch';
+export * from './channelStatus';

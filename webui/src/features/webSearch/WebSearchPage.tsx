@@ -25,6 +25,7 @@ import {
   type WebSearchProbeSummary,
   type WebSearchQuotaBalance,
   type WebSearchRequestEntry,
+  type WebSearchImportSummary,
   type WebSearchStatusSnapshot,
 } from '@/services/api';
 import {
@@ -95,6 +96,12 @@ export function WebSearchPage() {
   const [probeResult, setProbeResult] = useState<WebSearchProbeSummary | null>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ channel: '', name: '', api_key: '', username: '', password: '' });
+  const [importing, setImporting] = useState(false);
+  const [importSummary, setImportSummary] = useState<WebSearchImportSummary | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
+  const [includeCredentials, setIncludeCredentials] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const statusRunning = status?.check_running ?? false;
   const pollRef = useRef<number | null>(null);
@@ -227,6 +234,50 @@ export function WebSearchPage() {
       setBusy(false);
     }
   }, [loadAll]);
+
+  const importAccounts = useCallback(
+    async (file: File) => {
+      setImporting(true);
+      setError(null);
+      try {
+        const summary = await webSearchApi.importAccounts(await file.text());
+        setImportSummary(summary);
+        await loadAll();
+      } catch (errImport) {
+        setError(errImport instanceof Error ? errImport.message : String(errImport));
+      } finally {
+        setImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    },
+    [loadAll]
+  );
+
+  const exportAccounts = useCallback(async () => {
+    if (
+      includeCredentials &&
+      !window.confirm(t('webSearch.importExport.confirmCredentials'))
+    ) {
+      return;
+    }
+    setExporting(true);
+    try {
+      const blob = await webSearchApi.exportAccounts({
+        format: exportFormat,
+        include_credentials: includeCredentials,
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `xrouter-accounts.${exportFormat}`;
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (errExport) {
+      setError(errExport instanceof Error ? errExport.message : String(errExport));
+    } finally {
+      setExporting(false);
+    }
+  }, [exportFormat, includeCredentials, t]);
 
   const submitAccount = useCallback(async () => {
     if (!form.channel || !form.api_key.trim()) return;
@@ -457,6 +508,43 @@ export function WebSearchPage() {
           ))}
         </div>
         <div className={styles.rowActions}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void importAccounts(file);
+            }}
+          />
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={importing}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {t('webSearch.importExport.import')}
+          </Button>
+          <select
+            value={exportFormat}
+            onChange={(event) => setExportFormat(event.target.value === 'json' ? 'json' : 'csv')}
+            aria-label={t('webSearch.importExport.format')}
+          >
+            <option value="csv">CSV</option>
+            <option value="json">JSON</option>
+          </select>
+          <label className={styles.exportCredentials}>
+            <input
+              type="checkbox"
+              checked={includeCredentials}
+              onChange={(event) => setIncludeCredentials(event.target.checked)}
+            />
+            {t('webSearch.importExport.includeCredentials')}
+          </label>
+          <Button size="sm" variant="secondary" loading={exporting} onClick={() => void exportAccounts()}>
+            {t('webSearch.importExport.export')}
+          </Button>
           {channels.map((channel) => (
             <Button
               key={channel.id}
@@ -478,6 +566,31 @@ export function WebSearchPage() {
           </Button>
         </div>
       </div>
+
+      {importSummary && (
+        <div className={styles.importSummary}>
+          <strong>{t('webSearch.importExport.summaryTitle')}</strong>
+          <span>
+            {t('webSearch.importExport.summary', {
+              added: importSummary.added,
+              updated: importSummary.updated,
+              duplicate: importSummary.skipped_duplicate,
+              other: importSummary.skipped_other_channel,
+              invalid: importSummary.skipped_invalid,
+            })}
+          </span>
+          <span className={styles.muted}>{t('webSearch.importExport.llmNote')}</span>
+          {importSummary.errors && importSummary.errors.length > 0 && (
+            <ul className={styles.importErrors}>
+              {importSummary.errors.map((entry) => (
+                <li key={`${entry.row}-${entry.reason}`}>
+                  {entry.row}: {entry.reason}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {renderProbeSummary('webSearch.probes.lastSummary')}
 

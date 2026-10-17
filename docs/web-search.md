@@ -209,26 +209,34 @@ Tinyfish 404 表示钱包未开通（鉴权本身有效）；429 与 5xx **不�
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | `GET` | `/v8/management/web-search/channels` | 渠道列表与账号统计 |
-| `GET` | `/v8/management/web-search/accounts` | 账号池（可带 `channel`、`status` 过滤；密钥只回显掩码） |
+| `GET` | `/v8/management/web-search/accounts` | 账号池（可带 `channel`、`status` 过滤；密钥只回显掩码；包含最近测活耗时与 HTTP 状态） |
 | `PUT`/`POST` | `/v8/management/web-search/accounts` | 新增或更新账号（写回 config.yaml） |
 | `DELETE` | `/v8/management/web-search/accounts?channel=&account_id=` | 删除账号（写回 config.yaml） |
+| `POST` | `/v8/management/web-search/accounts/import` | 导入 OpenRegister CSV；搜索渠道写入账号池，NVIDIA/Agnes 写入原生供应商配置 |
+| `GET` | `/v8/management/web-search/accounts/export` | 导出搜索账号与 NVIDIA/Agnes key（CSV/JSON；默认脱敏，`include_credentials=true` 才返回明文） |
 | `POST` | `/v8/management/web-search/probes` | 触发一轮测活（同步返回逐账号结果） |
 | `GET` | `/v8/management/web-search/status` | 渠道状态快照 |
-| `POST` | `/v8/management/web-search/status/check` | 触发渠道状态检测（异步；进行中返回 409） |
+| `POST` | `/v8/management/web-search/status/check` | 触发渠道状态检测（异步；可带 `channel`；进行中返回 409） |
 | `GET` | `/v8/management/web-search/monitoring` | 额度概览 + 渠道状态 |
-| `POST` | `/v8/management/web-search/quota/refresh` | 立即刷新额度 |
+| `POST` | `/v8/management/web-search/quota/refresh` | 立即刷新额度（可选 `channel`、`account_ids`） |
+| `GET` | `/v8/management/web-search/quota/history` | 按 key 读取余额历史（`channel`、`account_id` 必填；默认 30 天） |
 | `GET` | `/v8/management/web-search/requests` | 最近调用日志（`channel`、`limit` 过滤） |
 
 调用日志只记录方法、路径、状态码、尝试次数与耗时，不记录请求体、查询串与任何密钥。
 
+余额历史按 key 保存在状态目录的 `quota-history/` 下，每次额度读取追加一个点，保留 30 天；相同快照在一分钟内去重。请求级渠道状态通过 `/v8/management/observability/channel-status` 提供，终身计数从功能上线后开始累计，不导入历史数据。
+
 ## 管理面板
 
-面板左侧「观测 → 搜索渠道」（`/web-search`）提供五个标签页：
+面板左侧「观测 → 渠道状态」（`/channel-status`）是请求级状态页：
 
-- **概览**：账号指标卡、整体状态横幅、各渠道卡片（账号数、代理就绪、网关路径）、最近测活结果；
-- **账号池**：状态筛选、密钥掩码、额度明细（负数额度红色显示）、额度重置时间、行内测活与删除、新增账号表单；
-- **测活**：整渠道或按渠道触发测活并查看逐账号结果；
-- **渠道状态**：手动检测、整体横幅、逐渠道的成功率/耗时/是否走代理、90 天历史色条；
+- **模型供应商**：按 provider 汇总请求；`deepseek`、`nvidia`、`agnes`、原生 `openai` 展开模型行（默认折叠），无流量模型显示灰色「暂无请求」；
+- **搜索渠道**：按渠道汇总请求；账号区默认展开，按 key 展示测活状态、耗时、HTTP 状态、当前余额与余额趋势；`测活`、`刷新余额`、`检测状态`均按 key 或按渠道触发。
+
+「观测 → web 工具」（`/web-search`）继续负责账号池与接入：
+
+- **概览**：账号指标卡、整体状态横幅、各渠道卡片、最近测活结果；
+- **账号池**：状态筛选、密钥掩码、额度明细（负数额度红色显示）、额度重置时间、行内测活与删除、新增账号、CSV 导入、CSV/JSON 导出（默认脱敏）；
 - **接入说明**：各渠道的网关与 MCP 路径、curl 与 MCP 客户端配置示例、最近调用日志。
 
 面板只展示与配置，不代替客户端发起业务调用。

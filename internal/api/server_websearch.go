@@ -26,6 +26,7 @@ func (s *Server) refreshWebSearchService(cfg *config.Config) {
 				log.WithError(errCreate).Error("搜索渠道子系统初始化失败，相关接口将不可用")
 			} else {
 				s.webSearch = created
+				created.SetStatsStore(s.channelStats)
 				// 定时任务随服务创建启动；StartScheduler 是幂等的，
 				// 因此热重载启用时无需重启进程也能开始检测渠道状态与刷新额度。
 				created.StartScheduler(context.Background())
