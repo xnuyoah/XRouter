@@ -377,6 +377,32 @@ $page-max-width: 1280px;
   font-size: 12px;
 }
 
+.exportCredentials {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.importSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: $spacing-md;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: $radius-md;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.importErrors {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--viz-failure);
+}
+
 @media (max-width: 900px) {
   .page {
     max-width: none;

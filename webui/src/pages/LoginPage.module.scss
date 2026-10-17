@@ -1,19 +1,474 @@
 @use '../styles/variables.scss' as *;
 
-// 登录页：对齐参考设计的 auth-screen —— 整屏居中 420px 白卡 + 品牌行。
+@mixin brandSurface {
+  background:
+    radial-gradient(
+      120% 100% at 0% 0%,
+      color-mix(in srgb, var(--primary-color) 16%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      90% 80% at 100% 100%,
+      color-mix(in srgb, var(--success-color) 12%, transparent),
+      transparent 55%
+    ),
+    linear-gradient(
+      150deg,
+      var(--bg-primary) 0%,
+      color-mix(in srgb, var(--bg-primary) 92%, var(--primary-color)) 55%,
+      color-mix(in srgb, var(--bg-primary) 90%, var(--success-color)) 100%
+    );
+  color: var(--text-primary);
+}
+
+// Login screen: a branded control-plane panel next to the access form.
 .container {
-  min-height: 100vh;
+  position: relative;
   display: grid;
   place-items: center;
-  padding: 24px;
+  min-height: 100vh;
+  padding: clamp(12px, 2vw, 30px);
+  background: var(--bg-secondary);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.container::before,
+.container::after {
+  content: '';
+  position: absolute;
+  width: min(46vw, 560px);
+  height: min(46vw, 560px);
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(90px);
+  opacity: 0.16;
+}
+
+.container::before {
+  top: -18%;
+  left: -10%;
+  background: var(--primary-color);
+}
+
+.container::after {
+  right: -12%;
+  bottom: -22%;
+  background: var(--success-color);
+}
+
+.shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
+  width: min(1120px, 100%);
+  min-height: 640px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 28px;
+  box-shadow:
+    0 36px 90px -42px rgb(15 23 42 / 0.42),
+    var(--shadow-lg);
+}
+
+// ========== Brand panel ==========
+
+.brandPanel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  padding: clamp(32px, 4vw, 52px);
+  overflow: hidden;
+  border-right: 1px solid var(--border-color);
+  @include brandSurface;
+}
+
+.brandGrid,
+.splashGrid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--text-primary) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--text-primary) 7%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 44px 44px;
+  mask-image: radial-gradient(80% 80% at 50% 38%, #000 20%, transparent 78%);
+}
+
+.brandOrb,
+.splashOrb {
+  position: absolute;
+  top: -160px;
+  right: -130px;
+  width: 380px;
+  height: 380px;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--primary-color) 28%, transparent) 0%,
+    transparent 66%
+  );
+  border-radius: 50%;
+  filter: blur(8px);
+}
+
+.brandPanel::after {
+  content: '';
+  position: absolute;
+  right: -80px;
+  bottom: -120px;
+  width: 300px;
+  height: 300px;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--success-color) 24%, transparent) 0%,
+    transparent 68%
+  );
+  border-radius: 50%;
+  filter: blur(12px);
+}
+
+.brandTop {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brandLogo {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  background: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bg-secondary) 60%, transparent);
+
+  img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+  }
+}
+
+.brandName {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.versionBadge {
+  padding: 3px 8px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  background: color-mix(in srgb, var(--bg-secondary) 75%, transparent);
+  border: 1px solid var(--border-color);
+  border-radius: $radius-full;
+}
+
+.brandCopy {
+  position: relative;
+  z-index: 1;
+  max-width: 500px;
+  margin-top: clamp(24px, 6vh, 60px);
+
+  h1 {
+    margin: 12px 0 16px;
+    color: var(--text-primary);
+    font-size: clamp(26px, 2.5vw, 32px);
+    font-weight: 650;
+    line-height: 1.24;
+    letter-spacing: -0.6px;
+
+    span {
+      display: block;
+    }
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: color-mix(in srgb, var(--primary-color) 75%, var(--text-primary));
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.brandCopy .eyebrow {
+  color: color-mix(in srgb, var(--primary-color) 72%, var(--text-primary));
+
+  &::before {
+    content: '';
+    width: 18px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.7;
+  }
+}
+
+.features {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+}
+
+.featureIcon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  color: var(--primary-color);
+  background: var(--primary-10);
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+}
+
+.brandFooter {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.liveDot {
+  width: 6px;
+  height: 6px;
+  background: var(--success-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--success-color) 14%, transparent);
+}
+
+// ========== Form panel ==========
+
+.formPanel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: clamp(24px, 3vw, 40px) clamp(24px, 4vw, 56px);
   background: var(--bg-secondary);
 }
 
-// 启动动画进入效果
+.formTop {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-md;
+  min-height: 36px;
+}
+
+.mobileBrand {
+  display: none;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 700;
+
+  img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+}
+
+.languageSelect {
+  min-width: 116px;
+  flex: 0 0 auto;
+}
+
+.formBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  width: 100%;
+  max-width: 404px;
+  margin: 0 auto;
+  padding: 28px 0;
+}
+
+.formHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+
+  h2 {
+    margin: 2px 0 0;
+    color: var(--text-primary);
+    font-size: clamp(26px, 2.4vw, 30px);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.7px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+}
+
+.advanced {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.connectionToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--primary-color);
+  }
+}
+
+.advancedPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.connectionHint {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.optionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toggleLabel {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.secureHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.submitButton {
+  height: 44px;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--primary-color) 75%, transparent);
+}
+
+.errorBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 13px;
+  color: var(--error-text, var(--error-color));
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--bg-error-light);
+  border: 1px solid var(--failure-badge-border, var(--border-color));
+  border-radius: 10px;
+
+  svg {
+    flex: 0 0 auto;
+    margin-top: 1px;
+  }
+}
+
+.formFooter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.footerDot {
+  width: 3px;
+  height: 3px;
+  background: var(--border-primary);
+  border-radius: 50%;
+}
+
+// ========== Splash ==========
+
 @keyframes splashEnter {
   from {
     opacity: 0;
-    transform: scale(0.9) translateY(20px);
+    transform: scale(0.94) translateY(14px);
   }
   to {
     opacity: 1;
@@ -21,18 +476,16 @@
   }
 }
 
-// Logo 脉冲效果
 @keyframes splashLogoPulse {
   0%,
   100% {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.05);
+    transform: scale(1.04);
   }
 }
 
-// 加载条动画
 @keyframes splashLoading {
   0% {
     transform: scaleX(0);
@@ -51,158 +504,134 @@
   }
 }
 
-// ========== 登录卡片 ==========
-
-.formContent {
-  width: min(420px, 100%);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  box-shadow: var(--shadow-lg);
-  padding: 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  @include brandSurface;
 }
-
-// 品牌行：图标 + XRouter 字标
-.authBrand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 4px;
-  color: var(--text-primary);
-  font-size: 19px;
-  font-weight: 700;
-
-  img {
-    width: 36px;
-    height: 36px;
-    object-fit: contain;
-  }
-}
-
-.title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.5px;
-  margin-bottom: 6px;
-}
-
-.subtitle {
-  color: var(--text-secondary);
-  font-size: 13px;
-  margin-bottom: 14px;
-}
-
-.titleRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $spacing-sm;
-  flex-wrap: wrap;
-}
-
-.languageSelect {
-  min-width: 108px;
-  flex: 0 0 auto;
-}
-
-// 连接信息框
-.connectionBox {
-  background: var(--accent-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-
-  .label {
-    color: var(--text-secondary);
-  }
-
-  .value {
-    font-weight: 600;
-    color: var(--text-primary);
-    word-break: break-all;
-    font-size: 13px;
-  }
-
-  .hint {
-    color: var(--text-tertiary);
-  }
-}
-
-// 复选框行
-.toggleAdvanced {
-  display: flex;
-  justify-content: flex-start;
-  width: 100%;
-}
-
-.toggleLabel {
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-// 错误提示框
-.errorBox {
-  background: var(--bg-error-light);
-  border: 1px solid var(--failure-badge-border, transparent);
-  border-radius: 8px;
-  padding: 10px 14px;
-  color: var(--error-text, $error-color);
-  font-size: 12px;
-}
-
-// ========== 启动动画 ==========
 
 .splashContent {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: $spacing-md;
+  gap: 11px;
   animation: splashEnter 0.6s ease-out;
 }
 
+.splashLogoWrap {
+  display: grid;
+  place-items: center;
+  width: 86px;
+  height: 86px;
+  margin-bottom: 8px;
+  background: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--bg-secondary) 60%, transparent),
+    0 24px 60px -24px color-mix(in srgb, var(--primary-color) 45%, transparent);
+}
+
 .splashLogo {
-  height: 72px;
-  width: auto;
-  animation: splashLogoPulse 1.5s ease-in-out infinite;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  animation: splashLogoPulse 1.8s ease-in-out infinite;
+}
+
+.splashEyebrow {
+  color: color-mix(in srgb, var(--primary-color) 72%, var(--text-primary));
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 .splashTitle {
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--text-primary);
   margin: 0;
-  letter-spacing: -0.5px;
-}
-
-.splashSubtitle {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin: -6px 0 0;
+  color: var(--text-primary);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
 }
 
 .splashLoader {
-  width: 120px;
+  width: 160px;
   height: 3px;
+  margin-top: 14px;
+  overflow: hidden;
   background: var(--border-color);
   border-radius: $radius-full;
-  overflow: hidden;
-  margin-top: $spacing-md;
 }
 
 .splashLoaderBar {
   width: 100%;
   height: 100%;
-  background: var(--primary-color);
+  background: linear-gradient(90deg, var(--primary-color), var(--success-color));
   border-radius: $radius-full;
-  animation: splashLoading 1.2s ease-in-out infinite;
+  animation: splashLoading 1.35s ease-in-out infinite;
+}
+
+.splashStatus {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+// ========== Responsive ==========
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    width: min(520px, 100%);
+    min-height: 0;
+    border-radius: 24px;
+  }
+
+  .brandPanel {
+    display: none;
+  }
+
+  .formPanel {
+    min-height: 620px;
+    padding: 24px 26px 28px;
+  }
+
+  .mobileBrand {
+    display: flex;
+  }
+
+  .formTop {
+    justify-content: space-between;
+  }
+
+  .formBody {
+    margin: 0 auto;
+    padding: 26px 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .container {
+    padding: 12px;
+  }
+
+  .shell {
+    border-radius: 20px;
+  }
+
+  .formPanel {
+    min-height: 0;
+    padding: 20px 18px 24px;
+  }
+
+  .formHeader h2 {
+    font-size: 26px;
+  }
 }

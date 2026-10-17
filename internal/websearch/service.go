@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/xnuyoah/XRouter/v8/internal/channelstats"
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 )
 
@@ -22,6 +23,7 @@ type Service struct {
 	prober   *Prober
 	status   *StatusService
 	mcp      *MCPMirror
+	stats    *channelstats.Store
 
 	mu   sync.RWMutex
 	cfg  *config.Config
@@ -69,6 +71,29 @@ func (s *Service) Store() *Store {
 		return nil
 	}
 	return s.store
+}
+
+// SetStatsStore injects the shared channel request statistics store.
+func (s *Service) SetStatsStore(store *channelstats.Store) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.stats = store
+	s.mu.Unlock()
+}
+
+func (s *Service) recordRequestStat(channel Channel, success bool) {
+	if s == nil {
+		return
+	}
+	s.mu.RLock()
+	store := s.stats
+	s.mu.RUnlock()
+	if store == nil {
+		return
+	}
+	store.Record(channelstats.KindWebSearch, "", string(channel), success, time.Now().UTC())
 }
 
 // UpdateConfig 用新的配置重建渠道视图，并把配置里声明的账号登记到状态存储。
@@ -224,7 +249,9 @@ func (s *Service) Execute(req Request) (Result, error) {
 	if errCfg != nil {
 		return Result{}, errCfg
 	}
-	return s.executor.Execute(cfg, req)
+	result, errExec := s.executor.Execute(cfg, req)
+	s.recordRequestStat(cfg.Channel, errExec == nil && result.StatusCode > 0 && result.StatusCode < 400)
+	return result, errExec
 }
 
 // HandleMCP 处理一次客户端 MCP 请求。
@@ -234,13 +261,16 @@ func (s *Service) HandleMCP(ctx context.Context, channelRaw string, body []byte)
 		return nil, errCfg
 	}
 	if !SupportsMCP(cfg.Channel) {
+		s.recordRequestStat(cfg.Channel, false)
 		return nil, &GatewayError{
 			Code:       ErrorCodeChannelDisabled,
 			Message:    fmt.Sprintf("渠道 %s 不提供 MCP 接入", cfg.Channel),
 			StatusCode: http.StatusNotFound,
 		}
 	}
-	return s.mcp.Handle(ctx, cfg, body), nil
+	response := s.mcp.Handle(ctx, cfg, body)
+	s.recordRequestStat(cfg.Channel, true)
+	return response, nil
 }
 
 // ProbeRequest 是测活请求的筛选条件。
@@ -263,12 +293,14 @@ type ProbeSummary struct {
 
 // ProbeItem 是单个账号的测活结果。
 type ProbeItem struct {
-	Channel   Channel       `json:"channel"`
-	AccountID string        `json:"account_id"`
-	Name      string        `json:"name"`
-	Status    AccountStatus `json:"status"`
-	Message   string        `json:"message,omitempty"`
-	Success   bool          `json:"success"`
+	Channel    Channel       `json:"channel"`
+	AccountID  string        `json:"account_id"`
+	Name       string        `json:"name"`
+	Status     AccountStatus `json:"status"`
+	Message    string        `json:"message,omitempty"`
+	Success    bool          `json:"success"`
+	LatencyMS  int64         `json:"latency_ms"`
+	HTTPStatus int           `json:"http_status"`
 }
 
 // ProbeAccounts 对筛选出的账号做一轮测活（串行执行，受调用方 context 控制）。
@@ -294,6 +326,8 @@ func (s *Service) ProbeAccounts(ctx context.Context, req ProbeRequest) ProbeSumm
 			outcome, errProbe := s.prober.ProbeAccount(ctx, target.Channel, account, target.ProxyURL)
 			if errProbe != nil {
 				item.Message = errProbe.Error()
+				item.LatencyMS = outcome.Latency.Milliseconds()
+				item.HTTPStatus = outcome.HTTPStatus
 				summary.Failed++
 				summary.ByStatus[string(AccountStatusPending)]++
 				summary.Results = append(summary.Results, item)
@@ -302,6 +336,8 @@ func (s *Service) ProbeAccounts(ctx context.Context, req ProbeRequest) ProbeSumm
 				}
 				continue
 			}
+			item.LatencyMS = outcome.Latency.Milliseconds()
+			item.HTTPStatus = outcome.HTTPStatus
 			if !outcome.Determined() {
 				// 未得出确定结论时沿用存储中的旧状态。
 				state, _ := s.store.AccountState(target.Channel, account.ID)
@@ -347,6 +383,44 @@ func (s *Service) CheckTargets() []CheckTarget {
 	return targets
 }
 
+// CheckTargetsFor returns the targets limited to a channel and/or account IDs.
+// An empty channel selects all channels; an empty account list selects all
+// accounts of the selected channels.
+func (s *Service) CheckTargetsFor(channel Channel, accountIDs []string) []CheckTarget {
+	targets := s.CheckTargets()
+	if channel == "" && len(accountIDs) == 0 {
+		return targets
+	}
+	keepAccounts := make(map[string]struct{}, len(accountIDs))
+	for _, id := range accountIDs {
+		if trimmed := strings.TrimSpace(id); trimmed != "" {
+			keepAccounts[trimmed] = struct{}{}
+		}
+	}
+	filtered := make([]CheckTarget, 0, len(targets))
+	for _, target := range targets {
+		if channel != "" && target.Channel != channel {
+			continue
+		}
+		if len(keepAccounts) == 0 {
+			filtered = append(filtered, target)
+			continue
+		}
+		accounts := make([]Account, 0, len(target.Accounts))
+		for _, account := range target.Accounts {
+			if _, ok := keepAccounts[account.ID]; ok {
+				accounts = append(accounts, account)
+			}
+		}
+		if len(accounts) == 0 {
+			continue
+		}
+		target.Accounts = accounts
+		filtered = append(filtered, target)
+	}
+	return filtered
+}
+
 // StatusSnapshot 返回渠道状态快照。
 func (s *Service) StatusSnapshot() ChannelStatusSnapshot {
 	targets := s.CheckTargets()
@@ -358,12 +432,27 @@ func (s *Service) StartStatusCheck(ctx context.Context) error {
 	return s.status.StartCheck(ctx, s.CheckTargets())
 }
 
+// StartStatusCheckFor starts a status check for a single channel.
+func (s *Service) StartStatusCheckFor(ctx context.Context, channel Channel) error {
+	return s.status.StartCheck(ctx, s.CheckTargetsFor(channel, nil))
+}
+
 // RefreshQuota 立即刷新额度。
 func (s *Service) RefreshQuota(ctx context.Context) error {
+	return s.RefreshQuotaFor(ctx, "", nil)
+}
+
+// RefreshQuotaFor refreshes quota for the selected channel and/or accounts.
+// Explicit selections bypass the freshness window so a manual per-key refresh
+// always contacts the upstream.
+func (s *Service) RefreshQuotaFor(ctx context.Context, channel Channel, accountIDs []string) error {
 	s.mu.RLock()
 	fresh := s.cfg.WebSearchEffectiveQuotaFreshSeconds()
 	s.mu.RUnlock()
-	return s.status.RefreshQuota(ctx, s.CheckTargets(), fresh)
+	if channel != "" || len(accountIDs) > 0 {
+		fresh = 0
+	}
+	return s.status.RefreshQuota(ctx, s.CheckTargetsFor(channel, accountIDs), fresh)
 }
 
 // QuotaOverview 返回额度刷新概览。

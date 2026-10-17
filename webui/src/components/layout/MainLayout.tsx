@@ -16,6 +16,7 @@ import { PageTransition } from '@/components/common/PageTransition';
 import { MainRoutes } from '@/router/MainRoutes';
 import { pluginsApi } from '@/services/api';
 import {
+  IconActivity,
   IconSidebarConfig,
   IconSidebarDashboard,
   IconSidebarLogs,
@@ -44,6 +45,7 @@ import type { Theme } from '@/types';
 
 const sidebarIcons: Record<string, ReactNode> = {
   dashboard: <IconSidebarDashboard size={17} />,
+  channelStatus: <IconActivity size={17} />,
   webSearch: <IconSidebarSearch size={17} />,
   plugins: <IconSidebarPlugins size={17} />,
   config: <IconSidebarConfig size={17} />,
@@ -419,6 +421,12 @@ export function MainLayout() {
       id: 'observe',
       labelKey: 'nav_groups.observe',
       items: [
+        {
+          path: '/channel-status',
+          labelKey: 'nav.channel_status',
+          metaKey: 'nav_meta.channel_status',
+          icon: sidebarIcons.channelStatus,
+        },
         {
           path: '/web-search',
           labelKey: 'nav.web_search',

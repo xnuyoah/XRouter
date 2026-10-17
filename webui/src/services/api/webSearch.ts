@@ -70,6 +70,8 @@ export interface WebSearchAccount {
   quota_refresh_status: WebSearchQuotaRefreshStatus;
   quota_refresh_message?: string;
   last_checked_at?: string;
+  last_latency_ms?: number;
+  last_http_status?: number;
   last_used_at?: string;
   cooldown_until?: string;
   cooldown: boolean;
@@ -147,6 +149,8 @@ export interface WebSearchProbeItem {
   status: WebSearchAccountStatus | '';
   message?: string;
   success: boolean;
+  latency_ms?: number;
+  http_status?: number;
 }
 
 /** 一轮测活的汇总。 */
@@ -173,6 +177,32 @@ export interface WebSearchRequestEntry {
   created_at: string;
   error_code?: string;
   proxy_used: boolean;
+}
+
+/** 账号额度历史点。 */
+export interface WebSearchQuotaHistoryPoint {
+  checked_at: string;
+  status: WebSearchQuotaRefreshStatus;
+  balances?: WebSearchQuotaBalance[];
+  reset_at?: string;
+  message?: string;
+}
+
+/** 账号额度历史响应。 */
+export interface WebSearchQuotaHistoryResponse {
+  channel: string;
+  account_id: string;
+  points: WebSearchQuotaHistoryPoint[];
+}
+
+/** CSV 导入结果。 */
+export interface WebSearchImportSummary {
+  added: number;
+  updated: number;
+  skipped_duplicate: number;
+  skipped_other_channel: number;
+  skipped_invalid: number;
+  errors?: { row: number; reason: string }[];
 }
 
 /** 账号新增/修改请求体。 */
@@ -228,9 +258,10 @@ export const webSearchApi = {
     return apiClient.get<WebSearchStatusSnapshot>(`${BASE}/status`);
   },
 
-  /** 触发渠道状态检测（异步）。 */
-  startStatusCheck(): Promise<unknown> {
-    return apiClient.post(`${BASE}/status/check`, {});
+  /** 触发渠道状态检测（异步）；可只检测一个渠道。 */
+  startStatusCheck(channel?: string): Promise<unknown> {
+    const query = channel ? `?channel=${encodeURIComponent(channel)}` : '';
+    return apiClient.post(`${BASE}/status/check${query}`, {});
   },
 
   /** 监控汇总（额度概览 + 渠道状态）。 */
@@ -238,9 +269,48 @@ export const webSearchApi = {
     return apiClient.get<WebSearchMonitoring>(`${BASE}/monitoring`);
   },
 
-  /** 立即刷新额度。 */
-  refreshQuota(): Promise<{ quota: WebSearchQuotaOverview }> {
-    return apiClient.post<{ quota: WebSearchQuotaOverview }>(`${BASE}/quota/refresh`, {});
+  /** 立即刷新额度；可按渠道或账号过滤。 */
+  refreshQuota(params?: { channel?: string; account_ids?: string[] }): Promise<{ quota: WebSearchQuotaOverview }> {
+    const body = params ?? {};
+    return apiClient.post<{ quota: WebSearchQuotaOverview }>(`${BASE}/quota/refresh`, body);
+  },
+
+  /** 单个账号的余额历史。 */
+  getQuotaHistory(params: {
+    channel: string;
+    account_id: string;
+    hours?: number;
+    limit?: number;
+  }): Promise<WebSearchQuotaHistoryResponse> {
+    const query = new URLSearchParams({
+      channel: params.channel,
+      account_id: params.account_id,
+    });
+    if (params.hours) query.set('hours', String(params.hours));
+    if (params.limit) query.set('limit', String(params.limit));
+    return apiClient.get<WebSearchQuotaHistoryResponse>(`${BASE}/quota/history?${query.toString()}`);
+  },
+
+  /** 导入 OpenRegister CSV（搜索账号与 NVIDIA/Agnes key）。 */
+  importAccounts(csv: string): Promise<WebSearchImportSummary> {
+    return apiClient.post<WebSearchImportSummary>(`${BASE}/accounts/import`, csv, {
+      headers: { 'Content-Type': 'text/csv' },
+    });
+  },
+
+  /** 导出账号；默认脱敏，include_credentials 显式返回凭据。 */
+  async exportAccounts(params: {
+    format: 'csv' | 'json';
+    include_credentials?: boolean;
+    channel?: string;
+  }): Promise<Blob> {
+    const query = new URLSearchParams({ format: params.format });
+    if (params.include_credentials) query.set('include_credentials', 'true');
+    if (params.channel) query.set('channel', params.channel);
+    const response = await apiClient.getRaw(`${BASE}/accounts/export?${query.toString()}`, {
+      responseType: 'blob',
+    });
+    return response.data as Blob;
   },
 
   /** 最近的调用日志。 */

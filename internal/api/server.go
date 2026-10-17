@@ -22,6 +22,7 @@ import (
 	managementHandlers "github.com/xnuyoah/XRouter/v8/internal/api/handlers/management"
 	websearchHandlers "github.com/xnuyoah/XRouter/v8/internal/api/handlers/websearch"
 	"github.com/xnuyoah/XRouter/v8/internal/api/middleware"
+	"github.com/xnuyoah/XRouter/v8/internal/channelstats"
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 	"github.com/xnuyoah/XRouter/v8/internal/githubauth"
 	"github.com/xnuyoah/XRouter/v8/internal/logging"
@@ -77,6 +78,9 @@ type Server struct {
 
 	// management 处理器
 	mgmt *managementHandlers.Handler
+
+	// channelStats 是共享的渠道请求统计存储。
+	channelStats *channelstats.Store
 
 	// pluginHost 负责动态插件 Management API 路由分发。
 	pluginHost *pluginhost.Host
@@ -163,6 +167,7 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 		envManagementSecret:          envManagementSecret,
 		pluginHost:                   optionState.pluginHost,
 		exampleAPIKeySafeModeEnabled: optionState.exampleAPIKeySafeMode,
+		channelStats:                 optionState.channelStats,
 	}
 
 	// 添加中间件
@@ -212,6 +217,7 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	// 初始化 management 处理器
 	s.mgmt = managementHandlers.NewHandler(cfg, configFilePath, authManager)
 	s.mgmt.SetPluginHost(optionState.pluginHost)
+	s.mgmt.SetChannelStatsStore(optionState.channelStats)
 	s.mgmt.SetConfigReloadHook(optionState.configReloadHook)
 	if optionState.localPassword != "" {
 		s.mgmt.SetLocalPassword(optionState.localPassword)

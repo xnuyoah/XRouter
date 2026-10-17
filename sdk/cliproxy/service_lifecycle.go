@@ -126,6 +126,7 @@ func (s *Service) Run(ctx context.Context) error {
 	}
 
 	// 处理器不再依赖旧版客户端；初始传入 nil 切片
+	s.initializeChannelStats()
 	s.server = api.NewServer(cfg, s.coreManager, s.accessManager, s.configPath, s.serverOptions...)
 	s.syncPluginRuntimeConfig(ctx)
 	if homeEnabled {
@@ -330,6 +331,7 @@ func (s *Service) Shutdown(ctx context.Context) error {
 				}
 			}
 		}
+		s.closeChannelStats()
 
 		if s.pluginHost != nil {
 			sdktranslator.SetPluginHooks(nil)

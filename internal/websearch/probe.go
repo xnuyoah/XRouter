@@ -77,11 +77,11 @@ func (p *Prober) ProbeAccount(ctx context.Context, channel Channel, account Acco
 		outcome = p.enrichAnySearchBalance(ctx, client, account, outcome)
 	}
 
-	// 得出确定结论时落库；不确定时保留旧结论（例如 429/5xx）。
-	if outcome.Determined() {
-		if errUpdate := p.store.UpdateStatus(channel, account.ID, outcome.Status, outcome.Message, account.Fingerprint(), p.now()); errUpdate != nil {
-			logWarnf("写入测活结果失败 channel=%s account=%s: %v", channel, account.ID, errUpdate)
-		}
+	// 得出确定结论时更新状态；不确定时保留旧结论（例如 429/5xx），
+	// 但仍刷新最近检测时间、耗时与 HTTP 状态。
+	if errUpdate := p.store.RecordProbe(channel, account.ID, outcome.Status, outcome.Message,
+		account.Fingerprint(), outcome.Latency.Milliseconds(), outcome.HTTPStatus, p.now()); errUpdate != nil {
+		logWarnf("写入测活结果失败 channel=%s account=%s: %v", channel, account.ID, errUpdate)
 	}
 	if errQuota := p.recordQuota(channel, account, outcome); errQuota != nil {
 		logWarnf("写入额度快照失败 channel=%s account=%s: %v", channel, account.ID, errQuota)
@@ -95,10 +95,20 @@ func (p *Prober) recordQuota(channel Channel, account Account, outcome ProbeOutc
 	if !ok || len(spec.quotaKinds) == 0 {
 		return nil
 	}
-	if outcome.Quota == nil {
-		return p.store.UpdateQuota(channel, account.ID, account.Fingerprint(), nil, QuotaRefreshFailed, outcome.Message, p.now())
+	status := QuotaRefreshFailed
+	if outcome.Quota != nil {
+		status = QuotaRefreshSuccess
 	}
-	return p.store.UpdateQuota(channel, account.ID, account.Fingerprint(), outcome.Quota, QuotaRefreshSuccess, outcome.Message, p.now())
+	var errUpdate error
+	if outcome.Quota == nil {
+		errUpdate = p.store.UpdateQuota(channel, account.ID, account.Fingerprint(), nil, status, outcome.Message, p.now())
+	} else {
+		errUpdate = p.store.UpdateQuota(channel, account.ID, account.Fingerprint(), outcome.Quota, status, outcome.Message, p.now())
+	}
+	if errHistory := p.store.AppendQuotaHistory(channel, account.ID, outcome.Quota, status, outcome.Message, p.now()); errHistory != nil {
+		logWarnf("写入额度历史失败 channel=%s account=%s: %v", channel, account.ID, errHistory)
+	}
+	return errUpdate
 }
 
 // request 发送一次探测请求。

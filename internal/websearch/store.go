@@ -242,6 +242,22 @@ func (s *Store) UpdateStatus(channel Channel, accountID string, status AccountSt
 	})
 }
 
+// RecordProbe records the latest probe observation for an account. Uncertain
+// outcomes keep the previous status and message but still refresh the timing
+// and HTTP status fields.
+func (s *Store) RecordProbe(channel Channel, accountID string, status AccountStatus, message, fingerprint string, latencyMS int64, httpStatus int, now time.Time) error {
+	return s.mutate(channel, accountID, fingerprint, func(state *AccountState) {
+		if status != "" {
+			state.Status = status
+			state.StatusMessage = message
+			state.CooldownUntil = nil
+		}
+		state.LastCheckedAt = timePointer(now)
+		state.LastLatencyMS = latencyMS
+		state.LastHTTPStatus = httpStatus
+	})
+}
+
 // SetCooldown 设置账号冷却截止时间。
 func (s *Store) SetCooldown(channel Channel, accountID, fingerprint string, until time.Time) error {
 	return s.mutate(channel, accountID, fingerprint, func(state *AccountState) {

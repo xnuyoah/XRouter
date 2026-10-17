@@ -460,3 +460,12 @@ export function IconSidebarSearch({ size = 20, ...props }: IconProps) {
     </svg>
   );
 }
+
+// 渠道状态：活动波形。
+export function IconActivity({ size = 20, ...props }: IconProps) {
+  return (
+    <svg {...baseSvgProps} width={size} height={size} {...props}>
+      <path d="M3 12h4l3-8 4 16 3-8h4" />
+    </svg>
+  );
+}

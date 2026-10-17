@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/xnuyoah/XRouter/v8/internal/channelstats"
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 	"github.com/xnuyoah/XRouter/v8/internal/logging"
 	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
@@ -27,6 +28,7 @@ type serverOptionConfig struct {
 	pluginHost            *pluginhost.Host
 	configReloadHook      func(context.Context, *config.Config)
 	exampleAPIKeySafeMode bool
+	channelStats          *channelstats.Store
 }
 
 // ServerOption 用于定制 HTTP 服务器的构建。
@@ -130,5 +132,12 @@ func WithConfigReloadHook(hook func(context.Context, *config.Config)) ServerOpti
 func WithExampleAPIKeySafeMode() ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.exampleAPIKeySafeMode = true
+	}
+}
+
+// WithChannelStatsStore injects the shared channel request statistics store.
+func WithChannelStatsStore(store *channelstats.Store) ServerOption {
+	return func(cfg *serverOptionConfig) {
+		cfg.channelStats = store
 	}
 }

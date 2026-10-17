@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/xnuyoah/XRouter/v8/internal/channelstats"
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 	corewebsearch "github.com/xnuyoah/XRouter/v8/internal/websearch"
 )
@@ -31,6 +32,25 @@ func (h *Handler) webSearchService() *corewebsearch.Service {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.webSearch
+}
+
+// SetChannelStatsStore injects the shared request statistics store.
+func (h *Handler) SetChannelStatsStore(store *channelstats.Store) {
+	if h == nil {
+		return
+	}
+	h.mu.Lock()
+	h.channelStats = store
+	h.mu.Unlock()
+}
+
+func (h *Handler) channelStatsStore() *channelstats.Store {
+	if h == nil {
+		return nil
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.channelStats
 }
 
 // requireWebSearchService 在服务未启用时写出 503 并返回 nil。
@@ -121,6 +141,8 @@ type webSearchAccountView struct {
 	QuotaRefreshStatus  corewebsearch.QuotaRefreshStatus `json:"quota_refresh_status"`
 	QuotaRefreshMessage string                           `json:"quota_refresh_message,omitempty"`
 	LastCheckedAt       *string                          `json:"last_checked_at,omitempty"`
+	LastLatencyMS       int64                            `json:"last_latency_ms"`
+	LastHTTPStatus      int                              `json:"last_http_status"`
 	LastUsedAt          *string                          `json:"last_used_at,omitempty"`
 	CooldownUntil       *string                          `json:"cooldown_until,omitempty"`
 	Cooldown            bool                             `json:"cooldown"`
@@ -159,6 +181,8 @@ func (h *Handler) GetWebSearchAccounts(c *gin.Context) {
 				Disabled:            accountView.Account.Disabled,
 				Weight:              accountView.Account.Weight,
 				Note:                accountView.Account.Note,
+				LastLatencyMS:       accountView.State.LastLatencyMS,
+				LastHTTPStatus:      accountView.State.LastHTTPStatus,
 			}
 			view.LastCheckedAt = formatTimePointer(accountView.State.LastCheckedAt)
 			view.LastUsedAt = formatTimePointer(accountView.State.LastUsedAt)
@@ -219,13 +243,30 @@ func (h *Handler) GetWebSearchStatus(c *gin.Context) {
 }
 
 // PostWebSearchStatusCheck 触发一轮渠道状态检测（异步，已有检测时返回 409）。
+// An optional channel query parameter limits the check to one channel.
 func (h *Handler) PostWebSearchStatusCheck(c *gin.Context) {
 	service := h.requireWebSearchService(c)
 	if service == nil {
 		return
 	}
+	channelRaw := strings.TrimSpace(c.Query("channel"))
+	var channel corewebsearch.Channel
+	if channelRaw != "" {
+		parsed, errChannel := corewebsearch.ParseChannel(channelRaw)
+		if errChannel != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "unknown_channel", "message": errChannel.Error()})
+			return
+		}
+		channel = parsed
+	}
 	// 检测在响应返回后仍要继续执行，因此必须脱离请求 context（请求结束即被取消）。
-	if errStart := service.StartStatusCheck(context.WithoutCancel(c.Request.Context())); errStart != nil {
+	var errStart error
+	if channel == "" {
+		errStart = service.StartStatusCheck(context.WithoutCancel(c.Request.Context()))
+	} else {
+		errStart = service.StartStatusCheckFor(context.WithoutCancel(c.Request.Context()), channel)
+	}
+	if errStart != nil {
 		if _, busy := errStart.(corewebsearch.BusyError); busy {
 			c.JSON(http.StatusConflict, gin.H{"error": "check_running", "message": errStart.Error()})
 			return
@@ -250,16 +291,81 @@ func (h *Handler) GetWebSearchMonitoring(c *gin.Context) {
 }
 
 // PostWebSearchQuotaRefresh 触发一次额度刷新。
+// An optional JSON body with channel/account_ids limits the refresh to one
+// channel or specific keys.
 func (h *Handler) PostWebSearchQuotaRefresh(c *gin.Context) {
 	service := h.requireWebSearchService(c)
 	if service == nil {
 		return
 	}
-	if errRefresh := service.RefreshQuota(c.Request.Context()); errRefresh != nil {
+	var body struct {
+		Channel    string   `json:"channel"`
+		AccountIDs []string `json:"account_ids"`
+	}
+	if c.Request.ContentLength > 0 {
+		if errBind := c.ShouldBindJSON(&body); errBind != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_body", "message": "请求体不是合法 JSON"})
+			return
+		}
+	}
+	var channel corewebsearch.Channel
+	if strings.TrimSpace(body.Channel) != "" {
+		parsed, errChannel := corewebsearch.ParseChannel(body.Channel)
+		if errChannel != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "unknown_channel", "message": errChannel.Error()})
+			return
+		}
+		channel = parsed
+	}
+	if errRefresh := service.RefreshQuotaFor(c.Request.Context(), channel, body.AccountIDs); errRefresh != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "refresh_failed", "message": errRefresh.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"quota": service.QuotaOverview()})
+}
+
+// GetWebSearchQuotaHistory returns the balance history for one key.
+func (h *Handler) GetWebSearchQuotaHistory(c *gin.Context) {
+	service := h.requireWebSearchService(c)
+	if service == nil {
+		return
+	}
+	channel, errChannel := corewebsearch.ParseChannel(c.Query("channel"))
+	if errChannel != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unknown_channel", "message": errChannel.Error()})
+		return
+	}
+	accountID := strings.TrimSpace(c.Query("account_id"))
+	if accountID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing_account_id", "message": "account_id 不能为空"})
+		return
+	}
+	hours := 720
+	if raw := strings.TrimSpace(c.Query("hours")); raw != "" {
+		if parsed, errParse := parsePositiveInt(raw); errParse == nil {
+			hours = parsed
+		}
+	}
+	limit := 1000
+	if raw := strings.TrimSpace(c.Query("limit")); raw != "" {
+		if parsed, errParse := parsePositiveInt(raw); errParse == nil {
+			limit = parsed
+		}
+	}
+	store := service.Store()
+	if store == nil {
+		c.JSON(http.StatusOK, gin.H{"channel": channel, "account_id": accountID, "points": []any{}})
+		return
+	}
+	points := store.QuotaHistory(channel, accountID, hours, limit, time.Now().UTC())
+	if points == nil {
+		points = []corewebsearch.QuotaHistoryPoint{}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"channel":    channel,
+		"account_id": accountID,
+		"points":     points,
+	})
 }
 
 // GetWebSearchRequests 返回最近的调用日志。
