@@ -17,7 +17,8 @@ import { obfuscateData } from '@/utils/encryption';
 
 // 插件页面（如扩展提供的 dashboard iframe）与主面板同源共享 localStorage。
 // 它们读取 cli-proxy-auth 时使用旧版盐 cli-proxy-api-webui，与主面板当前
-// 使用的盐不同；登录成功后额外写一份插件兼容的凭据，扩展页即可免密加载。
+// 使用的盐不同；persist 每次落盘时同步补写一份插件兼容凭据，扩展页即可
+// 持续免密加载（登出或未记住密码时清除）。
 const PLUGIN_COMPAT_SALT = 'cli-proxy-api-webui::secure-storage';
 
 const writePluginCompatAuth = (apiBase: string, managementKey: string, remember: boolean) => {
@@ -161,7 +162,6 @@ export const useAuthStore = create<AuthStoreState>()(
           } else {
             localStorage.removeItem('isLoggedIn');
           }
-          writePluginCompatAuth(apiBase, managementKey, rememberPassword);
         } catch (error: unknown) {
           set({ connectionStatus: 'error' });
           throw error;
@@ -184,7 +184,6 @@ export const useAuthStore = create<AuthStoreState>()(
           connectionStatus: 'disconnected',
         });
         localStorage.removeItem('isLoggedIn');
-        writePluginCompatAuth('', '', false);
       },
 
       // 检查认证状态
@@ -239,10 +238,27 @@ export const useAuthStore = create<AuthStoreState>()(
           return data ? JSON.stringify(data) : null;
         },
         setItem: (name, value) => {
-          obfuscatedStorage.setItem(name, JSON.parse(value));
+          // persist 传入的顶层结构是 { state: partialize(...), version }。
+          const persisted = JSON.parse(value) as {
+            state?: {
+              apiBase?: string;
+              managementKey?: string;
+              rememberPassword?: boolean;
+            };
+          };
+          const inner = persisted.state ?? {};
+          obfuscatedStorage.setItem(name, inner);
+          // persist 的每次落盘都会用主盐重写该 key，这里同步补写插件盐
+          // 版本，避免版本头等状态更新覆盖掉插件免密凭据。
+          writePluginCompatAuth(
+            inner.apiBase ?? '',
+            inner.managementKey ?? '',
+            Boolean(inner.rememberPassword && inner.managementKey)
+          );
         },
         removeItem: (name) => {
           obfuscatedStorage.removeItem(name);
+          writePluginCompatAuth('', '', false);
         },
       })),
       partialize: (state) => ({
