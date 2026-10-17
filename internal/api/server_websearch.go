@@ -26,6 +26,9 @@ func (s *Server) refreshWebSearchService(cfg *config.Config) {
 				log.WithError(errCreate).Error("搜索渠道子系统初始化失败，相关接口将不可用")
 			} else {
 				s.webSearch = created
+				// 定时任务随服务创建启动；StartScheduler 是幂等的，
+				// 因此热重载启用时无需重启进程也能开始检测渠道状态与刷新额度。
+				created.StartScheduler(context.Background())
 				log.Info("搜索渠道子系统已启用")
 			}
 		} else if errUpdate := s.webSearch.UpdateConfig(cfg); errUpdate != nil {
@@ -46,12 +49,4 @@ func (s *Server) refreshWebSearchService(cfg *config.Config) {
 	if s.mgmt != nil {
 		s.mgmt.SetWebSearchService(service)
 	}
-}
-
-// startWebSearchScheduler 启动搜索渠道定时任务（渠道状态检测 + 额度刷新）。
-func (s *Server) startWebSearchScheduler(ctx context.Context) {
-	if s == nil || s.webSearch == nil {
-		return
-	}
-	s.webSearch.StartScheduler(ctx)
 }

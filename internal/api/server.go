@@ -259,9 +259,6 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 		s.enableKeepAlive(optionState.keepAliveTimeout, optionState.keepAliveOnTimeout)
 	}
 
-	// 搜索渠道定时任务（渠道状态检测 + 额度刷新）随进程生命周期运行。
-	s.startWebSearchScheduler(context.Background())
-
 	// 创建 HTTP 服务器
 	s.server = &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
