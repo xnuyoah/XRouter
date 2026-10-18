@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -12,7 +13,6 @@ import {
   webSearchApi,
   type UsageAnalyticsResponse,
   type UsageAnalyticsStatus,
-  type UsageEvent,
   type UsageGroup,
   type UsageQueryParams,
   type UsageSeriesPoint,
@@ -20,31 +20,36 @@ import {
   type WebSearchMonitoring,
 } from '@/services/api';
 import { downloadBlob } from '@/utils/download';
-import { formatCompactNumber, formatFileSize, formatPercent } from '@/utils/format';
+import { formatCompactNumber, formatPercent } from '@/utils/format';
 import { CostTrendChart } from './CostTrendChart';
 import { LatencyDistributionChart } from './LatencyDistributionChart';
 import { PricingDialog } from './PricingDialog';
-import { SearchAccountsPanel } from './SearchAccountsPanel';
-import { SearchTrendChart } from './SearchTrendChart';
 import { exportChartPng } from './exportChartPng';
-import { formatUsageCost } from './format';
+import {
+  formatUsageCost,
+  formatUsageDuration,
+  formatUsageTime,
+  formatUsageTokens,
+  type TokenDisplayMode,
+} from './format';
 import { countAccountWarnings } from './searchAccountWarnings';
+import { UsageDataDialog } from './UsageDataDialog';
+import { UsageLogsTab } from './UsageLogsTab';
+import { UsageSearchTab } from './UsageSearchTab';
+import { UsageTabs, type UsageTabKey } from './UsageTabs';
+import {
+  DEFAULT_LOG_COLUMNS,
+  normalizeLogColumns,
+  type UsageLogColumnKey,
+} from './usageLogColumns';
+import type { UsageBaseFilters } from './usageQuery';
 
 import styles from './UsageAnalyticsPage.module.scss';
 
 type KindFilter = 'all' | 'llm' | 'search';
 type RangePreset = 'today' | '24h' | '5h' | '7d' | '30d' | 'month' | 'custom';
 
-interface FilterState {
-  provider: string;
-  model: string;
-  channel: string;
-  operation: string;
-  plan: string;
-  status: string;
-}
-
-const EMPTY_FILTERS: FilterState = {
+const EMPTY_FILTERS: UsageBaseFilters = {
   provider: '',
   model: '',
   channel: '',
@@ -54,34 +59,6 @@ const EMPTY_FILTERS: FilterState = {
 };
 
 const RANGE_PRESETS: RangePreset[] = ['today', '24h', '5h', '7d', '30d', 'month', 'custom'];
-
-function formatTime(value: string): string {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
-}
-
-function formatDuration(value: number): string {
-  if (!Number.isFinite(value) || value <= 0) return '—';
-  return `${Math.round(value)} ms`;
-}
-
-type TokenDisplayMode = 'compact' | 'full' | 'k' | 'm' | 'b';
-
-function formatTokens(value: number, mode: TokenDisplayMode): string {
-  if (!Number.isFinite(value)) return '—';
-  switch (mode) {
-    case 'full':
-      return value.toLocaleString();
-    case 'k':
-      return `${(value / 1_000).toFixed(1)}K`;
-    case 'm':
-      return `${(value / 1_000_000).toFixed(1)}M`;
-    case 'b':
-      return `${(value / 1_000_000_000).toFixed(1)}B`;
-    default:
-      return formatCompactNumber(value);
-  }
-}
 
 function groupLabel(group: UsageGroup): string {
   if (group.key) return group.key;
@@ -103,7 +80,7 @@ function buildQuery(
   customFrom: string,
   customTo: string,
   groupBy: string,
-  filters: FilterState
+  filters: UsageBaseFilters
 ): UsageQueryParams {
   const params: UsageQueryParams = {
     group_by: groupBy,
@@ -246,16 +223,21 @@ function UsageTrendChart({
       <polyline points={tokenPoints.join(' ')} className={styles.tokenLine} />
       <polyline points={requestPoints.join(' ')} className={styles.requestLine} />
       <text x={padding.left} y={height - 8} className={styles.axisLabel}>
-        {formatTime(points[0].start)}
+        {formatUsageTime(points[0].start)}
       </text>
       <text x={width - padding.right} y={height - 8} textAnchor="end" className={styles.axisLabel}>
-        {formatTime(points[points.length - 1].start)}
+        {formatUsageTime(points[points.length - 1].start)}
       </text>
       <text x={padding.left} y={padding.top - 6} className={styles.axisLabel}>
         {formatCompactNumber(maxTokens)} tokens
       </text>
     </svg>
   );
+}
+
+function usageTabFromPath(pathname: string): UsageTabKey {
+  const segment = pathname.replace(/\/+$/, '').split('/').pop();
+  return segment === 'logs' || segment === 'search' ? segment : 'overview';
 }
 
 export function UsageAnalyticsPage() {
@@ -270,31 +252,49 @@ export function UsageAnalyticsPage() {
   );
   const [pageSize, setPageSize] = useState(50);
   const [lowBalanceThreshold, setLowBalanceThreshold] = useState(10);
+  const [logColumns, setLogColumns] = useState<UsageLogColumnKey[]>(DEFAULT_LOG_COLUMNS);
   const prefsLoaded = useRef(false);
-  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<UsageBaseFilters>(EMPTY_FILTERS);
   const [analytics, setAnalytics] = useState<UsageAnalyticsResponse | null>(null);
   const [status, setStatus] = useState<UsageAnalyticsStatus | null>(null);
-  const [events, setEvents] = useState<UsageEvent[]>([]);
-  const [eventsHasMore, setEventsHasMore] = useState(false);
-  const [eventsCursor, setEventsCursor] = useState('');
   const [monitoring, setMonitoring] = useState<WebSearchMonitoring | null>(null);
   const [searchAccounts, setSearchAccounts] = useState<WebSearchAccount[]>([]);
   const [searchAccountUsage, setSearchAccountUsage] = useState<UsageAnalyticsResponse | null>(null);
   const [pricingOpen, setPricingOpen] = useState(false);
+  const [dataOpen, setDataOpen] = useState(false);
   const [exportingPng, setExportingPng] = useState(false);
   const chartRef = useRef<SVGSVGElement | null>(null);
   const loadSeq = useRef(0);
-  const restoreInputRef = useRef<HTMLInputElement | null>(null);
-  const importInputRef = useRef<HTMLInputElement | null>(null);
   const showNotification = useNotificationStore((state) => state.showNotification);
   const [loading, setLoading] = useState(true);
-  const [eventsLoading, setEventsLoading] = useState(false);
+  const [refreshToken, setRefreshToken] = useState(0);
+  const prefsSaveChain = useRef<Promise<void>>(Promise.resolve());
   const [error, setError] = useState('');
   const [disabled, setDisabled] = useState(false);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  const tab = usageTabFromPath(location.pathname);
+  const setTab = (next: UsageTabKey) => {
+    navigate(next === 'overview' ? '/usage' : `/usage/${next}`);
+  };
 
   const params = useMemo(
     () => buildQuery(kind, preset, customFrom, customTo, groupBy, filters),
     [kind, preset, customFrom, customTo, groupBy, filters]
+  );
+  const analyticsParams = useMemo(
+    () =>
+      tab === 'search'
+        ? {
+            ...params,
+            kind: 'search' as const,
+            group_by: 'channel',
+            provider: '',
+            model: '',
+          }
+        : params,
+    [params, tab]
   );
   const historyHours = useMemo(
     () => historyHoursForRange(preset, customFrom, customTo),
@@ -321,34 +321,28 @@ export function UsageAnalyticsPage() {
     setError('');
     setDisabled(false);
     try {
-      const includeSearchAccounts = kind !== 'llm';
-      const [
-        analyticsResult,
-        eventsResult,
-        monitoringResult,
-        accountUsageResult,
-        accountResult,
-        statusResult,
-      ] = await Promise.all([
-        usageAnalyticsApi.getAnalytics(params),
-        usageAnalyticsApi.getEvents({ ...params, limit: pageSize, offset: 0 }),
-        webSearchApi.getMonitoring().catch(() => null),
-        includeSearchAccounts
-          ? usageAnalyticsApi
-              .getAnalytics({ ...params, kind: 'search', group_by: 'account' })
-              .catch(() => null)
-          : Promise.resolve(null),
-        includeSearchAccounts
-          ? webSearchApi.listAccounts().catch(() => [] as WebSearchAccount[])
-          : Promise.resolve([] as WebSearchAccount[]),
-        usageAnalyticsApi.getStatus().catch(() => null),
-      ]);
+      const includeSearchAccounts = tab === 'search' || kind !== 'llm';
+      const [analyticsResult, monitoringResult, accountUsageResult, accountResult, statusResult] =
+        await Promise.all([
+          usageAnalyticsApi.getAnalytics(analyticsParams),
+          webSearchApi.getMonitoring().catch(() => null),
+          includeSearchAccounts
+            ? usageAnalyticsApi
+                .getAnalytics({
+                  ...analyticsParams,
+                  kind: 'search',
+                  group_by: 'account',
+                })
+                .catch(() => null)
+            : Promise.resolve(null),
+          includeSearchAccounts
+            ? webSearchApi.listAccounts().catch(() => [] as WebSearchAccount[])
+            : Promise.resolve([] as WebSearchAccount[]),
+          usageAnalyticsApi.getStatus().catch(() => null),
+        ]);
       if (seq !== loadSeq.current) return;
       setAnalytics(analyticsResult);
       setStatus(statusResult);
-      setEvents(eventsResult.events ?? []);
-      setEventsHasMore(Boolean(eventsResult.has_more));
-      setEventsCursor(eventsResult.next_cursor ?? '');
       setMonitoring(monitoringResult);
       setSearchAccountUsage(accountUsageResult);
       setSearchAccounts(accountResult);
@@ -358,7 +352,6 @@ export function UsageAnalyticsPage() {
       if (status === 503) {
         setDisabled(true);
         setAnalytics(null);
-        setEvents([]);
       } else {
         setError(err instanceof Error ? err.message : t('usage_analytics.load_failed'));
       }
@@ -367,7 +360,7 @@ export function UsageAnalyticsPage() {
         setLoading(false);
       }
     }
-  }, [params, preset, customFrom, customTo, pageSize, kind, t]);
+  }, [analyticsParams, preset, customFrom, customTo, kind, tab, t]);
 
   useEffect(() => {
     void load();
@@ -375,69 +368,72 @@ export function UsageAnalyticsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    usageAnalyticsApi
-      .getPreferences()
-      .then((prefs) => {
-        if (cancelled) return;
-        setKind(prefs.kind);
-        setPreset(
-          prefs.range === 'custom' || !RANGE_PRESETS.includes(prefs.range as RangePreset)
-            ? 'today'
-            : (prefs.range as RangePreset)
-        );
-        setGroupBy(prefs.group_by || 'provider');
-        setTokenDisplayMode(prefs.token_display_mode || 'compact');
-        setPageSize(prefs.page_size || 50);
-        setLowBalanceThreshold(prefs.low_balance_threshold_percent || 10);
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        if (!cancelled) {
+    let retryTimer: number | undefined;
+    let attempts = 0;
+    const loadPreferences = () => {
+      usageAnalyticsApi
+        .getPreferences()
+        .then((prefs) => {
+          if (cancelled) return;
+          setKind(prefs.kind);
+          setPreset(
+            prefs.range === 'custom' || !RANGE_PRESETS.includes(prefs.range as RangePreset)
+              ? 'today'
+              : (prefs.range as RangePreset)
+          );
+          setGroupBy(prefs.group_by || 'provider');
+          setTokenDisplayMode(prefs.token_display_mode || 'compact');
+          setPageSize(prefs.page_size || 50);
+          setLowBalanceThreshold(prefs.low_balance_threshold_percent || 10);
+          setLogColumns(normalizeLogColumns(prefs.log_columns));
           prefsLoaded.current = true;
-        }
-      });
+        })
+        .catch(() => {
+          if (cancelled || attempts >= 1) return;
+          attempts += 1;
+          retryTimer = window.setTimeout(loadPreferences, 1500);
+        });
+    };
+    loadPreferences();
     return () => {
       cancelled = true;
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
     };
   }, []);
 
   useEffect(() => {
     if (!prefsLoaded.current || disabled) return;
     const timer = window.setTimeout(() => {
-      void usageAnalyticsApi
-        .savePreferences({
-          kind,
-          range: preset,
-          group_by: groupBy,
-          token_display_mode: tokenDisplayMode,
-          page_size: pageSize,
-          low_balance_threshold_percent: lowBalanceThreshold,
-        })
+      const payload = {
+        kind,
+        range: preset,
+        group_by: groupBy,
+        token_display_mode: tokenDisplayMode,
+        page_size: pageSize,
+        low_balance_threshold_percent: lowBalanceThreshold,
+        log_columns: logColumns,
+      };
+      prefsSaveChain.current = prefsSaveChain.current
+        .then(() => usageAnalyticsApi.savePreferences(payload))
+        .then(() => undefined)
         .catch(() => undefined);
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [kind, preset, groupBy, tokenDisplayMode, pageSize, lowBalanceThreshold, disabled]);
+  }, [
+    kind,
+    preset,
+    groupBy,
+    tokenDisplayMode,
+    pageSize,
+    lowBalanceThreshold,
+    logColumns,
+    disabled,
+  ]);
 
-  useHeaderRefresh(load, true);
-
-  const loadMore = async () => {
-    if (eventsLoading || !eventsHasMore || !eventsCursor) return;
-    setEventsLoading(true);
-    try {
-      const result = await usageAnalyticsApi.getEvents({
-        ...params,
-        limit: pageSize,
-        cursor: eventsCursor,
-      });
-      setEvents((current) => [...current, ...(result.events ?? [])]);
-      setEventsHasMore(Boolean(result.has_more));
-      setEventsCursor(result.next_cursor ?? '');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t('usage_analytics.load_failed'));
-    } finally {
-      setEventsLoading(false);
-    }
-  };
+  useHeaderRefresh(() => {
+    setRefreshToken((value) => value + 1);
+    void load();
+  }, true);
 
   const exportCsv = async () => {
     try {
@@ -478,6 +474,7 @@ export function UsageAnalyticsPage() {
     try {
       await usageAnalyticsApi.restore(file);
       showNotification(t('usage_analytics.restore_success'), 'success');
+      setRefreshToken((value) => value + 1);
       await load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('usage_analytics.restore_failed'));
@@ -498,6 +495,7 @@ export function UsageAnalyticsPage() {
         }),
         'success'
       );
+      setRefreshToken((value) => value + 1);
       await load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('usage_analytics.import_failed'));
@@ -508,6 +506,7 @@ export function UsageAnalyticsPage() {
     if (!window.confirm(t('usage_analytics.reset_confirm'))) return;
     try {
       await usageAnalyticsApi.reset();
+      setRefreshToken((value) => value + 1);
       await load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('usage_analytics.reset_failed'));
@@ -545,92 +544,54 @@ export function UsageAnalyticsPage() {
           <p>{t('usage_analytics.subtitle')}</p>
         </div>
         <div className={styles.headerActions}>
-          <Button variant="secondary" onClick={() => void load()} disabled={loading}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setRefreshToken((value) => value + 1);
+              void load();
+            }}
+            loading={loading}
+          >
             {t('usage_analytics.refresh')}
           </Button>
+          {tab === 'overview' && (
+            <Button
+              variant="secondary"
+              onClick={() => void exportCsv()}
+              disabled={disabled || !analytics}
+            >
+              {t('usage_analytics.export_csv')}
+            </Button>
+          )}
           <Button variant="secondary" onClick={() => setPricingOpen(true)} disabled={disabled}>
             {t('usage_analytics.pricing')}
           </Button>
-          <Button variant="secondary" onClick={() => void backup()} disabled={disabled}>
-            {t('usage_analytics.backup')}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => restoreInputRef.current?.click()}
-            disabled={disabled}
-          >
-            {t('usage_analytics.restore')}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => importInputRef.current?.click()}
-            disabled={disabled}
-          >
-            {t('usage_analytics.import_legacy')}
-          </Button>
-          <input
-            ref={restoreInputRef}
-            type="file"
-            accept=".db,application/octet-stream"
-            hidden
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = '';
-              if (file) {
-                void restore(file);
-              }
-            }}
-          />
-          <input
-            ref={importInputRef}
-            type="file"
-            accept=".db,application/octet-stream"
-            hidden
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = '';
-              if (file) {
-                void importLegacy(file);
-              }
-            }}
-          />
-          <Button
-            variant="secondary"
-            onClick={() => void exportCsv()}
-            disabled={disabled || !analytics}
-          >
-            {t('usage_analytics.export_csv')}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => void exportPng()}
-            loading={exportingPng}
-            disabled={disabled || !summary || summary.requests === 0}
-          >
-            {t('usage_analytics.export_png')}
-          </Button>
-          <Button variant="danger" onClick={() => void reset()} disabled={disabled}>
-            {t('usage_analytics.reset')}
+          <Button variant="secondary" onClick={() => setDataOpen(true)}>
+            {t('usage_analytics.data_title')}
           </Button>
         </div>
       </header>
 
       <section className={styles.controls}>
-        <div className={styles.kindTabs}>
-          {(['all', 'llm', 'search'] as const).map((value) => (
-            <Button
-              key={value}
-              size="sm"
-              variant={kind === value ? 'primary' : 'secondary'}
-              onClick={() => {
-                setKind(value);
-                setGroupBy(value === 'search' ? 'channel' : value === 'llm' ? 'model' : 'provider');
-              }}
-            >
-              {t(`usage_analytics.kind_${value}`)}
-            </Button>
-          ))}
-        </div>
+        {tab !== 'search' && (
+          <div className={styles.kindTabs}>
+            {(['all', 'llm', 'search'] as const).map((value) => (
+              <Button
+                key={value}
+                size="sm"
+                variant={kind === value ? 'primary' : 'secondary'}
+                onClick={() => {
+                  setKind(value);
+                  setGroupBy(
+                    value === 'search' ? 'channel' : value === 'llm' ? 'model' : 'provider'
+                  );
+                }}
+              >
+                {t(`usage_analytics.kind_${value}`)}
+              </Button>
+            ))}
+          </div>
+        )}
         <Select
           value={preset}
           options={rangeOptions}
@@ -653,40 +614,37 @@ export function UsageAnalyticsPage() {
             />
           </>
         )}
-        <Select
-          value={groupBy}
-          options={groupOptions}
-          onChange={setGroupBy}
-          ariaLabel={t('usage_analytics.group_by')}
-        />
-        <Select
-          value={tokenDisplayMode}
-          options={[
-            { value: 'compact', label: t('usage_analytics.token_display_compact') },
-            { value: 'full', label: t('usage_analytics.token_display_full') },
-            { value: 'k', label: t('usage_analytics.token_display_k') },
-            { value: 'm', label: t('usage_analytics.token_display_m') },
-            { value: 'b', label: t('usage_analytics.token_display_b') },
-          ]}
-          onChange={(value) => setTokenDisplayMode(value as TokenDisplayMode)}
-          ariaLabel={t('usage_analytics.token_display')}
-        />
-        <Select
-          value={String(pageSize)}
-          options={[25, 50, 100, 200].map((value) => ({
-            value: String(value),
-            label: `${value} / ${t('usage_analytics.page_size')}`,
-          }))}
-          onChange={(value) => setPageSize(Number(value))}
-          ariaLabel={t('usage_analytics.page_size')}
-        />
-        <Select
-          value={filters.provider}
-          options={selectOptions(facets?.providers, t('usage_analytics.all'))}
-          onChange={(value) => setFilters((current) => ({ ...current, provider: value }))}
-          ariaLabel={t('usage_analytics.provider')}
-        />
-        {showLLM && (
+        {tab === 'overview' && (
+          <Select
+            value={groupBy}
+            options={groupOptions}
+            onChange={setGroupBy}
+            ariaLabel={t('usage_analytics.group_by')}
+          />
+        )}
+        {tab === 'overview' && (
+          <Select
+            value={tokenDisplayMode}
+            options={[
+              { value: 'compact', label: t('usage_analytics.token_display_compact') },
+              { value: 'full', label: t('usage_analytics.token_display_full') },
+              { value: 'k', label: t('usage_analytics.token_display_k') },
+              { value: 'm', label: t('usage_analytics.token_display_m') },
+              { value: 'b', label: t('usage_analytics.token_display_b') },
+            ]}
+            onChange={(value) => setTokenDisplayMode(value as TokenDisplayMode)}
+            ariaLabel={t('usage_analytics.token_display')}
+          />
+        )}
+        {tab !== 'search' && (
+          <Select
+            value={filters.provider}
+            options={selectOptions(facets?.providers, t('usage_analytics.all'))}
+            onChange={(value) => setFilters((current) => ({ ...current, provider: value }))}
+            ariaLabel={t('usage_analytics.provider')}
+          />
+        )}
+        {tab !== 'search' && showLLM && (
           <Select
             value={filters.model}
             options={selectOptions(facets?.models, t('usage_analytics.all'))}
@@ -694,7 +652,7 @@ export function UsageAnalyticsPage() {
             ariaLabel={t('usage_analytics.model')}
           />
         )}
-        {showSearch && (
+        {(tab === 'search' || showSearch) && (
           <>
             <Select
               value={filters.channel}
@@ -728,6 +686,8 @@ export function UsageAnalyticsPage() {
         />
       </section>
 
+      <UsageTabs active={tab} onChange={setTab} />
+
       {disabled && (
         <div className={styles.notice}>
           <strong>{t('usage_analytics.disabled')}</strong>
@@ -736,247 +696,246 @@ export function UsageAnalyticsPage() {
       )}
       {error && <div className={styles.error}>{error}</div>}
 
-      {!disabled && summary && (
-        <section className={styles.cards}>
-          <article className={styles.card}>
-            <span>{t('usage_analytics.summary_requests')}</span>
-            <strong>{formatCompactNumber(summary.requests)}</strong>
-          </article>
-          <article className={styles.card}>
-            <span>{t('usage_analytics.summary_success_rate')}</span>
-            <strong>{formatPercent(summary.success_rate * 100)}</strong>
-          </article>
-          <article className={styles.card}>
-            <span>{t('usage_analytics.summary_tokens')}</span>
-            <strong>{formatTokens(summary.tokens?.total ?? 0, tokenDisplayMode)}</strong>
-          </article>
-          <article className={styles.card}>
-            <span>{t('usage_analytics.summary_latency')}</span>
-            <strong>{formatDuration(summary.avg_latency_ms)}</strong>
-          </article>
-          <article className={styles.card}>
-            <span>{t('usage_analytics.summary_p95')}</span>
-            <strong>{formatDuration(summary.p95_latency_ms)}</strong>
-          </article>
-          <article className={styles.card}>
-            <span>{t('usage_analytics.summary_ttft')}</span>
-            <strong>{formatDuration(summary.avg_ttft_ms)}</strong>
-          </article>
-          {showSearch && (
-            <article className={styles.card}>
-              <span>{t('usage_analytics.summary_search_units')}</span>
-              <strong>{formatCompactNumber(summary.search_units ?? 0)}</strong>
-            </article>
-          )}
-          {showSearch && searchAccounts.length > 0 && (
-            <article className={styles.card}>
-              <span>{t('usage_analytics.summary_search_warnings')}</span>
-              <strong
-                className={
-                  searchWarningCounts.critical > 0
-                    ? styles.cardDanger
-                    : searchWarningCounts.warning > 0
-                      ? styles.cardWarning
-                      : undefined
-                }
-              >
-                {searchWarningCounts.critical} / {searchWarningCounts.warning}
-              </strong>
-            </article>
-          )}
-          <article className={styles.card}>
-            <span>{t('usage_analytics.summary_cost')}</span>
-            <strong>
-              {formatUsageCost(summary.estimated_cost, summary.currency ?? analytics?.currency)}
-            </strong>
-          </article>
-          <article className={styles.card}>
-            <span>{t('usage_analytics.summary_coverage')}</span>
-            <strong>{formatPercent((summary.coverage ?? 0) * 100)}</strong>
-          </article>
-        </section>
-      )}
-
-      {!disabled && status && (
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <h2>{t('usage_analytics.status_title')}</h2>
-            <span>{t('usage_analytics.status_hint')}</span>
-          </div>
-          <div className={styles.quotaRow}>
-            <span>
-              {t('usage_analytics.status_db')}: <strong>{formatFileSize(status.db_bytes)}</strong>
-              {status.max_db_bytes > 0 ? ` / ${formatFileSize(status.max_db_bytes)}` : ''}
-            </span>
-            <span>
-              {t('usage_analytics.status_queue')}:{' '}
-              <strong>
-                {status.queue_depth} / {status.queue_capacity}
-              </strong>
-            </span>
-            <span>
-              {t('usage_analytics.status_dropped')}:{' '}
-              <strong className={status.dropped_events > 0 ? styles.statusDanger : undefined}>
-                {formatCompactNumber(status.dropped_events)}
-              </strong>
-            </span>
-            <span>
-              {t('usage_analytics.status_retention')}: <strong>{status.retention_days} d</strong> /{' '}
-              {status.rollup_retention_days} d {t('usage_analytics.status_rollups')}
-            </span>
-            {status.oldest_event && status.newest_event && (
-              <span>
-                {t('usage_analytics.status_events_range')}:{' '}
+      {tab === 'overview' && (
+        <>
+          {!disabled && summary && (
+            <section className={styles.cards}>
+              <article className={styles.card}>
+                <span>{t('usage_analytics.summary_requests')}</span>
+                <strong>{formatCompactNumber(summary.requests)}</strong>
+              </article>
+              <article className={styles.card}>
+                <span>{t('usage_analytics.summary_success_rate')}</span>
+                <strong>{formatPercent(summary.success_rate * 100)}</strong>
+              </article>
+              <article className={styles.card}>
+                <span>{t('usage_analytics.summary_tokens')}</span>
+                <strong>{formatUsageTokens(summary.tokens?.total ?? 0, tokenDisplayMode)}</strong>
+              </article>
+              <article className={styles.card}>
+                <span>{t('usage_analytics.summary_latency')}</span>
+                <strong>{formatUsageDuration(summary.avg_latency_ms)}</strong>
+              </article>
+              <article className={styles.card}>
+                <span>{t('usage_analytics.summary_p95')}</span>
+                <strong>{formatUsageDuration(summary.p95_latency_ms)}</strong>
+              </article>
+              <article className={styles.card}>
+                <span>{t('usage_analytics.summary_ttft')}</span>
+                <strong>{formatUsageDuration(summary.avg_ttft_ms)}</strong>
+              </article>
+              {showSearch && (
+                <article className={styles.card}>
+                  <span>{t('usage_analytics.summary_search_units')}</span>
+                  <strong>{formatCompactNumber(summary.search_units ?? 0)}</strong>
+                </article>
+              )}
+              {showSearch && searchAccounts.length > 0 && (
+                <article className={styles.card}>
+                  <span>{t('usage_analytics.summary_search_warnings')}</span>
+                  <strong
+                    className={
+                      searchWarningCounts.critical > 0
+                        ? styles.cardDanger
+                        : searchWarningCounts.warning > 0
+                          ? styles.cardWarning
+                          : undefined
+                    }
+                  >
+                    {searchWarningCounts.critical} / {searchWarningCounts.warning}
+                  </strong>
+                </article>
+              )}
+              <article className={styles.card}>
+                <span>{t('usage_analytics.summary_cost')}</span>
                 <strong>
-                  {formatTime(status.oldest_event)} → {formatTime(status.newest_event)}
+                  {formatUsageCost(summary.estimated_cost, summary.currency ?? analytics?.currency)}
                 </strong>
-              </span>
-            )}
-            {status.last_flush && (
+              </article>
+              <article className={styles.card}>
+                <span>{t('usage_analytics.summary_coverage')}</span>
+                <strong>{formatPercent((summary.coverage ?? 0) * 100)}</strong>
+              </article>
+            </section>
+          )}
+
+          {!disabled && summary && (summary.coverage ?? 0) < 1 && (
+            <div className={styles.notice}>
+              <strong>{t('usage_analytics.unpriced_title')}</strong>
               <span>
-                {t('usage_analytics.status_last_flush')}:{' '}
-                <strong>{formatTime(status.last_flush)}</strong>
+                {t('usage_analytics.unpriced_hint')}
+                {summary.unpriced_models?.length
+                  ? `: ${summary.unpriced_models.slice(0, 8).join(', ')}`
+                  : ''}
               </span>
+            </div>
+          )}
+
+          {!disabled &&
+            summary &&
+            summary.failed > 0 &&
+            (summary.failure_statuses?.length ?? 0) > 0 && (
+              <section className={styles.panel}>
+                <div className={styles.panelHeader}>
+                  <h2>{t('usage_analytics.failure_status_title')}</h2>
+                  <span>{t('usage_analytics.failure_status_hint')}</span>
+                </div>
+                <div className={styles.statusList}>
+                  {summary.failure_statuses?.map((status) => {
+                    const percent = summary.failed > 0 ? (status.count / summary.failed) * 100 : 0;
+                    return (
+                      <div key={status.status_code} className={styles.statusRow}>
+                        <span className={styles.statusCode}>
+                          {status.status_code > 0
+                            ? status.status_code
+                            : t('usage_analytics.unknown_status')}
+                        </span>
+                        <div className={styles.statusTrack}>
+                          <span style={{ width: `${Math.max(2, percent)}%` }} />
+                        </div>
+                        <span>{formatCompactNumber(status.count)}</span>
+                        <span>{formatPercent(percent)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
             )}
-            <span>
-              {t('usage_analytics.status_price_revision')}: <strong>{status.price_revision}</strong>
-              {status.price_currency ? ` · ${status.price_currency}` : ''}
-            </span>
-          </div>
-          {status.dropped_events > 0 && (
-            <p className={styles.statusWarning}>
-              {t('usage_analytics.status_dropped_warning', {
-                count: status.dropped_events,
-              })}
-            </p>
+
+          {!disabled && summary && summary.latency_buckets?.some((bucket) => bucket.count > 0) && (
+            <section className={styles.panel}>
+              <div className={styles.panelHeader}>
+                <h2>{t('usage_analytics.latency_distribution_title')}</h2>
+                <span>{t('usage_analytics.latency_distribution_hint')}</span>
+              </div>
+              <LatencyDistributionChart
+                buckets={summary.latency_buckets ?? []}
+                p95={summary.p95_latency_ms}
+              />
+            </section>
           )}
-        </section>
-      )}
 
-      {!disabled && summary && (summary.coverage ?? 0) < 1 && (
-        <div className={styles.notice}>
-          <strong>{t('usage_analytics.unpriced_title')}</strong>
-          <span>
-            {t('usage_analytics.unpriced_hint')}
-            {summary.unpriced_models?.length
-              ? `: ${summary.unpriced_models.slice(0, 8).join(', ')}`
-              : ''}
-          </span>
-        </div>
-      )}
-
-      {!disabled &&
-        summary &&
-        summary.failed > 0 &&
-        (summary.failure_statuses?.length ?? 0) > 0 && (
-          <section className={styles.panel}>
-            <div className={styles.panelHeader}>
-              <h2>{t('usage_analytics.failure_status_title')}</h2>
-              <span>{t('usage_analytics.failure_status_hint')}</span>
-            </div>
-            <div className={styles.statusList}>
-              {summary.failure_statuses?.map((status) => {
-                const percent = summary.failed > 0 ? (status.count / summary.failed) * 100 : 0;
-                return (
-                  <div key={status.status_code} className={styles.statusRow}>
-                    <span className={styles.statusCode}>
-                      {status.status_code > 0
-                        ? status.status_code
-                        : t('usage_analytics.unknown_status')}
-                    </span>
-                    <div className={styles.statusTrack}>
-                      <span style={{ width: `${Math.max(2, percent)}%` }} />
-                    </div>
-                    <span>{formatCompactNumber(status.count)}</span>
-                    <span>{formatPercent(percent)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-      {!disabled && summary && summary.latency_buckets?.some((bucket) => bucket.count > 0) && (
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <h2>{t('usage_analytics.latency_distribution_title')}</h2>
-            <span>{t('usage_analytics.latency_distribution_hint')}</span>
-          </div>
-          <LatencyDistributionChart
-            buckets={summary.latency_buckets ?? []}
-            p95={summary.p95_latency_ms}
-          />
-        </section>
-      )}
-
-      {!disabled && analytics && (
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <h2>{t('usage_analytics.trend_title')}</h2>
-            <span>{t('usage_analytics.trend_hint')}</span>
-          </div>
-          {series.length > 0 && (summary?.requests ?? 0) > 0 ? (
-            <UsageTrendChart series={series} svgRef={chartRef} />
-          ) : (
-            <EmptyState
-              title={t('usage_analytics.no_data')}
-              description={t('usage_analytics.no_data_hint')}
-            />
+          {!disabled && analytics && (
+            <section className={styles.panel}>
+              <div className={styles.panelHeader}>
+                <h2>{t('usage_analytics.trend_title')}</h2>
+                <span>{t('usage_analytics.trend_hint')}</span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void exportPng()}
+                  loading={exportingPng}
+                  disabled={series.length === 0}
+                >
+                  {t('usage_analytics.export_png')}
+                </Button>
+              </div>
+              {series.length > 0 && (summary?.requests ?? 0) > 0 ? (
+                <UsageTrendChart series={series} svgRef={chartRef} />
+              ) : (
+                <EmptyState
+                  title={t('usage_analytics.no_data')}
+                  description={t('usage_analytics.no_data_hint')}
+                />
+              )}
+            </section>
           )}
-        </section>
+
+          {!disabled && analytics && series.some((point) => point.cost != null) && (
+            <section className={styles.panel}>
+              <div className={styles.panelHeader}>
+                <h2>{t('usage_analytics.cost_trend_title')}</h2>
+                <span>{t('usage_analytics.cost_trend_hint')}</span>
+              </div>
+              <CostTrendChart series={series} currency={summary?.currency ?? analytics.currency} />
+            </section>
+          )}
+
+          {!disabled && (
+            <section className={styles.panel}>
+              <div className={styles.panelHeader}>
+                <h2>{t('usage_analytics.breakdown_title')}</h2>
+                <span>{t('usage_analytics.breakdown_hint')}</span>
+              </div>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>{t('usage_analytics.group_by')}</th>
+                      <th>{t('usage_analytics.requests')}</th>
+                      <th>{t('usage_analytics.success_rate')}</th>
+                      <th>{t('usage_analytics.tokens_input')}</th>
+                      <th>{t('usage_analytics.tokens_output')}</th>
+                      <th>{t('usage_analytics.tokens_cache_read')}</th>
+                      <th>{t('usage_analytics.tokens_cache_write')}</th>
+                      <th>{t('usage_analytics.tokens_total')}</th>
+                      <th>{t('usage_analytics.units')}</th>
+                      <th>{t('usage_analytics.cost')}</th>
+                      <th>{t('usage_analytics.latency')}</th>
+                      <th>{t('usage_analytics.p95')}</th>
+                      <th>{t('usage_analytics.ttft')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groups.map((group) => (
+                      <tr key={`${group.kind}:${group.key}`}>
+                        <td>
+                          <span className={styles.kindBadge}>{kindLabel(group.kind, t)}</span>
+                          <span>{groupLabel(group)}</span>
+                        </td>
+                        <td>{formatCompactNumber(group.requests)}</td>
+                        <td>{formatPercent(group.success_rate * 100)}</td>
+                        <td>{formatUsageTokens(group.tokens.input, tokenDisplayMode)}</td>
+                        <td>{formatUsageTokens(group.tokens.output, tokenDisplayMode)}</td>
+                        <td>{formatUsageTokens(group.tokens.cache_read, tokenDisplayMode)}</td>
+                        <td>{formatUsageTokens(group.tokens.cache_write, tokenDisplayMode)}</td>
+                        <td>{formatUsageTokens(group.tokens.total, tokenDisplayMode)}</td>
+                        <td>{group.units ? formatCompactNumber(group.units) : '—'}</td>
+                        <td>
+                          {formatUsageCost(group.cost, summary?.currency ?? analytics?.currency)}
+                        </td>
+                        <td>{formatUsageDuration(group.avg_latency_ms)}</td>
+                        <td>{formatUsageDuration(group.p95_latency_ms)}</td>
+                        <td>{formatUsageDuration(group.avg_ttft_ms)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {groups.length === 0 && (
+                  <EmptyState
+                    title={t('usage_analytics.no_data')}
+                    description={t('usage_analytics.no_data_hint')}
+                  />
+                )}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
-      {!disabled && analytics && series.some((point) => point.cost != null) && (
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <h2>{t('usage_analytics.cost_trend_title')}</h2>
-            <span>{t('usage_analytics.cost_trend_hint')}</span>
-          </div>
-          <CostTrendChart series={series} currency={summary?.currency ?? analytics.currency} />
-        </section>
+      {!disabled && tab === 'logs' && (
+        <UsageLogsTab
+          kind={kind}
+          preset={preset}
+          customFrom={customFrom}
+          customTo={customTo}
+          baseFilters={filters}
+          facets={facets}
+          tokenDisplayMode={tokenDisplayMode}
+          currency={summary?.currency ?? analytics?.currency}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          columns={logColumns}
+          onColumnsChange={setLogColumns}
+          refreshToken={refreshToken}
+        />
       )}
 
-      {!disabled &&
-        showSearch &&
-        analytics &&
-        series.some((point) => point.kind === 'search' && point.requests > 0) && (
-          <section className={styles.panel}>
-            <div className={styles.panelHeader}>
-              <h2>{t('usage_analytics.search_trend_title')}</h2>
-              <span>{t('usage_analytics.search_trend_hint')}</span>
-            </div>
-            <SearchTrendChart series={series} />
-          </section>
-        )}
-
-      {!disabled && showSearch && monitoring?.quota && (
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <h2>{t('usage_analytics.search_quota_title')}</h2>
-            <span>{t('usage_analytics.search_quota_hint')}</span>
-          </div>
-          <div className={styles.quotaRow}>
-            <span>
-              {t('usage_analytics.search_quota_accounts')}:{' '}
-              <strong>{monitoring.quota.accounts}</strong>
-            </span>
-            <span>
-              {t('usage_analytics.search_quota_fresh')}: <strong>{monitoring.quota.fresh}</strong>
-            </span>
-            <span>
-              {t('usage_analytics.search_quota_stale')}: <strong>{monitoring.quota.stale}</strong>
-            </span>
-            <span>
-              {t('usage_analytics.search_quota_failed')}: <strong>{monitoring.quota.failed}</strong>
-            </span>
-          </div>
-        </section>
-      )}
-
-      {!disabled && showSearch && (
-        <SearchAccountsPanel
+      {!disabled && tab === 'search' && (
+        <UsageSearchTab
+          monitoring={monitoring}
           accounts={searchAccounts}
-          groups={searchAccountUsage?.groups ?? []}
+          accountUsage={searchAccountUsage}
           historyHours={historyHours}
           historyTo={historyTo}
           lowBalanceThreshold={lowBalanceThreshold}
@@ -984,141 +943,20 @@ export function UsageAnalyticsPage() {
         />
       )}
 
-      {!disabled && (
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <h2>{t('usage_analytics.breakdown_title')}</h2>
-            <span>{t('usage_analytics.breakdown_hint')}</span>
-          </div>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>{t('usage_analytics.group_by')}</th>
-                  <th>{t('usage_analytics.requests')}</th>
-                  <th>{t('usage_analytics.success_rate')}</th>
-                  <th>{t('usage_analytics.tokens_input')}</th>
-                  <th>{t('usage_analytics.tokens_output')}</th>
-                  <th>{t('usage_analytics.tokens_cache_read')}</th>
-                  <th>{t('usage_analytics.tokens_cache_write')}</th>
-                  <th>{t('usage_analytics.tokens_total')}</th>
-                  <th>{t('usage_analytics.units')}</th>
-                  <th>{t('usage_analytics.cost')}</th>
-                  <th>{t('usage_analytics.latency')}</th>
-                  <th>{t('usage_analytics.p95')}</th>
-                  <th>{t('usage_analytics.ttft')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.map((group) => (
-                  <tr key={`${group.kind}:${group.key}`}>
-                    <td>
-                      <span className={styles.kindBadge}>{kindLabel(group.kind, t)}</span>
-                      <span>{groupLabel(group)}</span>
-                    </td>
-                    <td>{formatCompactNumber(group.requests)}</td>
-                    <td>{formatPercent(group.success_rate * 100)}</td>
-                    <td>{formatTokens(group.tokens.input, tokenDisplayMode)}</td>
-                    <td>{formatTokens(group.tokens.output, tokenDisplayMode)}</td>
-                    <td>{formatTokens(group.tokens.cache_read, tokenDisplayMode)}</td>
-                    <td>{formatTokens(group.tokens.cache_write, tokenDisplayMode)}</td>
-                    <td>{formatTokens(group.tokens.total, tokenDisplayMode)}</td>
-                    <td>{group.units ? formatCompactNumber(group.units) : '—'}</td>
-                    <td>{formatUsageCost(group.cost, summary?.currency ?? analytics?.currency)}</td>
-                    <td>{formatDuration(group.avg_latency_ms)}</td>
-                    <td>{formatDuration(group.p95_latency_ms)}</td>
-                    <td>{formatDuration(group.avg_ttft_ms)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {groups.length === 0 && (
-              <EmptyState
-                title={t('usage_analytics.no_data')}
-                description={t('usage_analytics.no_data_hint')}
-              />
-            )}
-          </div>
-        </section>
-      )}
-
-      {!disabled && (
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <h2>{t('usage_analytics.events_title')}</h2>
-            <span>{t('usage_analytics.events_hint')}</span>
-          </div>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>{t('usage_analytics.time')}</th>
-                  <th>{t('usage_analytics.kind')}</th>
-                  <th>{t('usage_analytics.provider')}</th>
-                  <th>{t('usage_analytics.model_operation')}</th>
-                  <th>{t('usage_analytics.plan')}</th>
-                  <th>{t('usage_analytics.tokens_total')}</th>
-                  <th>{t('usage_analytics.units')}</th>
-                  <th>{t('usage_analytics.cost')}</th>
-                  <th>{t('usage_analytics.latency')}</th>
-                  <th>{t('usage_analytics.status')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((event) => (
-                  <tr key={`${event.id}:${event.time}`}>
-                    <td>{formatTime(event.time)}</td>
-                    <td>
-                      <span className={styles.kindBadge}>{kindLabel(event.kind, t)}</span>
-                    </td>
-                    <td>{event.provider || event.channel || '—'}</td>
-                    <td>{event.model || event.operation || '—'}</td>
-                    <td>{event.plan || event.quota_kind || '—'}</td>
-                    <td>{formatTokens(event.tokens?.total ?? 0, tokenDisplayMode)}</td>
-                    <td>
-                      {event.credits
-                        ? `${formatCompactNumber(event.credits)} ${t('usage_analytics.credits')}`
-                        : event.units
-                          ? formatCompactNumber(event.units)
-                          : '—'}
-                    </td>
-                    <td>
-                      {formatUsageCost(
-                        event.cost,
-                        event.currency || summary?.currency || analytics?.currency
-                      )}
-                    </td>
-                    <td>{formatDuration(event.latency_ms ?? 0)}</td>
-                    <td>
-                      <span className={event.success ? styles.statusSuccess : styles.statusFailed}>
-                        {event.success ? t('usage_analytics.success') : t('usage_analytics.failed')}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {events.length === 0 && (
-              <EmptyState
-                title={t('usage_analytics.no_data')}
-                description={t('usage_analytics.no_data_hint')}
-              />
-            )}
-            {eventsHasMore && (
-              <div className={styles.loadMore}>
-                <Button variant="secondary" onClick={() => void loadMore()} loading={eventsLoading}>
-                  {t('usage_analytics.load_more')}
-                </Button>
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
       <PricingDialog
         open={pricingOpen}
         onClose={() => setPricingOpen(false)}
         onSaved={() => void load()}
+      />
+      <UsageDataDialog
+        open={dataOpen}
+        onClose={() => setDataOpen(false)}
+        status={status}
+        disabled={disabled}
+        onBackup={() => void backup()}
+        onRestore={(file) => void restore(file)}
+        onImport={(file) => void importLegacy(file)}
+        onReset={() => void reset()}
       />
     </div>
   );

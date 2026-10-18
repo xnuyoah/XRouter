@@ -125,6 +125,24 @@ while another sync is active. The pricing snapshot includes a `sync` object with
 the last start/completion time, last error and matched model count. A sync is
 canceled when the analytics store shuts down.
 
+## Usage page
+
+The WebUI page is split into three tabs:
+
+- **Overview**: KPI cards, token/cost trends, latency and failure distribution,
+  and the grouped breakdown table.
+- **Request logs**: a high-density request table with time/status, provider,
+  model mapping, account, plan, token breakdown, cost, timing, request traits
+  and request ID. Filters include range, kind, provider, model, channel,
+  account ID, plan, status, HTTP status, request ID, trace ID and a keyword
+  search. Rows open a detail sheet; column visibility is saved in preferences.
+  Mobile widths switch to a card list.
+- **Search channels**: quota overview, search trend, account warnings and quota
+  history.
+
+Tabs use the path-based tabs (`/usage`, `/usage/logs`, `/usage/search`), for example
+`#/usage/logs`.
+
 ## Management API
 
 All endpoints are under `/v8/management` and require the management key.
@@ -155,6 +173,9 @@ Common query parameters for analytics/events:
 - `provider`, `model`, `channel`, `operation`, `plan`, `quota_kind`, `source`,
   `auth_type`, `executor`, `service_tier`, `reasoning_effort`, `status`, `status_code`
 - `limit`, `offset`, or `cursor` (use the `next_cursor` from a previous page)
+- `account_id`, `request_id`, `trace_id`, `q` for request-log queries
+  (`request_id`, `trace_id` and `q` are rejected by the aggregate `/analytics`
+  endpoint because they do not exist in rollup keys)
 - queries are capped at 20,000 time buckets; use a larger bucket or a shorter range
 
 `summary.failure_statuses` lists failed HTTP status codes and counts. Status code
@@ -221,6 +242,7 @@ The usage page saves these defaults server-side in the analytics database:
 - `group_by`
 - `token_display_mode`: compact / full / k / m / b
 - `page_size`: 25 / 50 / 100 / 200
+- `log_columns`: request-log column visibility
 - `low_balance_threshold_percent`: 5 / 10 / 20 / 30 (defaults to 10)
 
 They are loaded on page open and saved after a short debounce when the controls

@@ -20,5 +20,6 @@ services:
       - ${XROUTER_CONFIG_PATH:-./config.yaml}:/xrouter/config.yaml
       - ${XROUTER_AUTH_PATH:-./auths}:/root/.xrouter
       - ${XROUTER_LOG_PATH:-./logs}:/xrouter/logs
+      - ${XROUTER_ANALYTICS_PATH:-./usage-analytics}:/xrouter/usage-analytics
       - ${XROUTER_PLUGIN_PATH:-./plugins}:/xrouter/plugins
     restart: unless-stopped

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -40,6 +41,7 @@ func newUsageAnalyticsTestHandler(t *testing.T) (*Handler, *usageanalytics.Store
 	store.RecordSearchUsage(websearch.SearchUsageRecord{
 		Time:      time.Now().UTC(),
 		Channel:   websearch.ChannelTavily,
+		AccountID: "tavily-1",
 		Operation: "search",
 		Success:   true,
 		Units:     1,
@@ -210,12 +212,15 @@ func TestExportUsageAnalyticsIncludesSearchCosts(t *testing.T) {
 	for index, name := range rows[0] {
 		columns[name] = index
 	}
-	for _, name := range []string{"method", "path", "credits", "upstream_cost", "upstream_currency"} {
+	for _, name := range []string{"id", "trace_id", "method", "path", "api_key_masked", "tps", "stream", "credits", "upstream_cost", "upstream_currency"} {
 		if _, ok := columns[name]; !ok {
 			t.Fatalf("CSV header missing %q: %v", name, rows[0])
 		}
 	}
 	for _, row := range rows[1:] {
+		if len(row) != len(rows[0]) {
+			t.Fatalf("CSV row columns = %d, header = %d", len(row), len(rows[0]))
+		}
 		if row[columns["channel"]] != string(websearch.ChannelFirecrawl) {
 			continue
 		}
@@ -353,6 +358,79 @@ func TestGetUsageEventsCursorPagination(t *testing.T) {
 	}
 }
 
+func TestGetUsageEventsCursorDoesNotRepeatBoundary(t *testing.T) {
+	handler, store := newUsageAnalyticsTestHandler(t)
+	defer func() {
+		if errClose := store.Close(); errClose != nil {
+			t.Fatalf("Close() error = %v", errClose)
+		}
+	}()
+
+	seen := make(map[string]struct{})
+	cursor := ""
+	for page := 0; page < 10; page++ {
+		path := "/usage?range=24h&limit=1"
+		if cursor != "" {
+			path += "&cursor=" + url.QueryEscape(cursor)
+		}
+		recorder := performUsageRequest(handler.GetUsageEvents, path)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("page %d status = %d, body = %s", page, recorder.Code, recorder.Body.String())
+		}
+		var payload usageanalytics.EventsResult
+		if errUnmarshal := json.Unmarshal(recorder.Body.Bytes(), &payload); errUnmarshal != nil {
+			t.Fatalf("decode page %d: %v", page, errUnmarshal)
+		}
+		for _, event := range payload.Events {
+			if _, exists := seen[event.ID]; exists {
+				t.Fatalf("event %s repeated at page %d", event.ID, page)
+			}
+			seen[event.ID] = struct{}{}
+		}
+		if !payload.HasMore {
+			break
+		}
+		cursor = payload.NextCursor
+	}
+	if len(seen) != 2 {
+		t.Fatalf("events = %d, want 2 unique events", len(seen))
+	}
+}
+
+func TestGetUsageEventsStatusZeroFilter(t *testing.T) {
+	handler, store := newUsageAnalyticsTestHandler(t)
+	defer func() {
+		if errClose := store.Close(); errClose != nil {
+			t.Fatalf("Close() error = %v", errClose)
+		}
+	}()
+	recorder := performUsageRequest(handler.GetUsageEvents, "/usage?range=24h&kind=llm&status_code=0")
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	var payload usageanalytics.EventsResult
+	if errUnmarshal := json.Unmarshal(recorder.Body.Bytes(), &payload); errUnmarshal != nil {
+		t.Fatalf("decode response: %v", errUnmarshal)
+	}
+	if len(payload.Events) != 1 || payload.Events[0].Kind != usageanalytics.KindLLM {
+		t.Fatalf("status=0 events = %+v, want one LLM event", payload.Events)
+	}
+}
+
+func TestGetUsageEventsAllowsMultibyteSearch(t *testing.T) {
+	handler, store := newUsageAnalyticsTestHandler(t)
+	defer func() {
+		if errClose := store.Close(); errClose != nil {
+			t.Fatalf("Close() error = %v", errClose)
+		}
+	}()
+	query := url.QueryEscape(strings.Repeat("中", 100))
+	recorder := performUsageRequest(handler.GetUsageEvents, "/usage?range=24h&q="+query)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+}
+
 func TestGetUsageEventsRejectsOversizedRange(t *testing.T) {
 	handler, store := newUsageAnalyticsTestHandler(t)
 	defer func() {
@@ -367,5 +445,37 @@ func TestGetUsageEventsRejectsOversizedRange(t *testing.T) {
 	)
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400; body = %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestGetUsageEventsEventOnlyFilters(t *testing.T) {
+	handler, store := newUsageAnalyticsTestHandler(t)
+	defer func() {
+		if errClose := store.Close(); errClose != nil {
+			t.Fatalf("Close() error = %v", errClose)
+		}
+	}()
+
+	for _, path := range []string{
+		"/usage?range=24h&q=gpt-test",
+		"/usage?range=24h&request_id=llm-1",
+		"/usage?range=24h&account_id=tavily-1",
+	} {
+		recorder := performUsageRequest(handler.GetUsageEvents, path)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("%s status = %d, body = %s", path, recorder.Code, recorder.Body.String())
+		}
+		var payload usageanalytics.EventsResult
+		if errUnmarshal := json.Unmarshal(recorder.Body.Bytes(), &payload); errUnmarshal != nil {
+			t.Fatalf("decode %s: %v", path, errUnmarshal)
+		}
+		if len(payload.Events) != 1 {
+			t.Fatalf("%s events = %d, want 1", path, len(payload.Events))
+		}
+	}
+
+	recorder := performUsageRequest(handler.GetUsageAnalytics, "/usage?range=24h&q=gpt-test")
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("analytics event-only filter status = %d, want 400", recorder.Code)
 	}
 }

@@ -27,19 +27,23 @@ func TestPreferencesPersist(t *testing.T) {
 	saved, errSave := store.SavePreferences(Preferences{
 		Kind:                       "search",
 		Range:                      "7d",
-		GroupBy:                    "channel",
+		GroupBy:                    "status_code",
 		TokenDisplayMode:           "m",
 		PageSize:                   100,
 		LowBalanceThresholdPercent: 20,
+		LogColumns:                 []string{"time", "model", "cost"},
 	})
 	if errSave != nil {
 		t.Fatalf("SavePreferences() error = %v", errSave)
 	}
-	if saved.Kind != "search" || saved.Range != "7d" || saved.GroupBy != "channel" || saved.PageSize != 100 {
+	if saved.Kind != "search" || saved.Range != "7d" || saved.GroupBy != "status_code" || saved.PageSize != 100 {
 		t.Fatalf("saved = %+v", saved)
 	}
 	if saved.LowBalanceThresholdPercent != 20 {
 		t.Fatalf("saved low balance threshold = %d, want 20", saved.LowBalanceThresholdPercent)
+	}
+	if len(saved.LogColumns) != 3 {
+		t.Fatalf("saved log columns = %v", saved.LogColumns)
 	}
 	if errClose := store.Close(); errClose != nil {
 		t.Fatalf("Close() error = %v", errClose)
@@ -60,11 +64,14 @@ func TestPreferencesPersist(t *testing.T) {
 		}
 	}()
 	loaded := reopened.Preferences()
-	if loaded.Kind != "search" || loaded.Range != "7d" || loaded.GroupBy != "channel" || loaded.PageSize != 100 {
+	if loaded.Kind != "search" || loaded.Range != "7d" || loaded.GroupBy != "status_code" || loaded.PageSize != 100 {
 		t.Fatalf("loaded = %+v", loaded)
 	}
 	if loaded.LowBalanceThresholdPercent != 20 {
 		t.Fatalf("loaded low balance threshold = %d, want 20", loaded.LowBalanceThresholdPercent)
+	}
+	if len(loaded.LogColumns) != 3 || loaded.LogColumns[1] != "model" {
+		t.Fatalf("loaded log columns = %v", loaded.LogColumns)
 	}
 }
 
@@ -88,5 +95,8 @@ func TestPreferencesRejectInvalid(t *testing.T) {
 	}
 	if _, errSave := store.SavePreferences(Preferences{LowBalanceThresholdPercent: 7}); errSave == nil {
 		t.Fatal("SavePreferences(invalid threshold) error = nil, want error")
+	}
+	if _, errSave := store.SavePreferences(Preferences{LogColumns: []string{"bogus"}}); errSave == nil {
+		t.Fatal("SavePreferences(invalid log column) error = nil, want error")
 	}
 }

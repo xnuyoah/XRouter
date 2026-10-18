@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -57,6 +58,13 @@ func (h *Handler) GetUsageAnalytics(c *gin.Context) {
 	query, errQuery := parseUsageQuery(c)
 	if errQuery != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_query", "message": errQuery.Error()})
+		return
+	}
+	if query.RequestID != "" || query.TraceID != "" || query.Search != "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "unsupported_filter",
+			"message": "request_id, trace_id and q are only supported by events and CSV export",
+		})
 		return
 	}
 	result, errResult := store.Query(c.Request.Context(), query)
@@ -116,16 +124,16 @@ func (h *Handler) ExportUsageAnalytics(c *gin.Context) {
 	writer := csv.NewWriter(c.Writer)
 	defer writer.Flush()
 	header := []string{
-		"time", "kind", "provider", "channel", "model", "upstream_model", "alias",
+		"time", "id", "trace_id", "kind", "provider", "channel", "model", "upstream_model", "alias",
 		"operation", "method", "path", "plan", "quota_kind",
-		"account_id", "account_name", "source",
+		"account_id", "account_name", "api_key_masked", "source",
 		"auth_type", "executor", "service_tier", "reasoning_effort",
 		"input_tokens", "uncached_input_tokens", "output_tokens", "reasoning_tokens",
 		"cache_read_tokens", "cache_write_tokens", "total_tokens",
 		"units", "unit", "credits", "upstream_cost", "upstream_currency",
 		"cost", "currency", "price_revision",
-		"latency_ms", "ttft_ms", "status_code", "success",
-		"error_code", "attempts", "proxy_used", "generate",
+		"latency_ms", "ttft_ms", "tps", "status_code", "success",
+		"error_code", "attempts", "proxy_used", "stream", "generate",
 	}
 	if errHeader := writer.Write(header); errHeader != nil {
 		return
@@ -143,6 +151,8 @@ func (h *Handler) ExportUsageAnalytics(c *gin.Context) {
 		for _, event := range result.Events {
 			record := []string{
 				event.Time.UTC().Format(time.RFC3339),
+				csvSafe(event.ID),
+				csvSafe(event.TraceID),
 				csvSafe(string(event.Kind)),
 				csvSafe(event.Provider),
 				csvSafe(event.Channel),
@@ -156,6 +166,7 @@ func (h *Handler) ExportUsageAnalytics(c *gin.Context) {
 				csvSafe(event.QuotaKind),
 				csvSafe(event.AccountID),
 				csvSafe(event.AccountName),
+				csvSafe(event.APIKeyMasked),
 				csvSafe(event.Source),
 				csvSafe(event.AuthType),
 				csvSafe(event.ExecutorType),
@@ -178,11 +189,13 @@ func (h *Handler) ExportUsageAnalytics(c *gin.Context) {
 				strconv.FormatInt(event.PriceRevision, 10),
 				strconv.FormatInt(event.LatencyMS, 10),
 				strconv.FormatInt(event.TTFTMS, 10),
+				strconv.FormatFloat(event.TPS, 'f', -1, 64),
 				strconv.Itoa(event.StatusCode),
 				strconv.FormatBool(event.Success),
 				csvSafe(event.ErrorCode),
 				strconv.Itoa(event.Attempts),
 				strconv.FormatBool(event.ProxyUsed),
+				strconv.FormatBool(event.Stream),
 				strconv.FormatBool(event.Generate),
 			}
 			if errWrite := writer.Write(record); errWrite != nil {
@@ -383,6 +396,10 @@ func parseUsageQuery(c *gin.Context) (usageanalytics.Query, error) {
 		ReasoningEffort: strings.TrimSpace(c.Query("reasoning_effort")),
 		Status:          strings.ToLower(strings.TrimSpace(c.Query("status"))),
 		APIKeyHash:      strings.TrimSpace(c.Query("api_key_hash")),
+		AccountID:       strings.TrimSpace(c.Query("account_id")),
+		RequestID:       strings.TrimSpace(c.Query("request_id")),
+		TraceID:         strings.TrimSpace(c.Query("trace_id")),
+		Search:          strings.TrimSpace(c.Query("q")),
 		GroupBy:         strings.ToLower(strings.TrimSpace(c.Query("group_by"))),
 	}
 	switch strings.ToLower(strings.TrimSpace(c.Query("kind"))) {
@@ -397,12 +414,16 @@ func parseUsageQuery(c *gin.Context) (usageanalytics.Query, error) {
 	if query.Status != "" && query.Status != "success" && query.Status != "failed" {
 		return query, fmt.Errorf("status must be success or failed")
 	}
+	if utf8.RuneCountInString(query.Search) > 200 {
+		return query, fmt.Errorf("q must be 200 characters or fewer")
+	}
 	if rawStatusCode := strings.TrimSpace(c.Query("status_code")); rawStatusCode != "" {
 		statusCode, errStatusCode := strconv.Atoi(rawStatusCode)
 		if errStatusCode != nil || statusCode < 0 {
 			return query, fmt.Errorf("status_code must be a non-negative integer")
 		}
 		query.StatusCode = statusCode
+		query.StatusCodeSet = true
 	}
 	if query.GroupBy != "" && !validUsageGroupBy(query.GroupBy) {
 		return query, fmt.Errorf("unsupported group_by %q", query.GroupBy)

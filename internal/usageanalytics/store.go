@@ -1593,10 +1593,17 @@ func matchRollup(query Query, key rollupKey) bool {
 	if query.Status != "" && !equalFold(key.Status, query.Status) {
 		return false
 	}
-	if query.StatusCode > 0 && key.StatusCode != query.StatusCode {
+	if (query.StatusCode > 0 || query.StatusCodeSet) && key.StatusCode != query.StatusCode {
 		return false
 	}
 	if query.APIKeyHash != "" && key.APIKeyHash != query.APIKeyHash {
+		return false
+	}
+	if query.AccountID != "" && !equalFold(key.AccountID, query.AccountID) {
+		return false
+	}
+	if query.RequestID != "" || query.TraceID != "" || query.Search != "" {
+		// These dimensions only exist on individual events, not rollups.
 		return false
 	}
 	return true
@@ -1642,13 +1649,43 @@ func matchEvent(query Query, event Event) bool {
 	if query.Status != "" && !equalFold(statusLabel(event.Success), query.Status) {
 		return false
 	}
-	if query.StatusCode > 0 && event.StatusCode != query.StatusCode {
+	if (query.StatusCode > 0 || query.StatusCodeSet) && event.StatusCode != query.StatusCode {
 		return false
 	}
 	if query.APIKeyHash != "" && event.APIKeyHash != query.APIKeyHash {
 		return false
 	}
+	if query.AccountID != "" && !equalFold(event.AccountID, query.AccountID) {
+		return false
+	}
+	if query.RequestID != "" && !equalFold(event.ID, query.RequestID) {
+		return false
+	}
+	if query.TraceID != "" && !equalFold(event.TraceID, query.TraceID) {
+		return false
+	}
+	if query.Search != "" && !eventMatchesSearch(event, query.Search) {
+		return false
+	}
 	return true
+}
+
+func eventMatchesSearch(event Event, needle string) bool {
+	needle = strings.ToLower(strings.TrimSpace(needle))
+	if needle == "" {
+		return true
+	}
+	for _, value := range []string{
+		event.ID, event.TraceID, event.Provider, event.Channel, event.Model,
+		event.UpstreamModel, event.Alias, event.Operation, event.AccountID,
+		event.AccountName, event.APIKeyMasked, event.ErrorCode, event.Method,
+		event.Path, event.Plan, event.QuotaKind,
+	} {
+		if strings.Contains(strings.ToLower(value), needle) {
+			return true
+		}
+	}
+	return false
 }
 
 func equalFold(left, right string) bool {
