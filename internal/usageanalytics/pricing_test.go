@@ -388,3 +388,95 @@ func TestSearchPriceDoesNotMatchOtherOperations(t *testing.T) {
 		t.Fatalf("crawl was priced by search operation: %+v", result.Summary)
 	}
 }
+
+func TestManualModelPriceScopedToProvider(t *testing.T) {
+	store, errStore := New(Config{
+		Path:            filepath.Join(t.TempDir(), "usage.db"),
+		Retention:       time.Hour,
+		RollupRetention: 2 * time.Hour,
+		FlushInterval:   5 * time.Millisecond,
+	})
+	if errStore != nil {
+		t.Fatalf("New() error = %v", errStore)
+	}
+	defer func() {
+		if errClose := store.Close(); errClose != nil {
+			t.Fatalf("Close() error = %v", errClose)
+		}
+	}()
+	now := time.Now().UTC()
+	store.HandleUsage(context.Background(), usage.Record{
+		RequestID:   "provider-scope",
+		Provider:    "anthropic",
+		Model:       "shared-model",
+		RequestedAt: now,
+		Detail:      usage.Detail{InputTokens: 1_000_000, TotalTokens: 1_000_000},
+	})
+	if _, errPricing := store.ReplaceManualPricing([]ModelPrice{{
+		Provider: "openai",
+		Model:    "shared-model",
+		Input:    1000,
+	}}, nil); errPricing != nil {
+		t.Fatalf("ReplaceManualPricing() error = %v", errPricing)
+	}
+	if errFlush := store.Flush(); errFlush != nil {
+		t.Fatalf("Flush() error = %v", errFlush)
+	}
+	result, errQuery := store.Query(context.Background(), Query{
+		From: now.Add(-time.Hour),
+		To:   now.Add(time.Hour),
+	})
+	if errQuery != nil {
+		t.Fatalf("Query() error = %v", errQuery)
+	}
+	if result.Summary.Coverage != 0 || result.Summary.EstimatedCost != nil {
+		t.Fatalf("anthropic event used openai manual price: %+v", result.Summary)
+	}
+}
+
+func TestLocalSearchFailureNotPriced(t *testing.T) {
+	store, errStore := New(Config{
+		Path:            filepath.Join(t.TempDir(), "usage.db"),
+		Retention:       time.Hour,
+		RollupRetention: 2 * time.Hour,
+		FlushInterval:   5 * time.Millisecond,
+	})
+	if errStore != nil {
+		t.Fatalf("New() error = %v", errStore)
+	}
+	defer func() {
+		if errClose := store.Close(); errClose != nil {
+			t.Fatalf("Close() error = %v", errClose)
+		}
+	}()
+	now := time.Now().UTC()
+	store.RecordSearchUsage(websearch.SearchUsageRecord{
+		Time:      now,
+		Channel:   websearch.ChannelTavily,
+		Operation: "search",
+		Success:   false,
+		Attempts:  0,
+	})
+	if _, errPricing := store.ReplaceManualPricing(nil, []SearchPrice{
+		{Channel: "tavily", Operation: "search", Unit: "request", Price: 0.03},
+	}); errPricing != nil {
+		t.Fatalf("ReplaceManualPricing() error = %v", errPricing)
+	}
+	if errFlush := store.Flush(); errFlush != nil {
+		t.Fatalf("Flush() error = %v", errFlush)
+	}
+	result, errQuery := store.Query(context.Background(), Query{
+		Kind: KindSearch,
+		From: now.Add(-time.Hour),
+		To:   now.Add(time.Hour),
+	})
+	if errQuery != nil {
+		t.Fatalf("Query() error = %v", errQuery)
+	}
+	if result.Summary.Requests != 1 {
+		t.Fatalf("requests = %d, want 1", result.Summary.Requests)
+	}
+	if result.Summary.Coverage != 0 || result.Summary.EstimatedCost != nil {
+		t.Fatalf("local failure was priced: %+v", result.Summary)
+	}
+}

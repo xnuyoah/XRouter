@@ -308,6 +308,11 @@ func (m *MCPMirror) callUpstream(ctx context.Context, cfg ChannelConfig, method 
 			}
 		}
 		quotaKind := quotaKindFor(m.store, cfg.Channel, lastAccount.ID)
+		attemptCount := attempts
+		units, unit := 0.0, ""
+		if attemptCount > 0 {
+			units, unit = 1.0, "request"
+		}
 		m.recordSearchUsage(SearchUsageRecord{
 			Time:        time.Now().UTC(),
 			Channel:     cfg.Channel,
@@ -318,14 +323,14 @@ func (m *MCPMirror) callUpstream(ctx context.Context, cfg ChannelConfig, method 
 			Path:        "/mcp",
 			StatusCode:  statusCode,
 			Success:     success,
-			Attempts:    maxInt(attempts, 1),
+			Attempts:    attemptCount,
 			Duration:    time.Since(started),
 			ErrorCode:   errorCode,
 			ProxyUsed:   ProxyConfigured(cfg.ProxyURL),
 			Plan:        quotaKind,
 			QuotaKind:   quotaKind,
-			Units:       1,
-			Unit:        "request",
+			Units:       units,
+			Unit:        unit,
 		})
 	}()
 
