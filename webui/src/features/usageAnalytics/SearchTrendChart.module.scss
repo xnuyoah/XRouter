@@ -1,0 +1,77 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  color: var(--text-secondary);
+  font-size: 12px;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  i {
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+  }
+}
+
+.summary {
+  color: var(--text-secondary);
+}
+
+.successDot {
+  background: var(--viz-success, #22c55e);
+}
+
+.failedDot {
+  background: var(--danger-color, #ef4444);
+}
+
+.creditsDot {
+  background: var(--warning-color, #f59e0b);
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.gridLine {
+  stroke: var(--border-color);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.successBar {
+  fill: var(--viz-success, #22c55e);
+  opacity: 0.9;
+}
+
+.failedBar {
+  fill: var(--danger-color, #ef4444);
+  opacity: 0.9;
+}
+
+.creditsLine {
+  fill: none;
+  stroke: var(--warning-color, #f59e0b);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  stroke-linejoin: round;
+}
+
+.axisLabel {
+  fill: var(--text-secondary);
+  font-size: 11px;
+}

@@ -41,6 +41,10 @@ func TestQuotaHistoryAppendReadAndDedupe(t *testing.T) {
 	if points[0].CheckedAt != now || points[1].CheckedAt != now.Add(time.Hour) {
 		t.Fatalf("unexpected point times: %+v", points)
 	}
+	points = store.QuotaHistory(ChannelTavily, "account-1", 24, 100, now.Add(30*time.Minute))
+	if len(points) != 1 || points[0].CheckedAt != now {
+		t.Fatalf("upper-bound points = %+v, want only the first point", points)
+	}
 }
 
 func TestQuotaHistoryKeepsFailuresAndCompacts(t *testing.T) {

@@ -44,6 +44,9 @@ func (s *Server) refreshWebSearchService(cfg *config.Config) {
 		service = s.webSearch
 	}
 
+	if service != nil && s.webSearchUsageSink != nil {
+		service.SetUsageSink(s.webSearchUsageSink)
+	}
 	if s.webSearchHandler != nil {
 		s.webSearchHandler.SetService(service)
 	}

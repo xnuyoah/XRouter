@@ -1,0 +1,83 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  color: var(--text-secondary);
+  font-size: 12px;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  i {
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+  }
+}
+
+.totalDot {
+  background: var(--primary-color);
+}
+
+.llmDot {
+  background: var(--viz-success, #22c55e);
+}
+
+.searchDot {
+  background: var(--warning-color, #f59e0b);
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.gridLine {
+  stroke: var(--border-color);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.totalLine {
+  fill: none;
+  stroke: var(--primary-color);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.llmLine {
+  fill: none;
+  stroke: var(--viz-success, #22c55e);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  opacity: 0.9;
+}
+
+.searchLine {
+  fill: none;
+  stroke: var(--warning-color, #f59e0b);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 4;
+  opacity: 0.9;
+}
+
+.point {
+  fill: var(--primary-color);
+}
+
+.axisLabel {
+  fill: var(--text-secondary);
+  font-size: 11px;
+}

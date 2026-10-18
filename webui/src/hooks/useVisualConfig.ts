@@ -1212,6 +1212,15 @@ function getNextDirtyFields(
       'errorLogsMaxFiles',
       'usageStatisticsEnabled',
       'redisUsageQueueRetentionSeconds',
+      'usageAnalyticsEnabled',
+      'usageAnalyticsDB',
+      'usageAnalyticsRetentionDays',
+      'usageAnalyticsRollupRetentionDays',
+      'usageAnalyticsFlushInterval',
+      'usageAnalyticsMaxDBBytes',
+      'usagePricingSyncEnabled',
+      'usagePricingSourceURL',
+      'usagePricingCurrency',
       'pluginsEnabled',
       'passthroughHeaders',
       'disableCooling',
@@ -1422,6 +1431,8 @@ function parseVisualValuesFromYaml(yamlContent: string): VisualConfigValues {
   const v8Observability = asRecord(parsed?.['observability']);
   const v8ObservabilityLogs = asRecord(v8Observability?.['logs']);
   const v8ObservabilityUsage = asRecord(v8Observability?.['usage']);
+  const v8ObservabilityAnalytics = asRecord(v8ObservabilityUsage?.['analytics']);
+  const v8ObservabilityPricing = asRecord(v8ObservabilityAnalytics?.['pricing']);
   const tls = asRecord(v8Server?.['tls']);
   const remoteManagement = asRecord(parsed['management']);
   const routing = asRecord(parsed.routing);
@@ -1468,6 +1479,27 @@ function parseVisualValuesFromYaml(yamlContent: string): VisualConfigValues {
     redisUsageQueueRetentionSeconds: String(
       v8ObservabilityUsage?.['redis-usage-queue-retention-seconds'] ?? ''
     ),
+    usageAnalyticsEnabled: Boolean(v8ObservabilityAnalytics?.['enabled']),
+    usageAnalyticsDB:
+      typeof v8ObservabilityAnalytics?.['db'] === 'string' ? v8ObservabilityAnalytics['db'] : '',
+    usageAnalyticsRetentionDays: String(v8ObservabilityAnalytics?.['retention-days'] ?? ''),
+    usageAnalyticsRollupRetentionDays: String(
+      v8ObservabilityAnalytics?.['rollup-retention-days'] ?? ''
+    ),
+    usageAnalyticsFlushInterval:
+      typeof v8ObservabilityAnalytics?.['flush-interval'] === 'string'
+        ? v8ObservabilityAnalytics['flush-interval']
+        : '',
+    usageAnalyticsMaxDBBytes: String(v8ObservabilityAnalytics?.['max-db-bytes'] ?? ''),
+    usagePricingSyncEnabled: Boolean(v8ObservabilityPricing?.['sync-enabled']),
+    usagePricingSourceURL:
+      typeof v8ObservabilityPricing?.['source-url'] === 'string'
+        ? v8ObservabilityPricing['source-url']
+        : '',
+    usagePricingCurrency:
+      typeof v8ObservabilityPricing?.['currency'] === 'string'
+        ? v8ObservabilityPricing['currency']
+        : '',
 
     proxyUrl: typeof v8Requests?.['proxy-url'] === 'string' ? v8Requests?.['proxy-url'] : '',
     forceModelPrefix: Boolean(v8Routing?.['force-model-prefix']),
@@ -1795,6 +1827,65 @@ export function useVisualConfig() {
             doc,
             ['observability', 'usage', 'redis-usage-queue-retention-seconds'],
             values.redisUsageQueueRetentionSeconds
+          );
+        }
+        if (dirtyFields.has('usageAnalyticsEnabled')) {
+          setBooleanInDoc(
+            doc,
+            ['observability', 'usage', 'analytics', 'enabled'],
+            values.usageAnalyticsEnabled
+          );
+        }
+        if (dirtyFields.has('usageAnalyticsDB')) {
+          setStringInDoc(doc, ['observability', 'usage', 'analytics', 'db'], values.usageAnalyticsDB);
+        }
+        if (dirtyFields.has('usageAnalyticsRetentionDays')) {
+          setIntFromStringInDoc(
+            doc,
+            ['observability', 'usage', 'analytics', 'retention-days'],
+            values.usageAnalyticsRetentionDays
+          );
+        }
+        if (dirtyFields.has('usageAnalyticsRollupRetentionDays')) {
+          setIntFromStringInDoc(
+            doc,
+            ['observability', 'usage', 'analytics', 'rollup-retention-days'],
+            values.usageAnalyticsRollupRetentionDays
+          );
+        }
+        if (dirtyFields.has('usageAnalyticsFlushInterval')) {
+          setStringInDoc(
+            doc,
+            ['observability', 'usage', 'analytics', 'flush-interval'],
+            values.usageAnalyticsFlushInterval
+          );
+        }
+        if (dirtyFields.has('usageAnalyticsMaxDBBytes')) {
+          setIntFromStringInDoc(
+            doc,
+            ['observability', 'usage', 'analytics', 'max-db-bytes'],
+            values.usageAnalyticsMaxDBBytes
+          );
+        }
+        if (dirtyFields.has('usagePricingSyncEnabled')) {
+          setBooleanInDoc(
+            doc,
+            ['observability', 'usage', 'analytics', 'pricing', 'sync-enabled'],
+            values.usagePricingSyncEnabled
+          );
+        }
+        if (dirtyFields.has('usagePricingSourceURL')) {
+          setStringInDoc(
+            doc,
+            ['observability', 'usage', 'analytics', 'pricing', 'source-url'],
+            values.usagePricingSourceURL
+          );
+        }
+        if (dirtyFields.has('usagePricingCurrency')) {
+          setStringInDoc(
+            doc,
+            ['observability', 'usage', 'analytics', 'pricing', 'currency'],
+            values.usagePricingCurrency
           );
         }
 

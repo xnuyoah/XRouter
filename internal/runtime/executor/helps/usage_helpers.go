@@ -46,6 +46,7 @@ type UsageReporter struct {
 	source              string
 	reasoning           string
 	serviceTier         string
+	plan                string
 	generate            bool
 	stream              bool
 	requestedAt         time.Time
@@ -139,6 +140,7 @@ func NewUsageReporter(ctx context.Context, provider, model string, auth *cliprox
 		authType:        resolveUsageAuthType(auth),
 		reasoning:       usage.ReasoningEffortFromContext(ctx),
 		serviceTier:     usage.ServiceTierFromContext(ctx),
+		plan:            resolveUsagePlan(auth),
 		generate:        usage.GenerateFromContext(ctx),
 		stream:          usage.StreamFromContext(ctx),
 	}
@@ -656,6 +658,7 @@ func (r *UsageReporter) buildRecordForModel(model string, detail usage.Detail, f
 		AuthType:            r.authType,
 		ReasoningEffort:     r.reasoning,
 		ServiceTier:         r.serviceTier,
+		Plan:                r.plan,
 		ResponseServiceTier: strings.TrimSpace(detail.ResponseServiceTier),
 		ResponseModel:       responseModel,
 		Generate:            usage.GenerateFlag(r.generate),
@@ -849,6 +852,27 @@ func resolveUsageAuthType(auth *cliproxyauth.Auth) string {
 		return ""
 	}
 	return auth.AuthKind()
+}
+
+func resolveUsagePlan(auth *cliproxyauth.Auth) string {
+	if auth == nil {
+		return ""
+	}
+	for _, key := range []string{"plan_type", "plan", "subscription_plan", "tier"} {
+		if auth.Attributes != nil {
+			if value := strings.TrimSpace(auth.Attributes[key]); value != "" {
+				return value
+			}
+		}
+		if auth.Metadata != nil {
+			if value, ok := auth.Metadata[key].(string); ok {
+				if trimmed := strings.TrimSpace(value); trimmed != "" {
+					return trimmed
+				}
+			}
+		}
+	}
+	return ""
 }
 
 // StreamUsageBuffer 保存在流中观测到的最新用量详情。

@@ -10,6 +10,8 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 	"github.com/xnuyoah/XRouter/v8/internal/logging"
 	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
+	"github.com/xnuyoah/XRouter/v8/internal/usageanalytics"
+	"github.com/xnuyoah/XRouter/v8/internal/websearch"
 	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
 	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
@@ -29,6 +31,8 @@ type serverOptionConfig struct {
 	configReloadHook      func(context.Context, *config.Config)
 	exampleAPIKeySafeMode bool
 	channelStats          *channelstats.Store
+	usageAnalytics        *usageanalytics.Store
+	webSearchUsageSink    websearch.UsageSink
 }
 
 // ServerOption 用于定制 HTTP 服务器的构建。
@@ -139,5 +143,22 @@ func WithExampleAPIKeySafeMode() ServerOption {
 func WithChannelStatsStore(store *channelstats.Store) ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.channelStats = store
+	}
+}
+
+// WithUsageAnalyticsStore injects the native usage analytics store.
+func WithUsageAnalyticsStore(store *usageanalytics.Store) ServerOption {
+	return func(cfg *serverOptionConfig) {
+		cfg.usageAnalytics = store
+		if store != nil {
+			cfg.webSearchUsageSink = store
+		}
+	}
+}
+
+// WithWebSearchUsageSink injects the search usage sink.
+func WithWebSearchUsageSink(sink websearch.UsageSink) ServerOption {
+	return func(cfg *serverOptionConfig) {
+		cfg.webSearchUsageSink = sink
 	}
 }

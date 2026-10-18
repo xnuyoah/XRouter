@@ -19,6 +19,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/channelstats"
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
+	"github.com/xnuyoah/XRouter/v8/internal/usageanalytics"
 	"github.com/xnuyoah/XRouter/v8/internal/websearch"
 	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
@@ -62,6 +63,8 @@ type Handler struct {
 	webSearch *websearch.Service
 	// channelStats 是请求级渠道统计存储；未初始化时为 nil。
 	channelStats *channelstats.Store
+	// usageAnalytics stores local LLM and search usage analytics; nil when disabled.
+	usageAnalytics *usageanalytics.Store
 }
 
 type configReloadSnapshot struct {

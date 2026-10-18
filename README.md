@@ -27,6 +27,7 @@ XRouter 是一个本地代理服务器，对 CLI 及其他客户端暴露 **Open
 - 原生 API Key 家族：`openai`、`deepseek`、`nvidia`、`agnes`
 - 通用的 `openai-compatibility` 上游配置，可接入任意兼容供应商
 - 搜索渠道：`tavily` / `exa` / `anysearch` / `firecrawl` / `tinyfish` 的透传网关、MCP 镜像、账号池选号、测活、渠道状态与额度读取（见 `docs/web-search.md`）
+- 观测：内置 LLM Token 用量与成本估算、搜索工具用量分析，支持按模型/供应商/渠道/操作/计划/额度维度聚合（见 `docs/usage-analytics.md`）
 - 动态库插件体系，以及内置的管理面板
 - 可嵌入的 Go SDK（见 `docs/sdk-usage.md`）
 
@@ -138,6 +139,7 @@ go build -o xrouter ./cmd/server
 ## 文档
 
 - 管理 API：[docs/management-api-v8.md](docs/management-api-v8.md)
+- 用量分析：[docs/usage-analytics.md](docs/usage-analytics.md)
 - 搜索渠道：[docs/web-search.md](docs/web-search.md)
 - SDK 使用：[docs/sdk-usage.md](docs/sdk-usage.md)
 - SDK 进阶（executor 与 translator）：[docs/sdk-advanced.md](docs/sdk-advanced.md)

@@ -1,0 +1,83 @@
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  > :first-child {
+    flex: 1;
+  }
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.error {
+  padding: 10px 12px;
+  border: 1px solid var(--danger-color, #ef4444);
+  border-radius: 10px;
+  color: var(--danger-color, #ef4444);
+}
+
+.syncError {
+  color: var(--danger-color, #ef4444);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  h3 {
+    margin: 0;
+    font-size: 15px;
+  }
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  align-items: end;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+
+  th,
+  td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  th {
+    color: var(--text-secondary);
+  }
+}
+
+.empty {
+  padding: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}

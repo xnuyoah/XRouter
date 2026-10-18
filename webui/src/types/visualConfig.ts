@@ -31,6 +31,15 @@ export type VisualConfigFieldPath =
   | 'errorLogsMaxFiles'
   | 'logsMaxTotalSizeMb'
   | 'redisUsageQueueRetentionSeconds'
+  | 'usageAnalyticsEnabled'
+  | 'usageAnalyticsDB'
+  | 'usageAnalyticsRetentionDays'
+  | 'usageAnalyticsRollupRetentionDays'
+  | 'usageAnalyticsFlushInterval'
+  | 'usageAnalyticsMaxDBBytes'
+  | 'usagePricingSyncEnabled'
+  | 'usagePricingSourceURL'
+  | 'usagePricingCurrency'
   | 'requestRetry'
   | 'maxRetryCredentials'
   | 'maxRetryInterval'
@@ -177,6 +186,15 @@ export type VisualConfigValues = {
   errorLogsMaxFiles: string;
   usageStatisticsEnabled: boolean;
   redisUsageQueueRetentionSeconds: string;
+  usageAnalyticsEnabled: boolean;
+  usageAnalyticsDB: string;
+  usageAnalyticsRetentionDays: string;
+  usageAnalyticsRollupRetentionDays: string;
+  usageAnalyticsFlushInterval: string;
+  usageAnalyticsMaxDBBytes: string;
+  usagePricingSyncEnabled: boolean;
+  usagePricingSourceURL: string;
+  usagePricingCurrency: string;
   proxyUrl: string;
   forceModelPrefix: boolean;
   passthroughHeaders: boolean;
@@ -279,6 +297,15 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   errorLogsMaxFiles: '',
   usageStatisticsEnabled: false,
   redisUsageQueueRetentionSeconds: '',
+  usageAnalyticsEnabled: false,
+  usageAnalyticsDB: '',
+  usageAnalyticsRetentionDays: '',
+  usageAnalyticsRollupRetentionDays: '',
+  usageAnalyticsFlushInterval: '',
+  usageAnalyticsMaxDBBytes: '',
+  usagePricingSyncEnabled: false,
+  usagePricingSourceURL: '',
+  usagePricingCurrency: '',
   proxyUrl: '',
   forceModelPrefix: false,
   passthroughHeaders: false,
