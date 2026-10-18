@@ -13,8 +13,8 @@ bin/*
 conv/*
 temp/*
 refs/*
-plugins/*
-data/*
+/plugins/*
+/data/*
 examples/plugin/bin/*
 
 # Storage backends
@@ -36,6 +36,7 @@ docs/*
 !docs/management-api-v8.md
 !docs/web-search.md
 !docs/usage-analytics.md
+!docs/production.md
 AGENTS.md
 CLAUDE.md
 GEMINI.md
@@ -73,10 +74,7 @@ docker-compose.override.yml
 
 # Local LLM Wiki vault
 .llm-wiki
-usage-analytics/
-
-channel-status/
-
-websearch/
-
-backups/
+/usage-analytics/
+/channel-status/
+/websearch/
+/backups/
