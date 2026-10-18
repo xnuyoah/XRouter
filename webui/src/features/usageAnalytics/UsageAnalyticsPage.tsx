@@ -276,12 +276,14 @@ export function UsageAnalyticsPage() {
   const [status, setStatus] = useState<UsageAnalyticsStatus | null>(null);
   const [events, setEvents] = useState<UsageEvent[]>([]);
   const [eventsHasMore, setEventsHasMore] = useState(false);
+  const [eventsCursor, setEventsCursor] = useState('');
   const [monitoring, setMonitoring] = useState<WebSearchMonitoring | null>(null);
   const [searchAccounts, setSearchAccounts] = useState<WebSearchAccount[]>([]);
   const [searchAccountUsage, setSearchAccountUsage] = useState<UsageAnalyticsResponse | null>(null);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [exportingPng, setExportingPng] = useState(false);
   const chartRef = useRef<SVGSVGElement | null>(null);
+  const loadSeq = useRef(0);
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const showNotification = useNotificationStore((state) => state.showNotification);
@@ -302,6 +304,7 @@ export function UsageAnalyticsPage() {
     () => countAccountWarnings(searchAccounts, lowBalanceThreshold, t),
     [searchAccounts, lowBalanceThreshold, t]
   );
+  const series = analytics?.series ?? [];
   const historyTo = useMemo(() => {
     if (preset !== 'custom' || !customTo) return undefined;
     const parsed = new Date(customTo);
@@ -309,6 +312,7 @@ export function UsageAnalyticsPage() {
   }, [preset, customTo]);
 
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     if (preset === 'custom' && (!customFrom || !customTo)) {
       setLoading(false);
       return;
@@ -339,14 +343,17 @@ export function UsageAnalyticsPage() {
           : Promise.resolve([] as WebSearchAccount[]),
         usageAnalyticsApi.getStatus().catch(() => null),
       ]);
+      if (seq !== loadSeq.current) return;
       setAnalytics(analyticsResult);
       setStatus(statusResult);
       setEvents(eventsResult.events ?? []);
       setEventsHasMore(Boolean(eventsResult.has_more));
+      setEventsCursor(eventsResult.next_cursor ?? '');
       setMonitoring(monitoringResult);
       setSearchAccountUsage(accountUsageResult);
       setSearchAccounts(accountResult);
     } catch (err: unknown) {
+      if (seq !== loadSeq.current) return;
       const status = (err as { status?: number })?.status;
       if (status === 503) {
         setDisabled(true);
@@ -356,7 +363,9 @@ export function UsageAnalyticsPage() {
         setError(err instanceof Error ? err.message : t('usage_analytics.load_failed'));
       }
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) {
+        setLoading(false);
+      }
     }
   }, [params, preset, customFrom, customTo, pageSize, kind, t]);
 
@@ -412,16 +421,17 @@ export function UsageAnalyticsPage() {
   useHeaderRefresh(load, true);
 
   const loadMore = async () => {
-    if (eventsLoading || !eventsHasMore) return;
+    if (eventsLoading || !eventsHasMore || !eventsCursor) return;
     setEventsLoading(true);
     try {
       const result = await usageAnalyticsApi.getEvents({
         ...params,
         limit: pageSize,
-        offset: events.length,
+        cursor: eventsCursor,
       });
       setEvents((current) => [...current, ...(result.events ?? [])]);
       setEventsHasMore(Boolean(result.has_more));
+      setEventsCursor(result.next_cursor ?? '');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('usage_analytics.load_failed'));
     } finally {
@@ -738,7 +748,7 @@ export function UsageAnalyticsPage() {
           </article>
           <article className={styles.card}>
             <span>{t('usage_analytics.summary_tokens')}</span>
-            <strong>{formatTokens(summary.tokens.total, tokenDisplayMode)}</strong>
+            <strong>{formatTokens(summary.tokens?.total ?? 0, tokenDisplayMode)}</strong>
           </article>
           <article className={styles.card}>
             <span>{t('usage_analytics.summary_latency')}</span>
@@ -776,7 +786,9 @@ export function UsageAnalyticsPage() {
           )}
           <article className={styles.card}>
             <span>{t('usage_analytics.summary_cost')}</span>
-            <strong>{formatUsageCost(summary.estimated_cost, summary.currency)}</strong>
+            <strong>
+              {formatUsageCost(summary.estimated_cost, summary.currency ?? analytics?.currency)}
+            </strong>
           </article>
           <article className={styles.card}>
             <span>{t('usage_analytics.summary_coverage')}</span>
@@ -903,8 +915,8 @@ export function UsageAnalyticsPage() {
             <h2>{t('usage_analytics.trend_title')}</h2>
             <span>{t('usage_analytics.trend_hint')}</span>
           </div>
-          {analytics.series.length > 0 && (summary?.requests ?? 0) > 0 ? (
-            <UsageTrendChart series={analytics.series} svgRef={chartRef} />
+          {series.length > 0 && (summary?.requests ?? 0) > 0 ? (
+            <UsageTrendChart series={series} svgRef={chartRef} />
           ) : (
             <EmptyState
               title={t('usage_analytics.no_data')}
@@ -914,33 +926,30 @@ export function UsageAnalyticsPage() {
         </section>
       )}
 
-      {!disabled && analytics && analytics.series.some((point) => point.cost != null) && (
+      {!disabled && analytics && series.some((point) => point.cost != null) && (
         <section className={styles.panel}>
           <div className={styles.panelHeader}>
             <h2>{t('usage_analytics.cost_trend_title')}</h2>
             <span>{t('usage_analytics.cost_trend_hint')}</span>
           </div>
-          <CostTrendChart
-            series={analytics.series}
-            currency={summary?.currency ?? analytics.currency}
-          />
+          <CostTrendChart series={series} currency={summary?.currency ?? analytics.currency} />
         </section>
       )}
 
       {!disabled &&
         showSearch &&
         analytics &&
-        analytics.series.some((point) => point.kind === 'search' && point.requests > 0) && (
+        series.some((point) => point.kind === 'search' && point.requests > 0) && (
           <section className={styles.panel}>
             <div className={styles.panelHeader}>
               <h2>{t('usage_analytics.search_trend_title')}</h2>
               <span>{t('usage_analytics.search_trend_hint')}</span>
             </div>
-            <SearchTrendChart series={analytics.series} />
+            <SearchTrendChart series={series} />
           </section>
         )}
 
-      {!disabled && showSearch && monitoring && (
+      {!disabled && showSearch && monitoring?.quota && (
         <section className={styles.panel}>
           <div className={styles.panelHeader}>
             <h2>{t('usage_analytics.search_quota_title')}</h2>
@@ -1015,7 +1024,7 @@ export function UsageAnalyticsPage() {
                     <td>{formatTokens(group.tokens.cache_write, tokenDisplayMode)}</td>
                     <td>{formatTokens(group.tokens.total, tokenDisplayMode)}</td>
                     <td>{group.units ? formatCompactNumber(group.units) : '—'}</td>
-                    <td>{formatUsageCost(group.cost, summary?.currency)}</td>
+                    <td>{formatUsageCost(group.cost, summary?.currency ?? analytics?.currency)}</td>
                     <td>{formatDuration(group.avg_latency_ms)}</td>
                     <td>{formatDuration(group.p95_latency_ms)}</td>
                     <td>{formatDuration(group.avg_ttft_ms)}</td>

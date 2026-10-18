@@ -199,6 +199,7 @@ export interface UsageQueryParams {
   api_key_hash?: string;
   limit?: number;
   offset?: number;
+  cursor?: string;
 }
 
 export interface UsageModelPriceTier {

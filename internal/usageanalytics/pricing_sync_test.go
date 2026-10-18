@@ -119,3 +119,28 @@ func TestCloseCancelsActivePriceSync(t *testing.T) {
 		t.Fatal("active sync was not canceled by Close")
 	}
 }
+
+func TestPriceSyncRejectsEmptyCatalog(t *testing.T) {
+	store := newPricingSyncStore(t)
+	defer func() {
+		if errClose := store.Close(); errClose != nil {
+			t.Fatalf("Close() error = %v", errClose)
+		}
+	}()
+	store.priceFetch = func(context.Context, string) ([]ModelPrice, error) {
+		return []ModelPrice{{Provider: "openai", Model: "gpt-test", Input: 1}}, nil
+	}
+	if _, errSync := store.SyncModelsDev(context.Background()); errSync != nil {
+		t.Fatalf("first sync error = %v", errSync)
+	}
+	store.priceFetch = func(context.Context, string) ([]ModelPrice, error) {
+		return nil, nil
+	}
+	if _, errSync := store.SyncModelsDev(context.Background()); errSync == nil {
+		t.Fatal("empty catalog sync error = nil, want error")
+	}
+	snapshot := store.PricingSnapshot("", "gpt-test", 10, 0)
+	if snapshot.TotalModels != 1 || len(snapshot.Models) != 1 {
+		t.Fatalf("reference catalog was cleared: %+v", snapshot)
+	}
+}

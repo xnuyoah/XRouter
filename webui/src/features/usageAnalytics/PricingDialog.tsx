@@ -142,7 +142,10 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
     };
     const key = (value: UsageModelPrice) =>
       `${value.provider ?? ''}|${value.model}|${value.plan ?? ''}|${value.service_tier ?? ''}`.toLowerCase();
-    const models = [...snapshot.manual_models.filter((value) => key(value) !== key(entry)), entry];
+    const models = [
+      ...(snapshot.manual_models ?? []).filter((value) => key(value) !== key(entry)),
+      entry,
+    ];
     await saveModels(models, snapshot.search);
     setModelDraft(EMPTY_MODEL);
   };
@@ -152,7 +155,7 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
     const key = (value: UsageModelPrice) =>
       `${value.provider ?? ''}|${value.model}|${value.plan ?? ''}|${value.service_tier ?? ''}`.toLowerCase();
     await saveModels(
-      snapshot.manual_models.filter((value) => key(value) !== key(entry)),
+      (snapshot.manual_models ?? []).filter((value) => key(value) !== key(entry)),
       snapshot.search
     );
   };
@@ -168,8 +171,8 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
     };
     const key = (value: UsageSearchPrice) =>
       `${value.channel}|${value.operation ?? ''}|${value.unit ?? ''}`.toLowerCase();
-    const search = [...snapshot.search.filter((value) => key(value) !== key(entry)), entry];
-    await saveModels(snapshot.manual_models, search);
+    const search = [...(snapshot.search ?? []).filter((value) => key(value) !== key(entry)), entry];
+    await saveModels(snapshot.manual_models ?? [], search);
     setSearchDraft(EMPTY_SEARCH);
   };
 
@@ -179,7 +182,7 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
       `${value.channel}|${value.operation ?? ''}|${value.unit ?? ''}`.toLowerCase();
     await saveModels(
       snapshot.manual_models,
-      snapshot.search.filter((value) => key(value) !== key(entry))
+      (snapshot.search ?? []).filter((value) => key(value) !== key(entry))
     );
   };
 
@@ -220,7 +223,8 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
               {t('usage_analytics.pricing_revision')}: {snapshot.revision}
             </span>
             <span>
-              {t('usage_analytics.pricing_updated')}: {new Date(snapshot.updated_at).toLocaleString()}
+              {t('usage_analytics.pricing_updated')}:{' '}
+              {new Date(snapshot.updated_at).toLocaleString()}
             </span>
             <span>
               {t('usage_analytics.pricing_currency')}: {snapshot.currency}
@@ -249,22 +253,30 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
           <div className={styles.formGrid}>
             <Input
               value={modelDraft.provider}
-              onChange={(event) => setModelDraft((current) => ({ ...current, provider: event.target.value }))}
+              onChange={(event) =>
+                setModelDraft((current) => ({ ...current, provider: event.target.value }))
+              }
               placeholder={t('usage_analytics.provider')}
             />
             <Input
               value={modelDraft.model}
-              onChange={(event) => setModelDraft((current) => ({ ...current, model: event.target.value }))}
+              onChange={(event) =>
+                setModelDraft((current) => ({ ...current, model: event.target.value }))
+              }
               placeholder={t('usage_analytics.model')}
             />
             <Input
               value={modelDraft.plan}
-              onChange={(event) => setModelDraft((current) => ({ ...current, plan: event.target.value }))}
+              onChange={(event) =>
+                setModelDraft((current) => ({ ...current, plan: event.target.value }))
+              }
               placeholder={t('usage_analytics.plan')}
             />
             <Input
               value={modelDraft.service_tier}
-              onChange={(event) => setModelDraft((current) => ({ ...current, service_tier: event.target.value }))}
+              onChange={(event) =>
+                setModelDraft((current) => ({ ...current, service_tier: event.target.value }))
+              }
               placeholder={t('usage_analytics.pricing_service_tier')}
             />
             <Input
@@ -272,7 +284,9 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
               min={0}
               step="any"
               value={modelDraft.input}
-              onChange={(event) => setModelDraft((current) => ({ ...current, input: event.target.value }))}
+              onChange={(event) =>
+                setModelDraft((current) => ({ ...current, input: event.target.value }))
+              }
               placeholder="input / 1M"
             />
             <Input
@@ -280,7 +294,9 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
               min={0}
               step="any"
               value={modelDraft.output}
-              onChange={(event) => setModelDraft((current) => ({ ...current, output: event.target.value }))}
+              onChange={(event) =>
+                setModelDraft((current) => ({ ...current, output: event.target.value }))
+              }
               placeholder="output / 1M"
             />
             <Input
@@ -288,7 +304,9 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
               min={0}
               step="any"
               value={modelDraft.cache_read}
-              onChange={(event) => setModelDraft((current) => ({ ...current, cache_read: event.target.value }))}
+              onChange={(event) =>
+                setModelDraft((current) => ({ ...current, cache_read: event.target.value }))
+              }
               placeholder="cache read / 1M"
             />
             <Input
@@ -296,7 +314,9 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
               min={0}
               step="any"
               value={modelDraft.cache_write}
-              onChange={(event) => setModelDraft((current) => ({ ...current, cache_write: event.target.value }))}
+              onChange={(event) =>
+                setModelDraft((current) => ({ ...current, cache_write: event.target.value }))
+              }
               placeholder="cache write / 1M"
             />
             <Input
@@ -304,7 +324,9 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
               min={0}
               step="any"
               value={modelDraft.reasoning}
-              onChange={(event) => setModelDraft((current) => ({ ...current, reasoning: event.target.value }))}
+              onChange={(event) =>
+                setModelDraft((current) => ({ ...current, reasoning: event.target.value }))
+              }
               placeholder="reasoning / 1M"
             />
             <Button onClick={() => void addModelOverride()} loading={saving}>
@@ -336,7 +358,11 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
                     <td>{entry.cache_read}</td>
                     <td>{entry.cache_write}</td>
                     <td>
-                      <Button variant="danger" size="sm" onClick={() => void removeModelOverride(entry)}>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => void removeModelOverride(entry)}
+                      >
                         {t('usage_analytics.pricing_remove')}
                       </Button>
                     </td>
@@ -344,7 +370,7 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
                 ))}
               </tbody>
             </table>
-            {snapshot && snapshot.manual_models.length === 0 && (
+            {snapshot && (snapshot.manual_models?.length ?? 0) === 0 && (
               <div className={styles.empty}>{t('usage_analytics.pricing_no_manual')}</div>
             )}
           </div>
@@ -361,7 +387,9 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
             />
             <Input
               value={searchDraft.operation}
-              onChange={(event) => setSearchDraft((current) => ({ ...current, operation: event.target.value }))}
+              onChange={(event) =>
+                setSearchDraft((current) => ({ ...current, operation: event.target.value }))
+              }
               placeholder={t('usage_analytics.operation')}
             />
             <Select
@@ -375,7 +403,9 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
               min={0}
               step="any"
               value={searchDraft.price}
-              onChange={(event) => setSearchDraft((current) => ({ ...current, price: event.target.value }))}
+              onChange={(event) =>
+                setSearchDraft((current) => ({ ...current, price: event.target.value }))
+              }
               placeholder={t('usage_analytics.pricing_price')}
             />
             <Button onClick={() => void addSearchOverride()} loading={saving}>
@@ -401,7 +431,11 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
                     <td>{entry.unit || 'request'}</td>
                     <td>{entry.price}</td>
                     <td>
-                      <Button variant="danger" size="sm" onClick={() => void removeSearchOverride(entry)}>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => void removeSearchOverride(entry)}
+                      >
                         {t('usage_analytics.pricing_remove')}
                       </Button>
                     </td>
@@ -409,7 +443,7 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
                 ))}
               </tbody>
             </table>
-            {snapshot && snapshot.search.length === 0 && (
+            {snapshot && (snapshot.search?.length ?? 0) === 0 && (
               <div className={styles.empty}>{t('usage_analytics.pricing_no_manual')}</div>
             )}
           </div>
@@ -433,7 +467,9 @@ export function PricingDialog({ open, onClose, onSaved }: PricingDialogProps) {
               </thead>
               <tbody>
                 {(snapshot?.models ?? []).map((entry) => (
-                  <tr key={`${entry.provider}:${entry.model}:${entry.plan}:${entry.service_tier}:${entry.source}`}>
+                  <tr
+                    key={`${entry.provider}:${entry.model}:${entry.plan}:${entry.service_tier}:${entry.source}`}
+                  >
                     <td>{entry.provider || '—'}</td>
                     <td>{entry.model}</td>
                     <td>{entry.plan || entry.service_tier || '—'}</td>

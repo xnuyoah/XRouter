@@ -688,6 +688,13 @@ func (s *Store) SyncModelsDev(ctx context.Context) (PriceSyncResult, error) {
 		s.priceStateMu.Unlock()
 		return PriceSyncResult{}, errFetch
 	}
+	if len(reference) == 0 {
+		errEmpty := fmt.Errorf("price catalog is empty")
+		s.priceStateMu.Lock()
+		s.priceSyncState.LastError = errEmpty.Error()
+		s.priceStateMu.Unlock()
+		return PriceSyncResult{}, errEmpty
+	}
 	s.priceMu.Lock()
 	book := s.priceBook
 	book.Reference = reference

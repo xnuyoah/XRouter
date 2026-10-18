@@ -15,6 +15,8 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/usageanalytics"
 )
 
+const maxUsageQueryBuckets = 20000
+
 // SetUsageAnalyticsStore injects the native usage analytics store.
 func (h *Handler) SetUsageAnalyticsStore(store *usageanalytics.Store) {
 	if h == nil {
@@ -87,6 +89,10 @@ func (h *Handler) GetUsageEvents(c *gin.Context) {
 	}
 	result, errResult := store.Events(c.Request.Context(), query)
 	if errResult != nil {
+		if errors.Is(errResult, usageanalytics.ErrInvalidCursor) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_cursor", "message": errResult.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "query_failed", "message": errResult.Error()})
 		return
 	}
@@ -124,10 +130,11 @@ func (h *Handler) ExportUsageAnalytics(c *gin.Context) {
 	if errHeader := writer.Write(header); errHeader != nil {
 		return
 	}
-	offset := 0
+	cursor := ""
 	for {
 		page := query
-		page.Offset = offset
+		page.Offset = 0
+		page.Cursor = cursor
 		page.Limit = 1000
 		result, errResult := store.Events(c.Request.Context(), page)
 		if errResult != nil {
@@ -136,24 +143,24 @@ func (h *Handler) ExportUsageAnalytics(c *gin.Context) {
 		for _, event := range result.Events {
 			record := []string{
 				event.Time.UTC().Format(time.RFC3339),
-				string(event.Kind),
-				event.Provider,
-				event.Channel,
-				event.Model,
-				event.UpstreamModel,
-				event.Alias,
-				event.Operation,
-				event.Method,
-				event.Path,
-				event.Plan,
-				event.QuotaKind,
-				event.AccountID,
-				event.AccountName,
-				event.Source,
-				event.AuthType,
-				event.ExecutorType,
-				event.ServiceTier,
-				event.ReasoningEffort,
+				csvSafe(string(event.Kind)),
+				csvSafe(event.Provider),
+				csvSafe(event.Channel),
+				csvSafe(event.Model),
+				csvSafe(event.UpstreamModel),
+				csvSafe(event.Alias),
+				csvSafe(event.Operation),
+				csvSafe(event.Method),
+				csvSafe(event.Path),
+				csvSafe(event.Plan),
+				csvSafe(event.QuotaKind),
+				csvSafe(event.AccountID),
+				csvSafe(event.AccountName),
+				csvSafe(event.Source),
+				csvSafe(event.AuthType),
+				csvSafe(event.ExecutorType),
+				csvSafe(event.ServiceTier),
+				csvSafe(event.ReasoningEffort),
 				strconv.FormatInt(event.Tokens.Input, 10),
 				strconv.FormatInt(event.Tokens.UncachedInput, 10),
 				strconv.FormatInt(event.Tokens.Output, 10),
@@ -162,18 +169,18 @@ func (h *Handler) ExportUsageAnalytics(c *gin.Context) {
 				strconv.FormatInt(event.Tokens.CacheWrite, 10),
 				strconv.FormatInt(event.Tokens.Total, 10),
 				strconv.FormatFloat(event.Units, 'f', -1, 64),
-				event.Unit,
+				csvSafe(event.Unit),
 				strconv.FormatFloat(event.Credits, 'f', -1, 64),
 				formatOptionalCost(event.UpstreamCost),
-				event.UpstreamCurrency,
+				csvSafe(event.UpstreamCurrency),
 				formatOptionalCost(event.Cost),
-				event.Currency,
+				csvSafe(event.Currency),
 				strconv.FormatInt(event.PriceRevision, 10),
 				strconv.FormatInt(event.LatencyMS, 10),
 				strconv.FormatInt(event.TTFTMS, 10),
 				strconv.Itoa(event.StatusCode),
 				strconv.FormatBool(event.Success),
-				event.ErrorCode,
+				csvSafe(event.ErrorCode),
 				strconv.Itoa(event.Attempts),
 				strconv.FormatBool(event.ProxyUsed),
 				strconv.FormatBool(event.Generate),
@@ -182,10 +189,10 @@ func (h *Handler) ExportUsageAnalytics(c *gin.Context) {
 				return
 			}
 		}
-		if !result.HasMore || len(result.Events) == 0 {
+		if !result.HasMore || result.NextCursor == "" || len(result.Events) == 0 {
 			break
 		}
-		offset += len(result.Events)
+		cursor = result.NextCursor
 	}
 }
 
@@ -411,6 +418,9 @@ func parseUsageQuery(c *gin.Context) (usageanalytics.Query, error) {
 		return query, errBucket
 	}
 	query.Bucket = bucket
+	if spanBuckets := int64(to.Sub(from) / bucket); spanBuckets > maxUsageQueryBuckets {
+		return query, fmt.Errorf("time range requires %d buckets; use a larger bucket or a shorter range", spanBuckets)
+	}
 	if limit := parseIntQuery(c.Query("limit"), 100); limit > 1000 {
 		query.Limit = 1000
 	} else if limit > 0 {
@@ -420,6 +430,7 @@ func parseUsageQuery(c *gin.Context) (usageanalytics.Query, error) {
 	if query.Offset < 0 {
 		query.Offset = 0
 	}
+	query.Cursor = strings.TrimSpace(c.Query("cursor"))
 	query.Sort = strings.TrimSpace(c.Query("sort"))
 	return query, nil
 }
@@ -517,6 +528,18 @@ func parseUsageBucket(value string, span time.Duration) (time.Duration, error) {
 		}
 	default:
 		return 0, fmt.Errorf("bucket must be auto, minute, hour or day")
+	}
+}
+
+func csvSafe(value string) string {
+	if value == "" {
+		return ""
+	}
+	switch value[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + value
+	default:
+		return value
 	}
 }
 

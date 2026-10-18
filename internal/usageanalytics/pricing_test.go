@@ -118,6 +118,9 @@ func TestManualPricingAndQueryCost(t *testing.T) {
 	if result.Summary.Coverage != 1 {
 		t.Fatalf("coverage = %v, want 1", result.Summary.Coverage)
 	}
+	if result.Summary.Currency != "USD" {
+		t.Fatalf("summary currency = %q, want USD", result.Summary.Currency)
+	}
 	if result.PriceRevision != snapshot.Revision {
 		t.Fatalf("price revision = %d, want %d", result.PriceRevision, snapshot.Revision)
 	}
@@ -208,6 +211,9 @@ func TestSearchCreditsAndUpstreamCost(t *testing.T) {
 	}
 	if result.Summary.Coverage != 1 {
 		t.Fatalf("coverage = %v, want 1", result.Summary.Coverage)
+	}
+	if result.Summary.Currency != "USD" {
+		t.Fatalf("summary currency = %q, want USD", result.Summary.Currency)
 	}
 	var seriesCredits float64
 	for _, point := range result.Series {

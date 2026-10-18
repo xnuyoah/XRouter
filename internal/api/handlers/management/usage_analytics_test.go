@@ -177,7 +177,7 @@ func TestExportUsageAnalyticsIncludesSearchCosts(t *testing.T) {
 		Time:             time.Now().UTC(),
 		Channel:          websearch.ChannelFirecrawl,
 		AccountID:        "account-1",
-		AccountName:      "Firecrawl Key",
+		AccountName:      "=SUM(A1)",
 		Operation:        "scrape",
 		Method:           "POST",
 		Path:             "/v2/scrape",
@@ -218,6 +218,9 @@ func TestExportUsageAnalyticsIncludesSearchCosts(t *testing.T) {
 	for _, row := range rows[1:] {
 		if row[columns["channel"]] != string(websearch.ChannelFirecrawl) {
 			continue
+		}
+		if got := row[columns["account_name"]]; got != "'=SUM(A1)" {
+			t.Fatalf("account_name = %q, want CSV-escaped formula", got)
 		}
 		if got := row[columns["method"]]; got != "POST" {
 			t.Fatalf("method = %q, want POST", got)
@@ -308,5 +311,61 @@ func TestRequestLogFromAnalytics(t *testing.T) {
 	}
 	if entries[1].Path != "find_similar" || entries[1].Method != "" {
 		t.Fatalf("fallback path = %q, method = %q", entries[1].Path, entries[1].Method)
+	}
+}
+
+func TestGetUsageEventsCursorPagination(t *testing.T) {
+	handler, store := newUsageAnalyticsTestHandler(t)
+	defer func() {
+		if errClose := store.Close(); errClose != nil {
+			t.Fatalf("Close() error = %v", errClose)
+		}
+	}()
+
+	first := performUsageRequest(handler.GetUsageEvents, "/usage?range=24h&limit=1")
+	if first.Code != http.StatusOK {
+		t.Fatalf("first status = %d, body = %s", first.Code, first.Body.String())
+	}
+	var page1 usageanalytics.EventsResult
+	if errUnmarshal := json.Unmarshal(first.Body.Bytes(), &page1); errUnmarshal != nil {
+		t.Fatalf("decode page1: %v", errUnmarshal)
+	}
+	if len(page1.Events) != 1 || !page1.HasMore || page1.NextCursor == "" {
+		t.Fatalf("page1 = %+v", page1)
+	}
+
+	second := performUsageRequest(
+		handler.GetUsageEvents,
+		"/usage?range=24h&limit=1&cursor="+page1.NextCursor,
+	)
+	if second.Code != http.StatusOK {
+		t.Fatalf("second status = %d, body = %s", second.Code, second.Body.String())
+	}
+	var page2 usageanalytics.EventsResult
+	if errUnmarshal := json.Unmarshal(second.Body.Bytes(), &page2); errUnmarshal != nil {
+		t.Fatalf("decode page2: %v", errUnmarshal)
+	}
+	if len(page2.Events) != 1 {
+		t.Fatalf("page2 events = %d, want 1", len(page2.Events))
+	}
+	if page1.Events[0].ID == page2.Events[0].ID {
+		t.Fatalf("cursor repeated event %s", page2.Events[0].ID)
+	}
+}
+
+func TestGetUsageEventsRejectsOversizedRange(t *testing.T) {
+	handler, store := newUsageAnalyticsTestHandler(t)
+	defer func() {
+		if errClose := store.Close(); errClose != nil {
+			t.Fatalf("Close() error = %v", errClose)
+		}
+	}()
+
+	recorder := performUsageRequest(
+		handler.GetUsageEvents,
+		"/usage?from=0001-01-01&to=9999-12-31&bucket=minute",
+	)
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body = %s", recorder.Code, recorder.Body.String())
 	}
 }

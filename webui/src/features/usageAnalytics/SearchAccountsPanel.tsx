@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { QuotaHistoryChart } from '@/features/channelStatus/components/QuotaHistoryChart';
@@ -61,16 +61,20 @@ export function SearchAccountsPanel({
   const [history, setHistory] = useState<Record<string, WebSearchQuotaHistoryPoint[]>>({});
   const [historyLoading, setHistoryLoading] = useState<Record<string, boolean>>({});
   const [historyError, setHistoryError] = useState<Record<string, boolean>>({});
+  const historySeq = useRef<Record<string, number>>({});
 
   useEffect(() => {
     setExpandedKey('');
     setHistory({});
     setHistoryLoading({});
     setHistoryError({});
+    historySeq.current = {};
   }, [historyHours, historyTo]);
 
   const loadHistory = useCallback(
     async (account: WebSearchAccount, key: string) => {
+      const seq = (historySeq.current[key] ?? 0) + 1;
+      historySeq.current[key] = seq;
       setHistoryLoading((current) => ({ ...current, [key]: true }));
       setHistoryError((current) => ({ ...current, [key]: false }));
       try {
@@ -81,11 +85,15 @@ export function SearchAccountsPanel({
           limit: 500,
           to: historyTo,
         });
+        if (historySeq.current[key] !== seq) return;
         setHistory((current) => ({ ...current, [key]: result.points ?? [] }));
       } catch {
+        if (historySeq.current[key] !== seq) return;
         setHistoryError((current) => ({ ...current, [key]: true }));
       } finally {
-        setHistoryLoading((current) => ({ ...current, [key]: false }));
+        if (historySeq.current[key] === seq) {
+          setHistoryLoading((current) => ({ ...current, [key]: false }));
+        }
       }
     },
     [historyHours, historyTo]

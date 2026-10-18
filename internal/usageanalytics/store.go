@@ -28,12 +28,14 @@ import (
 )
 
 const (
-	schemaVersion   = 1
-	batchSize       = 100
-	maxRestoreBytes = 256 << 20
+	schemaVersion    = 1
+	batchSize        = 100
+	maxRestoreBytes  = 256 << 20
+	maxSeriesBuckets = 20000
 )
 
 var (
+	ErrInvalidCursor     = errors.New("invalid cursor")
 	metaBucket           = []byte("meta")
 	eventsBucket         = []byte("events")
 	rollupsBucket        = []byte("rollups")
@@ -167,6 +169,10 @@ func New(cfg Config) (*Store, error) {
 		log.WithError(errSize).Warn("usage analytics initial size limit enforcement failed")
 	}
 	if errCompact := store.compactIfNeeded(); errCompact != nil {
+		if store.db == nil {
+			store.priceCancel()
+			return nil, fmt.Errorf("usage analytics database is unusable after compaction: %w", errCompact)
+		}
 		log.WithError(errCompact).Warn("usage analytics initial compaction failed")
 	}
 	go store.runWriter()
@@ -987,6 +993,7 @@ func (s *Store) compact() error {
 	if errClose := s.db.Close(); errClose != nil {
 		return errClose
 	}
+	s.db = nil
 	reopen := func() error {
 		db, errOpen := bbolt.Open(s.cfg.Path, 0o600, &bbolt.Options{Timeout: time.Second})
 		if errOpen != nil {
@@ -997,11 +1004,13 @@ func (s *Store) compact() error {
 	}
 	if errCompact := compactDatabase(s.cfg.Path); errCompact != nil {
 		if errReopen := reopen(); errReopen != nil {
+			s.closed.Store(true)
 			return fmt.Errorf("%v; reopen failed: %w", errCompact, errReopen)
 		}
 		return errCompact
 	}
 	if errReopen := reopen(); errReopen != nil {
+		s.closed.Store(true)
 		return errReopen
 	}
 	s.priceMu.Lock()
@@ -1056,7 +1065,7 @@ func (s *Store) compactIfNeeded() error {
 }
 
 // Query aggregates rollups for the requested range.
-func (s *Store) Query(_ context.Context, query Query) (AnalyticsResult, error) {
+func (s *Store) Query(ctx context.Context, query Query) (AnalyticsResult, error) {
 	query = normalizeQuery(query, time.Now().UTC())
 	result := AnalyticsResult{
 		Range:  QueryRange{From: query.From.UTC(), To: query.To.UTC(), Bucket: bucketLabel(query.Bucket)},
@@ -1070,6 +1079,7 @@ func (s *Store) Query(_ context.Context, query Query) (AnalyticsResult, error) {
 	result.PriceRevision = pricing.book.Revision
 	result.PriceUpdatedAt = pricing.book.UpdatedAt
 	result.Currency = pricing.book.Currency
+	result.Summary.Currency = result.Currency
 	costs := newCostTracker()
 	groupMap := make(map[string]*Group)
 	seriesMap := make(map[string]*SeriesPoint)
@@ -1096,7 +1106,14 @@ func (s *Store) Query(_ context.Context, query Query) (AnalyticsResult, error) {
 		endBucket := query.To.UTC().Unix() / 60
 		startKey := make([]byte, 8)
 		binary.BigEndian.PutUint64(startKey, uint64(startBucket))
+		processed := 0
 		for rawKey, rawValue := cursor.Seek(startKey); rawKey != nil; rawKey, rawValue = cursor.Next() {
+			processed++
+			if processed%256 == 0 && ctx != nil {
+				if errCtx := ctx.Err(); errCtx != nil {
+					return errCtx
+				}
+			}
 			legacy := len(rawKey) > 0 && rawKey[0] == '{'
 			if !legacy && len(rawKey) >= 8 {
 				if int64(binary.BigEndian.Uint64(rawKey[:8])) > endBucket {
@@ -1184,7 +1201,7 @@ func (s *Store) Query(_ context.Context, query Query) (AnalyticsResult, error) {
 }
 
 // Events returns per-request detail rows, newest first.
-func (s *Store) Events(_ context.Context, query Query) (EventsResult, error) {
+func (s *Store) Events(ctx context.Context, query Query) (EventsResult, error) {
 	query = normalizeQuery(query, time.Now().UTC())
 	result := EventsResult{Events: make([]Event, 0)}
 	if s == nil {
@@ -1192,13 +1209,36 @@ func (s *Store) Events(_ context.Context, query Query) (EventsResult, error) {
 	}
 	pricing := s.priceIndexSnapshot()
 	skipped := query.Offset
+	cursorKey := []byte(nil)
+	if query.Cursor != "" {
+		decoded, errDecode := base64.RawURLEncoding.DecodeString(query.Cursor)
+		if errDecode != nil || len(decoded) < 8 {
+			return result, ErrInvalidCursor
+		}
+		cursorKey = decoded
+		skipped = 0
+	}
+	processed := 0
 	errView := s.db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(eventsBucket)
 		if bucket == nil {
 			return nil
 		}
 		cursor := bucket.Cursor()
-		for key, raw := cursor.Last(); key != nil; key, raw = cursor.Prev() {
+		startKey, startValue := cursor.Last()
+		if cursorKey != nil {
+			startKey, startValue = cursor.Seek(cursorKey)
+			for startKey != nil && bytes.Compare(startKey, cursorKey) > 0 {
+				startKey, startValue = cursor.Prev()
+			}
+		}
+		for key, raw := startKey, startValue; key != nil; key, raw = cursor.Prev() {
+			processed++
+			if processed%256 == 0 && ctx != nil {
+				if errCtx := ctx.Err(); errCtx != nil {
+					return errCtx
+				}
+			}
 			if len(key) < 8 {
 				continue
 			}
@@ -1295,7 +1335,9 @@ func (s *Store) Close() error {
 		s.priceSyncMu.Unlock()
 		close(s.stopCh)
 		<-s.doneCh
-		closeErr = s.db.Close()
+		if s.db != nil {
+			closeErr = s.db.Close()
+		}
 	})
 	return closeErr
 }
@@ -1393,7 +1435,16 @@ func (s *Store) Restore(r io.Reader) error {
 					return errCopyBucket
 				}
 			}
-			return nil
+			// Hourly rollups are derived data. Clear them in the same transaction
+			// and mark them unbuilt so a crash before the rebuild is repaired on
+			// the next start instead of serving stale pre-restore aggregates.
+			if errDelete := tx.DeleteBucket(rollupHoursBucket); errDelete != nil && errDelete != bbolt.ErrBucketNotFound {
+				return errDelete
+			}
+			if _, errCreate := tx.CreateBucket(rollupHoursBucket); errCreate != nil {
+				return errCreate
+			}
+			return tx.Bucket(metaBucket).Put(hourRollupsBuiltKey, []byte("0"))
 		})
 	})
 	if errRestore != nil {
@@ -1736,7 +1787,11 @@ func fillSeries(query Query, seriesMap map[string]*SeriesPoint) []SeriesPoint {
 	if query.Kind != "" {
 		kinds = []Kind{query.Kind}
 	}
+	limit := maxSeriesBuckets * len(kinds)
 	for at := start; at.Before(end); at = at.Add(query.Bucket) {
+		if len(out) >= limit {
+			break
+		}
 		for _, kind := range kinds {
 			key := fmt.Sprintf("%d|%s", at.Unix(), kind)
 			point := seriesMap[key]

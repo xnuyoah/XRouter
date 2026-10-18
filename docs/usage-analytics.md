@@ -43,7 +43,9 @@ stream, encoded as zero-token usage events with:
 - latency, failure status, credits and upstream cost in the `web_search` payload
 
 This lets Home show search request counts, latency and failures without polluting
-LLM token totals or requiring a new Home protocol.
+LLM token totals or requiring a new Home protocol. The Home side must recognize
+`event_type=web_search` and the `web_search` payload; without a matching Home
+release, these events appear as generic zero-token usage records.
 
 ## Data
 
@@ -66,6 +68,9 @@ Search events are produced by the web-search gateway and MCP mirror:
   - Firecrawl: `creditsUsed` (crawl status polling is excluded to avoid double counting)
   - Exa: `costDollars.total`, stored as an upstream dollar cost
   - Tinyfish search/fetch are free; credits are only recorded if the response reports them
+- credits and upstream cost are extracted from gateway HTTP responses; MCP
+  `tools/call` events currently record request units unless the upstream result
+  exposes billing metadata
 - a search-account detail table joins analytics with the existing account
   status, quota, last probe, credits and P95 views
 - the search trend chart plots success/failure bars per bucket with a credits
@@ -137,7 +142,7 @@ All endpoints are under `/v8/management` and require the management key.
 | GET | `/observability/usage/backup` | Download a bbolt snapshot |
 | POST | `/observability/usage/restore` | Replace data from a snapshot; requires `X-Confirm-Restore: replace` |
 | POST | `/observability/usage/import/tokens-statistic` | Merge request history from a legacy tokens-statistic bbolt DB; requires `X-Confirm-Import: merge` |
-| POST | `/observability/usage/reset` | Clear all analytics events, rollups and prices |
+| POST | `/observability/usage/reset` | Clear analytics events and rollups; prices and preferences are preserved |
 
 Common query parameters for analytics/events:
 
