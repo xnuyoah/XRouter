@@ -27,7 +27,7 @@ func TestPreferencesPersist(t *testing.T) {
 	saved, errSave := store.SavePreferences(Preferences{
 		Kind:                       "search",
 		Range:                      "7d",
-		GroupBy:                    "channel",
+		GroupBy:                    "status_code",
 		TokenDisplayMode:           "m",
 		PageSize:                   100,
 		LowBalanceThresholdPercent: 20,
@@ -36,7 +36,7 @@ func TestPreferencesPersist(t *testing.T) {
 	if errSave != nil {
 		t.Fatalf("SavePreferences() error = %v", errSave)
 	}
-	if saved.Kind != "search" || saved.Range != "7d" || saved.GroupBy != "channel" || saved.PageSize != 100 {
+	if saved.Kind != "search" || saved.Range != "7d" || saved.GroupBy != "status_code" || saved.PageSize != 100 {
 		t.Fatalf("saved = %+v", saved)
 	}
 	if saved.LowBalanceThresholdPercent != 20 {
@@ -64,7 +64,7 @@ func TestPreferencesPersist(t *testing.T) {
 		}
 	}()
 	loaded := reopened.Preferences()
-	if loaded.Kind != "search" || loaded.Range != "7d" || loaded.GroupBy != "channel" || loaded.PageSize != 100 {
+	if loaded.Kind != "search" || loaded.Range != "7d" || loaded.GroupBy != "status_code" || loaded.PageSize != 100 {
 		t.Fatalf("loaded = %+v", loaded)
 	}
 	if loaded.LowBalanceThresholdPercent != 20 {

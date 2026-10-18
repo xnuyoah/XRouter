@@ -70,7 +70,7 @@ func normalizePreferences(input Preferences) (Preferences, error) {
 	case "", "provider":
 		out.GroupBy = "provider"
 	case "kind", "model", "channel", "operation", "plan", "quota_kind", "account", "source",
-		"auth_type", "executor", "service_tier", "reasoning_effort", "status":
+		"auth_type", "executor", "service_tier", "reasoning_effort", "status", "status_code":
 	default:
 		return Preferences{}, fmt.Errorf("unsupported group_by %q", out.GroupBy)
 	}

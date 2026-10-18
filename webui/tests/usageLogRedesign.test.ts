@@ -64,6 +64,19 @@ describe('usage event query builder', () => {
     expect(query.plan).toBeUndefined();
   });
 
+  test('keeps an explicit zero status filter', () => {
+    const query = buildUsageEventQuery({
+      kind: 'llm',
+      preset: '24h',
+      customFrom: '',
+      customTo: '',
+      baseFilters: { ...baseFilters, provider: '' },
+      logFilters: { ...EMPTY_USAGE_LOG_FILTERS, statusCode: '0' },
+      limit: 25,
+    });
+    expect(query.status_code).toBe(0);
+  });
+
   test('uses custom range timestamps when provided', () => {
     const query = buildUsageEventQuery({
       kind: 'all',

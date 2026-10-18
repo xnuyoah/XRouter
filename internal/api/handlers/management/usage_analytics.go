@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -413,7 +414,7 @@ func parseUsageQuery(c *gin.Context) (usageanalytics.Query, error) {
 	if query.Status != "" && query.Status != "success" && query.Status != "failed" {
 		return query, fmt.Errorf("status must be success or failed")
 	}
-	if len(query.Search) > 200 {
+	if utf8.RuneCountInString(query.Search) > 200 {
 		return query, fmt.Errorf("q must be 200 characters or fewer")
 	}
 	if rawStatusCode := strings.TrimSpace(c.Query("status_code")); rawStatusCode != "" {
@@ -422,6 +423,7 @@ func parseUsageQuery(c *gin.Context) (usageanalytics.Query, error) {
 			return query, fmt.Errorf("status_code must be a non-negative integer")
 		}
 		query.StatusCode = statusCode
+		query.StatusCodeSet = true
 	}
 	if query.GroupBy != "" && !validUsageGroupBy(query.GroupBy) {
 		return query, fmt.Errorf("unsupported group_by %q", query.GroupBy)

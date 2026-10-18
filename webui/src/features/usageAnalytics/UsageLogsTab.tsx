@@ -51,7 +51,7 @@ export function UsageLogsTab({
 }: UsageLogsTabProps) {
   const { t } = useTranslation();
   const [filters, setFilters] = useState<UsageLogFilterValues>(EMPTY_USAGE_LOG_FILTERS);
-  const [debouncedQ, setDebouncedQ] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState<UsageLogFilterValues>(EMPTY_USAGE_LOG_FILTERS);
   const [events, setEvents] = useState<UsageEvent[]>([]);
   const [cursor, setCursor] = useState('');
   const [hasMore, setHasMore] = useState(false);
@@ -64,11 +64,9 @@ export function UsageLogsTab({
   const sequence = useRef(0);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedQ(filters.q), 250);
+    const timer = window.setTimeout(() => setAppliedFilters(filters), 300);
     return () => window.clearTimeout(timer);
-  }, [filters.q]);
-
-  const effectiveFilters = useMemo(() => ({ ...filters, q: debouncedQ }), [filters, debouncedQ]);
+  }, [filters]);
 
   const query = useMemo(
     () =>
@@ -78,21 +76,23 @@ export function UsageLogsTab({
         customFrom,
         customTo,
         baseFilters,
-        logFilters: effectiveFilters,
+        logFilters: appliedFilters,
         limit: pageSize,
       }),
-    [kind, preset, customFrom, customTo, baseFilters, effectiveFilters, pageSize]
+    [kind, preset, customFrom, customTo, baseFilters, appliedFilters, pageSize]
   );
 
   useEffect(() => {
+    const seq = ++sequence.current;
+    setLoadingMore(false);
     if (preset === 'custom' && (!customFrom || !customTo)) {
       setLoading(false);
+      setError('');
       setEvents([]);
       setCursor('');
       setHasMore(false);
       return;
     }
-    const seq = ++sequence.current;
     setLoading(true);
     setError('');
     setEvents([]);
@@ -126,9 +126,13 @@ export function UsageLogsTab({
       setCursor(result.next_cursor ?? '');
       setHasMore(Boolean(result.has_more));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t('usage_analytics.load_failed'));
+      if (seq === sequence.current) {
+        setError(err instanceof Error ? err.message : t('usage_analytics.load_failed'));
+      }
     } finally {
-      setLoadingMore(false);
+      if (seq === sequence.current) {
+        setLoadingMore(false);
+      }
     }
   };
 

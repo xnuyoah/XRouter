@@ -1593,7 +1593,7 @@ func matchRollup(query Query, key rollupKey) bool {
 	if query.Status != "" && !equalFold(key.Status, query.Status) {
 		return false
 	}
-	if query.StatusCode > 0 && key.StatusCode != query.StatusCode {
+	if (query.StatusCode > 0 || query.StatusCodeSet) && key.StatusCode != query.StatusCode {
 		return false
 	}
 	if query.APIKeyHash != "" && key.APIKeyHash != query.APIKeyHash {
@@ -1649,7 +1649,7 @@ func matchEvent(query Query, event Event) bool {
 	if query.Status != "" && !equalFold(statusLabel(event.Success), query.Status) {
 		return false
 	}
-	if query.StatusCode > 0 && event.StatusCode != query.StatusCode {
+	if (query.StatusCode > 0 || query.StatusCodeSet) && event.StatusCode != query.StatusCode {
 		return false
 	}
 	if query.APIKeyHash != "" && event.APIKeyHash != query.APIKeyHash {

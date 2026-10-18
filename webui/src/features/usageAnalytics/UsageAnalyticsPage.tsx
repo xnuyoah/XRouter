@@ -269,6 +269,7 @@ export function UsageAnalyticsPage() {
   const showNotification = useNotificationStore((state) => state.showNotification);
   const [loading, setLoading] = useState(true);
   const [refreshToken, setRefreshToken] = useState(0);
+  const prefsSaveChain = useRef<Promise<void>>(Promise.resolve());
   const [error, setError] = useState('');
   const [disabled, setDisabled] = useState(false);
 
@@ -294,6 +295,19 @@ export function UsageAnalyticsPage() {
   const params = useMemo(
     () => buildQuery(kind, preset, customFrom, customTo, groupBy, filters),
     [kind, preset, customFrom, customTo, groupBy, filters]
+  );
+  const analyticsParams = useMemo(
+    () =>
+      tab === 'search'
+        ? {
+            ...params,
+            kind: 'search' as const,
+            group_by: 'channel',
+            provider: '',
+            model: '',
+          }
+        : params,
+    [params, tab]
   );
   const historyHours = useMemo(
     () => historyHoursForRange(preset, customFrom, customTo),
@@ -323,16 +337,14 @@ export function UsageAnalyticsPage() {
       const includeSearchAccounts = tab === 'search' || kind !== 'llm';
       const [analyticsResult, monitoringResult, accountUsageResult, accountResult, statusResult] =
         await Promise.all([
-          usageAnalyticsApi.getAnalytics(params),
+          usageAnalyticsApi.getAnalytics(analyticsParams),
           webSearchApi.getMonitoring().catch(() => null),
           includeSearchAccounts
             ? usageAnalyticsApi
                 .getAnalytics({
-                  ...params,
+                  ...analyticsParams,
                   kind: 'search',
                   group_by: 'account',
-                  provider: '',
-                  model: '',
                 })
                 .catch(() => null)
             : Promise.resolve(null),
@@ -361,7 +373,7 @@ export function UsageAnalyticsPage() {
         setLoading(false);
       }
     }
-  }, [params, preset, customFrom, customTo, kind, tab, t]);
+  }, [analyticsParams, preset, customFrom, customTo, kind, tab, t]);
 
   useEffect(() => {
     void load();
@@ -384,13 +396,9 @@ export function UsageAnalyticsPage() {
         setPageSize(prefs.page_size || 50);
         setLowBalanceThreshold(prefs.low_balance_threshold_percent || 10);
         setLogColumns(normalizeLogColumns(prefs.log_columns));
+        prefsLoaded.current = true;
       })
-      .catch(() => undefined)
-      .finally(() => {
-        if (!cancelled) {
-          prefsLoaded.current = true;
-        }
-      });
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -399,16 +407,18 @@ export function UsageAnalyticsPage() {
   useEffect(() => {
     if (!prefsLoaded.current || disabled) return;
     const timer = window.setTimeout(() => {
-      void usageAnalyticsApi
-        .savePreferences({
-          kind,
-          range: preset,
-          group_by: groupBy,
-          token_display_mode: tokenDisplayMode,
-          page_size: pageSize,
-          low_balance_threshold_percent: lowBalanceThreshold,
-          log_columns: logColumns,
-        })
+      const payload = {
+        kind,
+        range: preset,
+        group_by: groupBy,
+        token_display_mode: tokenDisplayMode,
+        page_size: pageSize,
+        low_balance_threshold_percent: lowBalanceThreshold,
+        log_columns: logColumns,
+      };
+      prefsSaveChain.current = prefsSaveChain.current
+        .then(() => usageAnalyticsApi.savePreferences(payload))
+        .then(() => undefined)
         .catch(() => undefined);
     }, 400);
     return () => window.clearTimeout(timer);
@@ -467,6 +477,7 @@ export function UsageAnalyticsPage() {
     try {
       await usageAnalyticsApi.restore(file);
       showNotification(t('usage_analytics.restore_success'), 'success');
+      setRefreshToken((value) => value + 1);
       await load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('usage_analytics.restore_failed'));
@@ -487,6 +498,7 @@ export function UsageAnalyticsPage() {
         }),
         'success'
       );
+      setRefreshToken((value) => value + 1);
       await load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('usage_analytics.import_failed'));
@@ -497,6 +509,7 @@ export function UsageAnalyticsPage() {
     if (!window.confirm(t('usage_analytics.reset_confirm'))) return;
     try {
       await usageAnalyticsApi.reset();
+      setRefreshToken((value) => value + 1);
       await load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('usage_analytics.reset_failed'));
@@ -544,13 +557,15 @@ export function UsageAnalyticsPage() {
           >
             {t('usage_analytics.refresh')}
           </Button>
-          <Button
-            variant="secondary"
-            onClick={() => void exportCsv()}
-            disabled={disabled || !analytics}
-          >
-            {t('usage_analytics.export_csv')}
-          </Button>
+          {tab === 'overview' && (
+            <Button
+              variant="secondary"
+              onClick={() => void exportCsv()}
+              disabled={disabled || !analytics}
+            >
+              {t('usage_analytics.export_csv')}
+            </Button>
+          )}
           <Button variant="secondary" onClick={() => setPricingOpen(true)} disabled={disabled}>
             {t('usage_analytics.pricing')}
           </Button>

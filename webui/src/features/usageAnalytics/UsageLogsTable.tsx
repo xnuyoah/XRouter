@@ -213,7 +213,17 @@ function LogRow({
     }
   };
   return (
-    <TableRow className={styles.rowClickable} onClick={() => onSelect(event)}>
+    <TableRow
+      className={styles.rowClickable}
+      tabIndex={0}
+      onClick={() => onSelect(event)}
+      onKeyDown={(keyboardEvent) => {
+        if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
+          keyboardEvent.preventDefault();
+          onSelect(event);
+        }
+      }}
+    >
       {columns.map((column) => (
         <TableCell key={column}>{cellFor(column)}</TableCell>
       ))}
@@ -242,27 +252,29 @@ export function UsageLogsTable({
 
   return (
     <>
-      <Table className={styles.desktopTable}>
-        <TableHeader>
-          <tr>
-            {columns.map((column) => (
-              <TableHead key={column}>{t(`usage_analytics.log_col_${column}`)}</TableHead>
+      <div className={styles.desktopTable}>
+        <Table>
+          <TableHeader>
+            <tr>
+              {columns.map((column) => (
+                <TableHead key={column}>{t(`usage_analytics.log_col_${column}`)}</TableHead>
+              ))}
+            </tr>
+          </TableHeader>
+          <TableBody>
+            {events.map((event) => (
+              <LogRow
+                key={event.id}
+                event={event}
+                columns={columns}
+                mode={tokenDisplayMode}
+                currency={currency}
+                onSelect={onSelect}
+              />
             ))}
-          </tr>
-        </TableHeader>
-        <TableBody>
-          {events.map((event) => (
-            <LogRow
-              key={event.id}
-              event={event}
-              columns={columns}
-              mode={tokenDisplayMode}
-              currency={currency}
-              onSelect={onSelect}
-            />
-          ))}
-        </TableBody>
-      </Table>
+          </TableBody>
+        </Table>
+      </div>
       <div className={styles.mobileList}>
         {events.map((event) => (
           <button
@@ -276,21 +288,28 @@ export function UsageLogsTable({
               <StatusBadge event={event} />
             </span>
             <span className={styles.mobileModel}>
-              {event.model || event.operation || event.channel || '—'}
+              {event.alias || event.model || event.operation || event.channel || '—'}
             </span>
             <span className={styles.mobileMeta}>
-              {event.provider || event.channel || '—'} · {event.account_name || '—'}
+              {event.provider || event.channel || '—'}
+              {columns.includes('account')
+                ? ` · ${event.account_name || event.account_id || '—'}`
+                : ''}
             </span>
             <span className={styles.mobileMetrics}>
-              <span>
-                {event.kind === 'search'
-                  ? event.credits
-                    ? `${formatCompactNumber(event.credits)} ${t('usage_analytics.credits')}`
-                    : formatCompactNumber(event.units ?? 0)
-                  : formatUsageTokens(event.tokens.total, tokenDisplayMode)}
-              </span>
-              <span>{formatUsageCost(event.cost, event.currency || currency)}</span>
-              <span>{formatUsageDuration(event.latency_ms)}</span>
+              {columns.includes('tokens') && (
+                <span>
+                  {event.kind === 'search'
+                    ? event.credits
+                      ? `${formatCompactNumber(event.credits)} ${t('usage_analytics.credits')}`
+                      : formatCompactNumber(event.units ?? 0)
+                    : formatUsageTokens(event.tokens.total, tokenDisplayMode)}
+                </span>
+              )}
+              {columns.includes('cost') && (
+                <span>{formatUsageCost(event.cost, event.currency || currency)}</span>
+              )}
+              {columns.includes('latency') && <span>{formatUsageDuration(event.latency_ms)}</span>}
             </span>
           </button>
         ))}
