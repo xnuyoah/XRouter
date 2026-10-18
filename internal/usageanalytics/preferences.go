@@ -11,6 +11,12 @@ import (
 
 var dashboardPreferencesKey = []byte("dashboard_preferences")
 
+var allowedLogColumns = map[string]struct{}{
+	"time": {}, "kind": {}, "provider": {}, "model": {}, "account": {},
+	"plan": {}, "tokens": {}, "cost": {}, "latency": {}, "request": {},
+	"request_id": {},
+}
+
 // Preferences stores per-installation usage page defaults.
 type Preferences struct {
 	Kind             string `json:"kind"`
@@ -20,8 +26,11 @@ type Preferences struct {
 	PageSize         int    `json:"page_size"`
 	// LowBalanceThresholdPercent marks search-account balances at or below this
 	// percentage of their limit as low. Allowed values: 5, 10, 20, 30.
-	LowBalanceThresholdPercent int       `json:"low_balance_threshold_percent"`
-	UpdatedAt                  time.Time `json:"updated_at"`
+	LowBalanceThresholdPercent int `json:"low_balance_threshold_percent"`
+	// LogColumns narrows the request-log table to the listed columns. Empty
+	// means all supported columns.
+	LogColumns []string  `json:"log_columns,omitempty"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 // DefaultPreferences returns the built-in usage page defaults.
@@ -86,6 +95,25 @@ func normalizePreferences(input Preferences) (Preferences, error) {
 	case 5, 10, 20, 30:
 	default:
 		return Preferences{}, fmt.Errorf("low_balance_threshold_percent must be 5, 10, 20 or 30")
+	}
+	if len(out.LogColumns) > 0 {
+		seen := make(map[string]struct{}, len(out.LogColumns))
+		columns := make([]string, 0, len(out.LogColumns))
+		for _, column := range out.LogColumns {
+			column = strings.ToLower(strings.TrimSpace(column))
+			if _, ok := allowedLogColumns[column]; !ok {
+				return Preferences{}, fmt.Errorf("unsupported log column %q", column)
+			}
+			if _, exists := seen[column]; exists {
+				continue
+			}
+			seen[column] = struct{}{}
+			columns = append(columns, column)
+		}
+		if len(columns) == 0 {
+			columns = nil
+		}
+		out.LogColumns = columns
 	}
 	out.UpdatedAt = time.Time{}
 	return out, nil

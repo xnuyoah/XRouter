@@ -40,6 +40,7 @@ func newUsageAnalyticsTestHandler(t *testing.T) (*Handler, *usageanalytics.Store
 	store.RecordSearchUsage(websearch.SearchUsageRecord{
 		Time:      time.Now().UTC(),
 		Channel:   websearch.ChannelTavily,
+		AccountID: "tavily-1",
 		Operation: "search",
 		Success:   true,
 		Units:     1,
@@ -210,12 +211,15 @@ func TestExportUsageAnalyticsIncludesSearchCosts(t *testing.T) {
 	for index, name := range rows[0] {
 		columns[name] = index
 	}
-	for _, name := range []string{"method", "path", "credits", "upstream_cost", "upstream_currency"} {
+	for _, name := range []string{"id", "trace_id", "method", "path", "api_key_masked", "tps", "stream", "credits", "upstream_cost", "upstream_currency"} {
 		if _, ok := columns[name]; !ok {
 			t.Fatalf("CSV header missing %q: %v", name, rows[0])
 		}
 	}
 	for _, row := range rows[1:] {
+		if len(row) != len(rows[0]) {
+			t.Fatalf("CSV row columns = %d, header = %d", len(row), len(rows[0]))
+		}
 		if row[columns["channel"]] != string(websearch.ChannelFirecrawl) {
 			continue
 		}
@@ -367,5 +371,37 @@ func TestGetUsageEventsRejectsOversizedRange(t *testing.T) {
 	)
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400; body = %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestGetUsageEventsEventOnlyFilters(t *testing.T) {
+	handler, store := newUsageAnalyticsTestHandler(t)
+	defer func() {
+		if errClose := store.Close(); errClose != nil {
+			t.Fatalf("Close() error = %v", errClose)
+		}
+	}()
+
+	for _, path := range []string{
+		"/usage?range=24h&q=gpt-test",
+		"/usage?range=24h&request_id=llm-1",
+		"/usage?range=24h&account_id=tavily-1",
+	} {
+		recorder := performUsageRequest(handler.GetUsageEvents, path)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("%s status = %d, body = %s", path, recorder.Code, recorder.Body.String())
+		}
+		var payload usageanalytics.EventsResult
+		if errUnmarshal := json.Unmarshal(recorder.Body.Bytes(), &payload); errUnmarshal != nil {
+			t.Fatalf("decode %s: %v", path, errUnmarshal)
+		}
+		if len(payload.Events) != 1 {
+			t.Fatalf("%s events = %d, want 1", path, len(payload.Events))
+		}
+	}
+
+	recorder := performUsageRequest(handler.GetUsageAnalytics, "/usage?range=24h&q=gpt-test")
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("analytics event-only filter status = %d, want 400", recorder.Code)
 	}
 }

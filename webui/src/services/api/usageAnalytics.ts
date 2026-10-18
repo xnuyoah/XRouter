@@ -58,6 +58,8 @@ export interface UsageGroup {
   model?: string;
   channel?: string;
   operation?: string;
+  method?: string;
+  path?: string;
   plan?: string;
   quota_kind?: string;
   account_id?: string;
@@ -139,6 +141,8 @@ export interface UsageEvent {
   upstream_model?: string;
   alias?: string;
   operation?: string;
+  method?: string;
+  path?: string;
   plan?: string;
   quota_kind?: string;
   account_id?: string;
@@ -196,7 +200,12 @@ export interface UsageQueryParams {
   service_tier?: string;
   reasoning_effort?: string;
   status?: string;
+  status_code?: number;
   api_key_hash?: string;
+  account_id?: string;
+  request_id?: string;
+  trace_id?: string;
+  q?: string;
   limit?: number;
   offset?: number;
   cursor?: string;
@@ -247,6 +256,7 @@ export interface UsagePreferences {
   token_display_mode: 'compact' | 'full' | 'k' | 'm' | 'b';
   page_size: number;
   low_balance_threshold_percent: number;
+  log_columns?: string[];
   updated_at?: string;
 }
 

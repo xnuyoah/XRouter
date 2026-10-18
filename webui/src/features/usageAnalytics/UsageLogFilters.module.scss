@@ -1,0 +1,95 @@
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-secondary);
+}
+
+.primaryRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  > :global(.form-group) {
+    margin: 0;
+  }
+
+  > :global(.form-group):first-child {
+    flex: 1 1 260px;
+    min-width: 200px;
+  }
+}
+
+.search {
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+
+.monoInput {
+  width: 180px;
+  font-family: $font-mono;
+}
+
+.accountInput {
+  width: 170px;
+}
+
+.statusInput {
+  width: 110px;
+}
+
+.advanced {
+  summary {
+    width: fit-content;
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+}
+
+.advancedGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.columnsHint {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.columnList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+}
+
+.columnItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  cursor: pointer;
+
+  input {
+    accent-color: var(--primary-color);
+  }
+}
+
+@media (max-width: 640px) {
+  .primaryRow > * {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .columnList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

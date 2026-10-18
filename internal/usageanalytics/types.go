@@ -136,6 +136,10 @@ type Query struct {
 	Status          string
 	StatusCode      int
 	APIKeyHash      string
+	AccountID       string
+	RequestID       string
+	TraceID         string
+	Search          string
 
 	Limit  int
 	Offset int
