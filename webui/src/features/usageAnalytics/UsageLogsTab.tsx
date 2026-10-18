@@ -89,18 +89,32 @@ export function UsageLogsTab({
   const [reloadToken, setReloadToken] = useState(0);
   const sequence = useRef(0);
 
+  // Freeze the time window for the current analytics load so newly arriving
+  // events cannot shift offset pages while the operator is paging.
+  const useFixedWindow = preset !== 'custom' && Boolean(rangeFrom && rangeTo);
+  const queryPreset = useFixedWindow ? 'custom' : preset;
+  const queryFrom = useFixedWindow ? (rangeFrom ?? '') : customFrom;
+  const queryTo = useFixedWindow ? (rangeTo ?? '') : customTo;
   const query = useMemo(
     () =>
       buildUsageEventQuery({
         kind,
-        preset,
-        customFrom,
-        customTo,
+        preset: queryPreset,
+        customFrom: queryFrom,
+        customTo: queryTo,
         baseFilters,
         logFilters: appliedFilters,
         limit: pageSize,
       }),
-    [kind, preset, customFrom, customTo, baseFilters, appliedFilters, pageSize]
+    [
+      kind,
+      queryPreset,
+      queryFrom,
+      queryTo,
+      baseFilters,
+      appliedFilters,
+      pageSize,
+    ]
   );
 
   useEffect(() => {

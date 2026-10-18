@@ -155,7 +155,7 @@ The WebUI page is split into three tabs:
   and request ID. Filters include range, kind, provider, model, channel,
   account ID, plan, status, HTTP status, request ID, trace ID and a keyword
   search. Rows open a detail sheet; column visibility is saved in preferences.
-  Request logs use server-side cursor pagination with previous/next controls.
+  Request logs use offset pagination with page jumps over a frozen time window, so newly arriving events do not shift pages.
   Mobile widths switch to a card list.
 - **Search channels**: quota overview, search trend, account warnings and quota
   history. The account table paginates client-side (25 rows by default) so the

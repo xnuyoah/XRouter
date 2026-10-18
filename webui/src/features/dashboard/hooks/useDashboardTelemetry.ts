@@ -54,11 +54,15 @@ export function useDashboardTelemetry(): DashboardTelemetry {
         ]);
       if (seq !== sequence.current) return;
 
-      if (snapshotResult.status === 'fulfilled') setSnapshot(snapshotResult.value);
-      if (monitoringResult.status === 'fulfilled') setSearchStatus(monitoringResult.value.status);
-      if (channelsResult.status === 'fulfilled') setSearchChannels(channelsResult.value);
-      if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value);
-      if (failuresResult.status === 'fulfilled') setFailures(failuresResult.value.events ?? []);
+      setSnapshot(snapshotResult.status === 'fulfilled' ? snapshotResult.value : null);
+      setSearchStatus(
+        monitoringResult.status === 'fulfilled' ? monitoringResult.value.status : null
+      );
+      setSearchChannels(channelsResult.status === 'fulfilled' ? channelsResult.value : []);
+      setAnalytics(analyticsResult.status === 'fulfilled' ? analyticsResult.value : null);
+      setFailures(
+        failuresResult.status === 'fulfilled' ? failuresResult.value.events ?? [] : []
+      );
 
       const primaryFailed =
         snapshotResult.status === 'rejected' && channelsResult.status === 'rejected';
