@@ -13,8 +13,8 @@ var dashboardPreferencesKey = []byte("dashboard_preferences")
 
 var allowedLogColumns = map[string]struct{}{
 	"time": {}, "kind": {}, "provider": {}, "model": {}, "account": {},
-	"plan": {}, "tokens": {}, "cost": {}, "latency": {}, "request": {},
-	"request_id": {},
+	"token": {}, "plan": {}, "tokens": {}, "cost": {}, "latency": {},
+	"request": {}, "detail": {}, "request_id": {},
 }
 
 // Preferences stores per-installation usage page defaults.
@@ -24,6 +24,8 @@ type Preferences struct {
 	GroupBy          string `json:"group_by"`
 	TokenDisplayMode string `json:"token_display_mode"`
 	PageSize         int    `json:"page_size"`
+	// SearchAccountsPageSize controls the usage-page search account table.
+	SearchAccountsPageSize int `json:"search_accounts_page_size"`
 	// LowBalanceThresholdPercent marks search-account balances at or below this
 	// percentage of their limit as low. Allowed values: 5, 10, 20, 30.
 	LowBalanceThresholdPercent int `json:"low_balance_threshold_percent"`
@@ -37,10 +39,11 @@ type Preferences struct {
 func DefaultPreferences() Preferences {
 	return Preferences{
 		Kind:                       "all",
-		Range:                      "today",
+		Range:                      "24h",
 		GroupBy:                    "provider",
 		TokenDisplayMode:           "compact",
 		PageSize:                   50,
+		SearchAccountsPageSize:     25,
 		LowBalanceThresholdPercent: 10,
 	}
 }
@@ -88,6 +91,13 @@ func normalizePreferences(input Preferences) (Preferences, error) {
 	case 25, 50, 100, 200:
 	default:
 		return Preferences{}, fmt.Errorf("page_size must be 25, 50, 100 or 200")
+	}
+	switch out.SearchAccountsPageSize {
+	case 0:
+		out.SearchAccountsPageSize = 25
+	case 10, 25, 50, 100:
+	default:
+		return Preferences{}, fmt.Errorf("search_accounts_page_size must be 10, 25, 50 or 100")
 	}
 	switch out.LowBalanceThresholdPercent {
 	case 0:

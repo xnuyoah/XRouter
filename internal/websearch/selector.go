@@ -68,16 +68,17 @@ type SelectionCandidate struct {
 	Remaining *float64
 }
 
-// SelectAccounts 按可用性过滤并排序候选账号。
+// SelectAccounts filters and orders candidate accounts by availability.
 //
-// 过滤规则（与面板展示一致）：
-//   - 账号未被停用；
-//   - 状态为 available（pending/limited/expired 都不参与）；
-//   - 不处于冷却期；
-//   - 已知剩余额度大于 0（Firecrawl 透支时余额为负 → 视为耗尽）。
+// Filter rules (kept aligned with the account panel):
+//   - the account is not disabled;
+//   - its status is available, or limited with an expired quota-reset cooldown;
+//   - it is not in an active cooldown;
+//   - known remaining quota is greater than zero (negative Firecrawl balances
+//     are treated as exhausted).
 //
-// 排序规则：额度未知的最后，其余按剩余额度降序，再按最久未用优先，最后按账号 ID
-// 保证结果稳定。
+// Ordering: unknown quota last; otherwise descending remaining quota, then
+// least recently used, and finally account ID for a stable order.
 func SelectAccounts(accounts []Account, states map[string]AccountState, now time.Time) []SelectionCandidate {
 	candidates := make([]SelectionCandidate, 0, len(accounts))
 	for _, account := range accounts {
@@ -85,15 +86,24 @@ func SelectAccounts(accounts []Account, states map[string]AccountState, now time
 			continue
 		}
 		state := states[account.ID]
-		if state.Status != AccountStatusAvailable {
+		// A quota-limited account becomes retryable once its reset cooldown
+		// expires. The stale zero balance must not keep it out of selection:
+		// the upstream quota is expected to have reset by then.
+		quotaResetDue := state.Status == AccountStatusLimited &&
+			state.CooldownUntil != nil &&
+			!state.CooldownUntil.After(now)
+		if state.Status != AccountStatusAvailable && !quotaResetDue {
 			continue
 		}
 		if state.CooldownActive(now) {
 			continue
 		}
 		remaining := selectionRemaining(account.Channel, state.Quota)
-		if remaining != nil && *remaining <= 0 {
+		if !quotaResetDue && remaining != nil && *remaining <= 0 {
 			continue
+		}
+		if quotaResetDue {
+			remaining = nil
 		}
 		candidates = append(candidates, SelectionCandidate{
 			Account:   account,

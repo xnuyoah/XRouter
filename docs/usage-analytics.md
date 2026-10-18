@@ -19,6 +19,15 @@ observability:
       rollup-retention-days: 365
       flush-interval: 5s
       max-db-bytes: 0        # soft logical data cap; 0 disables
+      # Display-only labels for blank LLM plan/quota fields. Existing upstream
+      # plan values are preserved.
+      plan-display:
+        - provider: nvidia
+          plan: "NIM Free"
+          quota-kind: credits
+        - provider: agnes
+          plan: "Agnes Free"
+          quota-kind: plan
       pricing:
         sync-enabled: false  # refresh on startup and every 24 hours
         source-url: "https://models.dev/api.json"
@@ -28,6 +37,16 @@ observability:
 ```
 
 A restart is required after changing `enabled`.
+
+`plan-display` fills the request-log “Plan / quota” column for providers whose
+credentials do not report a plan. It is display-only and never changes routing
+or upstream quotas. An entry without `model` applies to every model served by
+that provider; a `model` entry matches the client model, upstream model, or
+alias and takes precedence over the provider default. Labels are also applied
+when querying existing event rows, so historical request logs pick up a new
+display mapping without rewriting the database. Rolled-up aggregates created
+before the mapping was added are not recalculated. Restart after changing this
+mapping.
 
 Local analytics is skipped in Home mode because Home already provides usage
 observability and local management endpoints are unavailable. This avoids
@@ -136,9 +155,11 @@ The WebUI page is split into three tabs:
   and request ID. Filters include range, kind, provider, model, channel,
   account ID, plan, status, HTTP status, request ID, trace ID and a keyword
   search. Rows open a detail sheet; column visibility is saved in preferences.
+  Request logs use server-side cursor pagination with previous/next controls.
   Mobile widths switch to a card list.
 - **Search channels**: quota overview, search trend, account warnings and quota
-  history.
+  history. The account table paginates client-side (25 rows by default) so the
+  861-account pool does not render every row at once.
 
 Tabs use the path-based tabs (`/usage`, `/usage/logs`, `/usage/search`), for example
 `#/usage/logs`.
@@ -242,6 +263,7 @@ The usage page saves these defaults server-side in the analytics database:
 - `group_by`
 - `token_display_mode`: compact / full / k / m / b
 - `page_size`: 25 / 50 / 100 / 200
+- `search_accounts_page_size`: 10 / 25 / 50 / 100 (defaults to 25)
 - `log_columns`: request-log column visibility
 - `low_balance_threshold_percent`: 5 / 10 / 20 / 30 (defaults to 10)
 

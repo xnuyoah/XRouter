@@ -54,6 +54,12 @@
   font-size: 11px;
 }
 
+.channelCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .statusPill {
   display: inline-block;
   padding: 2px 8px;

@@ -14,7 +14,7 @@ const (
 	// DefaultWebSearchGatewayMaxAttempts 是单次请求最多尝试的账号数。
 	DefaultWebSearchGatewayMaxAttempts = 3
 	// DefaultWebSearchProbeIntervalSeconds 是渠道状态与额度刷新的调度间隔（秒）。
-	DefaultWebSearchProbeIntervalSeconds = 3600
+	DefaultWebSearchProbeIntervalSeconds = 1200
 	// DefaultWebSearchProbeConcurrency 是探测任务的并发上限。
 	DefaultWebSearchProbeConcurrency = 4
 	// DefaultWebSearchProbeTimeoutSeconds 是单次探测请求的超时时间（秒）。
@@ -22,7 +22,7 @@ const (
 	// DefaultWebSearchHistoryDays 是渠道状态历史保留天数。
 	DefaultWebSearchHistoryDays = 90
 	// DefaultWebSearchQuotaFreshSeconds 是额度快照被视为“新鲜”的时长（秒）。
-	DefaultWebSearchQuotaFreshSeconds = 3600
+	DefaultWebSearchQuotaFreshSeconds = 900
 )
 
 // 搜索渠道固定标识列表。渠道集合是编译期固定的，配置只能声明这些渠道。

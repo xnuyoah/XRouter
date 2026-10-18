@@ -485,7 +485,8 @@ func classifyMCPHTTPFailure(channel Channel, account Account, resp *http.Respons
 	fingerprint := account.Fingerprint()
 	switch {
 	case DefiniteExhaustion(channel, resp.StatusCode, body):
-		if errUpdate := store.UpdateStatus(channel, account.ID, AccountStatusLimited, "额度耗尽（MCP）", fingerprint, now); errUpdate != nil {
+		until := quotaResetDeadlineForAccount(store, channel, account.ID, now)
+		if errUpdate := store.SetQuotaLimited(channel, account.ID, fingerprint, "额度耗尽（MCP）", until, now); errUpdate != nil {
 			logWarnf("更新账号状态失败 channel=%s account=%s: %v", channel, account.ID, errUpdate)
 		}
 		return &GatewayError{Code: ErrorCodeQuotaExhausted, Message: "上游额度耗尽", StatusCode: http.StatusServiceUnavailable}

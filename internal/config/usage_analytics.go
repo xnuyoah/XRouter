@@ -33,8 +33,19 @@ type UsageAnalyticsConfig struct {
 	FlushInterval string `yaml:"flush-interval" json:"flush-interval"`
 	// MaxDBBytes caps the logical analytics data size. 0 disables the cap.
 	MaxDBBytes int64 `yaml:"max-db-bytes" json:"max-db-bytes"`
+	// PlanDisplay fills blank LLM plan/quota labels for usage records.
+	PlanDisplay []UsagePlanDisplay `yaml:"plan-display" json:"plan-display"`
 	// Pricing configures model price synchronization and matching.
 	Pricing UsagePricingConfig `yaml:"pricing" json:"pricing"`
+}
+
+// UsagePlanDisplay maps a provider or model to display-only plan/quota labels.
+// Empty model applies to every model served by the provider.
+type UsagePlanDisplay struct {
+	Provider  string `yaml:"provider,omitempty" json:"provider,omitempty"`
+	Model     string `yaml:"model,omitempty" json:"model,omitempty"`
+	Plan      string `yaml:"plan,omitempty" json:"plan,omitempty"`
+	QuotaKind string `yaml:"quota-kind,omitempty" json:"quota-kind,omitempty"`
 }
 
 // UsagePricingConfig controls model price synchronization and matching.

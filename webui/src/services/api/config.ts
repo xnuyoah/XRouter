@@ -20,4 +20,7 @@ export const configApi = {
    */
   updateRequestLog: (enabled: boolean) =>
     apiClient.put('/config/observability/logs/request-log', enabled),
+
+  updateAccessApiKeys: (keys: string[]) =>
+    apiClient.put('/config/access/api-keys', keys),
 };

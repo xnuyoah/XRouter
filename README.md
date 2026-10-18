@@ -132,7 +132,6 @@ go build -o xrouter ./cmd/server
 - `multimedia` —— 内置图片生成行为
 - `observability` —— 日志、用量统计、profiling
 - `web-search` —— 搜索渠道（渠道、账号池、探测代理与调度）
-- `plugins` —— 动态库插件与插件配置
 
 完整的字段与注释见 [`config.example.yaml`](config.example.yaml)。
 
@@ -155,4 +154,4 @@ go build -o xrouter ./cmd/server
 go test ./...
 ```
 
-Docker 镜像：`registry.cn-hangzhou.aliyuncs.com/xctr/xrouter`，可通过 `docker-compose.yml` 启动，配置、凭据与日志目录按需挂载为卷。
+Docker 镜像：`registry.cn-hangzhou.aliyuncs.com/xctr/xrouter`，可通过 `docker-compose.yml` 启动，配置、凭据与日志目录按需挂载为卷。生产上线前请按 [docs/production.md](docs/production.md) 完成 TLS、密钥、备份、监控和探测负载检查。

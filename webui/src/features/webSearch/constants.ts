@@ -7,16 +7,14 @@
 
 import type {
   WebSearchAccountStatus,
-  WebSearchChannelStatusValue,
   WebSearchQuotaKind,
   WebSearchQuotaRefreshStatus,
 } from '@/services/api/webSearch';
 
 /** Tabs inside the page. */
-export type WebSearchTabId = 'overview' | 'accounts' | 'access';
+export type WebSearchTabId = 'accounts' | 'access';
 
 export const WEB_SEARCH_TABS: { id: WebSearchTabId; labelKey: string }[] = [
-  { id: 'overview', labelKey: 'webSearch.tabs.overview' },
   { id: 'accounts', labelKey: 'webSearch.tabs.accounts' },
   { id: 'access', labelKey: 'webSearch.tabs.access' },
 ];
@@ -34,17 +32,6 @@ export const ACCOUNT_STATUS_META: Record<
   expired: { labelKey: 'webSearch.accountStatus.expired', tone: 'red' },
   disabled: { labelKey: 'webSearch.accountStatus.disabled', tone: 'gray' },
   pending: { labelKey: 'webSearch.accountStatus.pending', tone: 'blue' },
-};
-
-/** Channel overall status to label key, tone and symbol. */
-export const CHANNEL_STATUS_META: Record<
-  WebSearchChannelStatusValue,
-  { labelKey: string; tone: ToneId; symbol: string }
-> = {
-  operational: { labelKey: 'webSearch.channelStatus.operational', tone: 'green', symbol: '●' },
-  degraded: { labelKey: 'webSearch.channelStatus.degraded', tone: 'orange', symbol: '◐' },
-  down: { labelKey: 'webSearch.channelStatus.down', tone: 'red', symbol: '○' },
-  unknown: { labelKey: 'webSearch.channelStatus.unknown', tone: 'gray', symbol: '·' },
 };
 
 /** Quota refresh status to label key and tone. */
@@ -87,16 +74,4 @@ export function gatewayExample(channel: string): string {
 /** Managed MCP endpoint per channel (display only; requests are not proxied). */
 export function mcpExample(channel: string): string {
   return `POST /mcp/${channel}`;
-}
-
-/** Polling intervals in ms. Probing is synchronous; these cover status refresh only. */
-export const WEB_SEARCH_POLL_IDLE_MS = 60_000;
-export const WEB_SEARCH_POLL_ACTIVE_MS = 2_000;
-
-/** Maximum number of days rendered in the history strip. */
-export const HISTORY_STRIP_DAYS = 90;
-
-/** Status auto-refresh interval in ms. */
-export function statusPollInterval(running: boolean): number {
-  return running ? WEB_SEARCH_POLL_ACTIVE_MS : WEB_SEARCH_POLL_IDLE_MS;
 }

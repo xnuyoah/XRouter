@@ -17,7 +17,6 @@ services:
     volumes:
       - ${XROUTER_HOME_PATH:-./home}:/root/.xrouter
       - ${XROUTER_LOG_PATH:-./logs}:/xrouter/logs
-      - ${XROUTER_PLUGIN_PATH:-./plugins}:/xrouter/plugins
     command: >
       sh -eu -c '
         if [ -z "$$HOME_JWT" ]; then
@@ -27,4 +26,13 @@ services:
 
         exec ./xrouter -home-jwt "$$HOME_JWT"
       '
+    init: true
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     restart: unless-stopped

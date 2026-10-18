@@ -1,14 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="XRouter">
-  <title>XRouter</title>
-  <defs>
-    <linearGradient id="xr-glyph" gradientUnits="userSpaceOnUse" x1="140" y1="140" x2="372" y2="372">
-      <stop offset="0" stop-color="#8B5CF6"/>
-      <stop offset="1" stop-color="#06B6D4"/>
-    </linearGradient>
-  </defs>
-  <!-- Transparent glyph for README headers, avatars, and light/dark documents -->
-  <g stroke="url(#xr-glyph)" stroke-width="66" stroke-linecap="round" fill="none">
-    <path d="M140 140 L372 372"/>
-    <path d="M372 140 L140 372"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="XRouter Arrow X">
+  <title>XRouter Arrow X</title>
+  <defs><linearGradient id="vg-blue" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1E9DF1"/><stop offset="1" stop-color="#72D4FF"/></linearGradient><linearGradient id="vg-green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00B87A"/><stop offset="1" stop-color="#6EF0C4"/></linearGradient></defs>
+  <g fill="none" stroke="url(#vg-blue)" stroke-width="52" stroke-linecap="round"><path d="M150 362 L330 182"/></g>
+  <path d="M372 140 L312 154 L358 200 Z" fill="#1E9DF1"/>
+  <g fill="none" stroke="url(#vg-green)" stroke-width="52" stroke-linecap="round"><path d="M150 150 L330 330"/></g>
+  <path d="M372 372 L312 358 L358 312 Z" fill="#00B87A"/>
 </svg>

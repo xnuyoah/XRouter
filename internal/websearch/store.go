@@ -149,6 +149,19 @@ func (s *Store) load() error {
 	if state.Jobs == nil {
 		state.Jobs = make(map[string]JobBinding)
 	}
+	// Older states could mark an account limited without a cooldown. Bring
+	// them in line with the quota-reset cooldown invariant on load.
+	now := time.Now().UTC()
+	for key, accountState := range state.Accounts {
+		if accountState.Status != AccountStatusLimited || accountState.CooldownUntil != nil {
+			continue
+		}
+		if accountState.Quota == nil || accountState.Quota.ResetAt == nil || !accountState.Quota.ResetAt.After(now) {
+			continue
+		}
+		accountState.CooldownUntil = timePointer(accountState.Quota.ResetAt.UTC())
+		state.Accounts[key] = accountState
+	}
 	s.state = state
 	return nil
 }
@@ -255,6 +268,17 @@ func (s *Store) RecordProbe(channel Channel, accountID string, status AccountSta
 		state.LastCheckedAt = timePointer(now)
 		state.LastLatencyMS = latencyMS
 		state.LastHTTPStatus = httpStatus
+	})
+}
+
+// SetQuotaLimited marks an account as quota-limited and keeps it in cooldown
+// until the next quota reset.
+func (s *Store) SetQuotaLimited(channel Channel, accountID, fingerprint, message string, until time.Time, now time.Time) error {
+	return s.mutate(channel, accountID, fingerprint, func(state *AccountState) {
+		state.Status = AccountStatusLimited
+		state.StatusMessage = message
+		state.LastCheckedAt = timePointer(now)
+		state.CooldownUntil = timePointer(until)
 	})
 }
 

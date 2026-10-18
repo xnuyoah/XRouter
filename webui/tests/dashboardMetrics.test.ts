@@ -120,6 +120,14 @@ describe('provider key counts', () => {
     expect(counts.interactions).toBe(2);
     expect(Object.values(counts).reduce((sum, count) => sum + count, 0)).toBe(4);
   });
+  test('includes native NVIDIA and Agnes API keys', () => {
+    const counts = getProviderKeyCounts({
+      nvidiaApiKeys: [{ apiKey: 'nvidia-1' }, { apiKey: 'nvidia-2' }],
+      agnesApiKeys: [{ apiKey: 'agnes-1' }],
+    });
+    expect(counts.nvidia).toBe(2);
+    expect(counts.agnes).toBe(1);
+  });
 });
 
 describe('providerLabel', () => {

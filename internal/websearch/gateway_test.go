@@ -194,6 +194,10 @@ func TestGatewayFailsOverOnQuotaExhaustion(t *testing.T) {
 	if state.Status != AccountStatusLimited {
 		t.Fatalf("额度耗尽的账号状态 = %s，期望 limited", state.Status)
 	}
+	wantReset := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
+	if state.CooldownUntil == nil || !state.CooldownUntil.Equal(wantReset) {
+		t.Fatalf("额度冷却截止 = %v，期望 %s", state.CooldownUntil, wantReset)
+	}
 }
 
 func TestGatewayMarksExpiredOnAuthFailure(t *testing.T) {

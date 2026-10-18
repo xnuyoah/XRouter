@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/Button';
+import { Pagination } from '@/components/ui/Pagination/Pagination';
 import { usageAnalyticsApi, type UsageEvent, type UsageFacets } from '@/services/api';
 import { downloadBlob } from '@/utils/download';
 
-import type { TokenDisplayMode } from './format';
 import { UsageLogDetailSheet } from './UsageLogDetailSheet';
 import { UsageLogFilters } from './UsageLogFilters';
 import { UsageLogsTable } from './UsageLogsTable';
@@ -20,53 +20,74 @@ import styles from './UsageLogsTab.module.scss';
 
 interface UsageLogsTabProps {
   kind: 'all' | 'llm' | 'search';
+  onKindChange: (kind: 'all' | 'llm' | 'search') => void;
   preset: string;
+  onPresetChange: (preset: string) => void;
   customFrom: string;
   customTo: string;
+  onCustomFromChange: (value: string) => void;
+  onCustomToChange: (value: string) => void;
   baseFilters: UsageBaseFilters;
+  onBaseFiltersChange: (patch: Partial<UsageBaseFilters>) => void;
+  onResetBaseFilters: () => void;
+  onRefreshAll: () => void;
   facets?: UsageFacets;
-  tokenDisplayMode: TokenDisplayMode;
   currency?: string;
   pageSize: number;
   onPageSizeChange: (size: number) => void;
   columns: UsageLogColumnKey[];
   onColumnsChange: (columns: UsageLogColumnKey[]) => void;
   refreshToken: number;
+  total: number;
+  rangeFrom?: string;
+  rangeTo?: string;
+  metrics: {
+    cost: number | null;
+    currency?: string;
+    rpm: number;
+    tpm: number;
+  };
 }
 
 export function UsageLogsTab({
   kind,
+  onKindChange,
   preset,
+  onPresetChange,
   customFrom,
   customTo,
+  onCustomFromChange,
+  onCustomToChange,
   baseFilters,
+  onBaseFiltersChange,
+  onResetBaseFilters,
+  onRefreshAll,
   facets,
-  tokenDisplayMode,
   currency,
   pageSize,
   onPageSizeChange,
   columns,
   onColumnsChange,
   refreshToken,
+  total,
+  rangeFrom,
+  rangeTo,
+  metrics,
 }: UsageLogsTabProps) {
   const { t } = useTranslation();
   const [filters, setFilters] = useState<UsageLogFilterValues>(EMPTY_USAGE_LOG_FILTERS);
-  const [appliedFilters, setAppliedFilters] = useState<UsageLogFilterValues>(EMPTY_USAGE_LOG_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState<UsageLogFilterValues>(
+    EMPTY_USAGE_LOG_FILTERS
+  );
   const [events, setEvents] = useState<UsageEvent[]>([]);
-  const [cursor, setCursor] = useState('');
+  const [pageIndex, setPageIndex] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState<UsageEvent | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const sequence = useRef(0);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setAppliedFilters(filters), 300);
-    return () => window.clearTimeout(timer);
-  }, [filters]);
 
   const query = useMemo(
     () =>
@@ -84,27 +105,22 @@ export function UsageLogsTab({
 
   useEffect(() => {
     const seq = ++sequence.current;
-    setLoadingMore(false);
     if (preset === 'custom' && (!customFrom || !customTo)) {
       setLoading(false);
       setError('');
       setEvents([]);
-      setCursor('');
       setHasMore(false);
       return;
     }
     setLoading(true);
     setError('');
-    setEvents([]);
-    setCursor('');
-    setHasMore(false);
     usageAnalyticsApi
-      .getEvents(query)
+      .getEvents({ ...query, offset: pageIndex * pageSize })
       .then((result) => {
         if (seq !== sequence.current) return;
         setEvents(result.events ?? []);
-        setCursor(result.next_cursor ?? '');
         setHasMore(Boolean(result.has_more));
+        setSelected(null);
       })
       .catch((err: unknown) => {
         if (seq !== sequence.current) return;
@@ -113,27 +129,51 @@ export function UsageLogsTab({
       .finally(() => {
         if (seq === sequence.current) setLoading(false);
       });
-  }, [query, preset, customFrom, customTo, refreshToken, reloadToken, t]);
+  }, [query, pageIndex, pageSize, preset, customFrom, customTo, refreshToken, reloadToken, t]);
 
-  const loadMore = async () => {
-    if (loadingMore || !hasMore || !cursor) return;
-    setLoadingMore(true);
-    const seq = sequence.current;
-    try {
-      const result = await usageAnalyticsApi.getEvents({ ...query, cursor });
-      if (seq !== sequence.current) return;
-      setEvents((current) => [...current, ...(result.events ?? [])]);
-      setCursor(result.next_cursor ?? '');
-      setHasMore(Boolean(result.has_more));
-    } catch (err: unknown) {
-      if (seq === sequence.current) {
-        setError(err instanceof Error ? err.message : t('usage_analytics.load_failed'));
-      }
-    } finally {
-      if (seq === sequence.current) {
-        setLoadingMore(false);
-      }
-    }
+  const applyFilters = () => {
+    setPageIndex(0);
+    setAppliedFilters(filters);
+    setReloadToken((value) => value + 1);
+  };
+
+  const resetFilters = () => {
+    setFilters(EMPTY_USAGE_LOG_FILTERS);
+    setAppliedFilters(EMPTY_USAGE_LOG_FILTERS);
+    setPageIndex(0);
+    onResetBaseFilters();
+    onKindChange('all');
+    setReloadToken((value) => value + 1);
+  };
+
+  const handlePresetChange = (value: string) => {
+    setPageIndex(0);
+    onPresetChange(value);
+  };
+
+  const handleKindChange = (value: 'all' | 'llm' | 'search') => {
+    setPageIndex(0);
+    onKindChange(value);
+  };
+
+  const handleBaseFiltersChange = (patch: Partial<UsageBaseFilters>) => {
+    setPageIndex(0);
+    onBaseFiltersChange(patch);
+  };
+
+  const handleCustomFromChange = (value: string) => {
+    setPageIndex(0);
+    onCustomFromChange(value);
+  };
+
+  const handleCustomToChange = (value: string) => {
+    setPageIndex(0);
+    onCustomToChange(value);
+  };
+
+  const handlePageSizeChange = (value: number) => {
+    setPageIndex(0);
+    onPageSizeChange(value);
   };
 
   const exportCsv = async () => {
@@ -149,42 +189,68 @@ export function UsageLogsTab({
     }
   };
 
+  const hasEventFilters = Object.values(appliedFilters).some((value) => value.trim() !== '');
+  const observedTotal = events.length + pageIndex * pageSize + (hasMore ? 1 : 0);
+  const effectiveTotal = hasEventFilters ? observedTotal : total > 0 ? total : observedTotal;
+
   return (
     <div className={styles.tab}>
       <UsageLogFilters
         values={filters}
         onChange={(patch) => setFilters((current) => ({ ...current, ...patch }))}
-        onReset={() => setFilters(EMPTY_USAGE_LOG_FILTERS)}
-        onRefresh={() => setReloadToken((value) => value + 1)}
-        onExport={() => void exportCsv()}
+        onReset={resetFilters}
+        onApply={applyFilters}
+        onRefresh={() => {
+          setReloadToken((value) => value + 1);
+          onRefreshAll();
+        }}
         loading={loading}
         exporting={exporting}
+        onExport={() => void exportCsv()}
         facets={facets}
         columns={columns}
         onColumnsChange={onColumnsChange}
-        pageSize={pageSize}
-        onPageSizeChange={onPageSizeChange}
+        kind={kind}
+        onKindChange={handleKindChange}
+        preset={preset}
+        onPresetChange={handlePresetChange}
+        customFrom={customFrom}
+        customTo={customTo}
+        onCustomFromChange={handleCustomFromChange}
+        onCustomToChange={handleCustomToChange}
+        baseFilters={baseFilters}
+        onBaseFiltersChange={handleBaseFiltersChange}
+        rangeFrom={rangeFrom}
+        rangeTo={rangeTo}
+        metrics={metrics}
       />
       {error && <div className={styles.error}>{error}</div>}
-      <div className={styles.summary}>
-        <span>{t('usage_analytics.log_loaded', { count: events.length })}</span>
-        {hasMore && <span>{t('usage_analytics.log_more_available')}</span>}
-      </div>
       <UsageLogsTable
         events={events}
         columns={columns}
-        tokenDisplayMode={tokenDisplayMode}
         currency={currency}
         loading={loading}
+        emptyAction={
+          preset !== '24h' && !hasEventFilters ? (
+            <Button size="sm" variant="secondary" onClick={() => handlePresetChange('24h')}>
+              {t('usage_analytics.log_try_24h')}
+            </Button>
+          ) : undefined
+        }
         onSelect={setSelected}
       />
-      {hasMore && (
-        <div className={styles.loadMore}>
-          <Button variant="secondary" onClick={() => void loadMore()} loading={loadingMore}>
-            {t('usage_analytics.load_more')}
-          </Button>
-        </div>
-      )}
+      <div className={styles.paginationBar}>
+        <Pagination
+          page={pageIndex + 1}
+          pageSize={pageSize}
+          total={effectiveTotal}
+          pageSizeOptions={[25, 50, 100, 200]}
+          onPageChange={(page) => {
+            setPageIndex(Math.max(0, page - 1));
+          }}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      </div>
       <UsageLogDetailSheet event={selected} onClose={() => setSelected(null)} />
     </div>
   );

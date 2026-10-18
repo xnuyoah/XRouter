@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ChannelLogo } from '@/components/common/ChannelLogo';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
   Table,
@@ -9,16 +11,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/Table/Table';
+import { IconKey } from '@/components/ui/icons';
 import type { UsageEvent } from '@/services/api';
 import { formatCompactNumber } from '@/utils/format';
 
 import {
+  formatLogDuration,
+  formatLogTableTime,
   formatUsageCost,
-  formatUsageDuration,
-  formatUsageTime,
   formatUsageTokens,
   formatUsageTps,
-  type TokenDisplayMode,
 } from './format';
 import type { UsageLogColumnKey } from './usageLogColumns';
 import styles from './UsageLogsTable.module.scss';
@@ -26,21 +28,57 @@ import styles from './UsageLogsTable.module.scss';
 interface UsageLogsTableProps {
   events: UsageEvent[];
   columns: UsageLogColumnKey[];
-  tokenDisplayMode: TokenDisplayMode;
   currency?: string;
   loading?: boolean;
+  emptyAction?: ReactNode;
   onSelect: (event: UsageEvent) => void;
-}
-
-function kindLabel(kind: UsageEvent['kind'], t: (key: string) => string) {
-  return kind === 'llm' ? t('usage_analytics.kind_llm') : t('usage_analytics.kind_search');
 }
 
 function shortId(value: string): string {
   return value.length > 14 ? `${value.slice(0, 14)}…` : value;
 }
 
-function StatusBadge({ event }: { event: UsageEvent }) {
+/**
+ * Search events carry `provider=web-search`, so their real brand is the
+ * channel. LLM events use the provider and keep the channel as a sub-label.
+ */
+function eventBrand(event: UsageEvent): { value: string; label: string; secondary?: string } {
+  if (event.kind === 'search') {
+    return {
+      value: event.channel || event.provider || '',
+      label: event.channel || event.provider || '—',
+      secondary:
+        event.channel && event.provider && event.provider !== event.channel
+          ? event.provider
+          : undefined,
+    };
+  }
+  return {
+    value: event.provider || event.channel || '',
+    label: event.provider || event.channel || '—',
+    secondary: event.channel && event.channel !== event.provider ? event.channel : undefined,
+  };
+}
+
+function accountName(event: UsageEvent): string {
+  return event.account_name || event.account_id || '—';
+}
+
+function accountInitial(event: UsageEvent): string {
+  const name = accountName(event);
+  const initial = name.trim().charAt(0);
+  return initial ? initial.toUpperCase() : '?';
+}
+
+function latencyTone(event: UsageEvent): 'good' | 'warning' | 'critical' | 'idle' {
+  const value = event.latency_ms ?? 0;
+  if (value <= 0) return 'idle';
+  if (value < 5000) return 'good';
+  if (value < 20000) return 'warning';
+  return 'critical';
+}
+
+function StatusText({ event }: { event: UsageEvent }) {
   const { t } = useTranslation();
   return (
     <span className={event.success ? styles.statusSuccess : styles.statusFailed}>
@@ -53,7 +91,10 @@ function ModelCell({ event }: { event: UsageEvent }) {
   if (event.kind === 'search') {
     return (
       <div className={styles.stack}>
-        <span>{event.operation || event.path || '—'}</span>
+        <span className={styles.modelName}>
+          <ChannelLogo value={event.channel || event.provider || ''} size={18} />
+          <span>{event.operation || event.path || '—'}</span>
+        </span>
         {event.path && <span className={styles.muted}>{event.path}</span>}
       </div>
     );
@@ -63,13 +104,16 @@ function ModelCell({ event }: { event: UsageEvent }) {
     event.upstream_model && event.upstream_model !== model ? event.upstream_model : '';
   return (
     <div className={styles.stack}>
-      <span>{model}</span>
+      <span className={styles.modelName}>
+        <ChannelLogo value={event.provider || event.channel || ''} size={18} />
+        <span>{model}</span>
+      </span>
       {upstream && <span className={styles.muted}>↳ {upstream}</span>}
     </div>
   );
 }
 
-function TokenCell({ event, mode }: { event: UsageEvent; mode: TokenDisplayMode }) {
+function TokenCell({ event }: { event: UsageEvent }) {
   const { t } = useTranslation();
   if (event.kind === 'search') {
     if (event.credits) {
@@ -84,25 +128,16 @@ function TokenCell({ event, mode }: { event: UsageEvent; mode: TokenDisplayMode 
   }
   const tokens = event.tokens;
   return (
-    <div className={styles.stack}>
-      <span>
-        {formatUsageTokens(tokens.input, mode)} / {formatUsageTokens(tokens.output, mode)}
-      </span>
-      {(tokens.cache_read > 0 || tokens.cache_write > 0 || tokens.reasoning > 0) && (
-        <span className={styles.muted}>
-          {tokens.cache_read > 0 ? `R ${formatUsageTokens(tokens.cache_read, mode)}` : ''}
-          {tokens.cache_write > 0 ? ` W ${formatUsageTokens(tokens.cache_write, mode)}` : ''}
-          {tokens.reasoning > 0 ? ` · think ${formatUsageTokens(tokens.reasoning, mode)}` : ''}
-        </span>
-      )}
-    </div>
+    <span className={styles.tokenPair}>
+      {formatUsageTokens(tokens.input, 'full')} / {formatUsageTokens(tokens.output, 'full')}
+    </span>
   );
 }
 
 function CostCell({ event, currency }: { event: UsageEvent; currency?: string }) {
   return (
     <div className={styles.stack}>
-      <span>{formatUsageCost(event.cost, event.currency || currency)}</span>
+      <span className={styles.costPill}>{formatUsageCost(event.cost, event.currency || currency)}</span>
       {event.upstream_cost != null && (
         <span className={styles.muted}>
           upstream {formatUsageCost(event.upstream_cost, event.upstream_currency || currency)}
@@ -112,20 +147,46 @@ function CostCell({ event, currency }: { event: UsageEvent; currency?: string })
   );
 }
 
-function RequestTraits({ event }: { event: UsageEvent }) {
+function RequestCell({ event }: { event: UsageEvent }) {
   const { t } = useTranslation();
-  const traits = [];
-  if (event.stream) traits.push('stream');
-  if ((event.attempts ?? 0) > 1) traits.push(`×${event.attempts}`);
-  if (event.proxy_used) traits.push('proxy');
-  if (traits.length === 0) return <span className={styles.muted}>—</span>;
   return (
-    <div className={styles.traits}>
-      {traits.map((trait) => (
-        <span key={trait} className={styles.badge}>
-          {trait === 'proxy' ? t('usage_analytics.proxy_short') : trait}
+    <div className={styles.stack}>
+      <span>{event.stream ? t('usage_analytics.log_stream') : t('usage_analytics.log_non_stream')}</span>
+      <span className={styles.muted}>
+        {event.tps ? formatUsageTps(event.tps) : '—'}
+        {(event.attempts ?? 0) > 1 ? ` · ×${event.attempts}` : ''}
+        {event.proxy_used ? ` · ${t('usage_analytics.proxy_short')}` : ''}
+      </span>
+    </div>
+  );
+}
+
+function DetailCell({ event }: { event: UsageEvent }) {
+  const { t } = useTranslation();
+  if (!event.success) {
+    const reason =
+      event.error_code ||
+      ((event.status_code ?? 0) > 0 ? `HTTP ${event.status_code}` : t('usage_analytics.failed'));
+    return (
+      <div className={styles.stack}>
+        <span className={styles.detailError} title={reason}>
+          {reason}
         </span>
-      ))}
+        {event.path && <span className={styles.muted}>{event.path}</span>}
+      </div>
+    );
+  }
+  const plan = event.plan || event.service_tier || t('usage_analytics.log_standard');
+  return (
+    <div className={styles.stack}>
+      <span className={styles.detailPlan}>{plan}</span>
+      <span className={styles.muted}>
+        {event.quota_kind && event.quota_kind !== plan
+          ? event.quota_kind
+          : event.service_tier && event.service_tier !== plan
+            ? event.service_tier
+            : event.reasoning_effort || '—'}
+      </span>
     </div>
   );
 }
@@ -133,13 +194,11 @@ function RequestTraits({ event }: { event: UsageEvent }) {
 function LogRow({
   event,
   columns,
-  mode,
   currency,
   onSelect,
 }: {
   event: UsageEvent;
   columns: UsageLogColumnKey[];
-  mode: TokenDisplayMode;
   currency?: string;
   onSelect: (event: UsageEvent) => void;
 }) {
@@ -149,59 +208,94 @@ function LogRow({
       case 'time':
         return (
           <div className={styles.stack}>
-            <span>{formatUsageTime(event.time)}</span>
+            <span className={styles.timeValue}>{formatLogTableTime(event.time)}</span>
             <span className={styles.rowMeta}>
-              <StatusBadge event={event} />
+              <StatusText event={event} />
               {(event.status_code ?? 0) > 0 && <span>HTTP {event.status_code}</span>}
             </span>
           </div>
         );
       case 'kind':
-        return <span className={styles.kindBadge}>{kindLabel(event.kind, t)}</span>;
-      case 'provider':
+        return (
+          <span className={styles.kindBadge}>
+            {event.kind === 'llm'
+              ? t('usage_analytics.kind_llm')
+              : t('usage_analytics.kind_search')}
+          </span>
+        );
+      case 'provider': {
+        const brand = eventBrand(event);
         return (
           <div className={styles.stack}>
-            <span>{event.provider || event.channel || '—'}</span>
-            {event.channel && event.channel !== event.provider && (
-              <span className={styles.muted}>{event.channel}</span>
-            )}
+            <span className={styles.identity}>
+              <ChannelLogo value={brand.value} label={brand.label} size={18} />
+              <span className={styles.channelLabel}>{brand.label}</span>
+            </span>
+            {brand.secondary && <span className={styles.muted}>{brand.secondary}</span>}
             {event.executor_type && <span className={styles.muted}>{event.executor_type}</span>}
+          </div>
+        );
+      }
+      case 'account':
+        return (
+          <div className={styles.accountCell}>
+            <span className={styles.avatar} aria-hidden="true">
+              {accountInitial(event)}
+            </span>
+            <div className={styles.stack}>
+              <span>{accountName(event)}</span>
+              {event.account_id && event.account_id !== event.account_name && (
+                <span className={styles.muted}>{shortId(event.account_id)}</span>
+              )}
+            </div>
+          </div>
+        );
+      case 'token':
+        return (
+          <div className={styles.stack}>
+            <span className={styles.tokenName}>
+              <IconKey size={15} />
+              <span>{event.api_key_masked || '—'}</span>
+            </span>
+            <span className={styles.muted}>
+              {event.plan || event.quota_kind || t('usage_analytics.log_token_default')}
+            </span>
           </div>
         );
       case 'model':
         return <ModelCell event={event} />;
-      case 'account':
+      case 'tokens':
+        return <TokenCell event={event} />;
+      case 'cost':
+        return <CostCell event={event} currency={currency} />;
+      case 'latency':
         return (
-          <div className={styles.stack}>
-            <span>{event.account_name || event.account_id || '—'}</span>
-            {event.api_key_masked && <span className={styles.muted}>{event.api_key_masked}</span>}
+          <div className={styles.latencyCell}>
+            <span
+              className={`${styles.latencyBar} ${styles[`latency_${latencyTone(event)}`]}`}
+              aria-hidden="true"
+            />
+            <div className={styles.stack}>
+              <span>{formatLogDuration(event.latency_ms)}</span>
+              {event.ttft_ms ? (
+                <span className={styles.muted}>TTFT {formatLogDuration(event.ttft_ms)}</span>
+              ) : null}
+            </div>
           </div>
         );
+      case 'request':
+        return <RequestCell event={event} />;
+      case 'detail':
+        return <DetailCell event={event} />;
       case 'plan':
         return (
-          <div className={styles.stack}>
+          <div className={`${styles.stack} ${styles.planCell}`}>
             <span>{event.plan || event.quota_kind || '—'}</span>
             {event.plan && event.quota_kind && event.quota_kind !== event.plan && (
               <span className={styles.muted}>{event.quota_kind}</span>
             )}
           </div>
         );
-      case 'tokens':
-        return <TokenCell event={event} mode={mode} />;
-      case 'cost':
-        return <CostCell event={event} currency={currency} />;
-      case 'latency':
-        return (
-          <div className={styles.stack}>
-            <span>{formatUsageDuration(event.latency_ms)}</span>
-            <span className={styles.muted}>
-              {event.ttft_ms ? `TTFT ${formatUsageDuration(event.ttft_ms)}` : ''}
-              {event.tps ? ` · ${formatUsageTps(event.tps)}` : ''}
-            </span>
-          </div>
-        );
-      case 'request':
-        return <RequestTraits event={event} />;
       case 'request_id':
         return (
           <span className={styles.mono} title={event.id}>
@@ -234,9 +328,9 @@ function LogRow({
 export function UsageLogsTable({
   events,
   columns,
-  tokenDisplayMode,
   currency,
   loading,
+  emptyAction,
   onSelect,
 }: UsageLogsTableProps) {
   const { t } = useTranslation();
@@ -244,8 +338,9 @@ export function UsageLogsTable({
     if (loading) return <div className={styles.loading}>{t('usage_analytics.log_loading')}</div>;
     return (
       <EmptyState
-        title={t('usage_analytics.no_data')}
-        description={t('usage_analytics.no_data_hint')}
+        title={t('usage_analytics.log_empty_title')}
+        description={t('usage_analytics.log_empty_hint')}
+        action={emptyAction}
       />
     );
   }
@@ -253,7 +348,7 @@ export function UsageLogsTable({
   return (
     <>
       <div className={styles.desktopTable}>
-        <Table>
+        <Table className={styles.logTable}>
           <TableHeader>
             <tr>
               {columns.map((column) => (
@@ -267,7 +362,6 @@ export function UsageLogsTable({
                 key={event.id}
                 event={event}
                 columns={columns}
-                mode={tokenDisplayMode}
                 currency={currency}
                 onSelect={onSelect}
               />
@@ -276,43 +370,52 @@ export function UsageLogsTable({
         </Table>
       </div>
       <div className={styles.mobileList}>
-        {events.map((event) => (
-          <button
-            key={event.id}
-            type="button"
-            className={styles.mobileCard}
-            onClick={() => onSelect(event)}
-          >
-            <span className={styles.mobileTop}>
-              <span>{formatUsageTime(event.time)}</span>
-              <StatusBadge event={event} />
-            </span>
-            <span className={styles.mobileModel}>
-              {event.alias || event.model || event.operation || event.channel || '—'}
-            </span>
-            <span className={styles.mobileMeta}>
-              {event.provider || event.channel || '—'}
-              {columns.includes('account')
-                ? ` · ${event.account_name || event.account_id || '—'}`
-                : ''}
-            </span>
-            <span className={styles.mobileMetrics}>
-              {columns.includes('tokens') && (
-                <span>
-                  {event.kind === 'search'
-                    ? event.credits
-                      ? `${formatCompactNumber(event.credits)} ${t('usage_analytics.credits')}`
-                      : formatCompactNumber(event.units ?? 0)
-                    : formatUsageTokens(event.tokens.total, tokenDisplayMode)}
-                </span>
-              )}
-              {columns.includes('cost') && (
-                <span>{formatUsageCost(event.cost, event.currency || currency)}</span>
-              )}
-              {columns.includes('latency') && <span>{formatUsageDuration(event.latency_ms)}</span>}
-            </span>
-          </button>
-        ))}
+        {events.map((event) => {
+          const brand = eventBrand(event);
+          return (
+            <button
+              key={event.id}
+              type="button"
+              className={styles.mobileCard}
+              onClick={() => onSelect(event)}
+            >
+              <span className={styles.mobileTop}>
+                <span>{formatLogTableTime(event.time)}</span>
+                <StatusText event={event} />
+              </span>
+              <span className={styles.mobileModel}>
+                {event.alias || event.model || event.operation || event.channel || '—'}
+              </span>
+              <span className={styles.mobileMeta}>
+                <ChannelLogo value={brand.value} label={brand.label} size={14} />
+                <span>{brand.label}</span>
+                {columns.includes('account') && (
+                  <span>· {event.account_name || event.account_id || '—'}</span>
+                )}
+              </span>
+              <span className={styles.mobileMetrics}>
+                {columns.includes('tokens') && (
+                  <span>
+                    {event.kind === 'search'
+                      ? event.credits
+                        ? `${formatCompactNumber(event.credits)} ${t('usage_analytics.credits')}`
+                        : formatCompactNumber(event.units ?? 0)
+                      : `${formatUsageTokens(event.tokens.input, 'full')} / ${formatUsageTokens(
+                          event.tokens.output,
+                          'full'
+                        )}`}
+                  </span>
+                )}
+                {columns.includes('cost') && (
+                  <span>{formatUsageCost(event.cost, event.currency || currency)}</span>
+                )}
+                {columns.includes('latency') && (
+                  <span>{formatLogDuration(event.latency_ms)}</span>
+                )}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </>
   );

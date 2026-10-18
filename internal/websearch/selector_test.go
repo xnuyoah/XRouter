@@ -213,3 +213,41 @@ func TestChannelLocksSerializePerChannel(t *testing.T) {
 		t.Fatal("释放锁后应当继续执行")
 	}
 }
+
+func TestSelectAccountsAllowsLimitedAfterQuotaReset(t *testing.T) {
+	now := time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)
+	accounts := []Account{
+		testAccount(ChannelFirecrawl, "reset-due"),
+		testAccount(ChannelFirecrawl, "still-cooling"),
+		testAccount(ChannelFirecrawl, "legacy-limited"),
+	}
+	states := map[string]AccountState{
+		"reset-due": {
+			Status:        AccountStatusLimited,
+			CooldownUntil: timePointer(now.Add(-time.Minute)),
+			Quota: &QuotaSnapshot{Balances: []QuotaBalance{{
+				Kind: QuotaKindCredits, Remaining: floatPointer(0),
+			}}},
+		},
+		"still-cooling": {
+			Status:        AccountStatusLimited,
+			CooldownUntil: timePointer(now.Add(time.Hour)),
+			Quota: &QuotaSnapshot{Balances: []QuotaBalance{{
+				Kind: QuotaKindCredits, Remaining: floatPointer(0),
+			}}},
+		},
+		"legacy-limited": {
+			Status: AccountStatusLimited,
+			Quota: &QuotaSnapshot{Balances: []QuotaBalance{{
+				Kind: QuotaKindCredits, Remaining: floatPointer(0),
+			}}},
+		},
+	}
+	selected := SelectAccounts(accounts, states, now)
+	if len(selected) != 1 || selected[0].Account.ID != "reset-due" {
+		t.Fatalf("候选 = %+v，期望仅 reset-due", selected)
+	}
+	if selected[0].Remaining != nil {
+		t.Fatalf("重置到期的账号额度应视为未知，得到 %v", *selected[0].Remaining)
+	}
+}

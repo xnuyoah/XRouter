@@ -189,14 +189,28 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
+// AccessScope limits which proxy routes may use a generated API token.
+type AccessScope string
+
+const (
+	AccessScopeModel  AccessScope = "model"
+	AccessScopeSearch AccessScope = "search"
+)
+
 // AuthMiddleware 返回一个 Gin 中间件处理器，它使用已配置的认证
 // 供应商对请求进行认证。当没有可用供应商时，
 // 它允许所有请求（旧版行为）。
 func AuthMiddleware(manager *sdkaccess.Manager) gin.HandlerFunc {
-	return accessAuthMiddleware(manager)
+	return accessAuthMiddlewareForScope(manager, "")
 }
 
-func accessAuthMiddleware(manager *sdkaccess.Manager) gin.HandlerFunc {
+// AuthMiddlewareForScope authenticates a request and enforces the optional
+// prefix-based scope used by tokens created in the API Tokens page.
+func AuthMiddlewareForScope(manager *sdkaccess.Manager, scope AccessScope) gin.HandlerFunc {
+	return accessAuthMiddlewareForScope(manager, scope)
+}
+
+func accessAuthMiddlewareForScope(manager *sdkaccess.Manager, scope AccessScope) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if manager == nil {
 			c.Next()
@@ -206,6 +220,10 @@ func accessAuthMiddleware(manager *sdkaccess.Manager) gin.HandlerFunc {
 		result, err := manager.Authenticate(c.Request.Context(), c.Request)
 		if err == nil {
 			if result != nil {
+				if !apiKeyAllowsScope(result.Principal, scope) {
+					c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "API key scope does not allow this endpoint"})
+					return
+				}
 				c.Set("userApiKey", result.Principal)
 				c.Set("accessProvider", result.Provider)
 				if len(result.Metadata) > 0 {
@@ -225,5 +243,20 @@ func accessAuthMiddleware(manager *sdkaccess.Manager) gin.HandlerFunc {
 			log.Errorf("authentication middleware error: %v", err)
 		}
 		c.AbortWithStatusJSON(statusCode, gin.H{"error": err.Message})
+	}
+}
+
+func apiKeyAllowsScope(key string, scope AccessScope) bool {
+	if scope == "" {
+		return true
+	}
+	normalized := strings.ToLower(strings.TrimSpace(key))
+	switch {
+	case strings.HasPrefix(normalized, "sk-xr-model-"):
+		return scope == AccessScopeModel
+	case strings.HasPrefix(normalized, "sk-xr-search-"):
+		return scope == AccessScopeSearch
+	default:
+		return true
 	}
 }

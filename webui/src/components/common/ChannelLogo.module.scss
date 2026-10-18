@@ -1,0 +1,42 @@
+.logo {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 22%;
+  color: var(--text-primary);
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.monochrome {
+  :global([data-theme='dark']) & {
+    filter: invert(1);
+  }
+}
+
+.fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: hsl(var(--logo-hue) 52% 90%);
+  color: hsl(var(--logo-hue) 48% 30%);
+  font-weight: 700;
+  line-height: 1;
+
+  :global([data-theme='dark']) & {
+    background: hsl(var(--logo-hue) 32% 24%);
+    color: hsl(var(--logo-hue) 62% 78%);
+  }
+}

@@ -18,8 +18,11 @@ func TestPreferencesPersist(t *testing.T) {
 		t.Fatalf("New() error = %v", errStore)
 	}
 	defaults := store.Preferences()
-	if defaults.Kind != "all" || defaults.Range != "today" || defaults.PageSize != 50 {
+	if defaults.Kind != "all" || defaults.Range != "24h" || defaults.PageSize != 50 {
 		t.Fatalf("defaults = %+v", defaults)
+	}
+	if defaults.SearchAccountsPageSize != 25 {
+		t.Fatalf("default search accounts page size = %d, want 25", defaults.SearchAccountsPageSize)
 	}
 	if defaults.LowBalanceThresholdPercent != 10 {
 		t.Fatalf("default low balance threshold = %d, want 10", defaults.LowBalanceThresholdPercent)
@@ -30,8 +33,9 @@ func TestPreferencesPersist(t *testing.T) {
 		GroupBy:                    "status_code",
 		TokenDisplayMode:           "m",
 		PageSize:                   100,
+		SearchAccountsPageSize:     50,
 		LowBalanceThresholdPercent: 20,
-		LogColumns:                 []string{"time", "model", "cost"},
+		LogColumns:                 []string{"time", "token", "model", "detail", "cost"},
 	})
 	if errSave != nil {
 		t.Fatalf("SavePreferences() error = %v", errSave)
@@ -42,7 +46,10 @@ func TestPreferencesPersist(t *testing.T) {
 	if saved.LowBalanceThresholdPercent != 20 {
 		t.Fatalf("saved low balance threshold = %d, want 20", saved.LowBalanceThresholdPercent)
 	}
-	if len(saved.LogColumns) != 3 {
+	if saved.SearchAccountsPageSize != 50 {
+		t.Fatalf("saved search accounts page size = %d, want 50", saved.SearchAccountsPageSize)
+	}
+	if len(saved.LogColumns) != 5 {
 		t.Fatalf("saved log columns = %v", saved.LogColumns)
 	}
 	if errClose := store.Close(); errClose != nil {
@@ -70,7 +77,10 @@ func TestPreferencesPersist(t *testing.T) {
 	if loaded.LowBalanceThresholdPercent != 20 {
 		t.Fatalf("loaded low balance threshold = %d, want 20", loaded.LowBalanceThresholdPercent)
 	}
-	if len(loaded.LogColumns) != 3 || loaded.LogColumns[1] != "model" {
+	if loaded.SearchAccountsPageSize != 50 {
+		t.Fatalf("loaded search accounts page size = %d, want 50", loaded.SearchAccountsPageSize)
+	}
+	if len(loaded.LogColumns) != 5 || loaded.LogColumns[1] != "token" {
 		t.Fatalf("loaded log columns = %v", loaded.LogColumns)
 	}
 }
@@ -95,6 +105,9 @@ func TestPreferencesRejectInvalid(t *testing.T) {
 	}
 	if _, errSave := store.SavePreferences(Preferences{LowBalanceThresholdPercent: 7}); errSave == nil {
 		t.Fatal("SavePreferences(invalid threshold) error = nil, want error")
+	}
+	if _, errSave := store.SavePreferences(Preferences{SearchAccountsPageSize: 7}); errSave == nil {
+		t.Fatal("SavePreferences(invalid search accounts page size) error = nil, want error")
 	}
 	if _, errSave := store.SavePreferences(Preferences{LogColumns: []string{"bogus"}}); errSave == nil {
 		t.Fatal("SavePreferences(invalid log column) error = nil, want error")

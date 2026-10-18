@@ -14,18 +14,17 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { PageTransition } from '@/components/common/PageTransition';
 import { MainRoutes } from '@/router/MainRoutes';
-import { pluginsApi } from '@/services/api';
 import {
   IconActivity,
-  IconDollarSign,
   IconSidebarConfig,
   IconSidebarDashboard,
   IconSidebarLogs,
-  IconSidebarPlugins,
   IconSidebarSearch,
-  IconChevronDown,
+  IconModelCluster,
+  IconKey,
+  IconScrollText,
 } from '@/components/ui/icons';
-import { INLINE_LOGO } from '@/assets/logoInline';
+import { INLINE_LOGO_DARK, INLINE_LOGO_LIGHT } from '@/assets/logoInline';
 import {
   useAuthStore,
   useConfigStore,
@@ -33,12 +32,6 @@ import {
   useNotificationStore,
   useThemeStore,
 } from '@/stores';
-import {
-  collectPluginResourceEntries,
-  PLUGIN_RESOURCES_REFRESH_EVENT,
-  resolvePluginAssetURL,
-  type PluginResourceEntry,
-} from '@/features/plugins/pluginResources';
 import { triggerHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { LANGUAGE_LABEL_KEYS, LANGUAGE_ORDER } from '@/utils/constants';
 import { isSupportedLanguage } from '@/utils/language';
@@ -47,9 +40,10 @@ import type { Theme } from '@/types';
 const sidebarIcons: Record<string, ReactNode> = {
   dashboard: <IconSidebarDashboard size={17} />,
   channelStatus: <IconActivity size={17} />,
-  usageAnalytics: <IconDollarSign size={17} />,
+  usageAnalytics: <IconScrollText size={17} />,
   webSearch: <IconSidebarSearch size={17} />,
-  plugins: <IconSidebarPlugins size={17} />,
+  providerAccounts: <IconModelCluster size={17} />,
+  apiTokens: <IconKey size={17} />,
   config: <IconSidebarConfig size={17} />,
   logs: <IconSidebarLogs size={17} />,
 };
@@ -66,16 +60,7 @@ interface SidebarNavLinkItem {
   icon: ReactNode;
 }
 
-interface SidebarNavDrawerItem {
-  kind: 'drawer';
-  id: string;
-  label: string;
-  meta?: string;
-  icon: ReactNode;
-  children: SidebarNavLinkItem[];
-}
-
-type SidebarNavItem = SidebarNavLinkItem | SidebarNavDrawerItem;
+type SidebarNavItem = SidebarNavLinkItem;
 
 interface SidebarNavGroup {
   id: string;
@@ -83,8 +68,7 @@ interface SidebarNavGroup {
   items: SidebarNavItem[];
 }
 
-const flattenNavItems = (items: SidebarNavItem[]): SidebarNavLinkItem[] =>
-  items.flatMap((item) => (item.kind === 'drawer' ? item.children : [item]));
+const flattenNavItems = (items: SidebarNavItem[]): SidebarNavLinkItem[] => items;
 
 /** 点击菜单外或按下 Escape 时关闭弹出菜单 */
 function useMenuDismiss(
@@ -117,17 +101,6 @@ function useMenuDismiss(
       document.removeEventListener('keydown', handleEscape);
     };
   }, [open, menuRef, onClose]);
-}
-
-function PluginSidebarIcon({ src }: { src: string }) {
-  const [failed, setFailed] = useState(false);
-  const showImage = Boolean(src) && !failed;
-
-  return showImage ? (
-    <img src={src} alt="" onError={() => setFailed(true)} />
-  ) : (
-    <IconSidebarPlugins size={17} />
-  );
 }
 
 // Topbar action icons
@@ -217,14 +190,12 @@ export function MainLayout() {
   const navigate = useNavigate();
 
   const logout = useAuthStore((state) => state.logout);
-  const connectionStatus = useAuthStore((state) => state.connectionStatus);
-  const apiBase = useAuthStore((state) => state.apiBase);
-  const supportsPlugin = useAuthStore((state) => state.supportsPlugin);
 
   const fetchConfig = useConfigStore((state) => state.fetchConfig);
   const clearCache = useConfigStore((state) => state.clearCache);
 
   const theme = useThemeStore((state) => state.theme);
+  const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const setTheme = useThemeStore((state) => state.setTheme);
   const language = useLanguageStore((state) => state.language);
   const setLanguage = useLanguageStore((state) => state.setLanguage);
@@ -234,10 +205,6 @@ export function MainLayout() {
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [pluginResources, setPluginResources] = useState<PluginResourceEntry[]>([]);
-  const [expandedPluginResourceIDs, setExpandedPluginResourceIDs] = useState<Set<string>>(
-    () => new Set()
-  );
   const contentRef = useRef<HTMLDivElement | null>(null);
   const languageMenuRef = useRef<HTMLDivElement | null>(null);
   const themeMenuRef = useRef<HTMLDivElement | null>(null);
@@ -246,7 +213,6 @@ export function MainLayout() {
 
   const brandName = 'XRouter';
   const isLogsPage = location.pathname.startsWith('/logs');
-  const isPluginResourcePage = location.pathname.startsWith('/plugin-pages');
 
   // Keep header height available to sticky mobile elements and overlays.
   useLayoutEffect(() => {
@@ -328,84 +294,6 @@ export function MainLayout() {
     });
   }, [fetchConfig]);
 
-  const loadPluginResources = useCallback(async () => {
-    if (connectionStatus !== 'connected' || !supportsPlugin) {
-      setPluginResources([]);
-      return;
-    }
-
-    try {
-      const plugins = await pluginsApi.list();
-      setPluginResources(collectPluginResourceEntries(plugins.plugins, t));
-    } catch {
-      setPluginResources([]);
-    }
-  }, [connectionStatus, supportsPlugin, t]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadPluginResources();
-    }, 0);
-
-    window.addEventListener(PLUGIN_RESOURCES_REFRESH_EVENT, loadPluginResources);
-
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener(PLUGIN_RESOURCES_REFRESH_EVENT, loadPluginResources);
-    };
-  }, [apiBase, loadPluginResources]);
-
-  const pluginResourceGroups = pluginResources.reduce<
-    Array<{ pluginID: string; pluginTitle: string; entries: PluginResourceEntry[] }>
-  >((groups, resource) => {
-    const group = groups.find((item) => item.pluginID === resource.pluginID);
-    if (group) {
-      group.entries.push(resource);
-      return groups;
-    }
-
-    groups.push({
-      pluginID: resource.pluginID,
-      pluginTitle: resource.pluginTitle,
-      entries: [resource],
-    });
-    return groups;
-  }, []);
-
-  const pluginPageNavItems: SidebarNavItem[] = supportsPlugin
-    ? pluginResourceGroups.flatMap((group): SidebarNavItem[] => {
-        if (group.entries.length === 1) {
-          const resource = group.entries[0];
-          const pluginLogo = resolvePluginAssetURL(resource.pluginLogo, apiBase);
-          return [
-            {
-              path: resource.route,
-              label: resource.label,
-              meta: resource.description,
-              icon: <PluginSidebarIcon src={pluginLogo} />,
-            },
-          ];
-        }
-
-        const pluginLogo = resolvePluginAssetURL(group.entries[0]?.pluginLogo ?? '', apiBase);
-        return [
-          {
-            kind: 'drawer',
-            id: `plugin-pages-${group.pluginID}`,
-            label: group.pluginTitle,
-            meta: t('plugin_resource.page_count', { count: group.entries.length }),
-            icon: <PluginSidebarIcon src={pluginLogo} />,
-            children: group.entries.map((resource) => ({
-              path: resource.route,
-              label: resource.label,
-              meta: resource.description,
-              icon: <span className="nav-sub-dot" aria-hidden="true" />,
-            })),
-          },
-        ];
-      })
-    : [];
-
   const navGroups: SidebarNavGroup[] = [
     {
       id: 'operate',
@@ -442,10 +330,10 @@ export function MainLayout() {
           icon: sidebarIcons.webSearch,
         },
         {
-          path: '/logs',
-          labelKey: 'nav.logs',
-          metaKey: 'nav_meta.logs',
-          icon: sidebarIcons.logs,
+          path: '/provider-accounts',
+          labelKey: 'nav.provider_accounts',
+          metaKey: 'nav_meta.provider_accounts',
+          icon: sidebarIcons.providerAccounts,
         },
       ],
     },
@@ -454,22 +342,19 @@ export function MainLayout() {
       labelKey: 'nav_groups.control',
       items: [
         {
+          path: '/api-tokens',
+          labelKey: 'nav.api_tokens',
+          metaKey: 'nav_meta.api_tokens',
+          icon: sidebarIcons.apiTokens,
+        },
+        {
           path: '/config',
           labelKey: 'nav.config_management',
           metaKey: 'nav_meta.config_management',
           icon: sidebarIcons.config,
         },
       ],
-    },
-    ...(pluginPageNavItems.length > 0
-      ? [
-          {
-            id: 'plugin-pages',
-            labelKey: 'nav_groups.plugin_pages',
-            items: pluginPageNavItems,
-          },
-        ]
-      : []),
+    }
   ];
   const navItems = navGroups.flatMap((group) => flattenNavItems(group.items));
   const navOrder = navItems.map((item) => item.path);
@@ -492,7 +377,6 @@ export function MainLayout() {
     clearCache();
     const results = await Promise.allSettled([
       fetchConfig(true),
-      loadPluginResources(),
       triggerHeaderRefresh(),
     ]);
     const rejected = results.find((result) => result.status === 'rejected');
@@ -509,53 +393,21 @@ export function MainLayout() {
     showNotification(t('notification.data_refreshed'), 'success');
   };
 
-  const togglePluginResourceDrawer = useCallback((drawerID: string) => {
-    setExpandedPluginResourceIDs((current) => {
-      const next = new Set(current);
-      if (next.has(drawerID)) {
-        next.delete(drawerID);
-      } else {
-        next.add(drawerID);
-      }
-      return next;
-    });
-  }, []);
-
   // 全局搜索：⌘K / Ctrl+K 聚焦，Escape 关闭；纯客户端过滤导航条目。
-  const searchCandidates = useMemo(
-    () => {
-      const fromNav = navItems.map((item) => ({
-        path: item.path,
-        label: item.label ?? (item.labelKey ? t(item.labelKey) : ''),
-        meta: item.meta ?? (item.metaKey ? t(item.metaKey) : ''),
-      }));
-      // 扩展管理不在侧边栏，但路由始终可达（页面自身渲染 no-CGO /
-      // 平台不匹配诊断）。动态扩展分组为空时这里是唯一 UI 入口，
-      // 保证全局搜索始终可达。
-      if (!fromNav.some((item) => item.path === '/plugins')) {
-        fromNav.push({
-          path: '/plugins',
-          label: t('nav.plugins'),
-          meta: t('nav_meta.plugins'),
-        });
-      }
-      return fromNav;
-    },
-    // navItems 每次渲染都是新建数组，这里依赖 t 与导航内容本身即可。
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- navItems is rebuilt every render; key on the translated strings instead.
-    [t, pluginPageNavItems]
-  );
-  const searchResults = useMemo(() => {
-    const normalized = searchQuery.trim().toLowerCase();
-    if (!normalized) return searchCandidates;
-    return searchCandidates.filter(
-      (item) =>
-        item.label.toLowerCase().includes(normalized) ||
-        item.meta.toLowerCase().includes(normalized) ||
-        item.path.toLowerCase().includes(normalized)
-    );
-  }, [searchCandidates, searchQuery]);
-
+  const searchCandidates = navItems.map((item) => ({
+    path: item.path,
+    label: item.label ?? (item.labelKey ? t(item.labelKey) : ''),
+    meta: item.meta ?? (item.metaKey ? t(item.metaKey) : ''),
+  }));
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const searchResults = normalizedSearch
+    ? searchCandidates.filter(
+        (item) =>
+          item.label.toLowerCase().includes(normalizedSearch) ||
+          item.meta.toLowerCase().includes(normalizedSearch) ||
+          item.path.toLowerCase().includes(normalizedSearch)
+      )
+    : searchCandidates;
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -621,40 +473,7 @@ export function MainLayout() {
     );
   };
 
-  const renderNavItem = (item: SidebarNavItem) => {
-    if (item.kind !== 'drawer') {
-      return renderNavLink(item);
-    }
-
-    const isActive = item.children.some((child) => child.path === location.pathname);
-    const isOpen = isActive || expandedPluginResourceIDs.has(item.id);
-
-    return (
-      <div className={`nav-drawer ${isOpen ? 'open' : ''}`} key={item.id}>
-        <button
-          type="button"
-          className={`nav-item nav-drawer-toggle ${isActive ? 'active' : ''} ${
-            isOpen ? 'open' : ''
-          }`}
-          onClick={() => togglePluginResourceDrawer(item.id)}
-          aria-expanded={isOpen}
-        >
-          <span className="nav-icon">{item.icon}</span>
-          <span className="nav-text">
-            <span className="nav-label">{item.label}</span>
-          </span>
-          <span className="nav-drawer-caret" aria-hidden="true">
-            <IconChevronDown size={14} />
-          </span>
-        </button>
-        {isOpen ? (
-          <div className="nav-sub-list">
-            {item.children.map((child) => renderNavLink(child, 'nav-item nav-sub-item'))}
-          </div>
-        ) : null}
-      </div>
-    );
-  };
+  const renderNavItem = (item: SidebarNavItem) => renderNavLink(item);
 
   const mobileSidebarToggleLabel = sidebarOpen
     ? t('sidebar.toggle_collapse', { defaultValue: 'Close navigation' })
@@ -668,10 +487,12 @@ export function MainLayout() {
   });
   const currentPageLabel = activeNavItem
     ? (activeNavItem.label ?? (activeNavItem.labelKey ? t(activeNavItem.labelKey) : ''))
-    : '';
+    : location.pathname.startsWith('/logs')
+      ? t('nav.logs')
+      : '';
 
   return (
-    <div className={`app-shell ${isPluginResourcePage ? 'plugin-resource-shell' : ''}`}>
+    <div className="app-shell">
       <header className="topbar">
         <button
           type="button"
@@ -840,7 +661,10 @@ export function MainLayout() {
         <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="brand">
             <span className="brand-mark">
-              <img src={INLINE_LOGO} alt="XRouter logo" />
+              <img
+                src={resolvedTheme === 'dark' ? INLINE_LOGO_DARK : INLINE_LOGO_LIGHT}
+                alt="XRouter logo"
+              />
             </span>
             <span className="brand-text">
               <span className="brand-title">{brandName}</span>
@@ -863,17 +687,8 @@ export function MainLayout() {
           </div>
         </aside>
 
-        <div
-          className={`content${isLogsPage ? ' content-logs' : ''}${
-            isPluginResourcePage ? ' content-plugin-resource' : ''
-          }`}
-          ref={contentRef}
-        >
-          <main
-            className={`main-content${isLogsPage ? ' main-content-logs' : ''}${
-              isPluginResourcePage ? ' main-content-plugin-resource' : ''
-            }`}
-          >
+        <div className={`content${isLogsPage ? ' content-logs' : ''}`} ref={contentRef}>
+          <main className={`main-content${isLogsPage ? ' main-content-logs' : ''}`}>
             <PageTransition
               render={(location) => <MainRoutes location={location} />}
               getRouteOrder={getRouteOrder}

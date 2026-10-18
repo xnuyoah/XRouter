@@ -14,12 +14,24 @@ services:
     #   - .env
     environment:
       DEPLOY: ${DEPLOY:-}
+    # Keep the gateway on loopback by default and terminate TLS in a reverse
+    # proxy. Set XROUTER_BIND_ADDR=0.0.0.0 only behind a firewall / private network.
     ports:
-      - "11016:11016"
+      - "${XROUTER_BIND_ADDR:-127.0.0.1}:11016:11016"
+    init: true
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     volumes:
       - ${XROUTER_CONFIG_PATH:-./config.yaml}:/xrouter/config.yaml
       - ${XROUTER_AUTH_PATH:-./auths}:/root/.xrouter
       - ${XROUTER_LOG_PATH:-./logs}:/xrouter/logs
       - ${XROUTER_ANALYTICS_PATH:-./usage-analytics}:/xrouter/usage-analytics
-      - ${XROUTER_PLUGIN_PATH:-./plugins}:/xrouter/plugins
+      - ${XROUTER_CHANNEL_STATUS_PATH:-./channel-status}:/xrouter/channel-status
+      - ${XROUTER_WEBSEARCH_PATH:-./websearch}:/xrouter/websearch
     restart: unless-stopped

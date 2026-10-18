@@ -29,8 +29,8 @@
 }
 
 .controls {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
   align-items: center;
   gap: 10px;
   padding: 14px;
@@ -41,6 +41,7 @@
 
 .kindTabs {
   display: flex;
+  grid-column: 1 / -1;
   gap: 6px;
 }
 
@@ -221,6 +222,16 @@
   font-size: 11px;
   color: var(--primary-color);
   background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+.groupIdentity {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  .kindBadge {
+    margin-right: 0;
+  }
 }
 
 .statusSuccess {

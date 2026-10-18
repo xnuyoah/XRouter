@@ -1,20 +1,16 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Collapsible } from '@/components/ui/Collapsible';
-import type { PluginStoreAuthRule } from '@/types/visualConfig';
 import { CONFIG_TAB_ICONS, SECTION_INDEX_LABELS } from '../../constants';
 import type { ConfigSectionProps } from '../../types';
 import { SectionCard } from '../SectionCard';
 import {
   BlockSetting,
-  FieldHint,
   FieldStack,
-  SettingCell,
   SettingList,
   TextSetting,
   ToggleSetting,
 } from '../fields/FieldPrimitives';
-import { PluginStoreAuthEditor } from '../blocks/PluginStoreAuthEditor';
 import { StringListEditor } from '../blocks/StringListEditor';
 import { getValidationMessage } from '../blocks/shared';
 import { SectionOAuthBehavior } from './SectionOAuthBehavior';
@@ -31,14 +27,6 @@ export function SectionAdvanced({
 }: ConfigSectionProps) {
   const { t } = useTranslation();
 
-  const handlePluginStoreSourcesChange = useCallback(
-    (pluginStoreSources: string[]) => onChange({ pluginStoreSources }),
-    [onChange]
-  );
-  const handlePluginStoreAuthChange = useCallback(
-    (pluginStoreAuth: PluginStoreAuthRule[]) => onChange({ pluginStoreAuth }),
-    [onChange]
-  );
   const handleAntigravitySensitiveWordsChange = useCallback(
     (antigravitySensitiveWords: string[]) => onChange({ antigravitySensitiveWords }),
     [onChange]
@@ -62,65 +50,6 @@ export function SectionAdvanced({
         disabled={disabled}
         onChange={onChange}
       />
-
-      <Collapsible
-        label={t('config_management.visual.sections.advanced.plugins_title')}
-        defaultOpen={false}
-      >
-        <FieldStack>
-          <SettingList>
-            <ToggleSetting
-              fieldId="pluginsEnabled"
-              label={t('config_management.visual.sections.system.plugins_enabled')}
-              description={t('config_management.visual.sections.system.plugins_enabled_desc')}
-              checked={values.pluginsEnabled}
-              disabled={disabled}
-              onChange={(pluginsEnabled) => onChange({ pluginsEnabled })}
-            />
-          </SettingList>
-
-          <SettingList
-            title={t('config_management.visual.sections.system.plugin_store_sources')}
-            description={t('config_management.visual.sections.system.plugin_store_sources_desc')}
-          >
-            <BlockSetting
-              fieldId="pluginStoreSources"
-              label={t('config_management.visual.sections.system.plugin_store_sources_label')}
-              description={t('config_management.visual.sections.system.plugin_store_sources_hint')}
-            >
-              <StringListEditor
-                value={values.pluginStoreSources}
-                disabled={disabled}
-                placeholder={t(
-                  'config_management.visual.sections.system.plugin_store_sources_placeholder'
-                )}
-                inputAriaLabel={t(
-                  'config_management.visual.sections.system.plugin_store_sources_label'
-                )}
-                onChange={handlePluginStoreSourcesChange}
-              />
-            </BlockSetting>
-          </SettingList>
-
-          <SettingList
-            title={t('config_management.visual.sections.system.plugin_store_auth')}
-            description={t('config_management.visual.sections.system.plugin_store_auth_desc')}
-          >
-            <SettingCell fieldId="pluginStoreAuth">
-              <FieldStack>
-                <FieldHint>
-                  {t('config_management.visual.sections.system.plugin_store_auth_hint')}
-                </FieldHint>
-                <PluginStoreAuthEditor
-                  value={values.pluginStoreAuth}
-                  disabled={disabled}
-                  onChange={handlePluginStoreAuthChange}
-                />
-              </FieldStack>
-            </SettingCell>
-          </SettingList>
-        </FieldStack>
-      </Collapsible>
 
       <Collapsible
         label={t('config_management.visual.sections.advanced.antigravity_title')}

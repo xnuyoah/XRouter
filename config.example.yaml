@@ -597,6 +597,18 @@ observability:
       # Soft logical data cap in bytes. When exceeded, the oldest events and
       # rollups are pruned. 0 disables the cap.
       max-db-bytes: 0
+      # Fill blank plan/quota labels in LLM usage records. This is display-only
+      # and never changes routing or upstream quotas. An entry with an empty
+      # model applies to every model served by the provider; a model entry
+      # matches the model, upstream model, or alias. Existing upstream plan
+      # values are never overwritten. Restart after changing this mapping.
+      plan-display:
+        - provider: "nvidia"
+          plan: "NIM Free"
+          quota-kind: "credits"
+        - provider: "agnes"
+          plan: "Agnes Free"
+          quota-kind: "plan"
       # Reference model prices are synced from a models.dev-compatible catalog.
       # Manual overrides are managed from Observe -> Usage Analytics -> Prices.
       pricing:
@@ -616,28 +628,6 @@ observability:
 # Other languages can implement the same C ABI and JSON method protocol.
 # Plugin executors require a matching auth record with the same provider key.
 # If the same provider is configured as OpenAI-compatible, the native executor wins.
-# Plugin command-line flags and Management API routes are optional capabilities.
-# Existing native flags/routes and higher-priority plugin flags/routes cannot be replaced.
-# Plugin list Management API reads Logo and ConfigFields from plugin metadata for management UI display.
-# Per-plugin enabled only controls plugins.configs.<pluginID>.enabled and does not implicitly change global plugins.enabled.
-plugins:
-  enabled: false
-  dir: "plugins"
-  # Home owns this revision; it is not an ordinary editable setting.
-  # auth-revision: 0
-
-  configs:
-    example:
-      enabled: true
-      priority: 1
-      config1: true
-      config2: "string"
-      config3: 3
-      mode: "safe" # enum example: safe, fast
-      config-list: ["a", "b"]
-      config-object:
-        mode: "safe"
-
 # 搜索渠道（tavily / exa / anysearch / firecrawl / tinyfish）。
 # 这些渠道不提供对话模型，只做搜索/抓取类 HTTP 透传；客户端使用 access.api-keys
 # 中的密钥访问 /gateway/<channel>/... 与 /mcp/<channel>，无需额外申请渠道密钥。
@@ -654,7 +644,7 @@ web-search:
     max-attempts: 3
   probe:
 # 定时任务间隔（秒）：渠道状态检测 + 额度刷新。
-    interval-seconds: 3600
+    interval-seconds: 1200
 # 探测并发上限。
     concurrency: 4
 # 单次探测请求超时（秒）。
@@ -663,7 +653,7 @@ web-search:
     history-days: 90
   quota:
 # 额度快照被视为“新鲜”的时长（秒）；到期后会被定时任务重新拉取。
-    fresh-seconds: 3600
+    fresh-seconds: 900
   channels:
     - id: tavily
       name: Tavily

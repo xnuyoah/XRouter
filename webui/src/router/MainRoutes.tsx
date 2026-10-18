@@ -2,8 +2,8 @@ import { Navigate, useRoutes, type Location } from 'react-router-dom';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ChannelStatusPage } from '@/features/channelStatus/ChannelStatusPage';
 import { WebSearchPage } from '@/features/webSearch/WebSearchPage';
-import { PluginResourcePage } from '@/features/plugins/PluginResourcePage';
-import { PluginsPage } from '@/features/plugins/PluginsPage';
+import { ProviderAccountsPage } from '@/features/providerAccounts/ProviderAccountsPage';
+import { ApiTokensPage } from '@/features/apiTokens/ApiTokensPage';
 import { ConfigPage } from '@/features/config/ConfigPage';
 import { LogsPage } from '@/features/logs/LogsPage';
 import { UsageAnalyticsPage } from '@/features/usageAnalytics/UsageAnalyticsPage';
@@ -16,13 +16,11 @@ const mainRoutes = [
   { path: '/web-search', element: <WebSearchPage /> },
   { path: '/channel-status', element: <ChannelStatusPage /> },
   { path: '/usage', element: <UsageAnalyticsPage /> },
+  { path: '/usage/overview', element: <UsageAnalyticsPage /> },
   { path: '/usage/logs', element: <UsageAnalyticsPage /> },
   { path: '/usage/search', element: <UsageAnalyticsPage /> },
-  // /plugins is always reachable: the page itself renders the no-CGO /
-  // platform-mismatch diagnostics from the plugin environment report.
-  { path: '/plugin-pages/:pluginId/:menuIndex', element: <PluginResourcePage /> },
-  { path: '/plugins', element: <PluginsPage /> },
-  { path: '/plugins/*', element: <Navigate to="/plugins" replace /> },
+  { path: '/provider-accounts', element: <ProviderAccountsPage /> },
+  { path: '/api-tokens', element: <ApiTokensPage /> },
   { path: '/config', element: <ConfigPage /> },
   { path: '/logs', element: <LogsPage /> },
   { path: '*', element: <Navigate to="/" replace /> },
