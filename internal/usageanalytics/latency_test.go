@@ -78,3 +78,58 @@ func TestQueryP95Latency(t *testing.T) {
 		t.Fatalf("latency buckets = %+v, want 3 under 50ms and 1 under 1s", result.Summary.LatencyBuckets)
 	}
 }
+
+func TestQueryHourlyRollupRespectsPartialBoundaries(t *testing.T) {
+	store, errStore := New(Config{
+		Path:            filepath.Join(t.TempDir(), "usage.db"),
+		Retention:       time.Hour,
+		RollupRetention: 2 * time.Hour,
+		FlushInterval:   5 * time.Millisecond,
+	})
+	if errStore != nil {
+		t.Fatalf("New() error = %v", errStore)
+	}
+	defer func() {
+		if errClose := store.Close(); errClose != nil {
+			t.Fatalf("Close() error = %v", errClose)
+		}
+	}()
+	for index, at := range []time.Time{
+		time.Date(2026, 10, 18, 12, 10, 0, 0, time.UTC),
+		time.Date(2026, 10, 18, 12, 50, 0, 0, time.UTC),
+		time.Date(2026, 10, 18, 13, 10, 0, 0, time.UTC),
+	} {
+		store.HandleUsage(context.Background(), usage.Record{
+			RequestID:   "partial-" + string(rune('a'+index)),
+			Provider:    "openai",
+			Model:       "gpt-test",
+			RequestedAt: at,
+			Detail:      usage.Detail{InputTokens: 1, TotalTokens: 1},
+		})
+	}
+	if errFlush := store.Flush(); errFlush != nil {
+		t.Fatalf("Flush() error = %v", errFlush)
+	}
+	result, errQuery := store.Query(context.Background(), Query{
+		From:   time.Date(2026, 10, 18, 12, 30, 0, 0, time.UTC),
+		To:     time.Date(2026, 10, 18, 13, 30, 0, 0, time.UTC),
+		Bucket: time.Hour,
+	})
+	if errQuery != nil {
+		t.Fatalf("Query() error = %v", errQuery)
+	}
+	if result.Summary.Requests != 2 {
+		t.Fatalf("requests = %d, want the 12:50 and 13:10 events", result.Summary.Requests)
+	}
+	result, errQuery = store.Query(context.Background(), Query{
+		From:   time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC),
+		To:     time.Date(2026, 10, 18, 14, 0, 0, 0, time.UTC),
+		Bucket: time.Hour,
+	})
+	if errQuery != nil {
+		t.Fatalf("Query() error = %v", errQuery)
+	}
+	if result.Summary.Requests != 3 {
+		t.Fatalf("aligned requests = %d, want 3", result.Summary.Requests)
+	}
+}

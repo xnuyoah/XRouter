@@ -51,7 +51,7 @@ type Record struct {
 	ReasoningEffort string
 	// ServiceTier 存储客户端请求的服务层级。
 	ServiceTier string
-	// Plan 存储凭据所属的订阅计划（例如 Codex free/plus/pro）。
+	// Plan stores the credential subscription plan (for example Codex free/plus/pro).
 	Plan string
 	// RequestServiceTier 是仅为输入保留的已弃用别名，供现有
 	// 插件调用方使用。它会被归一化到 ServiceTier，并且永不输出。
@@ -415,10 +415,12 @@ type Manager struct {
 	stopOnce sync.Once
 	cancel   context.CancelFunc
 
-	mu     sync.Mutex
-	cond   *sync.Cond
-	queue  []queueItem
-	closed bool
+	mu      sync.Mutex
+	cond    *sync.Cond
+	queue   []queueItem
+	closed  bool
+	started bool
+	done    chan struct{}
 
 	pluginsMu sync.RWMutex
 	plugins   []Plugin
@@ -427,7 +429,7 @@ type Manager struct {
 
 // NewManager 使用带缓冲的队列构造管理器。
 func NewManager(buffer int) *Manager {
-	m := &Manager{}
+	m := &Manager{done: make(chan struct{})}
 	m.cond = sync.NewCond(&m.mu)
 	return m
 }
@@ -443,6 +445,9 @@ func (m *Manager) Start(ctx context.Context) {
 		}
 		var workerCtx context.Context
 		workerCtx, m.cancel = context.WithCancel(ctx)
+		m.mu.Lock()
+		m.started = true
+		m.mu.Unlock()
 		go m.run(workerCtx)
 	})
 }
@@ -458,8 +463,12 @@ func (m *Manager) Stop() {
 		}
 		m.mu.Lock()
 		m.closed = true
+		started := m.started
 		m.mu.Unlock()
 		m.cond.Broadcast()
+		if started {
+			<-m.done
+		}
 	})
 }
 
@@ -547,6 +556,7 @@ func (m *Manager) Publish(ctx context.Context, record Record) {
 }
 
 func (m *Manager) run(ctx context.Context) {
+	defer close(m.done)
 	for {
 		m.mu.Lock()
 		for !m.closed && len(m.queue) == 0 {

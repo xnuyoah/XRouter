@@ -216,7 +216,11 @@ func (e *Executor) Execute(cfg ChannelConfig, req Request) (Result, error) {
 			ErrorCode:   outcome.errorCode,
 		})
 		if outcome.finalErr != nil {
-			return Result{}, outcome.finalErr
+			result.StatusCode = outcome.statusCode
+			result.ErrorCode = outcome.errorCode
+			result.AccountID = candidate.Account.ID
+			result.AccountName = candidate.Account.Name
+			return result, outcome.finalErr
 		}
 		if outcome.retryable {
 			lastErr = outcome.err
@@ -238,7 +242,14 @@ func (e *Executor) Execute(cfg ChannelConfig, req Request) (Result, error) {
 			StatusCode: http.StatusServiceUnavailable,
 		}
 	}
-	return Result{}, lastErr
+	if attempts := len(result.Attempts); attempts > 0 {
+		last := result.Attempts[attempts-1]
+		result.StatusCode = last.StatusCode
+		result.ErrorCode = last.ErrorCode
+		result.AccountID = last.AccountID
+		result.AccountName = last.AccountName
+	}
+	return result, lastErr
 }
 
 // attemptOutcome 是单次账号尝试的结果。

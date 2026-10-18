@@ -414,3 +414,38 @@ func TestBuildUpstreamURLPreservesQuery(t *testing.T) {
 		t.Fatalf("URL = %q", got)
 	}
 }
+
+func TestGatewayFailurePreservesAttemptMetadata(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusTooManyRequests)
+		_, _ = w.Write([]byte(`{"error":"rate limited"}`))
+	}))
+	defer upstream.Close()
+
+	store, _ := NewStore(t.TempDir())
+	now := time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)
+	first := Account{ID: "a1", Name: "a1", Channel: ChannelTavily, APIKey: "k1"}
+	second := Account{ID: "a2", Name: "a2", Channel: ChannelTavily, APIKey: "k2"}
+	_ = store.SaveAccountState(availableState(ChannelTavily, first))
+	_ = store.SaveAccountState(availableState(ChannelTavily, second))
+	executor := newTestExecutor(t, store)
+	executor.now = func() time.Time { return now }
+
+	result, errExecute := executor.Execute(
+		testChannelConfig(ChannelTavily, upstream.URL, first, second),
+		Request{Channel: ChannelTavily, Method: http.MethodPost, Path: "/search", Body: []byte(`{"query":"x"}`), Context: context.Background()},
+	)
+	if errExecute == nil {
+		t.Fatal("Execute() error = nil, want failure")
+	}
+	if len(result.Attempts) != 2 {
+		t.Fatalf("attempts = %d, want 2", len(result.Attempts))
+	}
+	if result.AccountID != "a2" || result.AccountName != "a2" {
+		t.Fatalf("failed account metadata = %q %q", result.AccountID, result.AccountName)
+	}
+	if result.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429", result.StatusCode)
+	}
+}

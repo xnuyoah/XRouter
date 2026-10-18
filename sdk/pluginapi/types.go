@@ -1522,7 +1522,7 @@ type UsageRecord struct {
 	ReasoningEffort string
 	// ServiceTier 记录请求的或报告的服务层级。
 	ServiceTier string
-	// Plan 记录凭据所属的订阅计划。
+	// Plan stores the credential subscription plan.
 	Plan string
 	// ResponseServiceTier 存储上游响应报告的最终层级。
 	ResponseServiceTier string

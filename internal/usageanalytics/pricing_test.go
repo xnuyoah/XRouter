@@ -343,3 +343,48 @@ func TestParseModelsDevCatalog(t *testing.T) {
 		t.Fatalf("service tier entry missing: %+v", entries)
 	}
 }
+
+func TestSearchPriceDoesNotMatchOtherOperations(t *testing.T) {
+	store, errStore := New(Config{
+		Path:            filepath.Join(t.TempDir(), "usage.db"),
+		Retention:       time.Hour,
+		RollupRetention: 2 * time.Hour,
+		FlushInterval:   5 * time.Millisecond,
+	})
+	if errStore != nil {
+		t.Fatalf("New() error = %v", errStore)
+	}
+	defer func() {
+		if errClose := store.Close(); errClose != nil {
+			t.Fatalf("Close() error = %v", errClose)
+		}
+	}()
+	now := time.Now().UTC()
+	store.RecordSearchUsage(websearch.SearchUsageRecord{
+		Time:      now,
+		Channel:   websearch.ChannelTavily,
+		Operation: "crawl",
+		Success:   true,
+		Units:     1,
+		Unit:      "request",
+	})
+	if _, errPricing := store.ReplaceManualPricing(nil, []SearchPrice{
+		{Channel: "tavily", Operation: "search", Unit: "request", Price: 0.03},
+	}); errPricing != nil {
+		t.Fatalf("ReplaceManualPricing() error = %v", errPricing)
+	}
+	if errFlush := store.Flush(); errFlush != nil {
+		t.Fatalf("Flush() error = %v", errFlush)
+	}
+	result, errQuery := store.Query(context.Background(), Query{
+		Kind: KindSearch,
+		From: now.Add(-time.Hour),
+		To:   now.Add(time.Hour),
+	})
+	if errQuery != nil {
+		t.Fatalf("Query() error = %v", errQuery)
+	}
+	if result.Summary.Coverage != 0 || result.Summary.EstimatedCost != nil {
+		t.Fatalf("crawl was priced by search operation: %+v", result.Summary)
+	}
+}

@@ -76,7 +76,7 @@ type Config struct {
 	// 默认：60。最大：3600。
 	RedisUsageQueueRetentionSeconds int `yaml:"redis-usage-queue-retention-seconds" json:"redis-usage-queue-retention-seconds"`
 
-	// UsageAnalytics 配置本地 LLM/搜索用量分析存储。
+	// UsageAnalytics configures the local LLM and search usage analytics store.
 	UsageAnalytics UsageAnalyticsConfig `yaml:"usage-analytics" json:"usage-analytics"`
 
 	// DisableCooling 为 true 时禁用 auth/模型冷却调度，除非某个凭据或供应商覆盖该设置。

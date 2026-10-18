@@ -468,7 +468,6 @@ func buildPriceIndex(book PriceBook, cfg PricingConfig) *priceIndex {
 			unit = "request"
 		}
 		index.search[searchPriceKey(entry.Channel, operation, unit)] = entry
-		index.search[searchPriceKey(entry.Channel, "*", unit)] = entry
 	}
 	return index
 }

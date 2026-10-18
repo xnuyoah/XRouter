@@ -83,10 +83,10 @@ type Server struct {
 	// channelStats 是共享的渠道请求统计存储。
 	channelStats *channelstats.Store
 
-	// usageAnalytics 是本地 LLM/搜索用量分析存储。
+	// usageAnalytics stores local LLM and search usage analytics.
 	usageAnalytics *usageanalytics.Store
 
-	// webSearchUsageSink 接收搜索渠道用量事件（本地分析或 Home 上报）。
+	// webSearchUsageSink receives search usage events for local analytics or Home forwarding.
 	webSearchUsageSink websearch.UsageSink
 
 	// pluginHost 负责动态插件 Management API 路由分发。

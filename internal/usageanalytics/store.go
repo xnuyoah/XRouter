@@ -338,10 +338,11 @@ func (s *Store) runWriter() {
 		}
 		errFlush := s.flush(batch)
 		if errFlush != nil {
-			log.WithError(errFlush).Error("usage analytics flush failed")
+			log.WithError(errFlush).Error("usage analytics flush failed; retaining batch for retry")
+			return errFlush
 		}
 		batch = batch[:0]
-		return errFlush
+		return nil
 	}
 	handle := func(item queueItem) {
 		if item.flushReply != nil {
@@ -1087,83 +1088,103 @@ func (s *Store) Query(ctx context.Context, query Query) (AnalyticsResult, error)
 	failureStatuses := make(map[int]int64)
 
 	errView := s.db.View(func(tx *bbolt.Tx) error {
-		slot := time.Minute
-		useHourly := query.Bucket >= time.Hour && query.To.Sub(query.From) >= 2*time.Hour
-		if useHourly {
-			slot = time.Hour
-		}
-		bucket := tx.Bucket(rollupsBucket)
-		if useHourly {
-			if hourly := tx.Bucket(rollupHoursBucket); hourly != nil {
-				bucket = hourly
+		processed := 0
+		scan := func(bucket *bbolt.Bucket, slot time.Duration, scanFrom, scanTo time.Time) error {
+			if bucket == nil || !scanFrom.Before(scanTo) {
+				return nil
 			}
-		}
-		if bucket == nil {
+			cursor := bucket.Cursor()
+			startBucket := scanFrom.UTC().Truncate(time.Minute).Unix() / 60
+			endBucket := scanTo.UTC().Unix() / 60
+			startKey := make([]byte, 8)
+			binary.BigEndian.PutUint64(startKey, uint64(startBucket))
+			for rawKey, rawValue := cursor.Seek(startKey); rawKey != nil; rawKey, rawValue = cursor.Next() {
+				processed++
+				if processed%256 == 0 && ctx != nil {
+					if errCtx := ctx.Err(); errCtx != nil {
+						return errCtx
+					}
+				}
+				legacy := len(rawKey) > 0 && rawKey[0] == '{'
+				if !legacy && len(rawKey) >= 8 {
+					if int64(binary.BigEndian.Uint64(rawKey[:8])) > endBucket {
+						break
+					}
+				}
+				key, errDecode := decodeRollupKey(rawKey)
+				if errDecode != nil || key.Bucket < 0 {
+					continue
+				}
+				at := time.Unix(key.Bucket*60, 0).UTC()
+				if !at.Add(slot).After(scanFrom) || !at.Before(scanTo) {
+					continue
+				}
+				if query.Kind == "" || key.Kind == query.Kind {
+					facetSets.add(key)
+				}
+				if !matchRollup(query, key) {
+					continue
+				}
+				var value rollupValue
+				if errUnmarshal := json.Unmarshal(rawValue, &value); errUnmarshal != nil {
+					continue
+				}
+				addSummary(&result.Summary, key, value)
+				if key.Status == "failed" {
+					failureStatuses[key.StatusCode] += value.Failed
+				}
+				cost, _ := pricing.costForRollup(key, value)
+				costs.add(cost, value.Requests, unpricedLabel(key))
+				seriesKey := fmt.Sprintf("%d|%s", at.Truncate(query.Bucket).Unix(), key.Kind)
+				point := seriesMap[seriesKey]
+				if point == nil {
+					point = &SeriesPoint{Start: at.Truncate(query.Bucket).UTC(), Kind: key.Kind}
+					seriesMap[seriesKey] = point
+				}
+				addToSeries(point, value)
+				if cost != nil {
+					addCost(&point.Cost, *cost)
+				}
+				groupKey, group := groupFor(query.GroupBy, key, value)
+				existing := groupMap[groupKey]
+				if existing == nil {
+					existing = group
+					groupMap[groupKey] = existing
+				}
+				addToGroup(existing, value)
+				existing.addCost(cost, value.Requests)
+			}
 			return nil
 		}
-		cursor := bucket.Cursor()
-		startBucket := query.From.UTC().Truncate(slot).Unix() / 60
-		endBucket := query.To.UTC().Unix() / 60
-		startKey := make([]byte, 8)
-		binary.BigEndian.PutUint64(startKey, uint64(startBucket))
-		processed := 0
-		for rawKey, rawValue := cursor.Seek(startKey); rawKey != nil; rawKey, rawValue = cursor.Next() {
-			processed++
-			if processed%256 == 0 && ctx != nil {
-				if errCtx := ctx.Err(); errCtx != nil {
-					return errCtx
+		if query.Bucket >= time.Hour && query.To.Sub(query.From) >= 2*time.Hour {
+			if hourly := tx.Bucket(rollupHoursBucket); hourly != nil {
+				hourFrom := query.From.UTC().Truncate(time.Hour)
+				hourTo := query.To.UTC().Truncate(time.Hour)
+				fullStart := hourFrom
+				if hourFrom.Before(query.From) {
+					fullStart = hourFrom.Add(time.Hour)
 				}
-			}
-			legacy := len(rawKey) > 0 && rawKey[0] == '{'
-			if !legacy && len(rawKey) >= 8 {
-				if int64(binary.BigEndian.Uint64(rawKey[:8])) > endBucket {
-					break
+				if errScan := scan(hourly, time.Hour, fullStart, hourTo); errScan != nil {
+					return errScan
 				}
+				if hourFrom.Before(query.From) {
+					partialEnd := hourFrom.Add(time.Hour)
+					if partialEnd.After(query.To) {
+						partialEnd = query.To
+					}
+					if errScan := scan(tx.Bucket(rollupsBucket), time.Minute, query.From, partialEnd); errScan != nil {
+						return errScan
+					}
+				}
+				if hourTo.Before(query.To) && !hourTo.Before(fullStart) {
+					if errScan := scan(tx.Bucket(rollupsBucket), time.Minute, hourTo, query.To); errScan != nil {
+						return errScan
+					}
+				}
+				return nil
 			}
-			key, errDecode := decodeRollupKey(rawKey)
-			if errDecode != nil || key.Bucket < 0 {
-				continue
-			}
-			at := time.Unix(key.Bucket*60, 0).UTC()
-			if !at.Add(slot).After(query.From) || !at.Before(query.To) {
-				continue
-			}
-			if query.Kind == "" || key.Kind == query.Kind {
-				facetSets.add(key)
-			}
-			if !matchRollup(query, key) {
-				continue
-			}
-			var value rollupValue
-			if errUnmarshal := json.Unmarshal(rawValue, &value); errUnmarshal != nil {
-				continue
-			}
-			addSummary(&result.Summary, key, value)
-			if key.Status == "failed" {
-				failureStatuses[key.StatusCode] += value.Failed
-			}
-			cost, _ := pricing.costForRollup(key, value)
-			costs.add(cost, value.Requests, unpricedLabel(key))
-			seriesKey := fmt.Sprintf("%d|%s", at.Truncate(query.Bucket).Unix(), key.Kind)
-			point := seriesMap[seriesKey]
-			if point == nil {
-				point = &SeriesPoint{Start: at.Truncate(query.Bucket).UTC(), Kind: key.Kind}
-				seriesMap[seriesKey] = point
-			}
-			addToSeries(point, value)
-			if cost != nil {
-				addCost(&point.Cost, *cost)
-			}
-			groupKey, group := groupFor(query.GroupBy, key, value)
-			existing := groupMap[groupKey]
-			if existing == nil {
-				existing = group
-				groupMap[groupKey] = existing
-			}
-			addToGroup(existing, value)
-			existing.addCost(cost, value.Requests)
 		}
-		return nil
+		return scan(tx.Bucket(rollupsBucket), time.Minute, query.From, query.To)
 	})
 	if errView != nil {
 		return result, errView
@@ -1349,6 +1370,9 @@ func (s *Store) Backup(w io.Writer) error {
 	}
 	if w == nil {
 		return fmt.Errorf("backup writer is nil")
+	}
+	if errFlush := s.Flush(); errFlush != nil {
+		return errFlush
 	}
 	return s.db.View(func(tx *bbolt.Tx) error {
 		_, errWrite := tx.WriteTo(w)

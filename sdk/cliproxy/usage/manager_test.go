@@ -186,3 +186,53 @@ func TestManagerPublishBackfillsContextAuthFields(t *testing.T) {
 		t.Fatal("timed out waiting for usage record")
 	}
 }
+
+type blockingUsagePlugin struct {
+	started chan struct{}
+	release chan struct{}
+	done    chan struct{}
+}
+
+func (p *blockingUsagePlugin) HandleUsage(_ context.Context, _ Record) {
+	p.started <- struct{}{}
+	<-p.release
+	p.done <- struct{}{}
+}
+
+func TestManagerStopDrainsInFlightRecord(t *testing.T) {
+	mgr := NewManager(4)
+	plugin := &blockingUsagePlugin{
+		started: make(chan struct{}, 1),
+		release: make(chan struct{}),
+		done:    make(chan struct{}, 1),
+	}
+	mgr.Register(plugin)
+	mgr.Start(context.Background())
+	mgr.Publish(context.Background(), Record{Provider: "openai", Model: "gpt-test"})
+	select {
+	case <-plugin.started:
+	case <-time.After(time.Second):
+		t.Fatal("plugin did not receive the record")
+	}
+	stopped := make(chan struct{})
+	go func() {
+		mgr.Stop()
+		close(stopped)
+	}()
+	select {
+	case <-stopped:
+		t.Fatal("Stop returned while a usage record was still being delivered")
+	case <-time.After(50 * time.Millisecond):
+	}
+	close(plugin.release)
+	select {
+	case <-plugin.done:
+	case <-time.After(time.Second):
+		t.Fatal("plugin did not finish delivery")
+	}
+	select {
+	case <-stopped:
+	case <-time.After(time.Second):
+		t.Fatal("Stop did not wait for the delivered record")
+	}
+}

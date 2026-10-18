@@ -152,7 +152,8 @@ Common query parameters for analytics/events:
 - `group_by=kind|provider|model|channel|operation|plan|quota_kind|account|source|auth_type|executor|service_tier|reasoning_effort|status|status_code`
 - `provider`, `model`, `channel`, `operation`, `plan`, `quota_kind`, `source`,
   `auth_type`, `executor`, `service_tier`, `reasoning_effort`, `status`, `status_code`
-- `limit`, `offset`
+- `limit`, `offset`, or `cursor` (use the `next_cursor` from a previous page)
+- queries are capped at 20,000 time buckets; use a larger bucket or a shorter range
 
 `summary.failure_statuses` lists failed HTTP status codes and counts. Status code
 `0` means the upstream did not report one.

@@ -63,7 +63,7 @@ type Handler struct {
 	webSearch *websearch.Service
 	// channelStats 是请求级渠道统计存储；未初始化时为 nil。
 	channelStats *channelstats.Store
-	// usageAnalytics 是本地 LLM/搜索用量分析存储；未启用时为 nil。
+	// usageAnalytics stores local LLM and search usage analytics; nil when disabled.
 	usageAnalytics *usageanalytics.Store
 }
 

@@ -333,6 +333,9 @@ func (s *Service) Shutdown(ctx context.Context) error {
 			}
 		}
 		s.closeChannelStats()
+		// Stop the usage dispatcher before closing analytics so accepted
+		// records are flushed to the store instead of being dropped.
+		usage.StopDefault()
 		s.closeUsageAnalytics()
 
 		if s.pluginHost != nil {
@@ -353,7 +356,6 @@ func (s *Service) Shutdown(ctx context.Context) error {
 			}
 		}
 
-		usage.StopDefault()
 	})
 	return shutdownErr
 }

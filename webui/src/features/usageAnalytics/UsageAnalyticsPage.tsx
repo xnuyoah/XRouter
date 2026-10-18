@@ -1082,7 +1082,12 @@ export function UsageAnalyticsPage() {
                           ? formatCompactNumber(event.units)
                           : '—'}
                     </td>
-                    <td>{formatUsageCost(event.cost, event.currency || summary?.currency)}</td>
+                    <td>
+                      {formatUsageCost(
+                        event.cost,
+                        event.currency || summary?.currency || analytics?.currency
+                      )}
+                    </td>
                     <td>{formatDuration(event.latency_ms ?? 0)}</td>
                     <td>
                       <span className={event.success ? styles.statusSuccess : styles.statusFailed}>
