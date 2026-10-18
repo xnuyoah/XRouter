@@ -69,10 +69,10 @@ func EventFromSearch(record websearch.SearchUsageRecord) Event {
 		units = credits
 		unit = "credit"
 	}
-	if units <= 0 {
+	if units <= 0 && record.Attempts > 0 {
 		units = 1
 	}
-	if unit == "" {
+	if unit == "" && units > 0 {
 		unit = "request"
 	}
 	return Event{

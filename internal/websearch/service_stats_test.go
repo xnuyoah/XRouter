@@ -79,3 +79,46 @@ func TestServiceExecuteRecordsWebSearchStats(t *testing.T) {
 		t.Fatalf("stats = %+v, want 1 success", found)
 	}
 }
+
+type captureUsageSink struct {
+	records []SearchUsageRecord
+}
+
+func (s *captureUsageSink) RecordSearchUsage(record SearchUsageRecord) {
+	s.records = append(s.records, record)
+}
+
+func TestServiceLocalFailureHasNoBillableUnits(t *testing.T) {
+	cfg := &config.Config{
+		WebSearch: config.WebSearchConfig{
+			Channels: []config.WebSearchChannel{{
+				ID:      "tavily",
+				BaseURL: "http://127.0.0.1:1",
+			}},
+		},
+	}
+	service, errService := NewService(cfg, filepath.Join(t.TempDir(), "config.yaml"), t.TempDir())
+	if errService != nil {
+		t.Fatalf("NewService() error = %v", errService)
+	}
+	service.executor = newTestExecutor(t, service.store)
+	sink := &captureUsageSink{}
+	service.SetUsageSink(sink)
+
+	if _, errExecute := service.Execute(Request{
+		Channel: ChannelTavily,
+		Method:  http.MethodPost,
+		Path:    "/search",
+		Body:    []byte(`{"query":"golang"}`),
+		Context: context.Background(),
+	}); errExecute == nil {
+		t.Fatal("Execute() error = nil, want local failure")
+	}
+	if len(sink.records) != 1 {
+		t.Fatalf("usage records = %d, want 1", len(sink.records))
+	}
+	record := sink.records[0]
+	if record.Attempts != 0 || record.Units != 0 || record.Unit != "" {
+		t.Fatalf("local failure usage = %+v, want zero attempts/units", record)
+	}
+}

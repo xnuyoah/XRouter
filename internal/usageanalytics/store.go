@@ -332,6 +332,7 @@ func (s *Store) runWriter() {
 	ticker := time.NewTicker(s.cfg.FlushInterval)
 	defer ticker.Stop()
 	batch := make([]Event, 0, batchSize)
+	backlogged := false
 	flush := func() error {
 		if len(batch) == 0 {
 			return nil
@@ -352,9 +353,17 @@ func (s *Store) runWriter() {
 		if item.event == nil {
 			return
 		}
+		if backlogged {
+			// Do not grow the retained batch while the database is rejecting
+			// writes; count the overflow instead and retry the batch on the tick.
+			s.dropped.Add(1)
+			return
+		}
 		batch = append(batch, *item.event)
 		if len(batch) >= batchSize {
-			_ = flush()
+			if errFlush := flush(); errFlush != nil {
+				backlogged = true
+			}
 		}
 	}
 	for {
@@ -362,7 +371,13 @@ func (s *Store) runWriter() {
 		case item := <-s.events:
 			handle(item)
 		case <-ticker.C:
-			_ = flush()
+			if backlogged {
+				if errFlush := flush(); errFlush == nil {
+					backlogged = false
+				}
+			} else {
+				_ = flush()
+			}
 		case <-s.stopCh:
 			for {
 				select {

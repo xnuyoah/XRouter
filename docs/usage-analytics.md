@@ -101,6 +101,8 @@ Costs are computed when analytics is queried, using the effective price book:
 For search, an upstream-reported cost wins when its currency matches the price
 book currency. Otherwise, a `credit` price is used when credits are available;
 if only a `request` price exists, cost falls back to one request per event.
+Local failures that never selected or called an upstream account carry zero
+units and are not included in search cost estimates.
 
 Latency P95 is computed from a fixed histogram stored in each rollup, so it is
 an estimate with bucket boundaries rather than an exact order statistic. The

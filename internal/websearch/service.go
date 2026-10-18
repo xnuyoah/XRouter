@@ -267,13 +267,13 @@ func (s *Service) Execute(req Request) (Result, error) {
 		}
 	}
 	attempts := len(result.Attempts)
-	if attempts == 0 {
-		attempts = 1
-	}
 	quotaKind := quotaKindFor(s.store, cfg.Channel, result.AccountID)
 	operation := OperationFor(cfg.Channel, req.Method, req.Path)
 	usage := ExtractResponseUsage(cfg.Channel, operation, statusCode, result.Header, result.Body)
-	units, unit := 1.0, "request"
+	units, unit := 0.0, ""
+	if attempts > 0 {
+		units, unit = 1.0, "request"
+	}
 	if usage.Credits > 0 {
 		units, unit = usage.Credits, "credit"
 	}

@@ -177,6 +177,9 @@ func (p *priceIndex) findModelPrice(provider string, models []string, plan, serv
 			}
 			seen[key] = struct{}{}
 			for _, entry := range p.models[key] {
+				if entry.Provider != "" && (provider == "" || !strings.EqualFold(entry.Provider, provider)) {
+					continue
+				}
 				if entry.Plan != "" && !strings.EqualFold(entry.Plan, plan) {
 					continue
 				}
@@ -255,6 +258,9 @@ func (p *priceIndex) costForRollup(key rollupKey, value rollupValue) (*float64, 
 			}
 			return nil, false
 		}
+		if value.Units <= 0 {
+			return nil, false
+		}
 		entry, ok := p.findSearchPrice(key.Channel, key.Operation, key.Unit)
 		if !ok {
 			return nil, false
@@ -287,6 +293,9 @@ func (p *priceIndex) costForEvent(event Event) (*float64, bool) {
 				cost := entry.Price
 				return &cost, true
 			}
+			return nil, false
+		}
+		if event.Units <= 0 {
 			return nil, false
 		}
 		entry, ok := p.findSearchPrice(event.Channel, event.Operation, event.Unit)
