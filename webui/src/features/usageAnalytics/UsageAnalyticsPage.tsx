@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -234,11 +235,9 @@ function UsageTrendChart({
   );
 }
 
-function usageTabFromHash(): UsageTabKey {
-  const hash = window.location.hash;
-  const query = hash.includes('?') ? hash.slice(hash.indexOf('?') + 1) : '';
-  const value = new URLSearchParams(query).get('tab');
-  return value === 'logs' || value === 'search' ? value : 'overview';
+function usageTabFromPath(pathname: string): UsageTabKey {
+  const segment = pathname.replace(/\/+$/, '').split('/').pop();
+  return segment === 'logs' || segment === 'search' ? segment : 'overview';
 }
 
 export function UsageAnalyticsPage() {
@@ -273,24 +272,12 @@ export function UsageAnalyticsPage() {
   const [error, setError] = useState('');
   const [disabled, setDisabled] = useState(false);
 
-  const [tab, setTabState] = useState<UsageTabKey>(usageTabFromHash);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const tab = usageTabFromPath(location.pathname);
   const setTab = (next: UsageTabKey) => {
-    setTabState(next);
-    const hash = window.location.hash;
-    const query = hash.includes('?') ? hash.slice(hash.indexOf('?') + 1) : '';
-    const params = new URLSearchParams(query);
-    if (next === 'overview') params.delete('tab');
-    else params.set('tab', next);
-    const base = hash.split('?')[0] || '#/usage';
-    const rendered = params.toString();
-    window.location.hash = rendered ? `${base}?${rendered}` : base;
+    navigate(next === 'overview' ? '/usage' : `/usage/${next}`);
   };
-
-  useEffect(() => {
-    const onHashChange = () => setTabState(usageTabFromHash());
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, []);
 
   const params = useMemo(
     () => buildQuery(kind, preset, customFrom, customTo, groupBy, filters),

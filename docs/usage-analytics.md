@@ -140,8 +140,8 @@ The WebUI page is split into three tabs:
 - **Search channels**: quota overview, search trend, account warnings and quota
   history.
 
-Tabs use the `tab=overview|logs|search` hash query parameter, for example
-`#/usage?tab=logs`.
+Tabs use the path-based tabs (`/usage`, `/usage/logs`, `/usage/search`), for example
+`#/usage/logs`.
 
 ## Management API
 

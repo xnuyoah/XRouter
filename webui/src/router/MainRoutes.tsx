@@ -16,6 +16,8 @@ const mainRoutes = [
   { path: '/web-search', element: <WebSearchPage /> },
   { path: '/channel-status', element: <ChannelStatusPage /> },
   { path: '/usage', element: <UsageAnalyticsPage /> },
+  { path: '/usage/logs', element: <UsageAnalyticsPage /> },
+  { path: '/usage/search', element: <UsageAnalyticsPage /> },
   // /plugins is always reachable: the page itself renders the no-CGO /
   // platform-mismatch diagnostics from the plugin environment report.
   { path: '/plugin-pages/:pluginId/:menuIndex', element: <PluginResourcePage /> },
