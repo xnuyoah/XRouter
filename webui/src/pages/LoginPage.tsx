@@ -17,11 +17,11 @@ import {
   IconShield,
   IconSlidersHorizontal,
 } from '@/components/ui/icons';
-import { useAuthStore, useLanguageStore, useNotificationStore } from '@/stores';
+import { useAuthStore, useLanguageStore, useNotificationStore, useThemeStore } from '@/stores';
 import { detectApiBaseFromLocation, normalizeApiBase } from '@/utils/connection';
 import { LANGUAGE_LABEL_KEYS, LANGUAGE_ORDER } from '@/utils/constants';
 import { isSupportedLanguage } from '@/utils/language';
-import { INLINE_LOGO } from '@/assets/logoInline';
+import { INLINE_LOGO_DARK, INLINE_LOGO_LIGHT } from '@/assets/logoInline';
 import type { ApiError } from '@/types';
 import { LegacyBackendError } from '@/services/api/legacyBackendProbe';
 import styles from './LoginPage.module.scss';
@@ -101,6 +101,7 @@ export function LoginPage() {
   const { showNotification } = useNotificationStore();
   const language = useLanguageStore((state) => state.language);
   const setLanguage = useLanguageStore((state) => state.setLanguage);
+  const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const login = useAuthStore((state) => state.login);
   const restoreSession = useAuthStore((state) => state.restoreSession);
@@ -215,6 +216,7 @@ export function LoginPage() {
 
   // 显示启动动画（自动登录中或自动登录成功）
   const showSplash = autoLoading || autoLoginSuccess;
+  const logoSrc = resolvedTheme === 'dark' ? INLINE_LOGO_DARK : INLINE_LOGO_LIGHT;
 
   return (
     <div className={styles.container}>
@@ -224,7 +226,7 @@ export function LoginPage() {
           <div className={styles.splashOrb} aria-hidden="true" />
           <div className={styles.splashContent}>
             <span className={styles.splashLogoWrap}>
-              <img src={INLINE_LOGO} alt="XRouter" className={styles.splashLogo} />
+              <img src={logoSrc} alt="XRouter" className={styles.splashLogo} />
             </span>
             <span className={styles.splashEyebrow}>{t('splash.eyebrow')}</span>
             <h1 className={styles.splashTitle}>{t('splash.title')}</h1>
@@ -243,7 +245,7 @@ export function LoginPage() {
             <div className={styles.brandOrb} aria-hidden="true" />
             <div className={styles.brandTop}>
               <span className={styles.brandLogo}>
-                <img src={INLINE_LOGO} alt="" />
+                <img src={logoSrc} alt="" />
               </span>
               <span className={styles.brandName}>XRouter</span>
               <span className={styles.versionBadge}>v8</span>
@@ -282,7 +284,7 @@ export function LoginPage() {
           <main className={styles.formPanel}>
             <div className={styles.formTop}>
               <div className={styles.mobileBrand}>
-                <img src={INLINE_LOGO} alt="" />
+                <img src={logoSrc} alt="" />
                 <span>XRouter</span>
               </div>
               <Select

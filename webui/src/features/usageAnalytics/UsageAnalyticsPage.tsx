@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } fro
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+import { ChannelLogo } from '@/components/common/ChannelLogo';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/Input';
@@ -237,13 +238,14 @@ function UsageTrendChart({
 
 function usageTabFromPath(pathname: string): UsageTabKey {
   const segment = pathname.replace(/\/+$/, '').split('/').pop();
-  return segment === 'logs' || segment === 'search' ? segment : 'overview';
+  if (segment === 'overview' || segment === 'search') return segment;
+  return 'logs';
 }
 
 export function UsageAnalyticsPage() {
   const { t } = useTranslation();
   const [kind, setKind] = useState<KindFilter>('all');
-  const [preset, setPreset] = useState<RangePreset>('today');
+  const [preset, setPreset] = useState<RangePreset>('24h');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [groupBy, setGroupBy] = useState('provider');
@@ -251,6 +253,7 @@ export function UsageAnalyticsPage() {
     'compact'
   );
   const [pageSize, setPageSize] = useState(50);
+  const [searchAccountsPageSize, setSearchAccountsPageSize] = useState(25);
   const [lowBalanceThreshold, setLowBalanceThreshold] = useState(10);
   const [logColumns, setLogColumns] = useState<UsageLogColumnKey[]>(DEFAULT_LOG_COLUMNS);
   const prefsLoaded = useRef(false);
@@ -276,7 +279,7 @@ export function UsageAnalyticsPage() {
   const navigate = useNavigate();
   const tab = usageTabFromPath(location.pathname);
   const setTab = (next: UsageTabKey) => {
-    navigate(next === 'overview' ? '/usage' : `/usage/${next}`);
+    navigate(next === 'logs' ? '/usage' : `/usage/${next}`);
   };
 
   const params = useMemo(
@@ -378,12 +381,13 @@ export function UsageAnalyticsPage() {
           setKind(prefs.kind);
           setPreset(
             prefs.range === 'custom' || !RANGE_PRESETS.includes(prefs.range as RangePreset)
-              ? 'today'
+              ? '24h'
               : (prefs.range as RangePreset)
           );
           setGroupBy(prefs.group_by || 'provider');
           setTokenDisplayMode(prefs.token_display_mode || 'compact');
           setPageSize(prefs.page_size || 50);
+          setSearchAccountsPageSize(prefs.search_accounts_page_size || 25);
           setLowBalanceThreshold(prefs.low_balance_threshold_percent || 10);
           setLogColumns(normalizeLogColumns(prefs.log_columns));
           prefsLoaded.current = true;
@@ -410,6 +414,7 @@ export function UsageAnalyticsPage() {
         group_by: groupBy,
         token_display_mode: tokenDisplayMode,
         page_size: pageSize,
+        search_accounts_page_size: searchAccountsPageSize,
         low_balance_threshold_percent: lowBalanceThreshold,
         log_columns: logColumns,
       };
@@ -425,6 +430,7 @@ export function UsageAnalyticsPage() {
     groupBy,
     tokenDisplayMode,
     pageSize,
+    searchAccountsPageSize,
     lowBalanceThreshold,
     logColumns,
     disabled,
@@ -515,6 +521,18 @@ export function UsageAnalyticsPage() {
 
   const summary = analytics?.summary;
   const facets = analytics?.facets;
+  const rangeMinutes = useMemo(() => {
+    if (!analytics) return 0;
+    const from = new Date(analytics.range.from).getTime();
+    const to = new Date(analytics.range.to).getTime();
+    return to > from ? (to - from) / 60_000 : 0;
+  }, [analytics]);
+  const logMetrics = {
+    cost: summary?.estimated_cost ?? null,
+    currency: summary?.currency ?? analytics?.currency,
+    rpm: rangeMinutes > 0 ? (summary?.requests ?? 0) / rangeMinutes : 0,
+    tpm: rangeMinutes > 0 ? (summary?.tokens?.total ?? 0) / rangeMinutes : 0,
+  };
   const groups = analytics?.groups ?? [];
   const showSearch = kind !== 'llm';
   const showLLM = kind !== 'search';
@@ -572,7 +590,10 @@ export function UsageAnalyticsPage() {
         </div>
       </header>
 
-      <section className={styles.controls}>
+      <UsageTabs active={tab} onChange={setTab} />
+
+      {tab !== 'logs' && (
+        <section className={styles.controls}>
         {tab !== 'search' && (
           <div className={styles.kindTabs}>
             {(['all', 'llm', 'search'] as const).map((value) => (
@@ -684,9 +705,8 @@ export function UsageAnalyticsPage() {
           onChange={(value) => setFilters((current) => ({ ...current, status: value }))}
           ariaLabel={t('usage_analytics.status')}
         />
-      </section>
-
-      <UsageTabs active={tab} onChange={setTab} />
+        </section>
+      )}
 
       {disabled && (
         <div className={styles.notice}>
@@ -880,8 +900,13 @@ export function UsageAnalyticsPage() {
                     {groups.map((group) => (
                       <tr key={`${group.kind}:${group.key}`}>
                         <td>
-                          <span className={styles.kindBadge}>{kindLabel(group.kind, t)}</span>
-                          <span>{groupLabel(group)}</span>
+                          <span className={styles.groupIdentity}>
+                            <span className={styles.kindBadge}>{kindLabel(group.kind, t)}</span>
+                            {(group.channel || group.provider) && (
+                              <ChannelLogo value={group.channel || group.provider} size={16} />
+                            )}
+                            <span>{groupLabel(group)}</span>
+                          </span>
                         </td>
                         <td>{formatCompactNumber(group.requests)}</td>
                         <td>{formatPercent(group.success_rate * 100)}</td>
@@ -916,18 +941,31 @@ export function UsageAnalyticsPage() {
       {!disabled && tab === 'logs' && (
         <UsageLogsTab
           kind={kind}
+          onKindChange={(value) => {
+            setKind(value);
+            setGroupBy(value === 'search' ? 'channel' : value === 'llm' ? 'model' : 'provider');
+          }}
           preset={preset}
+          onPresetChange={(value) => setPreset(value as RangePreset)}
           customFrom={customFrom}
           customTo={customTo}
+          onCustomFromChange={setCustomFrom}
+          onCustomToChange={setCustomTo}
           baseFilters={filters}
+          onBaseFiltersChange={(patch) => setFilters((current) => ({ ...current, ...patch }))}
+          onResetBaseFilters={() => setFilters(EMPTY_FILTERS)}
+          onRefreshAll={() => void load()}
           facets={facets}
-          tokenDisplayMode={tokenDisplayMode}
           currency={summary?.currency ?? analytics?.currency}
           pageSize={pageSize}
           onPageSizeChange={setPageSize}
           columns={logColumns}
           onColumnsChange={setLogColumns}
           refreshToken={refreshToken}
+          total={summary?.requests ?? 0}
+          rangeFrom={analytics?.range.from}
+          rangeTo={analytics?.range.to}
+          metrics={logMetrics}
         />
       )}
 
@@ -940,6 +978,8 @@ export function UsageAnalyticsPage() {
           historyTo={historyTo}
           lowBalanceThreshold={lowBalanceThreshold}
           onLowBalanceThresholdChange={setLowBalanceThreshold}
+          pageSize={searchAccountsPageSize}
+          onPageSizeChange={setSearchAccountsPageSize}
         />
       )}
 

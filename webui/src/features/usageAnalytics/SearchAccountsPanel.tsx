@@ -1,6 +1,9 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ChannelLogo } from '@/components/common/ChannelLogo';
+import { Pagination } from '@/components/ui/Pagination/Pagination';
+import { clampPage, paginate } from '@/components/ui/Pagination/paginationUtils';
 import { QuotaHistoryChart } from '@/features/channelStatus/components/QuotaHistoryChart';
 import { ACCOUNT_STATUS_META, QUOTA_KIND_LABEL_KEYS } from '@/features/webSearch/constants';
 import {
@@ -21,6 +24,8 @@ interface SearchAccountsPanelProps {
   historyTo?: string;
   lowBalanceThreshold: number;
   onLowBalanceThresholdChange: (value: number) => void;
+  pageSize: number;
+  onPageSizeChange: (value: number) => void;
 }
 
 function balanceText(account: WebSearchAccount, t: (key: string) => string): string {
@@ -54,10 +59,13 @@ export function SearchAccountsPanel({
   historyTo,
   lowBalanceThreshold,
   onLowBalanceThresholdChange,
+  pageSize,
+  onPageSizeChange,
 }: SearchAccountsPanelProps) {
   const { t } = useTranslation();
   const [expandedKey, setExpandedKey] = useState('');
   const [onlyWarnings, setOnlyWarnings] = useState(false);
+  const [page, setPage] = useState(1);
   const [history, setHistory] = useState<Record<string, WebSearchQuotaHistoryPoint[]>>({});
   const [historyLoading, setHistoryLoading] = useState<Record<string, boolean>>({});
   const [historyError, setHistoryError] = useState<Record<string, boolean>>({});
@@ -141,6 +149,37 @@ export function SearchAccountsPanel({
   }, [accounts, lowBalanceThreshold, t]);
   const warningCount = rows.filter((row) => row.warnings.length > 0).length;
   const visibleRows = onlyWarnings ? rows.filter((row) => row.warnings.length > 0) : rows;
+  const pagedRows = useMemo(
+    () => paginate(visibleRows, page, pageSize),
+    [visibleRows, page, pageSize]
+  );
+
+  useEffect(() => {
+    setPage((current) => clampPage(current, visibleRows.length, pageSize));
+  }, [visibleRows.length, pageSize]);
+
+  const changeWarningsFilter = (checked: boolean) => {
+    setOnlyWarnings(checked);
+    setPage(1);
+    setExpandedKey('');
+  };
+
+  const changeThreshold = (value: number) => {
+    onLowBalanceThresholdChange(value);
+    setPage(1);
+    setExpandedKey('');
+  };
+
+  const changePage = (nextPage: number) => {
+    setPage(nextPage);
+    setExpandedKey('');
+  };
+
+  const changePageSize = (size: number) => {
+    onPageSizeChange(size);
+    setPage(1);
+    setExpandedKey('');
+  };
 
   if (accounts.length === 0) {
     return null;
@@ -158,7 +197,7 @@ export function SearchAccountsPanel({
             <input
               type="checkbox"
               checked={onlyWarnings}
-              onChange={(event) => setOnlyWarnings(event.target.checked)}
+              onChange={(event) => changeWarningsFilter(event.target.checked)}
             />
             {t('usage_analytics.only_warnings', { count: warningCount })}
           </label>
@@ -166,7 +205,7 @@ export function SearchAccountsPanel({
             {t('usage_analytics.low_balance_threshold')}
             <select
               value={lowBalanceThreshold}
-              onChange={(event) => onLowBalanceThresholdChange(Number(event.target.value))}
+              onChange={(event) => changeThreshold(Number(event.target.value))}
             >
               {LOW_BALANCE_OPTIONS.map((value) => (
                 <option key={value} value={value}>
@@ -195,7 +234,7 @@ export function SearchAccountsPanel({
             </tr>
           </thead>
           <tbody>
-            {visibleRows.map(({ account, warnings }) => {
+            {pagedRows.map(({ account, warnings }) => {
               const usage = usageByAccount.get(account.account_id);
               const status = ACCOUNT_STATUS_META[account.status];
               const rowKey = `${account.channel}:${account.account_id}`;
@@ -208,7 +247,12 @@ export function SearchAccountsPanel({
               return (
                 <Fragment key={rowKey}>
                   <tr className={rowTone}>
-                    <td>{account.channel}</td>
+                    <td>
+                      <span className={styles.channelCell}>
+                        <ChannelLogo value={account.channel} size={18} />
+                        {account.channel}
+                      </span>
+                    </td>
                     <td>
                       <span>{account.name || account.account_id}</span>
                       {account.api_key_masked && (
@@ -299,6 +343,14 @@ export function SearchAccountsPanel({
           </tbody>
         </table>
       </div>
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={visibleRows.length}
+        pageSizeOptions={[10, 25, 50, 100]}
+        onPageChange={changePage}
+        onPageSizeChange={changePageSize}
+      />
     </section>
   );
 }

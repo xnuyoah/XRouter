@@ -255,6 +255,7 @@ export interface UsagePreferences {
   group_by: string;
   token_display_mode: 'compact' | 'full' | 'k' | 'm' | 'b';
   page_size: number;
+  search_accounts_page_size?: number;
   low_balance_threshold_percent: number;
   log_columns?: string[];
   updated_at?: string;

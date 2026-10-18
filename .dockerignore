@@ -15,12 +15,12 @@ README.md
 LICENSE
 
 # Runtime data folders (should be mounted as volumes)
-auths
-logs
+/auths
+/logs
 conv
-data
-plugins
-config.yaml
+/data
+/plugins
+/config.yaml
 
 # Runtime assets and development scripts
 
@@ -49,3 +49,9 @@ bin
 .bmad
 _bmad
 _bmad-output
+
+/backups
+/usage-analytics
+/channel-status
+/websearch
+/home

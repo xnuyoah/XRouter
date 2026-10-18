@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { ChannelLogo } from '@/components/common/ChannelLogo';
 import { Sheet } from '@/components/ui/Sheet/Sheet';
 import type { UsageEvent } from '@/services/api';
 
@@ -75,8 +76,32 @@ export function UsageLogDetailSheet({ event, onClose }: UsageLogDetailSheetProps
         <section className={styles.section}>
           <h3>{t('usage_analytics.log_detail_route')}</h3>
           <div className={styles.grid}>
-            <Field label={t('usage_analytics.provider')} value={event.provider || '—'} />
-            <Field label={t('usage_analytics.channel')} value={event.channel || '—'} />
+            <Field
+              label={t('usage_analytics.provider')}
+              value={
+                event.provider ? (
+                  <span className={styles.logoValue}>
+                    <ChannelLogo value={event.provider} size={17} />
+                    {event.provider}
+                  </span>
+                ) : (
+                  '—'
+                )
+              }
+            />
+            <Field
+              label={t('usage_analytics.channel')}
+              value={
+                event.channel ? (
+                  <span className={styles.logoValue}>
+                    <ChannelLogo value={event.channel} size={17} />
+                    {event.channel}
+                  </span>
+                ) : (
+                  '—'
+                )
+              }
+            />
             <Field
               label={t('usage_analytics.account')}
               value={event.account_name || event.account_id || '—'}

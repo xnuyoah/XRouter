@@ -2,61 +2,171 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px;
+  padding: 12px 14px;
   border: 1px solid var(--border-color);
-  border-radius: 14px;
-  background: var(--bg-secondary);
+  border-radius: 16px;
+  background: var(--bg-primary);
 }
 
-.primaryRow {
+.filterRow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 
   > :global(.form-group) {
+    flex: 1 1 260px;
+    min-width: 200px;
     margin: 0;
   }
 
-  > :global(.form-group):first-child {
-    flex: 1 1 260px;
-    min-width: 200px;
+  > :global(.form-group) input {
+    height: 42px;
   }
 }
 
-.search {
-  flex: 1 1 260px;
-  min-width: 200px;
+.rangeField {
+  display: flex;
+  flex: 1 1 490px;
+  align-items: center;
+  gap: 6px;
+  min-width: 340px;
+  height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+
+  button {
+    height: 38px;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
 }
 
-.monoInput {
-  width: 180px;
-  font-family: $font-mono;
+.rangeSelect {
+  flex: none;
+  width: 126px;
 }
 
-.accountInput {
-  width: 170px;
+.rangeText {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.statusInput {
-  width: 110px;
-}
+.customRange {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 
-.advanced {
-  summary {
-    width: fit-content;
-    color: var(--text-secondary);
+  :global(.form-group) {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+  }
+
+  input {
+    height: 36px;
     font-size: 12px;
-    cursor: pointer;
-    user-select: none;
   }
+}
+
+.keywordInput {
+  width: 100%;
+}
+
+.kindSelect {
+  flex: none;
+  width: 148px;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  small {
+    color: var(--text-secondary);
+    font-size: 11px;
+  }
+
+  b {
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 600;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.advancedPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.advancedGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.groupLabel {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .advancedGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 8px;
-  margin-top: 10px;
+}
+
+.monoInput {
+  font-family: $font-mono;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
 }
 
 .columnsHint {
@@ -83,10 +193,62 @@
   }
 }
 
-@media (max-width: 640px) {
-  .primaryRow > * {
-    flex: 1 1 100%;
+@media (max-width: 900px) {
+  .filterRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rangeField {
+    flex: 1 1 auto;
     width: 100%;
+    min-width: 0;
+  }
+
+  .filterRow > :global(.form-group) {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .kindSelect {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .actions {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .rangeField {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 42px;
+    padding: 6px 10px;
+  }
+
+  .rangeText {
+    width: 100%;
+    padding-left: 2px;
+  }
+
+  .customRange {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .customRange :global(.form-group) {
+    flex: 1 1 100%;
+  }
+
+  .actions {
+    width: 100%;
+
+    > * {
+      flex: 1 1 auto;
+    }
   }
 
   .columnList {

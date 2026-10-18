@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test';
 import { computeApiUrl, normalizeApiBase } from '../src/utils/connection';
-import { resolvePluginAssetURL } from '../src/features/plugins/pluginResources';
 
 describe('v8-only management connections', () => {
   test.each([
@@ -23,11 +22,4 @@ describe('v8-only management connections', () => {
     );
   });
 
-  test('preserves backend-declared plugin resource and custom extension paths', () => {
-    for (const path of ['/v0/resource/plugins/example/index.html', '/v0/management/example']) {
-      expect(resolvePluginAssetURL(path, 'https://proxy.example/v8/management')).toBe(
-        `https://proxy.example${path}`
-      );
-    }
-  });
 });

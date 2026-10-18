@@ -26,7 +26,8 @@ vendor 时的取舍：
 
 - 品牌文案：`CLI Proxy API` / `CLIProxyAPI` / `CPAMC` → `XRouter`。
 - 图标：`src/assets/logoInline.ts` 改为 XRouter 品牌图标的 SVG data URI
-  （来源 `../assets/brand/xrouter-icon.svg`），用于 favicon、侧边栏与登录页。
+  （来源 `../assets/brand/xrouter-icon.svg` 与 `xrouter-icon-light.svg`），
+  用于 favicon、侧边栏与登录页，并跟随 azure 浅色/深色主题切换。
 - 仓库链接改指向 <https://github.com/xnuyoah/XRouter>。
 - 本地加密存储盐值改为 `xrouter-webui::secure-storage`。
 - 移除上游的推广返利参数（Kimi affiliate `?aff=cliproxyapi`）。

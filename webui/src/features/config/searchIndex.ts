@@ -607,27 +607,6 @@ export const CONFIG_FIELD_SEARCH_INDEX: ConfigFieldSearchEntry[] = [
     yamlKeys: ['oauth', 'providers', 'antigravity', 'antigravity-credits'],
   },
   {
-    fieldId: 'pluginsEnabled',
-    sectionId: 'advanced',
-    labelKey: L('sections.system.plugins_enabled'),
-    hintKey: L('sections.system.plugins_enabled_desc'),
-    yamlKeys: ['plugins'],
-  },
-  {
-    fieldId: 'pluginStoreSources',
-    sectionId: 'advanced',
-    labelKey: L('sections.system.plugin_store_sources'),
-    hintKey: L('sections.system.plugin_store_sources_hint'),
-    yamlKeys: ['plugins', 'store-sources'],
-  },
-  {
-    fieldId: 'pluginStoreAuth',
-    sectionId: 'advanced',
-    labelKey: L('sections.system.plugin_store_auth'),
-    hintKey: L('sections.system.plugin_store_auth_hint'),
-    yamlKeys: ['plugins', 'store-auth'],
-  },
-  {
     fieldId: 'antigravitySensitiveWords',
     sectionId: 'advanced',
     labelKey: L('sections.system.antigravity_sensitive_words'),

@@ -13,6 +13,13 @@ observability:
       rollup-retention-days: 180
       flush-interval: 10s
       max-db-bytes: 1048576
+      plan-display:
+        - provider: nvidia
+          plan: NVIDIA NIM Free
+          quota-kind: credits
+        - provider: nvidia
+          model: nvidia/glm-5.3-flash
+          plan: GLM Free
       pricing:
         sync-enabled: true
         source-url: "https://models.dev/api.json"
@@ -35,6 +42,15 @@ observability:
 	}
 	if cfg.UsageAnalytics.MaxDBBytes != 1048576 {
 		t.Fatalf("max db bytes = %d, want 1048576", cfg.UsageAnalytics.MaxDBBytes)
+	}
+	if len(cfg.UsageAnalytics.PlanDisplay) != 2 {
+		t.Fatalf("plan display entries = %d, want 2", len(cfg.UsageAnalytics.PlanDisplay))
+	}
+	if got := cfg.UsageAnalytics.PlanDisplay[0]; got.Provider != "nvidia" || got.Plan != "NVIDIA NIM Free" || got.QuotaKind != "credits" {
+		t.Fatalf("provider plan display = %+v", got)
+	}
+	if got := cfg.UsageAnalytics.PlanDisplay[1]; got.Model != "nvidia/glm-5.3-flash" || got.Plan != "GLM Free" {
+		t.Fatalf("model plan display = %+v", got)
 	}
 	if !cfg.UsageAnalytics.Pricing.SyncEnabled || cfg.UsageAnalytics.Pricing.Currency != "CNY" {
 		t.Fatalf("pricing config = %+v", cfg.UsageAnalytics.Pricing)

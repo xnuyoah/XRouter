@@ -44,7 +44,7 @@ func (s *Server) setupRoutes() {
 
 	// OpenAI 兼容 API 路由
 	v1 := s.engine.Group("/v1")
-	v1.Use(AuthMiddleware(s.accessManager))
+	v1.Use(AuthMiddlewareForScope(s.accessManager, AccessScopeModel))
 	{
 		v1.GET("/models", s.unifiedModelsHandler(openaiHandlers, claudeCodeHandlers))
 		v1.GET("/models/*model", func(c *gin.Context) {
@@ -64,7 +64,7 @@ func (s *Server) setupRoutes() {
 
 	// Codex CLI 直连路由别名（兼容 chatgpt_base_url）
 	codexDirect := s.engine.Group("/backend-api/codex")
-	codexDirect.Use(AuthMiddleware(s.accessManager))
+	codexDirect.Use(AuthMiddlewareForScope(s.accessManager, AccessScopeModel))
 	{
 		codexDirect.GET("/responses", openaiResponsesHandlers.ResponsesWebsocket)
 		codexDirect.POST("/responses", openaiResponsesHandlers.Responses)
@@ -75,12 +75,12 @@ func (s *Server) setupRoutes() {
 	// 客户端鉴权复用 access.api-keys（与 /v1 相同的中间件），因此不需要额外的渠道密钥。
 	if s.webSearchHandler != nil {
 		gateway := s.engine.Group("/gateway")
-		gateway.Use(AuthMiddleware(s.accessManager))
+		gateway.Use(AuthMiddlewareForScope(s.accessManager, AccessScopeSearch))
 		// gin 支持末位通配：:channel 取渠道标识，*path 取上游路径（含前导 "/"）。
 		gateway.Any("/:channel/*path", s.webSearchHandler.Gateway)
 
 		mcp := s.engine.Group("/mcp")
-		mcp.Use(AuthMiddleware(s.accessManager))
+		mcp.Use(AuthMiddlewareForScope(s.accessManager, AccessScopeSearch))
 		mcp.POST("/:channel", s.webSearchHandler.MCP)
 	}
 

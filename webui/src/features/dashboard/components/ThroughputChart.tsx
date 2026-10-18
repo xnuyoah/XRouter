@@ -27,9 +27,10 @@ function bucketStartLabel(time: string | undefined, index: number, count: number
 
 interface ThroughputChartProps {
   traffic: TrafficWindow;
+  summaryLabel?: string;
 }
 
-export function ThroughputChart({ traffic }: ThroughputChartProps) {
+export function ThroughputChart({ traffic, summaryLabel }: ThroughputChartProps) {
   const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
@@ -54,12 +55,14 @@ export function ThroughputChart({ traffic }: ThroughputChartProps) {
     }));
   }, [buckets]);
 
-  const summary = t('dashboard.traffic_chart_summary', {
-    total,
-    success: totalSuccess,
-    failed: totalFailure,
-    minutes: traffic.windowMinutes,
-  });
+  const summary =
+    summaryLabel ??
+    t('dashboard.traffic_chart_summary', {
+      total,
+      success: totalSuccess,
+      failed: totalFailure,
+      minutes: traffic.windowMinutes,
+    });
 
   const activeBucket = activeIndex === null ? null : buckets[activeIndex];
   const activeTotal = activeBucket ? activeBucket.success + activeBucket.failed : 0;

@@ -16,6 +16,8 @@ interface UsageSearchTabProps {
   historyTo?: string;
   lowBalanceThreshold: number;
   onLowBalanceThresholdChange: (value: number) => void;
+  pageSize: number;
+  onPageSizeChange: (value: number) => void;
 }
 
 export function UsageSearchTab({
@@ -26,6 +28,8 @@ export function UsageSearchTab({
   historyTo,
   lowBalanceThreshold,
   onLowBalanceThresholdChange,
+  pageSize,
+  onPageSizeChange,
 }: UsageSearchTabProps) {
   const { t } = useTranslation();
   const series = accountUsage?.series ?? [];
@@ -81,6 +85,8 @@ export function UsageSearchTab({
         historyTo={historyTo}
         lowBalanceThreshold={lowBalanceThreshold}
         onLowBalanceThresholdChange={onLowBalanceThresholdChange}
+        pageSize={pageSize}
+        onPageSizeChange={onPageSizeChange}
       />
     </div>
   );

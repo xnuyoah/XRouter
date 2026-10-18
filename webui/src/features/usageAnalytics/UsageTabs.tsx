@@ -9,7 +9,7 @@ interface UsageTabsProps {
   onChange: (tab: UsageTabKey) => void;
 }
 
-const TABS: UsageTabKey[] = ['overview', 'logs', 'search'];
+const TABS: UsageTabKey[] = ['logs', 'overview', 'search'];
 
 const LABEL_KEYS: Record<UsageTabKey, string> = {
   overview: 'usage_analytics.tab_overview',

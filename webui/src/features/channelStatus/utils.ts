@@ -39,6 +39,17 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   hour12: false,
 });
 
+const dateFormatter = new Intl.DateTimeFormat(undefined, {
+  month: '2-digit',
+  day: '2-digit',
+});
+
+const timeFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
 export function formatBucketStart(start: string): string {
   const parsed = new Date(start);
   if (Number.isNaN(parsed.getTime())) return '--';
@@ -49,7 +60,12 @@ export function formatBucketRange(start: string, bucketMinutes: number): string 
   const parsed = new Date(start);
   if (Number.isNaN(parsed.getTime())) return '--';
   const end = new Date(parsed.getTime() + bucketMinutes * 60_000);
-  return `${dateTimeFormatter.format(parsed)}–${dateTimeFormatter.format(end)}`;
+  const startLabel = dateTimeFormatter.format(parsed);
+  const endDate = dateFormatter.format(end);
+  const endLabel = dateFormatter.format(parsed) === endDate
+    ? timeFormatter.format(end)
+    : dateTimeFormatter.format(end);
+  return `${startLabel}–${endLabel}`;
 }
 
 export function formatObservedAt(value: string | undefined): string {

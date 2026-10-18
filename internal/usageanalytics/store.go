@@ -54,6 +54,7 @@ type Config struct {
 	QueueSize       int
 	MaxDBBytes      int64
 	Pricing         PricingConfig
+	PlanDisplay     []PlanDisplay
 }
 
 func (c Config) withDefaults() Config {
@@ -72,6 +73,7 @@ func (c Config) withDefaults() Config {
 	if c.QueueSize <= 0 {
 		c.QueueSize = 4096
 	}
+	c.PlanDisplay = normalizePlanDisplays(c.PlanDisplay)
 	return c
 }
 
@@ -299,7 +301,9 @@ func (s *Store) HandleUsage(_ context.Context, record usage.Record) {
 	if s == nil {
 		return
 	}
-	s.enqueue(EventFromUsage(record))
+	event := EventFromUsage(record)
+	applyPlanDisplay(&event, s.cfg.PlanDisplay)
+	s.enqueue(event)
 }
 
 // RecordSearchUsage implements websearch.UsageSink.
@@ -1289,6 +1293,7 @@ func (s *Store) Events(ctx context.Context, query Query) (EventsResult, error) {
 			if errUnmarshal := json.Unmarshal(raw, &event); errUnmarshal != nil {
 				continue
 			}
+			applyPlanDisplay(&event, s.cfg.PlanDisplay)
 			if !matchEvent(query, event) {
 				continue
 			}

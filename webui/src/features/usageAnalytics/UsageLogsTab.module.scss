@@ -4,19 +4,9 @@
   gap: 12px;
 }
 
-.summary {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.loadMore {
-  display: flex;
-  justify-content: center;
-  padding: 8px 0;
+.paginationBar {
+  padding: 2px 4px 0;
+  border-top: 1px solid var(--border-color);
 }
 
 .error {
@@ -25,4 +15,10 @@
   border-radius: 12px;
   color: var(--danger-color, #ef4444);
   font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .paginationBar {
+    padding-top: 4px;
+  }
 }

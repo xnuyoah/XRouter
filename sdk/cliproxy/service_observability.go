@@ -37,12 +37,22 @@ func (s *Service) initializeUsageAnalytics() {
 	if path == "" {
 		path = usageanalytics.DefaultPath(s.configPath)
 	}
+	planDisplay := make([]usageanalytics.PlanDisplay, 0, len(cfg.UsageAnalytics.PlanDisplay))
+	for _, item := range cfg.UsageAnalytics.PlanDisplay {
+		planDisplay = append(planDisplay, usageanalytics.PlanDisplay{
+			Provider:  item.Provider,
+			Model:     item.Model,
+			Plan:      item.Plan,
+			QuotaKind: item.QuotaKind,
+		})
+	}
 	store, errStore := usageanalytics.New(usageanalytics.Config{
 		Path:            path,
 		Retention:       cfg.UsageAnalytics.Retention(),
 		RollupRetention: cfg.UsageAnalytics.RollupRetention(),
 		FlushInterval:   cfg.UsageAnalytics.FlushDuration(),
 		MaxDBBytes:      cfg.UsageAnalytics.MaxDBBytes,
+		PlanDisplay:     planDisplay,
 		Pricing: usageanalytics.PricingConfig{
 			SyncEnabled:      cfg.UsageAnalytics.Pricing.SyncEnabled,
 			SourceURL:        cfg.UsageAnalytics.Pricing.SourceURL,

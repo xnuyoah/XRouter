@@ -48,6 +48,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+.logoValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
 @media (max-width: 640px) {
   .grid {
     grid-template-columns: minmax(0, 1fr);

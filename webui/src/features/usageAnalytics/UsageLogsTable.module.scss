@@ -2,6 +2,14 @@
   font-size: 13px;
 }
 
+.logTable {
+  min-width: 1320px;
+}
+
+.desktopTable td {
+  white-space: nowrap;
+}
+
 .rowClickable {
   cursor: pointer;
 
@@ -18,10 +26,45 @@
   min-width: 0;
 }
 
+.timeValue {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.planCell {
+  white-space: nowrap;
+}
+
 .muted {
   color: var(--text-secondary);
   font-size: 11px;
   font-weight: 400;
+}
+
+.identity,
+.modelName,
+.tokenName {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.modelName {
+  font-weight: 500;
+
+  > span:last-child {
+    overflow: hidden;
+    max-width: 220px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.channelLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rowMeta {
@@ -36,20 +79,127 @@
 .statusFailed {
   display: inline-flex;
   width: fit-content;
-  padding: 1px 7px;
-  border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
 }
 
 .statusSuccess {
   color: var(--viz-success, #22c55e);
-  background: color-mix(in srgb, var(--viz-success, #22c55e) 12%, transparent);
 }
 
 .statusFailed {
   color: var(--danger-color, #ef4444);
-  background: color-mix(in srgb, var(--danger-color, #ef4444) 12%, transparent);
+}
+
+.accountCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 190px;
+
+  > .stack {
+    min-width: 0;
+
+    > span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+.avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--warning-color) 35%, var(--border-color));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--warning-color) 20%, transparent);
+  color: var(--warning-color);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tokenName {
+  color: var(--text-primary);
+  font-family: $font-mono;
+  font-size: 12px;
+
+  svg {
+    flex: none;
+    color: var(--text-secondary);
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.tokenPair,
+.costPill {
+  font-variant-numeric: tabular-nums;
+}
+
+.costPill {
+  display: inline-flex;
+  width: fit-content;
+  padding: 2px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.latencyCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.latencyBar {
+  display: inline-block;
+  flex: none;
+  width: 3px;
+  height: 30px;
+  border-radius: 999px;
+}
+
+.latency_good {
+  background: var(--viz-success, #22c55e);
+}
+
+.latency_warning {
+  background: var(--warning-color);
+}
+
+.latency_critical {
+  background: var(--viz-failure, #ef4444);
+}
+
+.latency_idle {
+  background: var(--border-color);
+}
+
+.detailError {
+  overflow: hidden;
+  max-width: 220px;
+  color: var(--danger-color, #ef4444);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailPlan {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .kindBadge {
@@ -60,20 +210,6 @@
   background: color-mix(in srgb, var(--primary-color) 12%, transparent);
   font-size: 11px;
   font-weight: 600;
-}
-
-.traits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.badge {
-  padding: 1px 6px;
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
-  color: var(--text-secondary);
-  font-size: 10px;
 }
 
 .mono {
@@ -123,6 +259,9 @@
 }
 
 .mobileMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--text-secondary);
   font-size: 11px;
 }

@@ -86,6 +86,18 @@ func (p *Prober) ProbeAccount(ctx context.Context, channel Channel, account Acco
 	if errQuota := p.recordQuota(channel, account, outcome); errQuota != nil {
 		logWarnf("写入额度快照失败 channel=%s account=%s: %v", channel, account.ID, errQuota)
 	}
+	if outcome.Status == AccountStatusLimited {
+		snapshot := outcome.Quota
+		if snapshot == nil {
+			if state, ok := p.store.AccountState(channel, account.ID); ok {
+				snapshot = state.Quota
+			}
+		}
+		until := QuotaResetDeadline(channel, snapshot, p.now())
+		if errLimit := p.store.SetQuotaLimited(channel, account.ID, account.Fingerprint(), outcome.Message, until, p.now()); errLimit != nil {
+			logWarnf("写入额度冷却失败 channel=%s account=%s: %v", channel, account.ID, errLimit)
+		}
+	}
 	return outcome, nil
 }
 
@@ -398,9 +410,15 @@ func (p *Prober) enrichAnySearchBalance(ctx context.Context, client *http.Client
 		}},
 	}
 	if remaining <= 0 {
-		return ProbeOutcome{Status: AccountStatusLimited, Message: fmt.Sprintf("AnySearch 剩余额度 %s", formatNumber(remaining)), Quota: snapshot}
+		outcome.Status = AccountStatusLimited
+		outcome.Message = fmt.Sprintf("AnySearch 剩余额度 %s", formatNumber(remaining))
+		outcome.Quota = snapshot
+		return outcome
 	}
-	return ProbeOutcome{Status: AccountStatusAvailable, Message: fmt.Sprintf("AnySearch 剩余额度 %s", formatNumber(remaining)), Quota: snapshot}
+	outcome.Status = AccountStatusAvailable
+	outcome.Message = fmt.Sprintf("AnySearch 剩余额度 %s", formatNumber(remaining))
+	outcome.Quota = snapshot
+	return outcome
 }
 
 // anySearchLogin 登录 AnySearch 网页控制台并返回访问令牌。

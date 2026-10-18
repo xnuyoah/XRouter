@@ -239,3 +239,31 @@ func TestDefaultStateDirUsesWritablePath(t *testing.T) {
 		t.Fatalf("状态目录 = %q", got)
 	}
 }
+
+func TestStoreBackfillsQuotaCooldownForLimitedAccounts(t *testing.T) {
+	dir := t.TempDir()
+	store, errStore := NewStore(dir)
+	if errStore != nil {
+		t.Fatal(errStore)
+	}
+	account := testAccount(ChannelFirecrawl, "legacy-limited")
+	state := availableState(ChannelFirecrawl, account)
+	state.Status = AccountStatusLimited
+	resetAt := time.Date(2099, 1, 2, 3, 4, 5, 0, time.UTC)
+	state.Quota = &QuotaSnapshot{ResetAt: &resetAt}
+	if errSave := store.SaveAccountState(state); errSave != nil {
+		t.Fatal(errSave)
+	}
+
+	reloaded, errReload := NewStore(dir)
+	if errReload != nil {
+		t.Fatal(errReload)
+	}
+	got, ok := reloaded.AccountState(ChannelFirecrawl, account.ID)
+	if !ok {
+		t.Fatal("账号状态未持久化")
+	}
+	if got.CooldownUntil == nil || !got.CooldownUntil.Equal(resetAt) {
+		t.Fatalf("冷却截止 = %v，期望 %s", got.CooldownUntil, resetAt)
+	}
+}

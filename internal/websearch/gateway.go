@@ -391,7 +391,8 @@ func (e *Executor) classifyFailure(cfg ChannelConfig, spec channelSpec, req Requ
 	fingerprint := account.Fingerprint()
 	switch {
 	case DefiniteExhaustion(cfg.Channel, resp.StatusCode, body):
-		if errUpdate := e.store.UpdateStatus(cfg.Channel, account.ID, AccountStatusLimited, "额度耗尽", fingerprint, now); errUpdate != nil {
+		until := quotaResetDeadlineForAccount(e.store, cfg.Channel, account.ID, now)
+		if errUpdate := e.store.SetQuotaLimited(cfg.Channel, account.ID, fingerprint, "额度耗尽", until, now); errUpdate != nil {
 			logWarnf("更新账号状态失败 channel=%s account=%s: %v", cfg.Channel, account.ID, errUpdate)
 		}
 	case IsUpstreamRateLimited(resp.StatusCode):

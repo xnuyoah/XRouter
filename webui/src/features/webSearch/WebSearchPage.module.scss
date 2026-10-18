@@ -175,6 +175,13 @@ $page-max-width: 1280px;
   gap: $spacing-sm;
 }
 
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .kv {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -269,8 +276,13 @@ $page-max-width: 1280px;
   font-weight: 600;
 }
 
+.tableScroll {
+  overflow-x: auto;
+}
+
 .table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
   font-size: 12px;
 

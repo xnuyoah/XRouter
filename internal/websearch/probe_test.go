@@ -273,3 +273,85 @@ func TestParseRetryAfterClamping(t *testing.T) {
 		}
 	}
 }
+
+// AnySearch 余额查询成功时不能丢失 API key 探测得到的 HTTP 状态、耗时与代理标记。
+func TestProbeAnySearchBalancePreservesProbeMetadata(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/auth/login":
+			_, _ = w.Write([]byte(`{"code":0,"data":{"logged_in":true,"access_token":"token"}}`))
+		case "/api/user/billing/overview":
+			_, _ = w.Write([]byte(`{"code":0,"data":{"remaining":1000,"used":0,"total":1000}}`))
+		default:
+			_, _ = w.Write([]byte(`{}`))
+		}
+	}))
+	defer upstream.Close()
+
+	store, errStore := NewStore(t.TempDir())
+	if errStore != nil {
+		t.Fatal(errStore)
+	}
+	prober := newTestProber(t, store)
+	prober.now = func() time.Time { return time.Now().UTC() }
+	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		req.URL.Scheme = "http"
+		req.URL.Host = strings.TrimPrefix(upstream.URL, "http://")
+		return http.DefaultTransport.RoundTrip(req)
+	})}
+	account := testAccount(ChannelAnySearch, "acc")
+	account.Username = "user"
+	account.Password = "pass"
+	outcome := ProbeOutcome{
+		Status:     AccountStatusAvailable,
+		HTTPStatus: http.StatusOK,
+		Latency:    1500 * time.Millisecond,
+		ProxyUsed:  true,
+	}
+	result := prober.enrichAnySearchBalance(context.Background(), client, account, outcome)
+	if result.HTTPStatus != http.StatusOK || result.Latency != outcome.Latency || !result.ProxyUsed {
+		t.Fatalf("探测元数据丢失: %+v", result)
+	}
+	if result.Quota == nil || result.Quota.Balances[0].Remaining == nil || *result.Quota.Balances[0].Remaining != 1000 {
+		t.Fatalf("余额快照缺失: %+v", result.Quota)
+	}
+	if result.Status != AccountStatusAvailable {
+		t.Fatalf("状态 = %s，期望 available", result.Status)
+	}
+}
+
+func TestProbeQuotaLimitedSetsCooldownUntilReset(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"success":true,"data":{"remainingCredits":0,"billingPeriodEnd":"2026-11-01T00:00:00Z"}}`))
+	}))
+	defer upstream.Close()
+
+	store, errStore := NewStore(t.TempDir())
+	if errStore != nil {
+		t.Fatal(errStore)
+	}
+	account := testAccount(ChannelFirecrawl, "fc1")
+	account.BaseURL = upstream.URL
+	outcome, errProbe := newTestProber(t, store).ProbeAccount(
+		context.Background(), ChannelFirecrawl, account, "socks5://127.0.0.1:1080",
+	)
+	if errProbe != nil {
+		t.Fatalf("探测失败: %v", errProbe)
+	}
+	if outcome.Status != AccountStatusLimited {
+		t.Fatalf("状态 = %s，期望 limited", outcome.Status)
+	}
+	state, ok := store.AccountState(ChannelFirecrawl, account.ID)
+	if !ok {
+		t.Fatal("账号状态未写入")
+	}
+	if state.Status != AccountStatusLimited {
+		t.Fatalf("存储状态 = %s，期望 limited", state.Status)
+	}
+	wantReset := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
+	if state.CooldownUntil == nil || !state.CooldownUntil.Equal(wantReset) {
+		t.Fatalf("冷却截止 = %v，期望 %s", state.CooldownUntil, wantReset)
+	}
+}
