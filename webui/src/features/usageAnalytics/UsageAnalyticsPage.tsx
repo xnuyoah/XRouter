@@ -368,26 +368,36 @@ export function UsageAnalyticsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    usageAnalyticsApi
-      .getPreferences()
-      .then((prefs) => {
-        if (cancelled) return;
-        setKind(prefs.kind);
-        setPreset(
-          prefs.range === 'custom' || !RANGE_PRESETS.includes(prefs.range as RangePreset)
-            ? 'today'
-            : (prefs.range as RangePreset)
-        );
-        setGroupBy(prefs.group_by || 'provider');
-        setTokenDisplayMode(prefs.token_display_mode || 'compact');
-        setPageSize(prefs.page_size || 50);
-        setLowBalanceThreshold(prefs.low_balance_threshold_percent || 10);
-        setLogColumns(normalizeLogColumns(prefs.log_columns));
-        prefsLoaded.current = true;
-      })
-      .catch(() => undefined);
+    let retryTimer: number | undefined;
+    let attempts = 0;
+    const loadPreferences = () => {
+      usageAnalyticsApi
+        .getPreferences()
+        .then((prefs) => {
+          if (cancelled) return;
+          setKind(prefs.kind);
+          setPreset(
+            prefs.range === 'custom' || !RANGE_PRESETS.includes(prefs.range as RangePreset)
+              ? 'today'
+              : (prefs.range as RangePreset)
+          );
+          setGroupBy(prefs.group_by || 'provider');
+          setTokenDisplayMode(prefs.token_display_mode || 'compact');
+          setPageSize(prefs.page_size || 50);
+          setLowBalanceThreshold(prefs.low_balance_threshold_percent || 10);
+          setLogColumns(normalizeLogColumns(prefs.log_columns));
+          prefsLoaded.current = true;
+        })
+        .catch(() => {
+          if (cancelled || attempts >= 1) return;
+          attempts += 1;
+          retryTimer = window.setTimeout(loadPreferences, 1500);
+        });
+    };
+    loadPreferences();
     return () => {
       cancelled = true;
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
     };
   }, []);
 
