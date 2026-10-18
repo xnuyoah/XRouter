@@ -91,6 +91,99 @@ export function SectionLogging({
           onChange={(usageStatisticsEnabled) => onChange({ usageStatisticsEnabled })}
         />
       </SettingList>
+
+      <SettingList>
+        <ToggleSetting
+          fieldId="usageAnalyticsEnabled"
+          label={t('config_management.visual.sections.system.usage_analytics_enabled')}
+          description={t('config_management.visual.sections.system.usage_analytics_enabled_desc')}
+          checked={values.usageAnalyticsEnabled}
+          disabled={disabled}
+          onChange={(usageAnalyticsEnabled) => onChange({ usageAnalyticsEnabled })}
+        />
+        <TextSetting
+          fieldId="usageAnalyticsDB"
+          size="lg"
+          label={t('config_management.visual.sections.system.usage_analytics_db')}
+          description={t('config_management.visual.sections.system.usage_analytics_db_desc')}
+          placeholder="usage-analytics/usage.db"
+          value={values.usageAnalyticsDB}
+          onChange={(usageAnalyticsDB) => onChange({ usageAnalyticsDB })}
+          disabled={disabled}
+        />
+        <TextSetting
+          fieldId="usageAnalyticsRetentionDays"
+          size="sm"
+          type="number"
+          min={1}
+          max={3650}
+          label={t('config_management.visual.sections.system.usage_analytics_retention')}
+          value={values.usageAnalyticsRetentionDays}
+          onChange={(usageAnalyticsRetentionDays) => onChange({ usageAnalyticsRetentionDays })}
+          disabled={disabled}
+        />
+        <TextSetting
+          fieldId="usageAnalyticsRollupRetentionDays"
+          size="sm"
+          type="number"
+          min={1}
+          max={3650}
+          label={t('config_management.visual.sections.system.usage_analytics_rollup_retention')}
+          value={values.usageAnalyticsRollupRetentionDays}
+          onChange={(usageAnalyticsRollupRetentionDays) =>
+            onChange({ usageAnalyticsRollupRetentionDays })
+          }
+          disabled={disabled}
+        />
+        <TextSetting
+          fieldId="usageAnalyticsFlushInterval"
+          size="sm"
+          label={t('config_management.visual.sections.system.usage_analytics_flush')}
+          description={t('config_management.visual.sections.system.usage_analytics_flush_desc')}
+          placeholder="5s"
+          value={values.usageAnalyticsFlushInterval}
+          onChange={(usageAnalyticsFlushInterval) => onChange({ usageAnalyticsFlushInterval })}
+          disabled={disabled}
+        />
+        <TextSetting
+          fieldId="usageAnalyticsMaxDBBytes"
+          size="sm"
+          type="number"
+          min={0}
+          label={t('config_management.visual.sections.system.usage_analytics_max_db_bytes')}
+          description={t('config_management.visual.sections.system.usage_analytics_max_db_bytes_desc')}
+          placeholder="0"
+          value={values.usageAnalyticsMaxDBBytes}
+          onChange={(usageAnalyticsMaxDBBytes) => onChange({ usageAnalyticsMaxDBBytes })}
+          disabled={disabled}
+        />
+        <ToggleSetting
+          fieldId="usagePricingSyncEnabled"
+          label={t('config_management.visual.sections.system.usage_pricing_sync')}
+          description={t('config_management.visual.sections.system.usage_pricing_sync_desc')}
+          checked={values.usagePricingSyncEnabled}
+          disabled={disabled}
+          onChange={(usagePricingSyncEnabled) => onChange({ usagePricingSyncEnabled })}
+        />
+        <TextSetting
+          fieldId="usagePricingSourceURL"
+          size="lg"
+          label={t('config_management.visual.sections.system.usage_pricing_source')}
+          placeholder="https://models.dev/api.json"
+          value={values.usagePricingSourceURL}
+          onChange={(usagePricingSourceURL) => onChange({ usagePricingSourceURL })}
+          disabled={disabled}
+        />
+        <TextSetting
+          fieldId="usagePricingCurrency"
+          size="sm"
+          label={t('config_management.visual.sections.system.usage_pricing_currency')}
+          placeholder="USD"
+          value={values.usagePricingCurrency}
+          onChange={(usagePricingCurrency) => onChange({ usagePricingCurrency })}
+          disabled={disabled}
+        />
+      </SettingList>
     </SectionCard>
   );
 }

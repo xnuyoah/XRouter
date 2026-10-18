@@ -1,0 +1,271 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 4px 0 40px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: 26px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-secondary);
+}
+
+.kindTabs {
+  display: flex;
+  gap: 6px;
+}
+
+.notice,
+.error {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.error {
+  border-color: var(--danger-color, #ef4444);
+  color: var(--danger-color, #ef4444);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-secondary);
+
+  span {
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  strong {
+    font-size: 24px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.panel {
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--bg-secondary);
+  padding: 18px;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+
+  h2 {
+    margin: 0;
+    font-size: 17px;
+  }
+
+  span {
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.gridLine {
+  stroke: var(--border-color);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.tokenLine {
+  fill: none;
+  stroke: var(--primary-color);
+  stroke-width: 2.5;
+}
+
+.requestLine {
+  fill: none;
+  stroke: var(--viz-success, #22c55e);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  opacity: 0.85;
+}
+
+.axisLabel {
+  fill: var(--text-secondary);
+  font-size: 11px;
+}
+
+.statusList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.statusRow {
+  display: grid;
+  grid-template-columns: 90px 1fr 70px 60px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.statusCode {
+  font-weight: 600;
+}
+
+.statusTrack {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--danger-color, #ef4444) 12%, transparent);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--danger-color, #ef4444);
+  }
+}
+
+.quotaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  color: var(--text-secondary);
+
+  strong {
+    color: var(--text-primary);
+  }
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    padding: 9px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+  }
+
+  th {
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  tbody tr:hover {
+    background: var(--bg-hover, rgba(127, 127, 127, 0.08));
+  }
+}
+
+.kindBadge {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+.statusSuccess {
+  color: var(--viz-success, #22c55e);
+}
+
+.statusFailed {
+  color: var(--danger-color, #ef4444);
+}
+
+.loadMore {
+  display: flex;
+  justify-content: center;
+  padding-top: 14px;
+}
+
+@media (max-width: 760px) {
+  .header {
+    flex-direction: column;
+  }
+
+  .controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .kindTabs {
+    width: 100%;
+  }
+}
+
+.statusDanger {
+  color: var(--danger-color, #ef4444);
+}
+
+.statusWarning {
+  margin: 12px 0 0;
+  color: var(--danger-color, #ef4444);
+  font-size: 13px;
+}
+
+.cardDanger {
+  color: var(--danger-color, #ef4444);
+}
+
+.cardWarning {
+  color: var(--warning-color, #f59e0b);
+}

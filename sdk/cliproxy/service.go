@@ -13,6 +13,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/home"
 	"github.com/xnuyoah/XRouter/v8/internal/homeplugins"
 	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
+	"github.com/xnuyoah/XRouter/v8/internal/usageanalytics"
 	"github.com/xnuyoah/XRouter/v8/internal/watcher"
 	sdkaccess "github.com/xnuyoah/XRouter/v8/sdk/access"
 	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
@@ -101,6 +102,9 @@ type Service struct {
 
 	// channelStats 是请求级渠道统计的共享存储。
 	channelStats *channelstats.Store
+
+	// usageAnalytics 是本地 LLM/搜索用量分析存储。
+	usageAnalytics *usageanalytics.Store
 
 	// pluginHost 拥有动态插件生命周期与运行时能力适配器。
 	pluginHost *pluginhost.Host

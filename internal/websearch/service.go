@@ -2,6 +2,7 @@ package websearch
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -24,6 +25,9 @@ type Service struct {
 	status   *StatusService
 	mcp      *MCPMirror
 	stats    *channelstats.Store
+
+	usageMu   sync.RWMutex
+	usageSink UsageSink
 
 	mu   sync.RWMutex
 	cfg  *config.Config
@@ -249,8 +253,52 @@ func (s *Service) Execute(req Request) (Result, error) {
 	if errCfg != nil {
 		return Result{}, errCfg
 	}
+	started := time.Now()
 	result, errExec := s.executor.Execute(cfg, req)
-	s.recordRequestStat(cfg.Channel, errExec == nil && result.StatusCode > 0 && result.StatusCode < 400)
+	success := errExec == nil && result.StatusCode > 0 && result.StatusCode < 400
+	s.recordRequestStat(cfg.Channel, success)
+
+	statusCode, errorCode := result.StatusCode, result.ErrorCode
+	if errExec != nil {
+		var gatewayErr *GatewayError
+		if errors.As(errExec, &gatewayErr) {
+			statusCode = gatewayErr.StatusCode
+			errorCode = gatewayErr.Code
+		}
+	}
+	attempts := len(result.Attempts)
+	if attempts == 0 {
+		attempts = 1
+	}
+	quotaKind := quotaKindFor(s.store, cfg.Channel, result.AccountID)
+	operation := OperationFor(cfg.Channel, req.Method, req.Path)
+	usage := ExtractResponseUsage(cfg.Channel, operation, statusCode, result.Header, result.Body)
+	units, unit := 1.0, "request"
+	if usage.Credits > 0 {
+		units, unit = usage.Credits, "credit"
+	}
+	s.recordSearchUsage(SearchUsageRecord{
+		Time:             time.Now().UTC(),
+		Channel:          cfg.Channel,
+		AccountID:        result.AccountID,
+		AccountName:      result.AccountName,
+		Operation:        operation,
+		Method:           req.Method,
+		Path:             req.Path,
+		StatusCode:       statusCode,
+		Success:          success,
+		Attempts:         attempts,
+		Duration:         time.Since(started),
+		ErrorCode:        errorCode,
+		ProxyUsed:        result.ProxyUsed || ProxyConfigured(cfg.ProxyURL),
+		Plan:             quotaKind,
+		QuotaKind:        quotaKind,
+		Units:            units,
+		Unit:             unit,
+		Credits:          usage.Credits,
+		UpstreamCost:     usage.UpstreamCost,
+		UpstreamCurrency: usage.UpstreamCurrency,
+	})
 	return result, errExec
 }
 

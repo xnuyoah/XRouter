@@ -202,6 +202,7 @@ func (a *usageAdapter) HandleUsage(ctx context.Context, record coreusage.Record)
 		Source:              record.Source,
 		ReasoningEffort:     record.ReasoningEffort,
 		ServiceTier:         record.ServiceTier,
+		Plan:                record.Plan,
 		ResponseServiceTier: record.ResponseServiceTier,
 		ResponseModel:       record.ResponseModel,
 		Generate:            coreusage.GenerateEnabled(record.Generate),

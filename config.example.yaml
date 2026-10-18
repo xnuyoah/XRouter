@@ -580,6 +580,32 @@ observability:
     # Default: 60. Max: 3600.
     redis-usage-queue-retention-seconds: 60
 
+    # Native LLM/search usage analytics shown under Observe -> Usage Analytics.
+    # This is independent of usage-statistics-enabled (which controls the Redis queue).
+    # Requires a restart after enabling or disabling.
+    analytics:
+      enabled: false
+      # Database path. Empty uses WRITABLE_PATH/usage-analytics/usage.db,
+      # then the config directory, then the working directory.
+      db: ""
+      # Per-request detail retention in days (1..3650).
+      retention-days: 90
+      # Minute-rollup retention in days (1..3650).
+      rollup-retention-days: 365
+      # Batch write interval (1s..1h). Empty writes every request.
+      flush-interval: 5s
+      # Soft logical data cap in bytes. When exceeded, the oldest events and
+      # rollups are pruned. 0 disables the cap.
+      max-db-bytes: 0
+      # Reference model prices are synced from a models.dev-compatible catalog.
+      # Manual overrides are managed from Observe -> Usage Analytics -> Prices.
+      pricing:
+        sync-enabled: false
+        source-url: "https://models.dev/api.json"
+        provider-priority: [openai, google, anthropic]
+        ignored-suffixes: ["-thinking", "-preview", "-high", "-low", "(thinking)", "(xhigh)", "(high)", "(medium)", "(low)", "(max)", "(auto)", "(none)"]
+        currency: "USD"
+
   # Enable pprof HTTP debug server (host:port). Keep it bound to localhost for safety.
   pprof:
     enable: false

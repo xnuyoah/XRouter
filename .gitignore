@@ -35,6 +35,7 @@ auths/*
 docs/*
 !docs/management-api-v8.md
 !docs/web-search.md
+!docs/usage-analytics.md
 AGENTS.md
 CLAUDE.md
 GEMINI.md

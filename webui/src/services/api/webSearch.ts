@@ -281,6 +281,7 @@ export const webSearchApi = {
     account_id: string;
     hours?: number;
     limit?: number;
+    to?: string;
   }): Promise<WebSearchQuotaHistoryResponse> {
     const query = new URLSearchParams({
       channel: params.channel,
@@ -288,6 +289,7 @@ export const webSearchApi = {
     });
     if (params.hours) query.set('hours', String(params.hours));
     if (params.limit) query.set('limit', String(params.limit));
+    if (params.to) query.set('to', params.to);
     return apiClient.get<WebSearchQuotaHistoryResponse>(`${BASE}/quota/history?${query.toString()}`);
   },
 

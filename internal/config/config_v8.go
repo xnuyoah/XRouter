@@ -60,7 +60,8 @@ func buildV8Paths() []configPath {
 		{"logs-max-total-size-mb", "observability.logs.logs-max-total-size-mb"}, {"request-log", "observability.logs.request-log"},
 		{"error-logs-max-files", "observability.logs.error-logs-max-files"},
 		{"usage-statistics-enabled", "observability.usage.usage-statistics-enabled"},
-		{"redis-usage-queue-retention-seconds", "observability.usage.redis-usage-queue-retention-seconds"}, {"pprof", "observability.pprof"},
+		{"redis-usage-queue-retention-seconds", "observability.usage.redis-usage-queue-retention-seconds"},
+		{"usage-analytics", "observability.usage.analytics"}, {"pprof", "observability.pprof"},
 	}
 	// 注意：web-search 段在 v8 与 legacy 布局中同名，因此**不能**登记为前缀映射。
 	// 前缀表要求 old 与 current 不同：同名前缀会让 NormalizeConfigLayout 在删除旧

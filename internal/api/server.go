@@ -28,6 +28,7 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/logging"
 	"github.com/xnuyoah/XRouter/v8/internal/pluginhost"
 	"github.com/xnuyoah/XRouter/v8/internal/redisqueue"
+	"github.com/xnuyoah/XRouter/v8/internal/usageanalytics"
 	"github.com/xnuyoah/XRouter/v8/internal/websearch"
 	sdkaccess "github.com/xnuyoah/XRouter/v8/sdk/access"
 	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers"
@@ -81,6 +82,12 @@ type Server struct {
 
 	// channelStats 是共享的渠道请求统计存储。
 	channelStats *channelstats.Store
+
+	// usageAnalytics 是本地 LLM/搜索用量分析存储。
+	usageAnalytics *usageanalytics.Store
+
+	// webSearchUsageSink 接收搜索渠道用量事件（本地分析或 Home 上报）。
+	webSearchUsageSink websearch.UsageSink
 
 	// pluginHost 负责动态插件 Management API 路由分发。
 	pluginHost *pluginhost.Host
@@ -168,6 +175,8 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 		pluginHost:                   optionState.pluginHost,
 		exampleAPIKeySafeModeEnabled: optionState.exampleAPIKeySafeMode,
 		channelStats:                 optionState.channelStats,
+		usageAnalytics:               optionState.usageAnalytics,
+		webSearchUsageSink:           optionState.webSearchUsageSink,
 	}
 
 	// 添加中间件
@@ -218,6 +227,7 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	s.mgmt = managementHandlers.NewHandler(cfg, configFilePath, authManager)
 	s.mgmt.SetPluginHost(optionState.pluginHost)
 	s.mgmt.SetChannelStatsStore(optionState.channelStats)
+	s.mgmt.SetUsageAnalyticsStore(optionState.usageAnalytics)
 	s.mgmt.SetConfigReloadHook(optionState.configReloadHook)
 	if optionState.localPassword != "" {
 		s.mgmt.SetLocalPassword(optionState.localPassword)

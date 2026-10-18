@@ -77,6 +77,9 @@ type MCPMirror struct {
 	// now 允许测试注入可控时钟。
 	now func() time.Time
 
+	usageMu   sync.RWMutex
+	usageSink UsageSink
+
 	cacheMu   sync.Mutex
 	toolCache map[Channel]cachedTools
 }
@@ -283,7 +286,49 @@ func (m *MCPMirror) fetchTools(ctx context.Context, cfg ChannelConfig) ([]map[st
 }
 
 // callUpstream 调用一次上游 MCP 方法并返回 result 原文，失败时自动换号。
-func (m *MCPMirror) callUpstream(ctx context.Context, cfg ChannelConfig, method string, params json.RawMessage) (json.RawMessage, error) {
+func (m *MCPMirror) callUpstream(ctx context.Context, cfg ChannelConfig, method string, params json.RawMessage) (out json.RawMessage, errOut error) {
+	started := time.Now()
+	attempts := 0
+	var lastAccount Account
+	defer func() {
+		if method != "tools/call" {
+			return
+		}
+		statusCode := 0
+		errorCode := ""
+		success := errOut == nil
+		if success {
+			statusCode = http.StatusOK
+		}
+		if errOut != nil {
+			var gatewayErr *GatewayError
+			if errors.As(errOut, &gatewayErr) {
+				statusCode = gatewayErr.StatusCode
+				errorCode = gatewayErr.Code
+			}
+		}
+		quotaKind := quotaKindFor(m.store, cfg.Channel, lastAccount.ID)
+		m.recordSearchUsage(SearchUsageRecord{
+			Time:        time.Now().UTC(),
+			Channel:     cfg.Channel,
+			AccountID:   lastAccount.ID,
+			AccountName: lastAccount.Name,
+			Operation:   "mcp:" + mcpToolName(params),
+			Method:      http.MethodPost,
+			Path:        "/mcp",
+			StatusCode:  statusCode,
+			Success:     success,
+			Attempts:    maxInt(attempts, 1),
+			Duration:    time.Since(started),
+			ErrorCode:   errorCode,
+			ProxyUsed:   ProxyConfigured(cfg.ProxyURL),
+			Plan:        quotaKind,
+			QuotaKind:   quotaKind,
+			Units:       1,
+			Unit:        "request",
+		})
+	}()
+
 	accounts := m.orderedAccounts(cfg)
 	if len(accounts) == 0 {
 		return nil, &GatewayError{
@@ -304,6 +349,8 @@ func (m *MCPMirror) callUpstream(ctx context.Context, cfg ChannelConfig, method 
 
 	var lastErr error
 	for _, account := range accounts[:attemptLimit] {
+		lastAccount = account
+		attempts++
 		result, errCall := m.callUpstreamWithAccount(ctx, client, cfg, account, method, params)
 		if errCall == nil {
 			if errTouch := m.store.TouchUsed(cfg.Channel, account.ID, account.Fingerprint(), m.now()); errTouch != nil {
@@ -320,6 +367,23 @@ func (m *MCPMirror) callUpstream(ctx context.Context, cfg ChannelConfig, method 
 		lastErr = &GatewayError{Code: ErrorCodeUpstreamError, Message: "上游 MCP 调用失败", StatusCode: http.StatusBadGateway}
 	}
 	return nil, lastErr
+}
+
+func mcpToolName(params json.RawMessage) string {
+	var parsed struct {
+		Name string `json:"name"`
+	}
+	if errUnmarshal := json.Unmarshal(params, &parsed); errUnmarshal != nil {
+		return ""
+	}
+	return strings.TrimSpace(parsed.Name)
+}
+
+func maxInt(left, right int) int {
+	if left > right {
+		return left
+	}
+	return right
 }
 
 // orderedAccounts 按可用性排序返回 MCP 可用的账号。

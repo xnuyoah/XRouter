@@ -81,10 +81,23 @@ retain the corresponding business operation's fields.
 | `/observability/logs/requests/<id>` | GET | Get a request log. |
 | `/observability/usage/api-keys` | GET | Get API-key usage. |
 | `/observability/usage/queue` | GET | Get queued usage events. |
+| `/observability/usage/analytics` | GET | Get native LLM/search usage summary, series, groups and facets. |
+| `/observability/usage/status` | GET | Get analytics store health, queue depth, dropped events, retention and DB size. |
+| `/observability/usage/events` | GET | Get native LLM/search per-request detail. |
+| `/observability/usage/export` | GET | Export native usage events as CSV. |
+| `/observability/usage/preferences` | GET, PUT | Read or save usage page defaults. |
+| `/observability/usage/pricing` | GET, PUT | Read effective prices or replace manual model/search overrides. |
+| `/observability/usage/pricing/sync` | POST | Refresh the models.dev reference catalog. |
+| `/observability/usage/compact` | POST | Schedule a bbolt rewrite on the next restart. |
+| `/observability/usage/backup` | GET | Download a bbolt snapshot of analytics data. |
+| `/observability/usage/restore` | POST | Replace analytics data from a backup; requires `X-Confirm-Restore: replace`. |
+| `/observability/usage/import/tokens-statistic` | POST | Merge request history from a legacy tokens-statistic bbolt database; requires `X-Confirm-Import: merge`. |
+| `/observability/usage/reset` | POST | Clear native usage analytics data. |
 | `/observability/channel-status` | GET | Get lifetime request counters and 24-hour, 20-minute buckets for LLM providers/models and web-search channels. |
 | `/web-search/accounts/import` | POST | Import an OpenRegister CSV into search accounts and NVIDIA/Agnes native credentials. |
 | `/web-search/accounts/export` | GET | Export search accounts and NVIDIA/Agnes keys as CSV or JSON; masked unless `include_credentials=true`. |
-| `/web-search/quota/history` | GET | Get balance history for one web-search key (`channel` and `account_id` required). |
+| `/web-search/quota/history` | GET | Get balance history for one web-search key (`channel` and `account_id` required; optional `hours`, `limit`, and `to`). |
+| `/web-search/requests` | GET | Get recent search calls from native analytics when available, otherwise legacy JSONL; `source` reports the origin. |
 | `/web-search/status/check` | POST | Start a probe-based channel status check; pass `channel` to limit it to one channel. |
 | `/credentials` | GET, POST, DELETE | List, upload, or delete credential files. |
 | `/credentials/models` | GET | Get credential models. |

@@ -51,6 +51,8 @@ type Record struct {
 	ReasoningEffort string
 	// ServiceTier 存储客户端请求的服务层级。
 	ServiceTier string
+	// Plan 存储凭据所属的订阅计划（例如 Codex free/plus/pro）。
+	Plan string
 	// RequestServiceTier 是仅为输入保留的已弃用别名，供现有
 	// 插件调用方使用。它会被归一化到 ServiceTier，并且永不输出。
 	RequestServiceTier string

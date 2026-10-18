@@ -17,6 +17,7 @@ import { MainRoutes } from '@/router/MainRoutes';
 import { pluginsApi } from '@/services/api';
 import {
   IconActivity,
+  IconDollarSign,
   IconSidebarConfig,
   IconSidebarDashboard,
   IconSidebarLogs,
@@ -46,6 +47,7 @@ import type { Theme } from '@/types';
 const sidebarIcons: Record<string, ReactNode> = {
   dashboard: <IconSidebarDashboard size={17} />,
   channelStatus: <IconActivity size={17} />,
+  usageAnalytics: <IconDollarSign size={17} />,
   webSearch: <IconSidebarSearch size={17} />,
   plugins: <IconSidebarPlugins size={17} />,
   config: <IconSidebarConfig size={17} />,
@@ -421,6 +423,12 @@ export function MainLayout() {
       id: 'observe',
       labelKey: 'nav_groups.observe',
       items: [
+        {
+          path: '/usage',
+          labelKey: 'nav.usage_analytics',
+          metaKey: 'nav_meta.usage_analytics',
+          icon: sidebarIcons.usageAnalytics,
+        },
         {
           path: '/channel-status',
           labelKey: 'nav.channel_status',

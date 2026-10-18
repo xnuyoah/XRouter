@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/xnuyoah/XRouter/v8/internal/channelstats"
 	"github.com/xnuyoah/XRouter/v8/internal/config"
+	"github.com/xnuyoah/XRouter/v8/internal/usageanalytics"
 	corewebsearch "github.com/xnuyoah/XRouter/v8/internal/websearch"
 )
 
@@ -352,12 +353,21 @@ func (h *Handler) GetWebSearchQuotaHistory(c *gin.Context) {
 			limit = parsed
 		}
 	}
+	to := time.Now().UTC()
+	if raw := strings.TrimSpace(c.Query("to")); raw != "" {
+		parsed, errParse := parseUsageTime(raw)
+		if errParse != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_to", "message": "to 需要 RFC3339、YYYY-MM-DD 或 Unix 秒"})
+			return
+		}
+		to = parsed.UTC()
+	}
 	store := service.Store()
 	if store == nil {
 		c.JSON(http.StatusOK, gin.H{"channel": channel, "account_id": accountID, "points": []any{}})
 		return
 	}
-	points := store.QuotaHistory(channel, accountID, hours, limit, time.Now().UTC())
+	points := store.QuotaHistory(channel, accountID, hours, limit, to)
 	if points == nil {
 		points = []corewebsearch.QuotaHistoryPoint{}
 	}
@@ -380,13 +390,34 @@ func (h *Handler) GetWebSearchRequests(c *gin.Context) {
 			limit = parsed
 		}
 	}
+	channelFilter := strings.ToLower(strings.TrimSpace(c.Query("channel")))
+	if analytics := h.usageAnalyticsStore(); analytics != nil {
+		now := time.Now().UTC()
+		days := analytics.Status().RetentionDays
+		if days <= 0 {
+			days = 1
+		}
+		result, errQuery := analytics.Events(c.Request.Context(), usageanalytics.Query{
+			Kind:    usageanalytics.KindSearch,
+			From:    now.Add(-time.Duration(days) * 24 * time.Hour),
+			To:      now.Add(time.Minute),
+			Channel: channelFilter,
+			Limit:   limit,
+		})
+		if errQuery == nil && len(result.Events) > 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"requests": requestLogFromAnalytics(result.Events),
+				"source":   "analytics",
+			})
+			return
+		}
+	}
 	store := service.Store()
 	if store == nil {
-		c.JSON(http.StatusOK, gin.H{"requests": []any{}})
+		c.JSON(http.StatusOK, gin.H{"requests": []any{}, "source": "legacy"})
 		return
 	}
 	entries := store.RequestLog(limit)
-	channelFilter := strings.ToLower(strings.TrimSpace(c.Query("channel")))
 	if channelFilter != "" {
 		filtered := entries[:0]
 		for _, entry := range entries {
@@ -396,7 +427,32 @@ func (h *Handler) GetWebSearchRequests(c *gin.Context) {
 		}
 		entries = filtered
 	}
-	c.JSON(http.StatusOK, gin.H{"requests": entries})
+	c.JSON(http.StatusOK, gin.H{"requests": entries, "source": "legacy"})
+}
+
+func requestLogFromAnalytics(events []usageanalytics.Event) []corewebsearch.RequestLogEntry {
+	entries := make([]corewebsearch.RequestLogEntry, 0, len(events))
+	for _, event := range events {
+		path := strings.TrimSpace(event.Path)
+		if path == "" {
+			path = strings.TrimSpace(event.Operation)
+		}
+		entries = append(entries, corewebsearch.RequestLogEntry{
+			ID:          event.ID,
+			Channel:     corewebsearch.Channel(event.Channel),
+			AccountID:   event.AccountID,
+			AccountName: event.AccountName,
+			Method:      event.Method,
+			Path:        path,
+			StatusCode:  event.StatusCode,
+			Attempts:    event.Attempts,
+			DurationMS:  event.LatencyMS,
+			CreatedAt:   event.Time,
+			ErrorCode:   event.ErrorCode,
+			ProxyUsed:   event.ProxyUsed,
+		})
+	}
+	return entries
 }
 
 // webSearchAccountPayload 是账号新增/修改的请求体。

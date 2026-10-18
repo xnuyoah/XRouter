@@ -111,7 +111,8 @@ func (s *Store) QuotaHistory(channel Channel, accountID string, hours, limit int
 	if limit <= 0 || limit > 5000 {
 		limit = 1000
 	}
-	cutoff := now.UTC().Add(-time.Duration(hours) * time.Hour)
+	now = now.UTC()
+	cutoff := now.Add(-time.Duration(hours) * time.Hour)
 	path := s.quotaHistoryPath(channel, accountID)
 	raw, errRead := os.ReadFile(path)
 	if errRead != nil {
@@ -128,7 +129,7 @@ func (s *Store) QuotaHistory(channel Channel, accountID string, hours, limit int
 		if errUnmarshal := json.Unmarshal([]byte(trimmed), &point); errUnmarshal != nil {
 			continue
 		}
-		if point.CheckedAt.Before(cutoff) {
+		if point.CheckedAt.Before(cutoff) || point.CheckedAt.After(now) {
 			continue
 		}
 		points = append(points, point)
