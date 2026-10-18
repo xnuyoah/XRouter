@@ -1041,8 +1041,8 @@
     "colActions": "Actions",
     "modelExample": "Model call example",
     "searchExample": "Search tool call example",
-    "apiTokens.configNotReady": "Configuration is not loaded yet. Refresh and try again.",
-    "apiTokens.tokenMissing": "This token no longer exists; the list was refreshed."
+    "configNotReady": "Configuration is not loaded yet. Refresh and try again.",
+    "tokenMissing": "This token no longer exists; the list was refreshed."
   },
   "providerAccounts": {
     "title": "Model provider accounts",

@@ -1041,8 +1041,8 @@
     "colActions": "操作",
     "modelExample": "模型调用示例",
     "searchExample": "搜索工具调用示例",
-    "apiTokens.configNotReady": "配置尚未加载完成，请刷新后重试。",
-    "apiTokens.tokenMissing": "该令牌已不存在，列表已刷新。"
+    "configNotReady": "配置尚未加载完成，请刷新后重试。",
+    "tokenMissing": "该令牌已不存在，列表已刷新。"
   },
   "providerAccounts": {
     "title": "模型供应商账号",
