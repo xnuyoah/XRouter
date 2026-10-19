@@ -288,7 +288,7 @@ func (s *Service) registerOpenAICompatProviderExecutor(providerKey string, auth 
 		providerKey = "openai-compatibility"
 	}
 	compatExecutor := executor.NewOpenAICompatExecutor(providerKey, cfg)
-	nextExecutor := compatExecutor
+	nextExecutor := s.wrapOpenAICompatIfPluginAuth(compatExecutor, auth, cfg)
 	if !forceReplace {
 		if existingExecutor, hasExecutor := s.coreManager.Executor(providerKey); hasExecutor {
 			if shouldKeepExistingOpenAICompatExecutor(s, existingExecutor, nextExecutor, respectNonOwned) {
@@ -299,9 +299,57 @@ func (s *Service) registerOpenAICompatProviderExecutor(providerKey string, auth 
 	s.coreManager.RegisterExecutor(nextExecutor)
 }
 
+func (s *Service) wrapOpenAICompatIfPluginAuth(compatExecutor *executor.OpenAICompatExecutor, auth *coreauth.Auth, cfg *config.Config) coreauth.ProviderExecutor {
+	if compatExecutor == nil {
+		return nil
+	}
+	for _, candidate := range pluginAuthProviderLookupKeys(auth, compatExecutor.Identifier()) {
+		if pluginHostHasAuthProvider(s.pluginHost, candidate) {
+			return pluginhost.NewPluginRefreshCompatExecutor(compatExecutor, s.pluginHost, cfg)
+		}
+	}
+	return compatExecutor
+}
+
+func pluginAuthProviderLookupKeys(auth *coreauth.Auth, fallback string) []string {
+	keys := make([]string, 0, 4)
+	add := func(value string) {
+		value = strings.ToLower(strings.TrimSpace(value))
+		if value == "" {
+			return
+		}
+		for _, existing := range keys {
+			if existing == value {
+				return
+			}
+		}
+		keys = append(keys, value)
+	}
+	if auth != nil {
+		add(auth.Provider)
+		if auth.Attributes != nil {
+			add(auth.Attributes["provider_key"])
+			add(auth.Attributes["compat_name"])
+		}
+	}
+	add(fallback)
+	return keys
+}
+
+// pluginHostHasAuthProvider 可在测试中覆盖，以避免加载真实插件。
+var pluginHostHasAuthProvider = func(host *pluginhost.Host, provider string) bool {
+	return host != nil && host.HasAuthProvider(provider)
+}
+
 func shouldKeepExistingOpenAICompatExecutor(s *Service, existing, next coreauth.ProviderExecutor, respectNonOwned bool) bool {
 	if existing == nil || next == nil {
 		return false
+	}
+	if shouldUpgradeOpenAICompatToPluginRefresh(existing, next) {
+		return false
+	}
+	if pluginhost.IsPluginRefreshCompatExecutor(existing) && pluginhost.IsPluginRefreshCompatExecutor(next) {
+		return true
 	}
 	_, existingBare := existing.(*executor.OpenAICompatExecutor)
 	_, nextBare := next.(*executor.OpenAICompatExecutor)
@@ -316,6 +364,17 @@ func shouldKeepExistingOpenAICompatExecutor(s *Service, existing, next coreauth.
 		return false
 	}
 	return true
+}
+
+func shouldUpgradeOpenAICompatToPluginRefresh(existing, next coreauth.ProviderExecutor) bool {
+	if existing == nil || next == nil {
+		return false
+	}
+	if !pluginhost.IsPluginRefreshCompatExecutor(next) {
+		return false
+	}
+	_, bareOpenAICompat := existing.(*executor.OpenAICompatExecutor)
+	return bareOpenAICompat
 }
 
 func (s *Service) registerResolvedModelsForAuth(a *coreauth.Auth, providerKey string, models []*ModelInfo) {

@@ -59,6 +59,11 @@ func authIDForPath(path, authDir string) string {
 	return id
 }
 
+// HasAuthProvider 报告主机是否拥有指定供应商键的插件 AuthProvider。
+func (h *Host) HasAuthProvider(provider string) bool {
+	return h.authProviderRecord(provider) != nil
+}
+
 func (h *Host) authProviderRecord(provider string) *capabilityRecord {
 	provider = normalizeProviderID(provider)
 	if h == nil || provider == "" {
