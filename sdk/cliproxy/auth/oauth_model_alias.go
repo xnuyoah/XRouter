@@ -317,7 +317,8 @@ func sanitizeOAuthModelAliases(aliases []internalconfig.OAuthModelAlias) []inter
 	if len(aliases) == 0 {
 		return nil
 	}
-	seen := make(map[string]struct{}, len(aliases))
+	seenPair := make(map[string]struct{}, len(aliases))
+	seenAlias := make(map[string]struct{}, len(aliases))
 	clean := make([]internalconfig.OAuthModelAlias, 0, len(aliases))
 	for _, entry := range aliases {
 		name := strings.TrimSpace(entry.Name)
@@ -325,13 +326,21 @@ func sanitizeOAuthModelAliases(aliases []internalconfig.OAuthModelAlias) []inter
 		if name == "" || alias == "" {
 			continue
 		}
-		entry.Name = name
-		entry.Alias = alias
-		key := strings.ToLower(name) + "->" + strings.ToLower(alias)
-		if _, exists := seen[key]; exists {
+		if strings.EqualFold(name, alias) {
 			continue
 		}
-		seen[key] = struct{}{}
+		aliasKey := strings.ToLower(alias)
+		// 别名在客户端可见模型列表中必须唯一，否则目录声明与
+		// 请求路由可能选中不同的上游模型。保留首次出现的映射。
+		if _, exists := seenAlias[aliasKey]; exists {
+			continue
+		}
+		pairKey := strings.ToLower(name) + "->" + aliasKey
+		if _, exists := seenPair[pairKey]; exists {
+			continue
+		}
+		seenPair[pairKey] = struct{}{}
+		seenAlias[aliasKey] = struct{}{}
 		clean = append(clean, entry)
 	}
 	if len(clean) == 0 {

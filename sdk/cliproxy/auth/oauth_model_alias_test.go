@@ -458,3 +458,25 @@ func TestApplyOAuthModelAliasWithResult_NoForceMappingPreservesRequestedModelInO
 		t.Fatalf("OriginalAlias = %q want requested model when force-mapping off", res.OriginalAlias)
 	}
 }
+
+// SanitizeOAuthModelAliases 必须保证客户端可见别名唯一：同一 alias 的
+// 多条映射只保留第一条，避免目录声明与请求路由选中不同上游模型。
+func TestSanitizeOAuthModelAliasesDeduplicatesByAliasKeepingFirst(t *testing.T) {
+	cleaned := sanitizeOAuthModelAliases([]internalconfig.OAuthModelAlias{
+		{Name: "model-a", Alias: "public"},
+		{Name: "model-b", Alias: "public"},
+		{Name: "model-c", Alias: "PUBLIC"},
+		{Name: "model-d", Alias: "solo"},
+		{Name: "solo", Alias: "solo"},
+		{Name: "model-e", Alias: ""},
+	})
+	if len(cleaned) != 2 {
+		t.Fatalf("cleaned entries = %d (%v), want 2", len(cleaned), cleaned)
+	}
+	if cleaned[0].Name != "model-a" || cleaned[0].Alias != "public" {
+		t.Fatalf("first public mapping = %v, want model-a -> public", cleaned[0])
+	}
+	if cleaned[1].Name != "model-d" || cleaned[1].Alias != "solo" {
+		t.Fatalf("solo mapping = %v, want model-d -> solo", cleaned[1])
+	}
+}
