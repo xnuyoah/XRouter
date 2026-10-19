@@ -38,14 +38,11 @@ const (
 	redisKeyPluginTasks        = "plugin-tasks"
 	redisKeyPluginSync         = "plugin-sync"
 
-	homeReconnectInterval                     = time.Second
-	homeReconnectFailoverThreshold            = 3
-	homeRedisOperationTimeout                 = 3 * time.Second
-	homeRefreshOperationTimeout               = 35 * time.Second
-	homePluginSyncOperationTimeout            = 2 * time.Minute
-	homeSubscriptionReceiveTimeout            = 3 * time.Second
-	credentialConcurrencyNodeHeartbeatTimeout = 20 * time.Second
-	redisChannelCluster                       = "cluster"
+	homeReconnectFailoverThreshold = 3
+	homeRedisOperationTimeout      = 3 * time.Second
+	homeRefreshOperationTimeout    = 35 * time.Second
+	homePluginSyncOperationTimeout = 2 * time.Minute
+	redisChannelCluster            = "cluster"
 )
 
 const pluginSyncUnsupportedErrorType = "plugin_sync_unsupported"
@@ -2075,22 +2072,4 @@ func isTimeoutError(err error) bool {
 	}
 	var netErr net.Error
 	return errors.As(err, &netErr) && netErr.Timeout()
-}
-
-func sleepWithContext(ctx context.Context, d time.Duration) {
-	if d <= 0 {
-		return
-	}
-	timer := time.NewTimer(d)
-	defer timer.Stop()
-	if ctx == nil {
-		<-timer.C
-		return
-	}
-	select {
-	case <-ctx.Done():
-		return
-	case <-timer.C:
-		return
-	}
 }

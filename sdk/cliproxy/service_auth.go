@@ -10,17 +10,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/xnuyoah/XRouter/v8/internal/util"
 	"github.com/xnuyoah/XRouter/v8/internal/watcher"
-	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 	"github.com/xnuyoah/XRouter/v8/sdk/config"
 )
-
-// newDefaultAuthManager 创建一个包含受支持 OAuth 供应商的默认认证管理器。
-func newDefaultAuthManager() *sdkAuth.Manager {
-	return sdkAuth.NewManager(
-		sdkAuth.GetTokenStore(),
-	)
-}
 
 func (s *Service) ensureAuthUpdateQueue(ctx context.Context) {
 	if s == nil {

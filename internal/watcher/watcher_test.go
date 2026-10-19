@@ -44,13 +44,9 @@ func TestApplyAuthExcludedModelsMeta_OAuthProvider(t *testing.T) {
 		Provider:   "TestProv",
 		Attributes: map[string]string{},
 	}
-	cfg := &config.Config{
-		OAuthExcludedModels: map[string][]string{
-			"testprov": {"A", "b"},
-		},
-	}
+	cfg := &config.Config{}
 
-	synthesizer.ApplyAuthExcludedModelsMeta(auth, cfg, nil, "oauth")
+	synthesizer.ApplyAuthExcludedModelsMeta(auth, cfg, []string{"A", "b"}, "oauth")
 
 	expected := diff.ComputeExcludedModelsHash([]string{"a", "b"})
 	if got := auth.Attributes["excluded_models_hash"]; got != expected {
@@ -662,7 +658,7 @@ func TestReloadClientsCachesAuthHashes(t *testing.T) {
 		config:  &config.Config{AuthDir: tmpDir},
 	}
 
-	w.reloadClients(true, nil, false)
+	w.reloadClients(true, false)
 
 	w.clientsMutex.RLock()
 	defer w.clientsMutex.RUnlock()
@@ -687,12 +683,12 @@ func TestReloadClientsLogsConfigDiffs(t *testing.T) {
 	w.config = newCfg
 	w.clientsMutex.Unlock()
 
-	w.reloadClients(false, nil, false)
+	w.reloadClients(false, false)
 }
 
 func TestReloadClientsHandlesNilConfig(t *testing.T) {
 	w := &Watcher{}
-	w.reloadClients(true, nil, false)
+	w.reloadClients(true, false)
 }
 
 func TestReloadClientsNotifiesUsageSubscribersToRefresh(t *testing.T) {
@@ -709,7 +705,7 @@ func TestReloadClientsNotifiesUsageSubscribersToRefresh(t *testing.T) {
 		authDir: tmp,
 		config:  &config.Config{AuthDir: tmp},
 	}
-	w.reloadClients(false, nil, false)
+	w.reloadClients(false, false)
 
 	requireWatcherUsagePayload(t, subscriber, `{"refresh":true}`)
 }
@@ -720,7 +716,7 @@ func TestReloadClientsFiltersProvidersWithNilCurrentAuths(t *testing.T) {
 		authDir: tmp,
 		config:  &config.Config{AuthDir: tmp},
 	}
-	w.reloadClients(false, []string{"match"}, false)
+	w.reloadClients(false, false)
 	if w.currentAuths != nil && len(w.currentAuths) != 0 {
 		t.Fatalf("expected currentAuths to be nil or empty, got %d", len(w.currentAuths))
 	}
@@ -1427,16 +1423,10 @@ func TestReloadConfigFiltersAffectedOAuthProviders(t *testing.T) {
 	oldCfg := &config.Config{
 		AuthDir:            authDir,
 		CredentialInFlight: config.DefaultCredentialInFlightConfig(),
-		OAuthExcludedModels: map[string][]string{
-			"provider-a": {"m1"},
-		},
 	}
 	newCfg := &config.Config{
 		AuthDir:            authDir,
 		CredentialInFlight: config.DefaultCredentialInFlightConfig(),
-		OAuthExcludedModels: map[string][]string{
-			"provider-a": {"m2"},
-		},
 	}
 	data, err := yaml.Marshal(newCfg)
 	if err != nil {
@@ -1791,7 +1781,7 @@ func TestReloadClientsFiltersOAuthProvidersWithoutRescan(t *testing.T) {
 		lastAuthHashes: map[string]string{"cached": "hash"},
 	}
 
-	w.reloadClients(false, []string{"match"}, false)
+	w.reloadClients(false, false)
 
 	w.clientsMutex.RLock()
 	defer w.clientsMutex.RUnlock()

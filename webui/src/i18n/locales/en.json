@@ -10,65 +10,29 @@
       "page": "Page {{page}}",
       "page_of": "Page {{page}} / {{total}}"
     },
-    "login": "Login",
-    "logout": "Logout",
-    "back": "Back",
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "leave": "Leave",
-    "stay": "Stay",
-    "save": "Save",
     "delete": "Delete",
     "edit": "Edit",
     "add": "Add",
     "update": "Update",
     "refresh": "Refresh",
     "close": "Close",
-    "success": "Success",
-    "error": "Error",
-    "info": "Info",
-    "warning": "Warning",
     "loading": "Loading...",
     "connecting": "Connecting...",
     "connected": "Connected",
     "disconnected": "Disconnected",
-    "connecting_status": "Connecting",
     "connected_status": "Connected",
-    "disconnected_status": "Disconnected",
     "yes": "Yes",
     "no": "No",
-    "not_set": "Not set",
-    "optional": "Optional",
-    "required": "Required",
-    "api_key": "Key",
-    "base_url": "Address",
-    "prefix": "Prefix",
-    "proxy_url": "Proxy",
-    "priority": "Priority",
-    "alias": "Alias",
-    "failure": "Failure",
-    "unknown_error": "Unknown error",
-    "quota_update_required": "Please update the CPA version or check for updates",
-    "quota_check_credential": "Please check the credential status",
     "copy": "Copy",
     "expand": "Expand",
     "collapse": "Collapse",
-    "status": "Status",
-    "action": "Action",
-    "custom_headers_label": "Custom Headers",
-    "custom_headers_hint": "Optional HTTP headers to send with the request. Leave blank to remove.",
-    "custom_headers_add": "Add Header",
-    "custom_headers_key_placeholder": "Header name, e.g. X-Custom-Header",
-    "custom_headers_value_placeholder": "Header value",
-    "model_name_placeholder": "Model name, e.g. claude-3-5-sonnet-20241022",
-    "model_alias_placeholder": "Model alias (optional)",
-    "invalid_provider_index": "Invalid provider index.",
     "unsaved_changes_title": "Unsaved changes",
     "unsaved_changes_message": "You have unsaved changes. Leaving now will discard them. Do you want to leave?"
   },
   "title": {
-    "login": "XRouter",
-    "abbr": "XRouter"
+    "login": "XRouter"
   },
   "splash": {
     "title": "XRouter",
@@ -116,12 +80,8 @@
     "search_placeholder": "Search pages…",
     "search_empty": "No matching pages"
   },
-  "connection": {
-    "status": "Connection Status:"
-  },
   "nav": {
     "dashboard": "Dashboard",
-    "plugins": "Extensions",
     "config_management": "Config Center",
     "logs": "Logs Viewer",
     "web_search": "Search Tools",
@@ -133,14 +93,11 @@
   "nav_groups": {
     "operate": "Operate",
     "observe": "Observe",
-    "plugin_pages": "Extensions",
     "control": "Control",
     "workspace": "Workspace"
   },
   "nav_meta": {
     "dashboard": "Operations overview",
-    "plugins": "Extension toggles, config fields and resource entries",
-    "logs": "Request tracing",
     "config_management": "Gateway configuration",
     "web_search": "Search channels, account pool, probes and access",
     "channel_status": "Request success rates and 24-hour availability",
@@ -271,14 +228,6 @@
     "failure_error": "Request failed"
   },
   "basic_settings": {
-    "debug_enable": "Enable Debug Mode",
-    "proxy_url_label": "Proxy URL:",
-    "retry_count_label": "Retry Count:",
-    "logging_to_file_enable": "Enable logging to file",
-    "request_log_title": "Request Logging",
-    "request_log_enable": "Enable request logging",
-    "request_log_warning": "Keep this off unless you need detailed troubleshooting.",
-    "ws_auth_enable": "Require auth for /ws/*",
     "routing_strategy_round_robin": "round-robin (cycle)",
     "routing_strategy_weighted_round_robin": "weighted-round-robin (weighted cycle)",
     "routing_strategy_fill_first": "fill-first (prioritize)"
@@ -309,7 +258,6 @@
     "clear_button": "Clear Logs",
     "fullscreen_button": "Full Screen",
     "exit_fullscreen_button": "Exit Full Screen",
-    "download_button": "Download Logs",
     "error_logs_modal_title": "Error Request Logs",
     "error_logs_description": "Pick an error request log file to open or download (only generated when request logging is off).",
     "error_logs_request_log_enabled": "Request logging is enabled, so this list will always be empty. Disable request logging and refresh to view error logs.",
@@ -324,8 +272,6 @@
     "error_log_empty_content": "This error log is empty",
     "error_log_copy_success": "Error log content copied",
     "error_log_download_success": "Error log downloaded successfully",
-    "request_log_download_title": "Download Request Log",
-    "request_log_download_confirm": "Download request log for ID {{id}}?",
     "request_log_download_success": "Request log downloaded successfully",
     "empty_title": "No Logs Available",
     "empty_desc": "When \"Enable logging to file\" is enabled, logs will be displayed here",
@@ -341,8 +287,6 @@
     "clear_confirm": "Are you sure you want to clear all logs? This action cannot be undone!",
     "clear_success": "Logs cleared successfully",
     "download_success": "Logs downloaded successfully",
-    "auto_refresh": "Auto Refresh",
-    "load_more_hint": "Scroll up to load more",
     "hidden_lines": "Hidden: {{count}} lines",
     "loaded_lines": "Loaded: {{count}} lines",
     "filtered_lines": "Filtered: {{count}} lines",
@@ -352,8 +296,6 @@
     "search_placeholder": "Search logs by content or keyword",
     "filter_panel_title": "Filters & display",
     "wrap_lines": "Wrap long lines",
-    "filter_panel_expand": "Expand structured filters",
-    "filter_panel_collapse": "Collapse structured filters",
     "filter_panel_active_count": "{{count}} active",
     "filter_method": "Method",
     "filter_status": "Status",
@@ -466,20 +408,6 @@
         "discoveryHint": "Requires multicast-capable physical interfaces and a non-loopback listener. Docker usually needs host networking; reachability is not guaranteed."
       },
       "additions": {
-        "oauthTitle": "OAuth provider behavior",
-        "oauthHint": "These provider settings apply only to OAuth/file-backed credentials, not API-key credentials.",
-        "claudeTitle": "Claude",
-        "codexTitle": "Codex",
-        "antigravityTitle": "Antigravity",
-        "xaiTitle": "xAI",
-        "liveRelayTitle": "Codex Live media relay",
-        "liveRelayHint": "Relay WebRTC audio and DataChannel traffic in the proxy process. Inbound UDP must be reachable. Keep ICE credentials out of screenshots and logs.",
-        "iceAdd": "Add ICE server",
-        "iceRemove": "Remove ICE server {{index}}",
-        "iceURLs": "STUN/TURN URLs",
-        "iceUsername": "TURN username",
-        "iceCredential": "TURN password",
-        "iceServer": "ICE server {{index}}",
         "routingSessionAffinitySubagents": {
           "label": "Subagent session affinity",
           "hint": "Enabled by default; only effective when session affinity is enabled. Subagents inherit their parent's credential to reuse caches. Disable to distribute subagents across the credential pool for greater concurrency."
@@ -491,98 +419,6 @@
         "transientErrorCooldownSeconds": {
           "label": "Transient error cooldown (seconds)",
           "hint": "Cooldown for upstream 408/500/502/503/504/520–526 errors. 0 uses the default 60 seconds; a negative value disables this cooldown."
-        },
-        "videoResultAuthCacheTTL": {
-          "label": "Video result credential cache TTL",
-          "hint": "How long video IDs remain bound to the credential that created them. Use a duration such as 30m or 3h; default: 3h."
-        },
-        "claudeHeaderTimezone": {
-          "label": "Fallback timezone",
-          "hint": "IANA timezone for the cloaked currentDate, e.g. Asia/Singapore, or Local for the backend host's timezone. The credential JSON's timezone takes priority."
-        },
-        "claudeModelLevelCooling": {
-          "label": "Model-level cooldown",
-          "hint": "Apply Claude quota cooldowns only to the requested model, rather than all models sharing the credential. Disabled by default."
-        },
-        "claudeDisableCloakMode": {
-          "label": "Disable request cloaking",
-          "hint": "Disable the Claude Code CLI disguise and system prompt replacement; pass through the original system prompt. Credential files can override this with cloak_mode. Default: false (automatic cloaking for non-Claude-Code clients)."
-        },
-        "claudeCodeDisableCloakingModelList": {
-          "label": "Disable model ID cloaking",
-          "hint": "Return original model IDs in Anthropic model list responses instead of cloaked IDs. Disabled by default."
-        },
-        "codexDisableCloaking": {
-          "label": "Disable request cloaking",
-          "hint": "Stop forcing official Codex User-Agent and Originator headers on HTTP/SSE and WebSocket requests. Disabled by default."
-        },
-        "codexModelLevelCooling": {
-          "label": "Model-level cooldown",
-          "hint": "Apply usage_limit_reached quota cooldowns only to the requested model, rather than all models sharing the credential. Disabled by default."
-        },
-        "codexStreamBootstrapBuffering": {
-          "label": "Buffer stream bootstrap",
-          "hint": "Hold initial empty events and heartbeats to allow credential failover on early overload or rate-limit rejections. Disabled by default. Delays response headers and may trigger client or reverse-proxy timeouts; buffering has frame and byte budgets."
-        },
-        "codexStreamBootstrapTimeout": {
-          "label": "Stream bootstrap timeout",
-          "hint": "Optional buffering time limit, e.g. 20s. Default: 0 (unlimited time; frame and byte budgets still apply). Checked as upstream frames arrive; not a hard deadline for every network stall. Headers may still wait for translated output."
-        },
-        "codexOptimizeMultiAgentV2": {
-          "label": "Optimize multi-agent v2",
-          "hint": "Optimize official Codex multi-agent requests: refresh spawn_agent model details, remove message parameter encryption, normalize agent_message content, and convert it to user messages for non-Codex protocols. Disabled by default."
-        },
-        "codexOrphanDelegationCompatibility": {
-          "label": "Orphan delegation compatibility",
-          "hint": "For X-Openai-Subagent: collab_spawn requests, convert orphan codex_app/create_thread and codex_app/send_message_to_thread outputs without a valid matching call into user messages. Disabled by default."
-        },
-        "codexResponseSteering": {
-          "label": "Response steering",
-          "hint": "Experimental full-duplex Codex Responses WebSockets. Each socket stays bound to one upstream account and model; accepted input is never replayed. Disabled by default."
-        },
-        "antigravityConnectionPoolEnabled": {
-          "label": "Enable connection pooling",
-          "hint": "Reuse upstream HTTP/1.1 connections. Default: false (short-lived connections)."
-        },
-        "antigravityConnectionPoolIdleTimeout": {
-          "label": "Idle connection timeout",
-          "hint": "How long idle connections remain in the pool. Default: 30s; capped at 210s. Zero or a negative duration switches to short-lived connections."
-        },
-        "antigravityConnectionPoolMaxIdleConnsPerHost": {
-          "label": "Maximum idle connections per host",
-          "hint": "Maximum idle connections retained per upstream host per credential. Default: 2; capped at 100. Zero uses Go's default of 2; a negative value switches to short-lived connections."
-        },
-        "xaiInjectXSearch": {
-          "label": "Inject x_search",
-          "hint": "Add xAI's native x_search tool when absent from the request, including tool_choice.allowed_tools when applicable. Disabled by default."
-        },
-        "codexLiveMediaRelayEnabled": {
-          "label": "Enable media relay",
-          "hint": "Terminate and relay Codex Live WebRTC media in this process. Requires inbound UDP reachability. Disabled by default to preserve direct media connections."
-        },
-        "codexLiveMediaRelayMaxSessions": {
-          "label": "Maximum concurrent media sessions",
-          "hint": "Blank or 0 uses the default of 32 sessions. A custom UDP range must provide at least two ports per session."
-        },
-        "codexLiveMediaRelayDisablePrivateRemoteIPs": {
-          "label": "Block private remote IP candidates",
-          "hint": "Default: false, allowing private candidates for local or trusted-network clients. Enable to reject downstream SDP candidates targeting private, loopback, link-local, or unspecified IPs and reduce internal-network exposure; local connections may fail."
-        },
-        "codexLiveMediaRelayPublicIP": {
-          "label": "Advertised public IP",
-          "hint": "Optional public IPv4 or IPv6 address to advertise when the proxy is behind 1:1 NAT. Enter an IP address, not a hostname."
-        },
-        "codexLiveMediaRelayUDPPortMin": {
-          "label": "Minimum UDP port",
-          "hint": "Set both UDP bounds to 0 for system allocation, or specify an inclusive continuous range with at least twice the effective session limit in ports."
-        },
-        "codexLiveMediaRelayUDPPortMax": {
-          "label": "Maximum UDP port",
-          "hint": "Must be at least the minimum port. Both bounds must be 0 or both nonzero; a custom range needs at least two ports per session (64 with the default 32 sessions)."
-        },
-        "codexLiveMediaRelayICEServers": {
-          "label": "ICE servers",
-          "hint": "Optional STUN/TURN servers using stun:, stuns:, turn:, or turns: URLs. TURN credentials are omitted from the JSON config API. Enter the credential as a password and keep secrets out of screenshots and logs."
         }
       },
       "search": {
@@ -896,87 +732,6 @@
       }
     }
   },
-  "plugin_management": {
-    "title": "Extension Management",
-    "description": "View discovered and registered extensions; manage toggles, config fields and resource entries.",
-    "refresh": "Refresh",
-    "load_failed": "Failed to load extensions",
-    "config_load_failed": "Failed to read extension config",
-    "config_not_found": "Unable to read extension config because the backend could not find this extension.",
-    "unsupported_backend": "The current backend does not expose the extension management API. Use a newer backend build that includes extension management endpoints, then restart the service.",
-    "global_status": "Global status",
-    "global_enabled": "Enabled",
-    "global_disabled": "Disabled",
-    "global_disabled_hint": "extensions.enabled is false, so enabled extension instances will not become effective.",
-    "plugins_dir": "Extension directory",
-    "discovered": "Discovered",
-    "effective": "Effective",
-    "search_placeholder": "Search extension ID, name, author, or resource...",
-    "search_label": "Search extensions",
-    "no_plugins": "No extensions",
-    "no_plugins_desc": "No extensions were found in the extension directory or runtime registry.",
-    "configured": "Configured",
-    "not_configured": "Not configured",
-    "registered": "Registered",
-    "not_registered": "Not registered",
-    "oauth": "OAuth",
-    "status_effective": "Effective",
-    "status_inactive": "Inactive",
-    "edit_config": "Edit config",
-    "open_repository": "Open repository",
-    "config_title": "Configure {{name}}",
-    "base_settings": "Base settings",
-    "enabled": "Enabled",
-    "enabled_hint": "Controls the enabled field for this extension instance under extensions.configs.",
-    "priority": "Priority",
-    "config_fields": "Config fields",
-    "no_config_fields": "This extension does not declare visual config fields.",
-    "select_placeholder": "Select",
-    "array_item_placeholder": "Enter array item",
-    "add_array_item": "Add array item",
-    "remove_array_item": "Remove array item",
-    "delete_plugin": "Delete",
-    "delete_confirm_title": "Delete extension",
-    "delete_confirm_message": "Delete {{name}} ({{id}})? This removes the local extension file and saved config.",
-    "delete_success": "Extension deleted",
-    "delete_failed": "Failed to delete extension",
-    "delete_restart_required": "The loaded extension cannot be removed until the backend restarts.",
-    "toggle_success": "Extension status updated",
-    "toggle_failed": "Failed to update extension status",
-    "runtime_pending": "Extension change was saved, but the runtime state is still pending. Refresh later or check backend logs.",
-    "save_success": "Extension config saved",
-    "save_failed": "Failed to save extension config",
-    "validation_failed": "Fix extension config form errors first",
-    "invalid_priority": "Enter an integer priority",
-    "invalid_number": "Enter a valid number",
-    "invalid_integer": "Enter a valid integer",
-    "invalid_json": "Enter valid JSON",
-    "expected_array": "Enter a JSON array",
-    "expected_object": "Enter a JSON object",
-    "invalid_enum": "Choose one of the declared enum values",
-    "env_platform": "Platform",
-    "env_container": "Container",
-    "env_container_yes": "Yes (in container)",
-    "env_container_no": "No (host)",
-    "env_cgo": "Extension loading",
-    "env_cgo_yes": "Enabled",
-    "env_cgo_no": "Disabled",
-    "env_platform_dir": "Platform directory",
-    "env_skipped": "Mismatched files",
-    "env_available": "Extensions available",
-    "env_no_cgo": "This binary was built without extension loading support",
-    "env_platform_mismatch": "{{count}} files in the extensions directory do not match this platform; extensions are unavailable",
-    "env_mismatch_hint": "Discovery only loads files matching the running platform from the platform directory (<extensions-dir>/<goos>/<goarch>) or the directory root; files for other platforms are silently skipped. Place platform-matched extension files (.so/.dylib/.dll) there."
-  },
-  "plugin_resource": {
-    "page_count": "{{count}} pages",
-    "load_failed": "Failed to load plugin page",
-    "unavailable": "Plugin page unavailable",
-    "not_found": "Plugin page not found",
-    "not_found_desc": "This plugin page is not declared by the current backend plugin list.",
-    "empty_src": "Plugin page URL is empty",
-    "empty_src_desc": "This plugin menu does not provide an embeddable page URL."
-  },
   "notification": {
     "trusted_proxies_restart_required": "Trusted proxy settings saved. Restart the backend to apply them.",
     "region_label": "Notifications",
@@ -984,15 +739,9 @@
     "type_info": "Information",
     "type_warning": "Warning",
     "type_error": "Error",
-    "request_log_updated": "Request logging setting updated",
-    "login_storage_cleared": "Local login data cleared",
     "data_refreshed": "Data refreshed successfully",
-    "connection_required": "Please establish connection first",
     "refresh_failed": "Refresh failed",
-    "update_failed": "Update failed",
-    "add_failed": "Add failed",
     "delete_failed": "Delete failed",
-    "upload_failed": "Upload failed",
     "download_failed": "Download failed",
     "login_failed": "Login failed",
     "commercial_mode_restart_required": "Commercial mode setting changed. Please restart the service for it to take effect",
@@ -1048,12 +797,10 @@
     "title": "Model provider accounts",
     "subtitle": "Inspect NVIDIA, Agnes and other upstream key pools; import OpenRegister CSV here.",
     "editConfig": "Edit configuration",
-    "import": "Import CSV",
     "metricProviders": "Providers",
     "metricKeys": "Total keys",
     "metricGroups": "Account groups",
     "metricModels": "Models",
-    "importNote": "Imports search-channel accounts together with native NVIDIA / Agnes keys.",
     "searchPlaceholder": "Search provider, group, key or model",
     "providerFilter": "Provider filter",
     "allProviders": "All providers",
@@ -1072,7 +819,6 @@
     "modelCount": "{{count}} models"
   },
   "usage_analytics": {
-    "log_page": "Page {{page}}",
     "title": "Usage Logs",
     "subtitle": "Local LLM token and search-tool usage, grouped by provider, model, channel, operation and plan.",
     "refresh": "Refresh",
@@ -1128,7 +874,6 @@
     "token_display_k": "K",
     "token_display_m": "M",
     "token_display_b": "B",
-    "page_size": "rows",
     "provider": "Provider",
     "model": "Model",
     "channel": "Channel",
@@ -1191,8 +936,6 @@
     "search_quota_fresh": "Fresh",
     "search_quota_stale": "Stale",
     "search_quota_failed": "Failed",
-    "status_title": "Analytics storage",
-    "status_hint": "Local database, write queue and retention health",
     "status_db": "Database",
     "status_queue": "Write queue",
     "status_dropped": "Dropped events",
@@ -1201,7 +944,6 @@
     "status_events_range": "Event range",
     "status_last_flush": "Last flush",
     "status_price_revision": "Price revision",
-    "status_dropped_warning": "{{count}} events were dropped because the write queue was full. Increase observability.usage.analytics.flush-interval or reduce analytics load.",
     "search_tab_empty": "No search channel data",
     "search_tab_empty_hint": "Configure web-search channels and accounts to see quota and usage here.",
     "search_trend_title": "Search traffic and credits",
@@ -1269,7 +1011,6 @@
     "log_filter_advanced": "Advanced filters",
     "log_columns": "Columns",
     "log_columns_hint": "Choose the columns shown in the request log table.",
-    "log_loaded": "{{count}} rows on this page",
     "log_loading": "Loading request logs…",
     "log_col_time": "Time",
     "log_col_kind": "Type",
@@ -1288,8 +1029,6 @@
     "log_detail_model": "Model mapping",
     "log_detail_tokens": "Tokens",
     "log_detail_cost_time": "Cost and timing",
-    "events_title": "Request details",
-    "events_hint": "Most recent requests first",
     "tokens_input": "Input",
     "tokens_output": "Output",
     "tokens_cache_read": "Cache read",
@@ -1301,7 +1040,6 @@
     "ttft": "TTFT",
     "time": "Time",
     "kind": "Kind",
-    "model_operation": "Model / operation",
     "no_data": "No usage data",
     "no_data_hint": "Enable observability.usage.analytics and send a few requests.",
     "disabled": "Usage analytics is disabled",
@@ -1361,47 +1099,11 @@
       "critical": "Critical",
       "idle": "No requests"
     },
-    "card": {
-      "allEndpoints": "All endpoints combined",
-      "allCredentials": "All credentials and endpoints combined",
-      "models": "Models ({{count}})",
-      "accounts": "Accounts / keys ({{count}})"
-    },
-    "metrics": {
-      "total": "All-time requests",
-      "successRate": "Success rate",
-      "success": "Success",
-      "failed": "Failed"
-    },
-    "strip": {
-      "past24h": "Past 24 hours",
-      "now": "Now"
-    },
-    "detail": {
-      "range": "Time range",
-      "total": "Total requests",
-      "successFailed": "Success / failed",
-      "noRequests": "No requests"
-    },
-    "probe": {
-      "lastChecked": "Last probe",
-      "latency": "Latency",
-      "http": "HTTP",
-      "noStatus": "No status check yet"
-    },
-    "account": {
-      "empty": "No accounts",
-      "cooldown": "Cooling down until"
-    },
     "quota": {
-      "refresh": "Refresh balance",
-      "trend": "Balance trend",
-      "resetAt": "Resets",
       "loading": "Loading balance history…",
       "empty": "No balance history",
       "chart": "Balance history trend"
     },
-    "actionSummary": "Probe finished: {{succeeded}} succeeded, {{failed}} failed",
     "empty": {
       "title": "No channel data",
       "description": "Counters start accumulating once the gateway handles requests.",
@@ -1419,7 +1121,6 @@
     "title": "Search Tools",
     "subtitle": "Manage search account pools and integration",
     "tabs": {
-      "overview": "Overview",
       "accounts": "Accounts",
       "access": "Integration"
     },
@@ -1427,7 +1128,6 @@
       "refresh": "Refresh",
       "probe": "Check",
       "probeAll": "Check all",
-      "checkStatus": "Check channels",
       "refreshQuota": "Refresh quota",
       "save": "Save",
       "remove": "Remove"
@@ -1441,12 +1141,6 @@
       "summaryTitle": "Import result",
       "summary": "Added {{added}} · Updated {{updated}} · Duplicate {{duplicate}} · Other channels {{other}} · Invalid {{invalid}}",
       "llmNote": "NVIDIA / Agnes rows are written to the native provider configuration and do not appear in the search account table."
-    },
-    "metrics": {
-      "accounts": "Accounts",
-      "available": "Available",
-      "abnormal": "Abnormal",
-      "pending": "Pending"
     },
     "accountStatus": {
       "available": "Available",
@@ -1486,21 +1180,8 @@
       "lastCheck": "Last check",
       "actions": "Actions",
       "message": "Message",
-      "accounts": "Accounts",
-      "proxy": "Proxy",
       "gateway": "Gateway path",
-      "mcp": "MCP path",
-      "time": "Time",
-      "request": "Request",
-      "attempts": "Attempts",
-      "duration": "Duration"
-    },
-    "overview": {
-      "channels": "Channels",
-      "proxy": "Probe proxy",
-      "proxyConfigured": "configured",
-      "proxyMissing": "not configured (probes never dial directly)",
-      "lastCheck": "Last checked"
+      "mcp": "MCP path"
     },
     "accounts": {
       "title": "Account pool",
@@ -1517,20 +1198,8 @@
       "cooldownUntil": "Cooling down until"
     },
     "probes": {
-      "title": "Health checks",
-      "hint": "Runs a real probe per account; without a proxy it fails explicitly instead of dialing directly.",
-      "result": "Probe result",
       "summary": "{{total}} total, {{succeeded}} ok, {{failed}} failed",
       "lastSummary": "Latest probe"
-    },
-    "status": {
-      "title": "Channel status",
-      "note": "Local proxy and account-pool observations, not the vendor's global status.",
-      "successRate": "Success rate",
-      "latency": "Latency",
-      "proxyUsed": "via proxy",
-      "noProxy": "no proxy",
-      "history": "History"
     },
     "access": {
       "title": "Integration",
@@ -1539,22 +1208,10 @@
       "noMcp": "No MCP",
       "examples": "Examples"
     },
-    "requests": {
-      "title": "Recent requests"
-    },
     "empty": {
-      "noChannels": "No search channel configured",
-      "noChannelsDesc": "Declare channels and accounts in the web-search section of config.yaml.",
       "noAccounts": "No matching account",
-      "noAccountsDesc": "Adjust the filter or add an account above.",
-      "noProbe": "No health check yet",
-      "noProbeDesc": "Run “Check all” to probe account availability.",
-      "noRequests": "No request recorded"
+      "noAccountsDesc": "Adjust the filter or add an account above."
     },
-    "channelEnabled": "Enabled",
-    "channelDisabled": "Disabled",
-    "proxyReady": "Ready",
-    "proxyMissing": "Missing",
     "quotaUnknown": "Not fetched"
   },
   "stats": {
@@ -1564,16 +1221,11 @@
   "sidebar": {
     "toggle_expand": "Expand sidebar",
     "toggle_collapse": "Collapse sidebar",
-    "expand": "Expand",
-    "collapse": "Collapse",
     "subtitle": "XRouter Console"
   },
   "status_bar": {
     "success_short": "✓",
     "failure_short": "✗",
     "no_requests": "No requests"
-  },
-  "plugin_display_names": {
-    "tokens-statistic": "Request Log"
   }
 }

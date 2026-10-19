@@ -12,32 +12,6 @@ import (
 	sdktranslator "github.com/xnuyoah/XRouter/v8/sdk/translator"
 )
 
-// TranslateRequestBody 为目标供应商格式转换请求信封。
-func TranslateRequestBody(ctx context.Context, from, to sdktranslator.Format, model string, payload []byte, stream bool) []byte {
-	body, _, _ := translateRequestForProvider(ctx, from, to, model, payload, stream, false)
-	return body
-}
-
-// TranslateRequestReturningError 上报目标无法表示的内容部分。
-func TranslateRequestReturningError(ctx context.Context, from, to sdktranslator.Format, model string, payload []byte, stream, isCompat bool) ([]byte, error) {
-	body, _, errTranslate := translateRequestForProvider(ctx, from, to, model, payload, stream, isCompat)
-	return body, errTranslate
-}
-
-// TranslateRequestWithAPIKeyModelCompatibility 转换请求，同时
-// 为已配置的 API-key 模型保留兼容性感知的处理。
-func TranslateRequestWithAPIKeyModelCompatibility(ctx context.Context, from, to sdktranslator.Format, model string, payload []byte, stream, isCompat bool) []byte {
-	body, _, _ := translateRequestForProvider(ctx, from, to, model, payload, stream, isCompat)
-	return body
-}
-
-// TranslateRequestPairReturningError 转换工作中载荷与
-// 未被改动的基线载荷，并上报工作中载荷的错误。
-func TranslateRequestPairReturningError(ctx context.Context, from, to sdktranslator.Format, model string, originalPayload, requestPayload []byte, stream, isCompat bool) ([]byte, []byte, error) {
-	original, working, _, errTranslate := TranslateRequestPairWithAPIKeyModelCompatibilityAndUpdateIntent(ctx, from, to, model, originalPayload, requestPayload, stream, isCompat)
-	return original, working, errTranslate
-}
-
 // TranslateRequestPairWithAPIKeyModelCompatibilityAndUpdateIntent 返回
 // 工作中载荷（而非基线载荷）的规整器决策，
 // 以及工作中载荷在目标无法表示某个内容部分时

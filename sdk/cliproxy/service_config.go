@@ -259,7 +259,6 @@ func (s *Service) applyManagerConfig(ctx context.Context, commit configCommit) b
 	if !s.coreManager.ApplyConfigWithCooldownStateStore(ctx, commit.cfg, store) {
 		return false
 	}
-	s.coreManager.SetOAuthModelAlias(commit.cfg.OAuthModelAlias)
 	return true
 }
 

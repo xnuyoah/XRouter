@@ -17,16 +17,6 @@ export type VisualConfigFieldPath =
   | 'trustedProxies'
   | 'discoveryServiceType'
   | 'transientErrorCooldownSeconds'
-  | 'videoResultAuthCacheTTL'
-  | 'claudeHeaderTimezone'
-  | 'codexStreamBootstrapTimeout'
-  | 'antigravityConnectionPoolIdleTimeout'
-  | 'antigravityConnectionPoolMaxIdleConnsPerHost'
-  | 'codexLiveMediaRelayMaxSessions'
-  | 'codexLiveMediaRelayPublicIP'
-  | 'codexLiveMediaRelayUDPPortMin'
-  | 'codexLiveMediaRelayUDPPortMax'
-  | 'codexLiveMediaRelayICEServers'
   | 'port'
   | 'errorLogsMaxFiles'
   | 'logsMaxTotalSizeMb'
@@ -140,29 +130,6 @@ export type VisualConfigValues = {
   routingSessionAffinitySubagents: boolean;
   saveCooldownStatus: boolean;
   transientErrorCooldownSeconds: string;
-  videoResultAuthCacheTTL: string;
-  claudeHeaderTimezone: string;
-  claudeModelLevelCooling: boolean;
-  claudeDisableCloakMode: boolean;
-  claudeCodeDisableCloakingModelList: boolean;
-  codexDisableCloaking: boolean;
-  codexModelLevelCooling: boolean;
-  codexStreamBootstrapBuffering: boolean;
-  codexStreamBootstrapTimeout: string;
-  codexOptimizeMultiAgentV2: boolean;
-  codexOrphanDelegationCompatibility: boolean;
-  codexResponseSteering: boolean;
-  antigravityConnectionPoolEnabled: boolean;
-  antigravityConnectionPoolIdleTimeout: string;
-  antigravityConnectionPoolMaxIdleConnsPerHost: string;
-  xaiInjectXSearch: boolean;
-  codexLiveMediaRelayEnabled: boolean;
-  codexLiveMediaRelayMaxSessions: string;
-  codexLiveMediaRelayDisablePrivateRemoteIPs: boolean;
-  codexLiveMediaRelayPublicIP: string;
-  codexLiveMediaRelayUDPPortMin: string;
-  codexLiveMediaRelayUDPPortMax: string;
-  codexLiveMediaRelayICEServers: CodexLiveICEServerDraft[];
   host: string;
   port: string;
   tlsEnable: boolean;
@@ -252,29 +219,6 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   routingSessionAffinitySubagents: true,
   saveCooldownStatus: false,
   transientErrorCooldownSeconds: '',
-  videoResultAuthCacheTTL: '',
-  claudeHeaderTimezone: '',
-  claudeModelLevelCooling: false,
-  claudeDisableCloakMode: false,
-  claudeCodeDisableCloakingModelList: false,
-  codexDisableCloaking: false,
-  codexModelLevelCooling: false,
-  codexStreamBootstrapBuffering: false,
-  codexStreamBootstrapTimeout: '',
-  codexOptimizeMultiAgentV2: false,
-  codexOrphanDelegationCompatibility: false,
-  codexResponseSteering: false,
-  antigravityConnectionPoolEnabled: false,
-  antigravityConnectionPoolIdleTimeout: '',
-  antigravityConnectionPoolMaxIdleConnsPerHost: '',
-  xaiInjectXSearch: false,
-  codexLiveMediaRelayEnabled: false,
-  codexLiveMediaRelayMaxSessions: '',
-  codexLiveMediaRelayDisablePrivateRemoteIPs: false,
-  codexLiveMediaRelayPublicIP: '',
-  codexLiveMediaRelayUDPPortMin: '',
-  codexLiveMediaRelayUDPPortMax: '',
-  codexLiveMediaRelayICEServers: [],
   host: '',
   port: '',
   tlsEnable: false,

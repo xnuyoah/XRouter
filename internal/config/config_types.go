@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/xnuyoah/XRouter/v8/internal/registry"
 	sdkpluginstore "github.com/xnuyoah/XRouter/v8/sdk/pluginstore"
@@ -226,53 +225,6 @@ type OAuthModelAlias struct {
 	DisplayName string `yaml:"display-name,omitempty" json:"display-name,omitempty"`
 
 	ForceMapping bool `yaml:"force-mapping,omitempty" json:"force-mapping,omitempty"`
-}
-
-// OAuthModelSetting 为 OAuth 凭据定义供应商/渠道模型设置（例如上下文窗口覆盖）。
-type OAuthModelSetting struct {
-	Name  string `yaml:"name" json:"name"`
-	Alias string `yaml:"alias,omitempty" json:"alias,omitempty"`
-
-	// MaxContextLength 覆盖向 Codex 客户端通告的上下文窗口。
-	MaxContextLength int `yaml:"max-context-length,omitempty" json:"max-context-length,omitempty"`
-}
-
-// GetMaxContextLength 返回配置的最大上下文长度覆盖值。
-func (s OAuthModelSetting) GetMaxContextLength() int { return s.MaxContextLength }
-
-// ResolveOAuthModelSetting 为给定模型查找最佳匹配的 OAuthModelSetting。
-// 模型 ID 上精确的 Alias 匹配优先于一般的 Name 匹配。
-// 在相同的匹配精确度内，切片中靠后的条目会覆盖靠前的条目。
-func ResolveOAuthModelSetting(settings []OAuthModelSetting, modelID, metadataModelID, modelName string) *OAuthModelSetting {
-	if len(settings) == 0 {
-		return nil
-	}
-	id := strings.ToLower(strings.TrimSpace(modelID))
-	metaID := strings.ToLower(strings.TrimSpace(metadataModelID))
-	name := strings.ToLower(strings.TrimSpace(modelName))
-
-	var aliasMatch *OAuthModelSetting
-	var nameMatch *OAuthModelSetting
-
-	for i := range settings {
-		entry := &settings[i]
-		entryName := strings.ToLower(strings.TrimSpace(entry.Name))
-		if entryName == "" {
-			continue
-		}
-		entryAlias := strings.ToLower(strings.TrimSpace(entry.Alias))
-
-		if entryAlias != "" && id != "" && id == entryAlias {
-			aliasMatch = entry
-		} else if (entryAlias == "" || entryAlias == id) && (id == entryName || (metaID != "" && metaID == entryName) || (name != "" && name == entryName)) {
-			nameMatch = entry
-		}
-	}
-
-	if aliasMatch != nil {
-		return aliasMatch
-	}
-	return nameMatch
 }
 
 // PayloadConfig 定义应用于供应商载荷的默认与覆盖参数规则。

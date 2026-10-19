@@ -33,12 +33,3 @@ export function buildHeaderObject(
   }, {});
 }
 
-export function hasHeader(
-  headers: Record<string, unknown> | null | undefined,
-  name: string
-): boolean {
-  if (!headers) return false;
-  const target = name.toLowerCase();
-  return Object.keys(headers).some((key) => key.toLowerCase() === target);
-}
-

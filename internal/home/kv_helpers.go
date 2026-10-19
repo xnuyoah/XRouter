@@ -96,24 +96,6 @@ func KVExpireRequired(ctx context.Context, key string, ttl time.Duration) (bool,
 	return true, errExpire
 }
 
-func KVGetJSONBestEffort(ctx context.Context, key string, out any) (bool, bool) {
-	homeMode, found, errGet := KVGetJSONRequired(ctx, key, out)
-	if errGet != nil {
-		log.Errorf("home kv best-effort get failed prefix=%s: %v", kvLogPrefix(key), errGet)
-		return homeMode, false
-	}
-	return homeMode, found
-}
-
-func KVSetJSONBestEffort(ctx context.Context, key string, value any, ttl time.Duration) bool {
-	raw, errMarshal := json.Marshal(value)
-	if errMarshal != nil {
-		log.Errorf("home kv best-effort set failed prefix=%s: %v", kvLogPrefix(key), errMarshal)
-		return false
-	}
-	return KVSetBytesBestEffort(ctx, key, raw, ttl)
-}
-
 func KVSetBytesBestEffort(ctx context.Context, key string, value []byte, ttl time.Duration) bool {
 	homeMode, errSet := KVSetBytesRequired(ctx, key, value, ttl)
 	if !homeMode {
@@ -121,42 +103,6 @@ func KVSetBytesBestEffort(ctx context.Context, key string, value []byte, ttl tim
 	}
 	if errSet != nil {
 		log.Errorf("home kv best-effort set failed prefix=%s: %v", kvLogPrefix(key), errSet)
-		return false
-	}
-	return true
-}
-
-func KVSetNXBestEffort(ctx context.Context, key string, value []byte, ttl time.Duration) bool {
-	homeMode, written, errSet := KVSetNXRequired(ctx, key, value, ttl)
-	if !homeMode {
-		return false
-	}
-	if errSet != nil {
-		log.Errorf("home kv best-effort setnx failed prefix=%s: %v", kvLogPrefix(key), errSet)
-		return false
-	}
-	return written
-}
-
-func KVDelBestEffort(ctx context.Context, keys ...string) bool {
-	homeMode, _, errDel := KVDelRequired(ctx, keys...)
-	if !homeMode {
-		return false
-	}
-	if errDel != nil {
-		log.Errorf("home kv best-effort del failed prefix=%s: %v", kvLogPrefix(firstKVKey(keys)), errDel)
-		return false
-	}
-	return true
-}
-
-func KVExpireBestEffort(ctx context.Context, key string, ttl time.Duration) bool {
-	homeMode, errExpire := KVExpireRequired(ctx, key, ttl)
-	if !homeMode {
-		return false
-	}
-	if errExpire != nil {
-		log.Errorf("home kv best-effort expire failed prefix=%s: %v", kvLogPrefix(key), errExpire)
 		return false
 	}
 	return true

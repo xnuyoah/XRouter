@@ -24,9 +24,14 @@ The SDK service exposes a watcher integration that surfaces granular auth update
 
 ## Usage Checklist
 
-1. Instantiate the SDK service (builder or manual construction).
-2. Call `ensureAuthUpdateQueue` before starting the watcher to allocate the shared channel.
-3. When the `WatcherWrapper` is created, call `SetAuthUpdateQueue` with the service queue, then start the watcher.
-4. Provide a reload callback that handles configuration updates; auth deltas will arrive via the queue and are applied by the service automatically through `handleAuthUpdate`.
+1. Instantiate the SDK service (builder or manual construction). The service allocates
+   its auth update queue and consumer goroutine during startup (`ensureAuthUpdateQueue`,
+   an internal step, runs as part of `Run`).
+2. Only when you supply your own watcher integration: create the `WatcherWrapper`,
+   call its exported `SetAuthUpdateQueue` with your queue, then start the watcher.
+3. Provide a reload callback that handles configuration updates; auth deltas arrive
+   via the queue and are applied by the service automatically.
+
+Embedders normally need none of this: the service wires the default watcher itself.
 
 Following this flow keeps auth changes responsive while avoiding full reloads for every edit.

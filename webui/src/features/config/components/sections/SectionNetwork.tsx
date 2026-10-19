@@ -183,16 +183,6 @@ export function SectionNetwork({
           disabled={disabled}
           error={getValidationMessage(t, validationErrors?.transientErrorCooldownSeconds)}
         />
-        <TextSetting
-          fieldId="videoResultAuthCacheTTL"
-          size="sm"
-          label={t('config_management.visual.additions.videoResultAuthCacheTTL.label')}
-          description={t('config_management.visual.additions.videoResultAuthCacheTTL.hint')}
-          value={values.videoResultAuthCacheTTL}
-          onChange={(videoResultAuthCacheTTL) => onChange({ videoResultAuthCacheTTL })}
-          disabled={disabled}
-          error={getValidationMessage(t, validationErrors?.videoResultAuthCacheTTL)}
-        />
         <ToggleSetting
           fieldId="forceModelPrefix"
           label={t('config_management.visual.sections.network.force_model_prefix')}

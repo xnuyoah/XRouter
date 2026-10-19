@@ -64,7 +64,7 @@ func (s *Service) registerModelsForAuthWithConfigAndCache(ctx context.Context, c
 	if compatDetected {
 		provider = "openai-compatibility"
 	}
-	excluded := oauthExcludedModelsForConfig(cfg, provider, authKind)
+	var excluded []string
 	// 合成器会把按账号的排除项和全局排除项预合并进 "excluded_models" 属性。
 	// 如果该属性存在，它就代表完整的排除列表并覆盖全局配置。
 	if a.Attributes != nil {
@@ -208,7 +208,6 @@ func (s *Service) registerModelsForAuthWithConfigAndCache(ctx context.Context, c
 	}
 	models = s.appendPluginModels(key, models)
 	if len(models) > 0 {
-		models = applyOAuthSettingsForAuth(cfg, provider, authKind, models)
 		s.registerResolvedModelsForAuthFenced(a, fence, key, applyModelPrefixes(models, a.Prefix, cfg != nil && cfg.ForceModelPrefix))
 		return
 	}
@@ -392,20 +391,45 @@ func resolveConfigNativeAPIKey(auth *coreauth.Auth, entries []config.NativeAPIKe
 	return nil
 }
 
-func (s *Service) oauthExcludedModels(provider, authKind string) []string {
-	return oauthExcludedModelsForConfig(s.currentConfig(), provider, authKind)
+func (s *Service) reconcileRegisteredModelStates(ctx context.Context, auth *coreauth.Auth) {
+	if auth == nil || s.coreManager == nil {
+		return
+	}
+	s.coreManager.ReconcileRegistryModelStates(ctx, auth.ID)
 }
 
-func oauthExcludedModelsForConfig(cfg *config.Config, provider, authKind string) []string {
-	if cfg == nil {
+func buildOpenAICompatibilityConfigModels(compat *config.OpenAICompatibility) []*ModelInfo {
+	if compat == nil || len(compat.Models) == 0 {
 		return nil
 	}
-	authKindKey := strings.ToLower(strings.TrimSpace(authKind))
-	providerKey := strings.ToLower(strings.TrimSpace(provider))
-	if authKindKey == "apikey" {
-		return nil
+	now := time.Now().Unix()
+	models := make([]*ModelInfo, 0, len(compat.Models))
+	for i := range compat.Models {
+		model := compat.Models[i]
+		modelType := "openai-compatibility"
+		if model.Image {
+			modelType = registry.OpenAIImageModelType
+		}
+		info := buildConfiguredModelInfo(model, compat.Name, modelType, now, strings.TrimSpace(model.Alias), false)
+		if info == nil {
+			continue
+		}
+		thinkingSupport := model.Thinking
+		if thinkingSupport == nil && !model.Image {
+			thinkingSupport = &registry.ThinkingSupport{Levels: []string{"low", "medium", "high"}}
+		}
+		if model.Thinking != nil {
+			info.ExplicitThinking = true
+		}
+		if len(model.InputModalities) > 0 {
+			info.ExplicitInputModalities = true
+		}
+		info.Thinking = modelconfig.NormalizeThinkingSupport(thinkingSupport)
+		info.SupportedInputModalities = normalizeCompatConfigModalities(model.InputModalities)
+		info.SupportedOutputModalities = normalizeCompatConfigModalities(model.OutputModalities)
+		models = append(models, info)
 	}
-	return cfg.OAuthExcludedModels[providerKey]
+	return models
 }
 
 func applyExcludedModels(models []*ModelInfo, excluded []string) []*ModelInfo {
@@ -442,20 +466,20 @@ func applyExcludedModels(models []*ModelInfo, excluded []string) []*ModelInfo {
 	}
 	return filtered
 }
-
-func cloneModelInfoForCatalogRoute(model *ModelInfo) ModelInfo {
-	clone := *model
-	if model.NativeCapabilities != nil {
-		capabilities := *model.NativeCapabilities
-		if model.NativeCapabilities.WebSearch != nil {
-			webSearch := *model.NativeCapabilities.WebSearch
-			capabilities.WebSearch = &webSearch
-		}
-		clone.NativeCapabilities = &capabilities
+func applyOAuthModelAliasForAuth(cfg *config.Config, provider, authKind string, attributes map[string]string, models []*ModelInfo) []*ModelInfo {
+	if len(models) == 0 {
+		return models
 	}
-	return clone
+	channel := coreauth.OAuthModelAliasChannel(provider, authKind)
+	if channel == "" {
+		return models
+	}
+	aliases := oauthModelAliasesForAuth(cfg, channel, attributes)
+	if len(aliases) == 0 {
+		return models
+	}
+	return applyOAuthModelAliasEntries(aliases, models)
 }
-
 func applyModelPrefixes(models []*ModelInfo, prefix string, forceModelPrefix bool) []*ModelInfo {
 	trimmedPrefix := strings.TrimSpace(prefix)
 	if trimmedPrefix == "" || len(models) == 0 {
@@ -502,64 +526,12 @@ func applyModelPrefixes(models []*ModelInfo, prefix string, forceModelPrefix boo
 	}
 	return out
 }
-
-// matchWildcard 执行大小写不敏感的通配符匹配，其中 '*' 匹配任意子串。
-func matchWildcard(pattern, value string) bool {
-	if pattern == "" {
-		return false
+func buildNativeAPIConfigModels(entry *config.NativeAPIKey, provider string) []*ModelInfo {
+	models := config.NativeAPIEffectiveModels(entry, provider)
+	if len(models) == 0 {
+		return nil
 	}
-
-	// 精确匹配的快速路径（不存在通配符）。
-	if !strings.Contains(pattern, "*") {
-		return pattern == value
-	}
-
-	parts := strings.Split(pattern, "*")
-	// 处理前缀。
-	if prefix := parts[0]; prefix != "" {
-		if !strings.HasPrefix(value, prefix) {
-			return false
-		}
-		value = value[len(prefix):]
-	}
-
-	// 处理后缀。
-	if suffix := parts[len(parts)-1]; suffix != "" {
-		if !strings.HasSuffix(value, suffix) {
-			return false
-		}
-		value = value[:len(value)-len(suffix)]
-	}
-
-	// 按顺序处理中间片段。
-	for i := 1; i < len(parts)-1; i++ {
-		segment := parts[i]
-		if segment == "" {
-			continue
-		}
-		idx := strings.Index(value, segment)
-		if idx < 0 {
-			return false
-		}
-		value = value[idx+len(segment):]
-	}
-
-	return true
-}
-
-type modelEntry interface {
-	GetName() string
-	GetAlias() string
-	GetDisplayName() string
-	GetThinking() *registry.ThinkingSupport
-}
-
-type modelMaxContextLengthEntry interface {
-	GetMaxContextLength() int
-}
-
-type modelCompatEntry interface {
-	GetIsCompat() bool
+	return buildConfigModels(models, provider, provider, provider)
 }
 
 func buildConfiguredModelInfo(model modelEntry, ownedBy, modelType string, created int64, fallbackDisplayName string, userDefined bool) *ModelInfo {
@@ -604,40 +576,6 @@ func buildConfiguredModelInfo(model modelEntry, ownedBy, modelType string, creat
 	return info
 }
 
-func buildOpenAICompatibilityConfigModels(compat *config.OpenAICompatibility) []*ModelInfo {
-	if compat == nil || len(compat.Models) == 0 {
-		return nil
-	}
-	now := time.Now().Unix()
-	models := make([]*ModelInfo, 0, len(compat.Models))
-	for i := range compat.Models {
-		model := compat.Models[i]
-		modelType := "openai-compatibility"
-		if model.Image {
-			modelType = registry.OpenAIImageModelType
-		}
-		info := buildConfiguredModelInfo(model, compat.Name, modelType, now, strings.TrimSpace(model.Alias), false)
-		if info == nil {
-			continue
-		}
-		thinkingSupport := model.Thinking
-		if thinkingSupport == nil && !model.Image {
-			thinkingSupport = &registry.ThinkingSupport{Levels: []string{"low", "medium", "high"}}
-		}
-		if model.Thinking != nil {
-			info.ExplicitThinking = true
-		}
-		if len(model.InputModalities) > 0 {
-			info.ExplicitInputModalities = true
-		}
-		info.Thinking = modelconfig.NormalizeThinkingSupport(thinkingSupport)
-		info.SupportedInputModalities = normalizeCompatConfigModalities(model.InputModalities)
-		info.SupportedOutputModalities = normalizeCompatConfigModalities(model.OutputModalities)
-		models = append(models, info)
-	}
-	return models
-}
-
 func normalizeCompatConfigModalities(raw []string) []string {
 	if len(raw) == 0 {
 		return nil
@@ -661,121 +599,53 @@ func normalizeCompatConfigModalities(raw []string) []string {
 	return out
 }
 
-func buildConfigModels[T modelEntry](models []T, ownedBy, modelType, metadataChannel string) []*ModelInfo {
-	if len(models) == 0 {
-		return nil
+func matchWildcard(pattern, value string) bool {
+	if pattern == "" {
+		return false
 	}
-	now := time.Now().Unix()
-	out := make([]*ModelInfo, 0, len(models))
-	seen := make(map[string]struct{}, len(models))
-	for i := range models {
-		model := models[i]
-		name := strings.TrimSpace(model.GetName())
-		info := buildConfiguredModelInfo(model, ownedBy, modelType, now, name, true)
-		if info == nil {
+
+	// 精确匹配的快速路径（不存在通配符）。
+	if !strings.Contains(pattern, "*") {
+		return pattern == value
+	}
+
+	parts := strings.Split(pattern, "*")
+	// 处理前缀。
+	if prefix := parts[0]; prefix != "" {
+		if !strings.HasPrefix(value, prefix) {
+			return false
+		}
+		value = value[len(prefix):]
+	}
+
+	// 处理后缀。
+	if suffix := parts[len(parts)-1]; suffix != "" {
+		if !strings.HasSuffix(value, suffix) {
+			return false
+		}
+		value = value[:len(value)-len(suffix)]
+	}
+
+	// 按顺序处理中间片段。
+	for i := 1; i < len(parts)-1; i++ {
+		segment := parts[i]
+		if segment == "" {
 			continue
 		}
-		alias := info.ID
-		key := strings.ToLower(alias)
-		if _, exists := seen[key]; exists {
-			continue
+		idx := strings.Index(value, segment)
+		if idx < 0 {
+			return false
 		}
-		seen[key] = struct{}{}
-		if model.GetThinking() != nil {
-			info.ExplicitThinking = true
-		}
-		if resolved := modelconfig.ResolveModelInfo(name, modelType, model.GetThinking()); resolved.Thinking != nil {
-			info.Thinking = resolved.Thinking
-		}
-		out = append(out, info)
+		value = value[idx+len(segment):]
 	}
-	return out
-}
 
-func buildNativeAPIConfigModels(entry *config.NativeAPIKey, provider string) []*ModelInfo {
-	models := config.NativeAPIEffectiveModels(entry, provider)
-	if len(models) == 0 {
-		return nil
-	}
-	return buildConfigModels(models, provider, provider, provider)
-}
-
-func rewriteModelInfoName(name, oldID, newID string) string {
-	trimmed := strings.TrimSpace(name)
-	if trimmed == "" {
-		return name
-	}
-	oldID = strings.TrimSpace(oldID)
-	newID = strings.TrimSpace(newID)
-	if oldID == "" || newID == "" {
-		return name
-	}
-	if strings.EqualFold(oldID, newID) {
-		return name
-	}
-	if strings.EqualFold(trimmed, oldID) {
-		return newID
-	}
-	if strings.HasSuffix(trimmed, "/"+oldID) {
-		prefix := strings.TrimSuffix(trimmed, oldID)
-		return prefix + newID
-	}
-	if trimmed == "models/"+oldID {
-		return "models/" + newID
-	}
-	return name
-}
-
-func applyOAuthModelAlias(cfg *config.Config, provider, authKind string, models []*ModelInfo) []*ModelInfo {
-	return applyOAuthModelAliasForAuth(cfg, provider, authKind, nil, models)
-}
-
-func applyOAuthModelAliasForAuth(cfg *config.Config, provider, authKind string, attributes map[string]string, models []*ModelInfo) []*ModelInfo {
-	if len(models) == 0 {
-		return models
-	}
-	channel := coreauth.OAuthModelAliasChannel(provider, authKind)
-	if channel == "" {
-		return models
-	}
-	aliases := oauthModelAliasesForAuth(cfg, channel, attributes)
-	if len(aliases) == 0 {
-		return models
-	}
-	return applyOAuthModelAliasEntries(aliases, models)
+	return true
 }
 
 func oauthModelAliasesForAuth(cfg *config.Config, channel string, attributes map[string]string) []config.OAuthModelAlias {
-	perAuthAliases := coreauth.OAuthModelAliasesFromAttributes(attributes)
-	if cfg == nil || len(cfg.OAuthModelAlias) == 0 {
-		return perAuthAliases
-	}
-	globalAliases := cfg.OAuthModelAlias[channel]
-	if len(perAuthAliases) == 0 {
-		return globalAliases
-	}
-	if len(globalAliases) == 0 {
-		return perAuthAliases
-	}
-	out := make([]config.OAuthModelAlias, 0, len(perAuthAliases)+len(globalAliases))
-	seenAlias := make(map[string]struct{}, len(perAuthAliases)+len(globalAliases))
-	add := func(aliases []config.OAuthModelAlias) {
-		for _, entry := range aliases {
-			alias := strings.TrimSpace(entry.Alias)
-			if alias == "" {
-				continue
-			}
-			key := strings.ToLower(alias)
-			if _, exists := seenAlias[key]; exists {
-				continue
-			}
-			seenAlias[key] = struct{}{}
-			out = append(out, entry)
-		}
-	}
-	add(perAuthAliases)
-	add(globalAliases)
-	return out
+	_ = cfg
+	_ = channel
+	return coreauth.OAuthModelAliasesFromAttributes(attributes)
 }
 
 func applyOAuthModelAliasEntries(aliases []config.OAuthModelAlias, models []*ModelInfo) []*ModelInfo {
@@ -885,59 +755,87 @@ func applyOAuthModelAliasEntries(aliases []config.OAuthModelAlias, models []*Mod
 	return out
 }
 
-func applyOAuthSettings(cfg *config.Config, provider, authKind string, models []*ModelInfo) []*ModelInfo {
-	return applyOAuthSettingsForAuth(cfg, provider, authKind, models)
+func cloneModelInfoForCatalogRoute(model *ModelInfo) ModelInfo {
+	clone := *model
+	if model.NativeCapabilities != nil {
+		capabilities := *model.NativeCapabilities
+		if model.NativeCapabilities.WebSearch != nil {
+			webSearch := *model.NativeCapabilities.WebSearch
+			capabilities.WebSearch = &webSearch
+		}
+		clone.NativeCapabilities = &capabilities
+	}
+	return clone
 }
 
-func applyOAuthSettingsForAuth(cfg *config.Config, provider, authKind string, models []*ModelInfo) []*ModelInfo {
+func buildConfigModels[T modelEntry](models []T, ownedBy, modelType, metadataChannel string) []*ModelInfo {
 	if len(models) == 0 {
-		return models
-	}
-	channel := coreauth.OAuthModelAliasChannel(provider, authKind)
-	if channel == "" {
-		return models
-	}
-	settings := oauthSettingsForAuth(cfg, channel)
-	if len(settings) == 0 {
-		return models
-	}
-	return applyOAuthSettingEntries(settings, models)
-}
-
-func oauthSettingsForAuth(cfg *config.Config, channel string) []config.OAuthModelSetting {
-	if cfg == nil || len(cfg.OAuthSettings) == 0 {
 		return nil
 	}
-	return cfg.OAuthSettings[channel]
-}
-
-func applyOAuthSettingEntries(settings []config.OAuthModelSetting, models []*ModelInfo) []*ModelInfo {
-	if len(settings) == 0 || len(models) == 0 {
-		return models
-	}
+	now := time.Now().Unix()
 	out := make([]*ModelInfo, 0, len(models))
-	for _, model := range models {
-		if model == nil {
+	seen := make(map[string]struct{}, len(models))
+	for i := range models {
+		model := models[i]
+		name := strings.TrimSpace(model.GetName())
+		info := buildConfiguredModelInfo(model, ownedBy, modelType, now, name, true)
+		if info == nil {
 			continue
 		}
-		setting := config.ResolveOAuthModelSetting(settings, model.ID, model.MetadataModelID, model.Name)
-		if setting != nil && setting.MaxContextLength > 0 {
-			clone := *model
-			clone.ContextLength = setting.MaxContextLength
-			clone.MaxContextLength = setting.MaxContextLength
-			out = append(out, &clone)
-		} else {
-			out = append(out, model)
+		alias := info.ID
+		key := strings.ToLower(alias)
+		if _, exists := seen[key]; exists {
+			continue
 		}
+		seen[key] = struct{}{}
+		if model.GetThinking() != nil {
+			info.ExplicitThinking = true
+		}
+		if resolved := modelconfig.ResolveModelInfo(name, modelType, model.GetThinking()); resolved.Thinking != nil {
+			info.Thinking = resolved.Thinking
+		}
+		out = append(out, info)
 	}
 	return out
 }
 
-// reconcileRegisteredModelStates 在模型注册之后重新发布
-// 该 auth 的注册表模型状态，使路由能看到刚注册的目录。
-func (s *Service) reconcileRegisteredModelStates(ctx context.Context, auth *coreauth.Auth) {
-	if auth == nil || s.coreManager == nil {
-		return
+type modelEntry interface {
+	GetName() string
+	GetAlias() string
+	GetDisplayName() string
+	GetThinking() *registry.ThinkingSupport
+}
+
+type modelMaxContextLengthEntry interface {
+	GetMaxContextLength() int
+}
+
+type modelCompatEntry interface {
+	GetIsCompat() bool
+}
+
+func rewriteModelInfoName(name, oldID, newID string) string {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return name
 	}
-	s.coreManager.ReconcileRegistryModelStates(ctx, auth.ID)
+	oldID = strings.TrimSpace(oldID)
+	newID = strings.TrimSpace(newID)
+	if oldID == "" || newID == "" {
+		return name
+	}
+	if strings.EqualFold(oldID, newID) {
+		return name
+	}
+	if strings.EqualFold(trimmed, oldID) {
+		return newID
+	}
+	if strings.HasSuffix(trimmed, "/"+oldID) {
+		prefix := strings.TrimSuffix(trimmed, oldID)
+		return prefix + newID
+	}
+	if trimmed == "models/"+oldID {
+		return "models/" + newID
+	}
+	return name
 }

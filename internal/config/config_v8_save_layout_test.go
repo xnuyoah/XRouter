@@ -68,7 +68,7 @@ func TestV0SaveUpgradesHistoricalV8Layout(t *testing.T) {
 			if yamlPath(root, "observability.logs.debug") == nil || yamlPath(root, "server.port").Value != "8318" {
 				t.Fatal("v0 save did not restore canonical fields and updated port")
 			}
-			if !cfg.ForAPIKey().Debug || !cfg.Home.Enabled {
+			if !cfg.Debug || !cfg.Home.Enabled {
 				t.Fatal("v0 save changed shared scope or runtime-only state")
 			}
 			if !strings.Contains(string(data), "# Preserve settings") {

@@ -326,16 +326,6 @@ func (t *responsesWebsocketToolCacheTurn) commit() {
 	}
 }
 
-func repairResponsesWebsocketToolCalls(sessionKey string, payload []byte) []byte {
-	return repairResponsesWebsocketToolCallsWithCaches(defaultWebsocketToolOutputCache, defaultWebsocketToolCallCache, sessionKey, payload)
-}
-
-func repairResponsesWebsocketToolCallsWithoutRecording(sessionKey string, payload []byte) []byte {
-	defaultWebsocketToolCacheTransactionMu.RLock()
-	defer defaultWebsocketToolCacheTransactionMu.RUnlock()
-	return repairResponsesWebsocketToolCallsWithCachesMode(defaultWebsocketToolOutputCache, defaultWebsocketToolCallCache, sessionKey, payload, false, nil)
-}
-
 func prepareResponsesWebsocketFallbackTurn(sessionKey string, payload []byte) ([]byte, *responsesWebsocketToolCacheTurn) {
 	turn := newResponsesWebsocketToolCacheTurn(sessionKey)
 	defaultWebsocketToolCacheTransactionMu.RLock()
@@ -349,10 +339,6 @@ func prepareResponsesWebsocketFallbackTurn(sessionKey string, payload []byte) ([
 		turn,
 	)
 	return payload, turn
-}
-
-func repairResponsesWebsocketToolCallsWithCache(cache *websocketToolOutputCache, sessionKey string, payload []byte) []byte {
-	return repairResponsesWebsocketToolCallsWithCaches(cache, nil, sessionKey, payload)
 }
 
 func repairResponsesWebsocketToolCallsWithCaches(outputCache, callCache *websocketToolOutputCache, sessionKey string, payload []byte) []byte {

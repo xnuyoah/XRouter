@@ -59,170 +59,6 @@ export const CONFIG_FIELD_SEARCH_INDEX: ConfigFieldSearchEntry[] = [
     yamlKeys: ['routing', 'cooldown', 'transient-error-cooldown-seconds'],
   },
   {
-    fieldId: 'videoResultAuthCacheTTL',
-    sectionId: 'network',
-    labelKey: L('additions.videoResultAuthCacheTTL.label'),
-    hintKey: L('additions.videoResultAuthCacheTTL.hint'),
-    yamlKeys: ['multimedia', 'video-result-auth-cache-ttl'],
-  },
-  {
-    fieldId: 'claudeHeaderTimezone',
-    sectionId: 'advanced',
-    labelKey: L('additions.claudeHeaderTimezone.label'),
-    hintKey: L('additions.claudeHeaderTimezone.hint'),
-    yamlKeys: ['upstream', 'claude', 'header-defaults', 'timezone'],
-  },
-  {
-    fieldId: 'claudeModelLevelCooling',
-    sectionId: 'advanced',
-    labelKey: L('additions.claudeModelLevelCooling.label'),
-    hintKey: L('additions.claudeModelLevelCooling.hint'),
-    yamlKeys: ['upstream', 'claude', 'model-level-cooling'],
-  },
-  {
-    fieldId: 'claudeDisableCloakMode',
-    sectionId: 'advanced',
-    labelKey: L('additions.claudeDisableCloakMode.label'),
-    hintKey: L('additions.claudeDisableCloakMode.hint'),
-    yamlKeys: ['upstream', 'claude', 'disable-claude-cloak-mode'],
-  },
-  {
-    fieldId: 'claudeCodeDisableCloakingModelList',
-    sectionId: 'advanced',
-    labelKey: L('additions.claudeCodeDisableCloakingModelList.label'),
-    hintKey: L('additions.claudeCodeDisableCloakingModelList.hint'),
-    yamlKeys: ['upstream', 'claude', 'disable-cloaking-model-list'],
-  },
-  {
-    fieldId: 'codexDisableCloaking',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexDisableCloaking.label'),
-    hintKey: L('additions.codexDisableCloaking.hint'),
-    yamlKeys: ['upstream', 'codex', 'disable-codex-cloaking'],
-  },
-  {
-    fieldId: 'codexModelLevelCooling',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexModelLevelCooling.label'),
-    hintKey: L('additions.codexModelLevelCooling.hint'),
-    yamlKeys: ['upstream', 'codex', 'model-level-cooling'],
-  },
-  {
-    fieldId: 'codexStreamBootstrapBuffering',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexStreamBootstrapBuffering.label'),
-    hintKey: L('additions.codexStreamBootstrapBuffering.hint'),
-    yamlKeys: ['upstream', 'codex', 'stream-bootstrap-buffering'],
-  },
-  {
-    fieldId: 'codexStreamBootstrapTimeout',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexStreamBootstrapTimeout.label'),
-    hintKey: L('additions.codexStreamBootstrapTimeout.hint'),
-    yamlKeys: ['upstream', 'codex', 'stream-bootstrap-timeout'],
-  },
-  {
-    fieldId: 'codexOptimizeMultiAgentV2',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexOptimizeMultiAgentV2.label'),
-    hintKey: L('additions.codexOptimizeMultiAgentV2.hint'),
-    yamlKeys: ['client', 'codex', 'optimize-multi-agent-v2'],
-  },
-  {
-    fieldId: 'codexOrphanDelegationCompatibility',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexOrphanDelegationCompatibility.label'),
-    hintKey: L('additions.codexOrphanDelegationCompatibility.hint'),
-    yamlKeys: ['upstream', 'codex', 'orphan-delegation-compatibility'],
-  },
-  {
-    fieldId: 'codexResponseSteering',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexResponseSteering.label'),
-    hintKey: L('additions.codexResponseSteering.hint'),
-    yamlKeys: ['upstream', 'codex', 'response-steering'],
-  },
-  {
-    fieldId: 'antigravityConnectionPoolEnabled',
-    sectionId: 'advanced',
-    labelKey: L('additions.antigravityConnectionPoolEnabled.label'),
-    hintKey: L('additions.antigravityConnectionPoolEnabled.hint'),
-    yamlKeys: ['oauth', 'providers', 'antigravity', 'connection-pool', 'enabled'],
-  },
-  {
-    fieldId: 'antigravityConnectionPoolIdleTimeout',
-    sectionId: 'advanced',
-    labelKey: L('additions.antigravityConnectionPoolIdleTimeout.label'),
-    hintKey: L('additions.antigravityConnectionPoolIdleTimeout.hint'),
-    yamlKeys: ['oauth', 'providers', 'antigravity', 'connection-pool', 'idle-conn-timeout'],
-  },
-  {
-    fieldId: 'antigravityConnectionPoolMaxIdleConnsPerHost',
-    sectionId: 'advanced',
-    labelKey: L('additions.antigravityConnectionPoolMaxIdleConnsPerHost.label'),
-    hintKey: L('additions.antigravityConnectionPoolMaxIdleConnsPerHost.hint'),
-    yamlKeys: ['oauth', 'providers', 'antigravity', 'connection-pool', 'max-idle-conns-per-host'],
-  },
-  {
-    fieldId: 'xaiInjectXSearch',
-    sectionId: 'advanced',
-    labelKey: L('additions.xaiInjectXSearch.label'),
-    hintKey: L('additions.xaiInjectXSearch.hint'),
-    yamlKeys: ['upstream', 'xai', 'inject-x-search'],
-  },
-  {
-    fieldId: 'codexLiveMediaRelayEnabled',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexLiveMediaRelayEnabled.label'),
-    hintKey: L('additions.codexLiveMediaRelayEnabled.hint'),
-    yamlKeys: ['oauth', 'providers', 'codex', 'live-media-relay', 'enabled'],
-  },
-  {
-    fieldId: 'codexLiveMediaRelayMaxSessions',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexLiveMediaRelayMaxSessions.label'),
-    hintKey: L('additions.codexLiveMediaRelayMaxSessions.hint'),
-    yamlKeys: ['oauth', 'providers', 'codex', 'live-media-relay', 'max-sessions'],
-  },
-  {
-    fieldId: 'codexLiveMediaRelayDisablePrivateRemoteIPs',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexLiveMediaRelayDisablePrivateRemoteIPs.label'),
-    hintKey: L('additions.codexLiveMediaRelayDisablePrivateRemoteIPs.hint'),
-    yamlKeys: ['oauth', 'providers', 'codex', 'live-media-relay', 'disable-private-remote-ips'],
-  },
-  {
-    fieldId: 'codexLiveMediaRelayPublicIP',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexLiveMediaRelayPublicIP.label'),
-    hintKey: L('additions.codexLiveMediaRelayPublicIP.hint'),
-    yamlKeys: ['oauth', 'providers', 'codex', 'live-media-relay', 'public-ip'],
-  },
-  {
-    fieldId: 'codexLiveMediaRelayUDPPortMin',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexLiveMediaRelayUDPPortMin.label'),
-    hintKey: L('additions.codexLiveMediaRelayUDPPortMin.hint'),
-    yamlKeys: ['oauth', 'providers', 'codex', 'live-media-relay', 'udp-port-min'],
-  },
-  {
-    fieldId: 'codexLiveMediaRelayUDPPortMax',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexLiveMediaRelayUDPPortMax.label'),
-    hintKey: L('additions.codexLiveMediaRelayUDPPortMax.hint'),
-    yamlKeys: ['oauth', 'providers', 'codex', 'live-media-relay', 'udp-port-max'],
-  },
-  {
-    fieldId: 'codexLiveMediaRelayICEServers',
-    sectionId: 'advanced',
-    labelKey: L('additions.codexLiveMediaRelayICEServers.label'),
-    hintKey: L('additions.codexLiveMediaRelayICEServers.hint'),
-    yamlKeys: ['oauth', 'providers', 'codex', 'live-media-relay', 'ice-servers'],
-    keywords: ['stun', 'turn', 'urls', 'username', 'credential'],
-  },
-
-  // ── connectivity ──────────────────────────────────────────────────────────
-  {
     fieldId: 'githubToken',
     sectionId: 'connectivity',
     labelKey: L('sections.server.github_token'),
@@ -372,7 +208,6 @@ export const CONFIG_FIELD_SEARCH_INDEX: ConfigFieldSearchEntry[] = [
     labelKey: L('sections.remote.panel_repo'),
     yamlKeys: ['management', 'panel-github-repository'],
   },
-  // ── network ───────────────────────────────────────────────────────────────
   {
     fieldId: 'proxyUrl',
     sectionId: 'network',
@@ -462,15 +297,6 @@ export const CONFIG_FIELD_SEARCH_INDEX: ConfigFieldSearchEntry[] = [
     labelKey: L('sections.network.session_affinity'),
     yamlKeys: ['routing', 'session-affinity'],
   },
-  {
-    fieldId: 'wsAuth',
-    sectionId: 'network',
-    labelKey: L('sections.network.ws_auth'),
-    hintKey: L('sections.network.ws_auth_desc'),
-    yamlKeys: ['oauth', 'providers', 'aistudio', 'ws-auth'],
-    keywords: ['websocket'],
-  },
-  // ── logging ───────────────────────────────────────────────────────────────
   {
     fieldId: 'debug',
     sectionId: 'logging',
@@ -577,7 +403,6 @@ export const CONFIG_FIELD_SEARCH_INDEX: ConfigFieldSearchEntry[] = [
     labelKey: L('sections.system.usage_pricing_currency'),
     yamlKeys: ['observability', 'usage', 'analytics', 'pricing', 'currency'],
   },
-  // ── streaming ─────────────────────────────────────────────────────────────
   {
     fieldId: 'streamingKeepaliveSeconds',
     sectionId: 'streaming',
@@ -599,44 +424,6 @@ export const CONFIG_FIELD_SEARCH_INDEX: ConfigFieldSearchEntry[] = [
     hintKey: L('sections.streaming.nonstream_keepalive_hint'),
     yamlKeys: ['requests', 'nonstream-keepalive-interval'],
   },
-  // ── advanced ──────────────────────────────────────────────────────────────
-  {
-    fieldId: 'quotaAntigravityCredits',
-    sectionId: 'advanced',
-    labelKey: L('sections.advanced.antigravity_credits'),
-    yamlKeys: ['oauth', 'providers', 'antigravity', 'antigravity-credits'],
-  },
-  {
-    fieldId: 'antigravitySensitiveWords',
-    sectionId: 'advanced',
-    labelKey: L('sections.system.antigravity_sensitive_words'),
-    hintKey: L('sections.system.antigravity_sensitive_words_desc'),
-    yamlKeys: ['oauth', 'providers', 'antigravity', 'sensitive-words'],
-    keywords: ['antigravity', 'obfuscate', 'zero-width'],
-  },
-  {
-    fieldId: 'devinSensitiveWords',
-    sectionId: 'advanced',
-    labelKey: L('sections.system.devin_sensitive_words'),
-    hintKey: L('sections.system.devin_sensitive_words_desc'),
-    yamlKeys: ['oauth', 'providers', 'devin', 'sensitive-words'],
-    keywords: ['devin', 'system prompt', 'remove line', 'obfuscate', 'zero-width'],
-  },
-  {
-    fieldId: 'antigravitySignatureCacheEnabled',
-    sectionId: 'advanced',
-    labelKey: L('sections.system.antigravity_signature_cache'),
-    hintKey: L('sections.system.antigravity_signature_cache_desc'),
-    yamlKeys: ['oauth', 'providers', 'antigravity', 'signature-cache-enabled'],
-  },
-  {
-    fieldId: 'antigravitySignatureBypassStrict',
-    sectionId: 'advanced',
-    labelKey: L('sections.system.antigravity_signature_strict'),
-    hintKey: L('sections.system.antigravity_signature_strict_desc'),
-    yamlKeys: ['oauth', 'providers', 'antigravity', 'signature-bypass-strict'],
-  },
-  // Claude header defaults — qualifierKey disambiguates the shared "User-Agent" label.
   {
     fieldId: 'claudeHeaderUserAgent',
     sectionId: 'advanced',
@@ -694,24 +481,6 @@ export const CONFIG_FIELD_SEARCH_INDEX: ConfigFieldSearchEntry[] = [
     yamlKeys: ['upstream', 'claude', 'header-defaults', 'stabilize-device-profile'],
     keywords: ['claude'],
   },
-  // Codex header defaults.
-  {
-    fieldId: 'codexHeaderUserAgent',
-    sectionId: 'advanced',
-    labelKey: L('sections.headers.user_agent'),
-    qualifierKey: L('sections.headers.codex_title'),
-    yamlKeys: ['oauth', 'providers', 'codex', 'header-defaults', 'user-agent'],
-    keywords: ['codex'],
-  },
-  {
-    fieldId: 'codexHeaderBetaFeatures',
-    sectionId: 'advanced',
-    labelKey: L('sections.headers.beta_features'),
-    qualifierKey: L('sections.headers.codex_title'),
-    yamlKeys: ['oauth', 'providers', 'codex', 'header-defaults', 'beta-features'],
-    keywords: ['codex'],
-  },
-  // ── payload (coarse: one entry per rule group) ──────────────────────────────
   {
     fieldId: 'payloadDefaultRules',
     yamlKeys: ['requests', 'payload', 'default'],
@@ -752,6 +521,7 @@ export const CONFIG_FIELD_SEARCH_INDEX: ConfigFieldSearchEntry[] = [
     hintKey: L('sections.payload.filter_rules_desc'),
     keywords: ['payload', 'rule', 'filter'],
   },
+
 ];
 
 const MAX_RESULTS = 8;

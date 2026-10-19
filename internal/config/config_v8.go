@@ -53,8 +53,6 @@ func buildV8Paths() []configPath {
 		{"proxy-url", "requests.proxy-url"}, {"tls-handshake-timeout-seconds", "requests.tls-handshake-timeout-seconds"}, {"passthrough-headers", "requests.passthrough-headers"},
 		{"nonstream-keepalive-interval", "requests.nonstream-keepalive-interval"}, {"streaming", "requests.streaming"}, {"payload", "requests.payload"},
 		{"auth-dir", "oauth.auth-dir"}, {"auth-auto-refresh-workers", "oauth.auth-auto-refresh-workers"},
-		{"oauth-model-alias", "oauth.model-alias"}, {"oauth-excluded-models", "oauth.excluded-models"},
-		{"oauth-request-scoped-errors", "oauth.request-scoped-errors"}, {"oauth-settings", "oauth.settings"},
 		{"disable-image-generation", "multimedia.disable-image-generation"},
 		{"debug", "observability.logs.debug"}, {"logging-to-file", "observability.logs.logging-to-file"},
 		{"logs-max-total-size-mb", "observability.logs.logs-max-total-size-mb"}, {"request-log", "observability.logs.request-log"},
@@ -210,16 +208,6 @@ func (cfg *Config) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 	*cfg = Config(decoded)
-	cfg.OAuthOnlyFields = nil
-	source := expandConfigAliases(node)
-	for _, path := range v8Paths {
-		if strings.HasPrefix(path.current, "oauth.providers.") && yamlPath(source, path.current) != nil {
-			if cfg.OAuthOnlyFields == nil {
-				cfg.OAuthOnlyFields = make(map[string]bool)
-			}
-			cfg.OAuthOnlyFields[path.old] = true
-		}
-	}
 	return nil
 }
 

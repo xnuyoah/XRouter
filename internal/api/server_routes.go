@@ -18,8 +18,6 @@ import (
 	"github.com/xnuyoah/XRouter/v8/sdk/api/handlers/openai"
 )
 
-const oauthCallbackSuccessHTML = `<html><head><meta charset="utf-8"><title>Authentication successful</title><link rel="icon" href="/favicon.ico"><script>setTimeout(function(){window.close();},5000);</script></head><body><h1>Authentication successful!</h1><p>You can close this window.</p><p>This window will close automatically in 5 seconds.</p></body></html>`
-
 // setupRoutes 为服务器配置 API 路由。
 // 它定义各端点并将它们与各自的处理器关联起来。
 func (s *Server) setupRoutes() {

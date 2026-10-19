@@ -15,18 +15,6 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/util"
 )
 
-func normalizeResponsesWebsocketRequest(rawJSON []byte, lastRequest []byte, lastResponseOutput []byte) ([]byte, []byte, *interfaces.ErrorMessage) {
-	return normalizeResponsesWebsocketRequestWithMode(rawJSON, lastRequest, lastResponseOutput, true, true)
-}
-
-func normalizeResponsesWebsocketRequestWithMode(rawJSON []byte, lastRequest []byte, lastResponseOutput []byte, allowIncrementalInputWithPreviousResponseID bool, allowCompactionReplayBypass bool) ([]byte, []byte, *interfaces.ErrorMessage) {
-	return normalizeResponsesWebsocketRequestWithLastResponseID(rawJSON, lastRequest, lastResponseOutput, "", allowIncrementalInputWithPreviousResponseID, allowCompactionReplayBypass)
-}
-
-func normalizeResponsesWebsocketRequestWithLastResponseID(rawJSON []byte, lastRequest []byte, lastResponseOutput []byte, lastResponseID string, allowIncrementalInputWithPreviousResponseID bool, allowCompactionReplayBypass bool) ([]byte, []byte, *interfaces.ErrorMessage) {
-	return normalizeResponsesWebsocketRequestWithIncrementalState(rawJSON, lastRequest, lastResponseOutput, lastResponseID, nil, allowIncrementalInputWithPreviousResponseID, allowCompactionReplayBypass)
-}
-
 func normalizeResponsesWebsocketRequestWithIncrementalState(rawJSON []byte, lastRequest []byte, lastResponseOutput []byte, lastResponseID string, lastResponsePendingToolCallIDs []string, allowIncrementalInputWithPreviousResponseID bool, allowCompactionReplayBypass bool) ([]byte, []byte, *interfaces.ErrorMessage) {
 	requestType := strings.TrimSpace(gjson.GetBytes(rawJSON, "type").String())
 	switch requestType {
@@ -623,22 +611,6 @@ func marshalResponsesWebsocketInputItems(items []responsesWebsocketInputItem) (s
 	return string(out), nil
 }
 
-func dedupeResponsesWebsocketFunctionCalls(items []responsesWebsocketInputItem) []responsesWebsocketInputItem {
-	seenCallIDs := make(map[string]struct{}, len(items))
-	filtered := items[:0]
-	for _, item := range items {
-		if isResponsesToolCallType(item.itemType) && item.callID != "" {
-			if _, ok := seenCallIDs[item.callID]; ok {
-				continue
-			}
-			seenCallIDs[item.callID] = struct{}{}
-		}
-		filtered = append(filtered, item)
-	}
-	clear(items[len(filtered):])
-	return filtered
-}
-
 func dedupeResponsesWebsocketInputItems(items []responsesWebsocketInputItem) []responsesWebsocketInputItem {
 	// 收集仍被工具调用输出条目引用的 call_id。
 	// 当多个输入条目共享同一 id 时，我们保留的那个必须
@@ -685,22 +657,6 @@ func dedupeResponsesWebsocketInputItems(items []responsesWebsocketInputItem) []r
 	}
 	clear(items[len(filtered):])
 	return filtered
-}
-
-func dedupeResponsesWebsocketInputItemsByID(payload []byte) []byte {
-	input := gjson.GetBytes(payload, "input")
-	if !input.Exists() || !input.IsArray() {
-		return payload
-	}
-	dedupedInput, errDedupe := dedupeInputItemsByID(input.Raw)
-	if errDedupe != nil || dedupedInput == input.Raw {
-		return payload
-	}
-	updated, errSet := sjson.SetRawBytes(payload, "input", []byte(dedupedInput))
-	if errSet != nil {
-		return payload
-	}
-	return updated
 }
 
 func dedupeInputItemsByID(rawArray string) (string, error) {

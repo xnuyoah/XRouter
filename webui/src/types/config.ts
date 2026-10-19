@@ -32,7 +32,6 @@ export interface Config {
   nvidiaApiKeys?: ProviderKeyConfig[];
   agnesApiKeys?: ProviderKeyConfig[];
   openaiCompatibility?: OpenAIProviderConfig[];
-  oauthExcludedModels?: Record<string, string[]>;
   raw?: Record<string, unknown>;
 }
 
@@ -56,4 +55,4 @@ export type RawConfigSection =
   | 'claude-api-key'
   | 'vertex-api-key'
   | 'openai-compatibility'
-  | 'oauth-excluded-models';
+  | 'auth-auto-refresh-workers';

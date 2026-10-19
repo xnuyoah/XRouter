@@ -192,11 +192,8 @@ func TestRegisterModelsUsesModelProviderStaticModels(t *testing.T) {
 					if req.Host.AuthDir != "/tmp/plugin-auth" || req.Host.ProxyURL != "http://proxy.local" || !req.Host.ForceModelPrefix {
 						t.Fatalf("StaticModels host = %#v, want configured summary", req.Host)
 					}
-					if len(req.Host.OAuthModelAlias["plugin-provider"]) != 1 || req.Host.OAuthModelAlias["plugin-provider"][0].Alias != "alias-model" {
-						t.Fatalf("StaticModels OAuthModelAlias = %#v, want configured alias", req.Host.OAuthModelAlias)
-					}
-					if len(req.Host.ExcludedModels["plugin-provider"]) != 1 || req.Host.ExcludedModels["plugin-provider"][0] != "hidden-model" {
-						t.Fatalf("StaticModels ExcludedModels = %#v, want configured exclusion", req.Host.ExcludedModels)
+					if len(req.Host.ExcludedModels) != 0 {
+						t.Fatalf("StaticModels ExcludedModels = %#v, want empty summary", req.Host.ExcludedModels)
 					}
 					return pluginapi.ModelResponse{
 						Provider: "  Plugin-Provider  ",
@@ -217,12 +214,6 @@ func TestRegisterModelsUsesModelProviderStaticModels(t *testing.T) {
 			ForceModelPrefix: true,
 		},
 		AuthDir: "/tmp/plugin-auth",
-		OAuthModelAlias: map[string][]config.OAuthModelAlias{
-			"plugin-provider": []config.OAuthModelAlias{{Name: "upstream-model", Alias: "alias-model"}},
-		},
-		OAuthExcludedModels: map[string][]string{
-			"plugin-provider": []string{"hidden-model"},
-		},
 	}
 
 	host.RegisterModels(context.Background(), modelRegistry)
@@ -3646,8 +3637,6 @@ func (panicFrontendAuthProvider) Authenticate(ctx context.Context, req pluginapi
 type fakeAuthProvider struct {
 	identifier  string
 	parseAuth   func(context.Context, pluginapi.AuthParseRequest) (pluginapi.AuthParseResponse, error)
-	startLogin  func(context.Context, pluginapi.AuthLoginStartRequest) (pluginapi.AuthLoginStartResponse, error)
-	pollLogin   func(context.Context, pluginapi.AuthLoginPollRequest) (pluginapi.AuthLoginPollResponse, error)
 	refreshAuth func(context.Context, pluginapi.AuthRefreshRequest) (pluginapi.AuthRefreshResponse, error)
 }
 
@@ -3660,20 +3649,6 @@ func (p fakeAuthProvider) ParseAuth(ctx context.Context, req pluginapi.AuthParse
 		return pluginapi.AuthParseResponse{}, nil
 	}
 	return p.parseAuth(ctx, req)
-}
-
-func (p fakeAuthProvider) StartLogin(ctx context.Context, req pluginapi.AuthLoginStartRequest) (pluginapi.AuthLoginStartResponse, error) {
-	if p.startLogin == nil {
-		return pluginapi.AuthLoginStartResponse{}, nil
-	}
-	return p.startLogin(ctx, req)
-}
-
-func (p fakeAuthProvider) PollLogin(ctx context.Context, req pluginapi.AuthLoginPollRequest) (pluginapi.AuthLoginPollResponse, error) {
-	if p.pollLogin == nil {
-		return pluginapi.AuthLoginPollResponse{}, nil
-	}
-	return p.pollLogin(ctx, req)
 }
 
 func (p fakeAuthProvider) RefreshAuth(ctx context.Context, req pluginapi.AuthRefreshRequest) (pluginapi.AuthRefreshResponse, error) {

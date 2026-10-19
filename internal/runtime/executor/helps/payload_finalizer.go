@@ -1,8 +1,6 @@
 package helps
 
 import (
-	"context"
-
 	"github.com/xnuyoah/XRouter/v8/internal/config"
 	cliproxyexecutor "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executor"
 )
@@ -20,19 +18,4 @@ func NewPayloadFinalizer(cfg *config.Config, executor, model, protocol, root str
 	return func(body []byte) []byte {
 		return ApplyPayloadConfigWithRequestForExecutor(cfg, executor, model, protocol, opts.SourceFormat.String(), root, body, source, requestedModel, requestPath, headers)
 	}
-}
-
-type payloadFinalizerKey struct{}
-
-// WithPayloadFinalizer 通过共享的请求构建器传递最终屏障。
-func WithPayloadFinalizer(ctx context.Context, finalize PayloadFinalizer) context.Context {
-	return context.WithValue(ctx, payloadFinalizerKey{}, finalize)
-}
-
-// FinalizePayload 在序列化或传输层封装之前立即运行。
-func FinalizePayload(ctx context.Context, body []byte) []byte {
-	if finalize, ok := ctx.Value(payloadFinalizerKey{}).(PayloadFinalizer); ok && finalize != nil {
-		return finalize(body)
-	}
-	return body
 }

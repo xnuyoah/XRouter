@@ -195,24 +195,6 @@ func writeWebsocketTimelineBuilder(builder *strings.Builder, data []byte) {
 	builder.Write(data)
 }
 
-func appendWebsocketEvent(builder *strings.Builder, eventType string, payload []byte) {
-	if builder == nil {
-		return
-	}
-	trimmedPayload := bytes.TrimSpace(payload)
-	if len(trimmedPayload) == 0 {
-		return
-	}
-	if builder.Len() > 0 {
-		builder.WriteString("\n")
-	}
-	builder.WriteString("websocket.")
-	builder.WriteString(eventType)
-	builder.WriteString("\n")
-	builder.Write(trimmedPayload)
-	builder.WriteString("\n")
-}
-
 func websocketPayloadEventType(payload []byte) string {
 	eventType := strings.TrimSpace(gjson.GetBytes(payload, "type").String())
 	if eventType == "" {

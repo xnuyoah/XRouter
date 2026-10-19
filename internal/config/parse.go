@@ -102,10 +102,6 @@ func ParseConfigBytes(data []byte) (*Config, error) {
 	// 应用相同的净化流水线。
 	cfg.SanitizeNativeAPIKeys()
 	cfg.SanitizeOpenAICompatibility()
-	cfg.OAuthExcludedModels = NormalizeOAuthExcludedModels(cfg.OAuthExcludedModels)
-	cfg.SanitizeOAuthModelAlias()
-	cfg.SanitizeOAuthSettings()
-	cfg.SanitizeOAuthRequestScopedErrors()
 	cfg.SanitizePayloadRules()
 
 	return &cfg, nil

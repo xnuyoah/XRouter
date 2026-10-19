@@ -15,11 +15,6 @@ type SDKConfig struct {
 	// 值 <= 0 表示禁用限制（默认）。
 	MaxRequestBodyBytes int64 `yaml:"max-request-body-bytes" json:"max-request-body-bytes"`
 
-	// OAuthOnlyFields 记录必须等待凭据选择、
-	// 且不得影响 API-key 凭据的 v8 供应商设置。配置 YAML 快照
-	// 会保留对应的 v8 路径，而不是序列化这些元数据。
-	OAuthOnlyFields map[string]bool `yaml:"-" json:"-"`
-
 	// ProxyURL 是可选代理服务器的 URL，用于出站请求。
 	ProxyURL string `yaml:"proxy-url" json:"proxy-url"`
 

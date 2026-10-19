@@ -11,8 +11,6 @@ import (
 // 配置路径镜像 v8 YAML 树；运维路由使用其分组。
 func (s *Server) registerManagementV8Routes() {
 	const prefix = "/v8/management"
-	s.engine.GET(prefix+"/oauth/callback", s.managementAvailabilityMiddleware(), s.mgmt.GetOAuthCallback)
-	s.engine.POST(prefix+"/oauth/callback", s.managementAvailabilityMiddleware(), s.mgmt.PostOAuthCallback)
 
 	v8 := s.engine.Group(prefix)
 	v8.Use(s.managementAvailabilityMiddleware(), s.mgmt.Middleware(), func(c *gin.Context) {
@@ -63,10 +61,6 @@ func (s *Server) registerManagementV8Routes() {
 	v8.PATCH("/credentials/status", s.mgmt.PatchAuthFileStatus)
 	v8.PATCH("/credentials/fields", s.mgmt.PatchAuthFileFields)
 	v8.POST("/credentials/refresh", s.mgmt.RefreshAuthFiles)
-	v8.POST("/oauth/import", s.mgmt.ImportOAuthV8)
-	v8.GET("/oauth/auth-url", s.mgmt.StartOAuthV8)
-	v8.GET("/oauth/status", s.mgmt.GetAuthStatus)
-	v8.DELETE("/oauth/session", s.mgmt.CancelAuthSession)
 
 	v8.GET("/plugins", s.mgmt.ListPlugins)
 	v8.DELETE("/plugins/:id", s.mgmt.DeletePlugin)
