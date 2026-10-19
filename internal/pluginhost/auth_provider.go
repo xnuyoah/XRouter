@@ -59,7 +59,8 @@ func authIDForPath(path, authDir string) string {
 	return id
 }
 
-// HasAuthProvider 报告主机是否拥有指定供应商键的插件 AuthProvider。
+// HasAuthProvider reports whether the host has a plugin AuthProvider for the
+// given provider key.
 func (h *Host) HasAuthProvider(provider string) bool {
 	return h.authProviderRecord(provider) != nil
 }

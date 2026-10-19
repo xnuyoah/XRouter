@@ -336,7 +336,7 @@ func pluginAuthProviderLookupKeys(auth *coreauth.Auth, fallback string) []string
 	return keys
 }
 
-// pluginHostHasAuthProvider 可在测试中覆盖，以避免加载真实插件。
+// pluginHostHasAuthProvider can be overridden in tests to avoid loading real plugins.
 var pluginHostHasAuthProvider = func(host *pluginhost.Host, provider string) bool {
 	return host != nil && host.HasAuthProvider(provider)
 }

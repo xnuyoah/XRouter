@@ -117,7 +117,7 @@ func extractClaudeCodeSessionIDFromPayload(payload []byte) string {
 	return ""
 }
 
-// CodexCache 是 prompt_cache_key 派生结果的载体。
+// CodexCache carries the derived prompt_cache_key result.
 type CodexCache struct {
 	ID     string
 	Expire time.Time
