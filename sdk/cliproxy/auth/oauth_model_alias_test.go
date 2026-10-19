@@ -459,8 +459,9 @@ func TestApplyOAuthModelAliasWithResult_NoForceMappingPreservesRequestedModelInO
 	}
 }
 
-// SanitizeOAuthModelAliases 必须保证客户端可见别名唯一：同一 alias 的
-// 多条映射只保留第一条，避免目录声明与请求路由选中不同上游模型。
+// SanitizeOAuthModelAliases must keep client-visible aliases unique: when
+// several mappings share one alias, only the first is kept so that catalog
+// generation and request routing cannot pick different upstream models.
 func TestSanitizeOAuthModelAliasesDeduplicatesByAliasKeepingFirst(t *testing.T) {
 	cleaned := sanitizeOAuthModelAliases([]internalconfig.OAuthModelAlias{
 		{Name: "model-a", Alias: "public"},
