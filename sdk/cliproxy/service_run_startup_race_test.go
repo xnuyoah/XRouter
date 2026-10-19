@@ -115,19 +115,6 @@ func TestRegisterModelsForAuthBatch_ConcurrentCommitConfigUpdateRace_Issue6583(t
 			SDKConfig: config.SDKConfig{
 				ForceModelPrefix: forcePrefix,
 			},
-			OAuthExcludedModels: map[string][]string{
-				"kimi": {"kimi-k2-mini"},
-			},
-			OAuthModelAlias: map[string][]config.OAuthModelAlias{
-				"kimi": {
-					{Name: "kimi-k2", Alias: fmt.Sprintf("astra-alias-%d", aliasSuffix), Fork: true},
-				},
-			},
-			OAuthSettings: map[string][]config.OAuthModelSetting{
-				"kimi": {
-					{Name: "kimi-k2", MaxContextLength: 128000},
-				},
-			},
 			DeepseekKey: []config.DeepseekKey{
 				{
 					APIKey: "sk-deepseek-race",

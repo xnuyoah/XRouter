@@ -53,13 +53,10 @@ func (g *StableIDGenerator) Next(kind string, parts ...string) (string, string) 
 
 // ApplyAuthExcludedModelsMeta 将排除模型元数据应用到 auth 条目。
 // 它计算排除模型的哈希并设置 auth_kind 属性。
-// 对于 OAuth 条目，perKey（来自 JSON 文件的 excluded-models 字段）会与该供应商的
-// 全局 oauth-excluded-models 配置合并。
 func ApplyAuthExcludedModelsMeta(auth *coreauth.Auth, cfg *config.Config, perKey []string, authKind string) {
 	if auth == nil || cfg == nil {
 		return
 	}
-	authKindKey := strings.ToLower(strings.TrimSpace(authKind))
 	seen := make(map[string]struct{})
 	add := func(list []string) {
 		for _, entry := range list {
@@ -72,16 +69,7 @@ func ApplyAuthExcludedModelsMeta(auth *coreauth.Auth, cfg *config.Config, perKey
 			}
 		}
 	}
-	if authKindKey == "apikey" {
-		add(perKey)
-	} else {
-		// 对于 OAuth：将按账号的排除模型与供应商级别的全局排除项合并
-		add(perKey)
-		if cfg.OAuthExcludedModels != nil {
-			providerKey := strings.ToLower(strings.TrimSpace(auth.Provider))
-			add(cfg.OAuthExcludedModels[providerKey])
-		}
-	}
+	add(perKey)
 	combined := make([]string, 0, len(seen))
 	for k := range seen {
 		combined = append(combined, k)

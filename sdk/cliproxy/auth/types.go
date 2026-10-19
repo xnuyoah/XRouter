@@ -644,27 +644,6 @@ func (a *Auth) AccountInfo() (string, string) {
 	}
 }
 
-// IsCodexUseSIWC 报告某个 Codex auth 记录是否配置为使用其嵌套的 "siwc" 段。
-func IsCodexUseSIWC(a *Auth) bool {
-	if a == nil {
-		return false
-	}
-	enabled := false
-	if len(a.Attributes) > 0 {
-		if raw := strings.TrimSpace(a.Attributes["use_siwc"]); raw != "" {
-			if parsed, ok := parseBoolAny(raw); ok {
-				enabled = parsed
-			}
-		}
-	}
-	if !enabled && a.Metadata != nil {
-		if parsed, ok := parseBoolAny(a.Metadata["use_siwc"]); ok {
-			enabled = parsed
-		}
-	}
-	return enabled
-}
-
 // OuterExpirationTime 提取外层凭据的过期时间戳，忽略嵌套的 "siwc" 段。
 func (a *Auth) OuterExpirationTime() (time.Time, bool) {
 	if a == nil {
@@ -686,43 +665,8 @@ func (a *Auth) OuterExpirationTime() (time.Time, bool) {
 }
 
 // ExpirationTime 尝试从元数据中提取当前生效凭据的过期时间戳。
-// 当 Codex 凭据启用 use_siwc 时，返回当前生效的 SIWC 段的过期时间。
 func (a *Auth) ExpirationTime() (time.Time, bool) {
-	if a == nil {
-		return time.Time{}, false
-	}
-	if IsCodexUseSIWC(a) {
-		siwcToken := authSIWCTokenField(a, "access_token")
-		if siwcToken != "" && a.RejectedAccessToken != "" && a.RejectedAccessToken == siwcToken {
-			return time.Unix(0, 0), true
-		}
-		return a.SIWCExpirationTime()
-	}
 	return a.OuterExpirationTime()
-}
-
-// CodexSIWCRefreshLead 是刷新 Sign in with ChatGPT (SIWC) 令牌前所需的最短
-// 剩余有效期，与 pi 的 DEFAULT_OAUTH_MINIMUM_VALIDITY_MS（5 分钟）一致。
-const CodexSIWCRefreshLead = 5 * time.Minute
-
-// SIWCExpirationTime 从嵌套的 "siwc" 元数据段中提取过期时间戳。
-func (a *Auth) SIWCExpirationTime() (time.Time, bool) {
-	if a == nil || a.Metadata == nil {
-		return time.Time{}, false
-	}
-	siwcMap, ok := a.Metadata["siwc"].(map[string]any)
-	if !ok || len(siwcMap) == 0 {
-		return time.Time{}, false
-	}
-	if ts, okExp := expirationFromMap(siwcMap); okExp && !ts.IsZero() {
-		return ts, true
-	}
-	if rawToken, okTok := siwcMap["access_token"].(string); okTok && strings.TrimSpace(rawToken) != "" {
-		if jwtExp, okJWT := parseJWTExp(rawToken); okJWT && !jwtExp.IsZero() {
-			return jwtExp, true
-		}
-	}
-	return time.Time{}, false
 }
 
 // CodexOuterNeedsRefresh 评估外层凭据的刷新到期时间以及当前是否需要刷新。
@@ -790,48 +734,6 @@ func CodexOuterNeedsRefresh(a *Auth, now time.Time) (dueAt time.Time, hasRefresh
 	}
 	if !lastRefresh.IsZero() {
 		due := lastRefresh.Add(*lead)
-		if !due.After(now) {
-			return now, true, true
-		}
-		return due, true, false
-	}
-	return now, true, true
-}
-
-// CodexSIWCNeedsRefresh 评估嵌套 "siwc" 凭据段的刷新到期时间以及当前是否需要刷新。
-func CodexSIWCNeedsRefresh(a *Auth, now time.Time) (dueAt time.Time, hasRefresh bool, needsRefresh bool) {
-	if a == nil || a.Metadata == nil {
-		return time.Time{}, false, false
-	}
-	siwcMap, ok := a.Metadata["siwc"].(map[string]any)
-	if !ok || len(siwcMap) == 0 {
-		return time.Time{}, false, false
-	}
-	refreshToken, _ := siwcMap["refresh_token"].(string)
-	clientID, _ := siwcMap["client_id"].(string)
-	if strings.TrimSpace(refreshToken) == "" || strings.TrimSpace(clientID) == "" {
-		return time.Time{}, false, false
-	}
-	hasRefresh = true
-
-	siwcToken, _ := siwcMap["access_token"].(string)
-	siwcToken = strings.TrimSpace(siwcToken)
-	if siwcToken == "" {
-		return now, true, true
-	}
-	if a.RejectedAccessToken != "" && a.RejectedAccessToken == siwcToken {
-		return now, true, true
-	}
-	expiry, hasExpiry := a.SIWCExpirationTime()
-	if hasExpiry && !expiry.IsZero() {
-		due := expiry.Add(-CodexSIWCRefreshLead)
-		if !due.After(now) {
-			return now, true, true
-		}
-		return due, true, false
-	}
-	if lastRefresh, okLast := lookupMetadataTime(siwcMap, "last_refresh", "lastRefresh"); okLast && !lastRefresh.IsZero() {
-		due := lastRefresh.Add(CodexSIWCRefreshLead)
 		if !due.After(now) {
 			return now, true, true
 		}

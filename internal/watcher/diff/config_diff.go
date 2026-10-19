@@ -151,19 +151,6 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 	changes = appendNativeAPIKeyChanges(changes, "nvidia-api-key", oldCfg.NvidiaKey, newCfg.NvidiaKey)
 	changes = appendNativeAPIKeyChanges(changes, "agnes-api-key", oldCfg.AgnesKey, newCfg.AgnesKey)
 
-	if entries, _ := DiffOAuthExcludedModelChanges(oldCfg.OAuthExcludedModels, newCfg.OAuthExcludedModels); len(entries) > 0 {
-		changes = append(changes, entries...)
-	}
-	if entries, _ := DiffOAuthModelAliasChanges(oldCfg.OAuthModelAlias, newCfg.OAuthModelAlias); len(entries) > 0 {
-		changes = append(changes, entries...)
-	}
-	if entries, _ := DiffOAuthRequestScopedErrorsChanges(oldCfg.OAuthRequestScopedErrors, newCfg.OAuthRequestScopedErrors); len(entries) > 0 {
-		changes = append(changes, entries...)
-	}
-	if entries, _ := DiffOAuthSettingsChanges(oldCfg.OAuthSettings, newCfg.OAuthSettings); len(entries) > 0 {
-		changes = append(changes, entries...)
-	}
-
 	// 远程管理（绝不打印密钥）
 	if oldCfg.RemoteManagement.AllowRemote != newCfg.RemoteManagement.AllowRemote {
 		changes = append(changes, fmt.Sprintf("remote-management.allow-remote: %t -> %t", oldCfg.RemoteManagement.AllowRemote, newCfg.RemoteManagement.AllowRemote))

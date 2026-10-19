@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -12,9 +12,7 @@ import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
   channelStatusApi,
-  webSearchApi,
   type ChannelStatusSnapshot,
-  type WebSearchImportSummary,
 } from '@/services/api';
 import { useAuthStore, useConfigStore } from '@/stores';
 import { providerLabel } from '@/features/dashboard/utils';
@@ -169,10 +167,7 @@ export function ProviderAccountsPage() {
     25
   );
   const pageSize = PAGE_SIZES.some((size) => size === storedPageSize) ? storedPageSize : 25;
-  const [importing, setImporting] = useState(false);
-  const [importSummary, setImportSummary] = useState<WebSearchImportSummary | null>(null);
   const [channelSnapshot, setChannelSnapshot] = useState<ChannelStatusSnapshot | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -249,21 +244,6 @@ export function ProviderAccountsPage() {
     setPage(1);
   };
 
-  const importCsv = async (file: File) => {
-    setImporting(true);
-    setError('');
-    try {
-      const summary = await webSearchApi.importAccounts(await file.text());
-      setImportSummary(summary);
-      await refresh();
-    } catch (errImport) {
-      setError(errImport instanceof Error ? errImport.message : String(errImport));
-    } finally {
-      setImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -275,24 +255,6 @@ export function ProviderAccountsPage() {
           <Link to="/config" className={styles.secondaryLink}>
             {t('providerAccounts.editConfig')}
           </Link>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            hidden
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void importCsv(file);
-            }}
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            loading={importing}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {t('providerAccounts.import')}
-          </Button>
           <Button variant="secondary" size="sm" onClick={() => void refresh()} loading={loading}>
             {t('common.refresh')}
           </Button>
@@ -319,22 +281,6 @@ export function ProviderAccountsPage() {
           <strong>{modelCount}</strong>
         </article>
       </section>
-
-      {importSummary && (
-        <div className={styles.importSummary}>
-          <strong>{t('webSearch.importExport.summaryTitle')}</strong>
-          <span>
-            {t('webSearch.importExport.summary', {
-              added: importSummary.added,
-              updated: importSummary.updated,
-              duplicate: importSummary.skipped_duplicate,
-              other: importSummary.skipped_other_channel,
-              invalid: importSummary.skipped_invalid,
-            })}
-          </span>
-          <span>{t('providerAccounts.importNote')}</span>
-        </div>
-      )}
 
       <section className={styles.panel}>
         <div className={styles.toolbar}>

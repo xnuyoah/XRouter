@@ -23,7 +23,6 @@ import (
 	gin "github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
-	managementHandlers "github.com/xnuyoah/XRouter/v8/internal/api/handlers/management"
 	claudemodels "github.com/xnuyoah/XRouter/v8/internal/client/claude/models"
 	proxyconfig "github.com/xnuyoah/XRouter/v8/internal/config"
 	"github.com/xnuyoah/XRouter/v8/internal/home"
@@ -529,30 +528,6 @@ func TestManagementResponseExposesPluginSupportHeaderForCORS(t *testing.T) {
 		if _, ok := exposedHeaders[strings.ToLower(headerName)]; !ok {
 			t.Fatalf("Access-Control-Expose-Headers missing %s: %q", headerName, rr.Header().Get("Access-Control-Expose-Headers"))
 		}
-	}
-}
-
-func TestOAuthCallbackRouteSkipsManagementKeyMiddleware(t *testing.T) {
-	t.Setenv("MANAGEMENT_PASSWORD", "test-management-key")
-
-	server := newTestServer(t)
-	state := "server-plugin-oauth-state"
-	if errRegister := managementHandlers.RegisterPluginOAuthSession(state, "gemini-cli", nil); errRegister != nil {
-		t.Fatalf("register plugin oauth session: %v", errRegister)
-	}
-	defer managementHandlers.CompleteOAuthSession(state)
-
-	req := httptest.NewRequest(http.MethodGet, "/v0/management/oauth-callback?state="+state+"&code=test-code", nil)
-	rr := httptest.NewRecorder()
-	server.engine.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
-	}
-
-	callbackPath := filepath.Join(server.cfg.AuthDir, ".oauth-gemini-cli-"+state+".oauth")
-	if _, errRead := os.ReadFile(callbackPath); errRead != nil {
-		t.Fatalf("expected callback file to be written without management key: %v", errRead)
 	}
 }
 

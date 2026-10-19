@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xnuyoah/XRouter/v8/internal/config"
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 	"github.com/xnuyoah/XRouter/v8/sdk/pluginapi"
 )
@@ -26,8 +25,6 @@ func (h *Host) hostConfigSummaryLocked() pluginapi.HostConfigSummary {
 		AuthDir:          strings.TrimSpace(cfg.AuthDir),
 		ProxyURL:         strings.TrimSpace(cfg.ProxyURL),
 		ForceModelPrefix: cfg.ForceModelPrefix,
-		OAuthModelAlias:  pluginOAuthModelAliases(cfg.OAuthModelAlias),
-		ExcludedModels:   cloneStringSliceMap(cfg.OAuthExcludedModels),
 	}
 }
 
@@ -38,49 +35,6 @@ func (h *Host) hostConfigSummary() pluginapi.HostConfigSummary {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.hostConfigSummaryLocked()
-}
-
-func pluginOAuthModelAliases(in map[string][]config.OAuthModelAlias) map[string][]pluginapi.ModelAlias {
-	if len(in) == 0 {
-		return nil
-	}
-	out := make(map[string][]pluginapi.ModelAlias, len(in))
-	for provider, aliases := range in {
-		key := normalizeProviderID(provider)
-		if key == "" {
-			continue
-		}
-		for _, alias := range aliases {
-			name := strings.TrimSpace(alias.Name)
-			value := strings.TrimSpace(alias.Alias)
-			if name == "" || value == "" {
-				continue
-			}
-			out[key] = append(out[key], pluginapi.ModelAlias{Name: name, Alias: value})
-		}
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
-}
-
-func cloneStringSliceMap(in map[string][]string) map[string][]string {
-	if len(in) == 0 {
-		return nil
-	}
-	out := make(map[string][]string, len(in))
-	for key, values := range in {
-		cleanKey := normalizeProviderID(key)
-		if cleanKey == "" {
-			continue
-		}
-		out[cleanKey] = cloneStringSlice(values)
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
 }
 
 func normalizeProviderID(provider string) string {
@@ -103,28 +57,6 @@ func authIDForPath(path, authDir string) string {
 		id = strings.ToLower(id)
 	}
 	return id
-}
-
-func (h *Host) AuthProviderIdentifiers() []string {
-	if h == nil {
-		return nil
-	}
-	out := make([]string, 0)
-	for _, record := range h.activeRecords() {
-		provider := record.plugin.Capabilities.AuthProvider
-		if provider == nil || h.isPluginFused(record.id) {
-			continue
-		}
-		identifier, okIdentifier := h.callAuthProviderIdentifier(record.id, provider)
-		if okIdentifier && identifier != "" {
-			out = append(out, identifier)
-		}
-	}
-	return out
-}
-
-func (h *Host) HasAuthProvider(provider string) bool {
-	return h.authProviderRecord(provider) != nil
 }
 
 func (h *Host) authProviderRecord(provider string) *capabilityRecord {
@@ -253,84 +185,6 @@ func pluginAuthParseResponseAuths(resp pluginapi.AuthParseResponse) []pluginapi.
 		return append([]pluginapi.AuthData(nil), resp.Auths...)
 	}
 	return []pluginapi.AuthData{resp.Auth}
-}
-
-func (h *Host) StartLogin(ctx context.Context, provider string, baseURL string, metadata ...map[string]any) (pluginapi.AuthLoginStartResponse, bool, error) {
-	record := h.authProviderRecord(provider)
-	if record == nil {
-		return pluginapi.AuthLoginStartResponse{}, false, nil
-	}
-	var startMetadata map[string]any
-	if len(metadata) > 0 {
-		startMetadata = metadata[0]
-	}
-	return h.callStartLogin(ctx, *record, provider, baseURL, startMetadata)
-}
-
-func (h *Host) callStartLogin(ctx context.Context, record capabilityRecord, provider string, baseURL string, metadata map[string]any) (resp pluginapi.AuthLoginStartResponse, handled bool, err error) {
-	authProvider := record.plugin.Capabilities.AuthProvider
-	if h == nil || authProvider == nil || h.isPluginFused(record.id) || !h.recordCurrent(record) {
-		return pluginapi.AuthLoginStartResponse{}, false, nil
-	}
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			h.fusePlugin(record.id, "AuthProvider.StartLogin", recovered)
-			resp = pluginapi.AuthLoginStartResponse{}
-			handled = false
-			err = fmt.Errorf("auth provider start login panic: %v", recovered)
-		}
-	}()
-	req := pluginapi.AuthLoginStartRequest{
-		Provider:   normalizeProviderID(provider),
-		BaseURL:    strings.TrimSpace(baseURL),
-		Host:       h.hostConfigSummary(),
-		HTTPClient: h.newHTTPClient(nil),
-		Metadata:   cloneAnyMap(metadata),
-	}
-	resp, errStart := authProvider.StartLogin(ctx, req)
-	if errStart != nil {
-		return pluginapi.AuthLoginStartResponse{}, true, errStart
-	}
-	return resp, true, nil
-}
-
-func (h *Host) PollLogin(ctx context.Context, provider, state string, metadata ...map[string]any) (pluginapi.AuthLoginPollResponse, bool, error) {
-	record := h.authProviderRecord(provider)
-	if record == nil {
-		return pluginapi.AuthLoginPollResponse{}, false, nil
-	}
-	var pollMetadata map[string]any
-	if len(metadata) > 0 {
-		pollMetadata = metadata[0]
-	}
-	return h.callPollLogin(ctx, *record, provider, state, pollMetadata)
-}
-
-func (h *Host) callPollLogin(ctx context.Context, record capabilityRecord, provider, state string, metadata map[string]any) (resp pluginapi.AuthLoginPollResponse, handled bool, err error) {
-	authProvider := record.plugin.Capabilities.AuthProvider
-	if h == nil || authProvider == nil || h.isPluginFused(record.id) || !h.recordCurrent(record) {
-		return pluginapi.AuthLoginPollResponse{}, false, nil
-	}
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			h.fusePlugin(record.id, "AuthProvider.PollLogin", recovered)
-			resp = pluginapi.AuthLoginPollResponse{}
-			handled = false
-			err = fmt.Errorf("auth provider poll login panic: %v", recovered)
-		}
-	}()
-	req := pluginapi.AuthLoginPollRequest{
-		Provider:   normalizeProviderID(provider),
-		State:      strings.TrimSpace(state),
-		Host:       h.hostConfigSummary(),
-		HTTPClient: h.newHTTPClient(nil),
-		Metadata:   cloneAnyMap(metadata),
-	}
-	resp, errPoll := authProvider.PollLogin(ctx, req)
-	if errPoll != nil {
-		return pluginapi.AuthLoginPollResponse{}, true, errPoll
-	}
-	return resp, true, nil
 }
 
 func (h *Host) RefreshAuth(ctx context.Context, auth *coreauth.Auth) (refreshed *coreauth.Auth, handled bool, err error) {

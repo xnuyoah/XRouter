@@ -88,7 +88,6 @@ func TestManagementV8IndependentContract(t *testing.T) {
 		"GET /v0/management/debug", "PUT /v0/management/request-retry", "GET /v0/management/auth-files",
 		"GET /v8/management/observability/logs", "GET /v8/management/observability/usage/queue",
 		"GET /v8/management/credentials", "POST /v8/management/credentials",
-		"GET /v8/management/oauth/auth-url", "POST /v8/management/oauth/import", "POST /v8/management/oauth/callback",
 		"POST /v8/management/routing/cooldown/reset",
 		"GET /v8/management/plugins/:id/quota", "POST /v8/management/plugins/:id/quota", "DELETE /v8/management/plugins/:id/quota",
 		"DELETE /v8/management/plugins/:id",
@@ -123,25 +122,14 @@ func TestManagementV8IndependentContract(t *testing.T) {
 		request(route.method, route.path, "", http.StatusNotFound)
 	}
 	request(http.MethodPost, "/v8/management/oauth/providers/vertex/import", "", http.StatusNotFound)
-	for _, tc := range []struct {
-		method, url, body string
-		status            int
-	}{
-		{http.MethodGet, "/v8/management/oauth/auth-url", `{"error":"provider is required"}`, http.StatusBadRequest},
-		{http.MethodGet, "/v8/management/oauth/auth-url?provider=%20", `{"error":"provider is required"}`, http.StatusBadRequest},
-		{http.MethodGet, "/v8/management/oauth/auth-url?provider=unknown", `{"error":"provider_not_found"}`, http.StatusNotFound},
-		{http.MethodPost, "/v8/management/oauth/import", `{"error":"provider is required"}`, http.StatusBadRequest},
-		{http.MethodPost, "/v8/management/oauth/import?provider=codex", `{"error":"provider_not_found"}`, http.StatusNotFound},
+	for _, url := range []string{
+		"/v8/management/oauth/auth-url",
+		"/v8/management/oauth/auth-url?provider=codex",
+		"/v8/management/oauth/import",
+		"/v8/management/oauth/import?provider=codex",
+		"/v0/management/codex-auth-url",
 	} {
-		if got := request(tc.method, tc.url, "", tc.status); got != tc.body {
-			t.Fatalf("%s: body=%s, want %s", tc.url, got, tc.body)
-		}
-	}
-	for _, tc := range []struct{ url, provider string }{
-		{"/v8/management/oauth/auth-url?provider=codex", "codex"},
-		{"/v0/management/codex-auth-url", "codex"},
-	} {
-		request(http.MethodGet, tc.url, "", http.StatusNotFound)
+		request(http.MethodGet, url, "", http.StatusNotFound)
 	}
 	if got := request(http.MethodGet, "/v8/management/config/routing/retry/request-retry", "", http.StatusOK); got != "3" {
 		t.Fatalf("nested value = %s, want 3", got)
@@ -191,8 +179,8 @@ func TestManagementV8PluginOperationMigratesConfiguration(t *testing.T) {
 	}
 	select {
 	case next := <-reloads:
-		if !next.ForAPIKey().DisableCooling || !next.DisableCooling {
-			t.Fatal("plugin operation published an incorrect configuration scope")
+		if !next.DisableCooling {
+			t.Fatal("plugin operation published an incorrect configuration")
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("missing configuration reload")

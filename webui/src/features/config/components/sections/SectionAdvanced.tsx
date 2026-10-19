@@ -12,15 +12,12 @@ import {
   ToggleSetting,
 } from '../fields/FieldPrimitives';
 import { StringListEditor } from '../blocks/StringListEditor';
-import { getValidationMessage } from '../blocks/shared';
-import { SectionOAuthBehavior } from './SectionOAuthBehavior';
 
 const Icon = CONFIG_TAB_ICONS.advanced;
 
 /** 05 高级与实验：插件源、供应商敏感词、签名缓存与请求头默认值。 */
 export function SectionAdvanced({
   values,
-  validationErrors,
   disabled,
   animateIn,
   onChange,
@@ -44,12 +41,7 @@ export function SectionAdvanced({
       description={t('config_management.visual.sections.advanced.description')}
       animateIn={animateIn}
     >
-      <SectionOAuthBehavior
-        values={values}
-        validationErrors={validationErrors}
-        disabled={disabled}
-        onChange={onChange}
-      />
+
 
       <Collapsible
         label={t('config_management.visual.sections.advanced.antigravity_title')}
@@ -202,15 +194,6 @@ export function SectionAdvanced({
               value={values.claudeHeaderArch}
               onChange={(claudeHeaderArch) => onChange({ claudeHeaderArch })}
               disabled={disabled}
-            />
-            <TextSetting
-              fieldId="claudeHeaderTimezone"
-              label={t('config_management.visual.additions.claudeHeaderTimezone.label')}
-              description={t('config_management.visual.additions.claudeHeaderTimezone.hint')}
-              value={values.claudeHeaderTimezone}
-              onChange={(claudeHeaderTimezone) => onChange({ claudeHeaderTimezone })}
-              disabled={disabled}
-              error={getValidationMessage(t, validationErrors?.claudeHeaderTimezone)}
             />
             <TextSetting
               fieldId="claudeHeaderTimeout"

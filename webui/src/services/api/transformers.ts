@@ -1,7 +1,6 @@
 import type {
   ApiKeyEntry,
   CloakConfig,
-  GeminiKeyConfig,
   ModelAlias,
   OpenAIProviderConfig,
   ProviderKeyConfig,
@@ -214,45 +213,6 @@ const normalizeProviderKeyConfig = (item: unknown): ProviderKeyConfig | null => 
   return config;
 };
 
-const normalizeGeminiKeyConfig = (item: unknown): GeminiKeyConfig | null => {
-  if (item === undefined || item === null) return null;
-  const record = isRecord(item) ? item : null;
-  let apiKey = record?.['api-key'];
-  if (!apiKey && typeof item === 'string') {
-    apiKey = item;
-  }
-  const trimmed = String(apiKey || '').trim();
-  if (!trimmed) return null;
-
-  const config: GeminiKeyConfig = { apiKey: trimmed, ...normalizeRuntimePolicy(record) };
-  const weight = readCredentialWeight(record?.weight);
-  if (weight !== undefined) config.weight = weight;
-  const priority = record?.priority;
-  if (priority !== undefined && priority !== null && String(priority).trim() !== '') {
-    const parsed = Number(priority);
-    if (Number.isFinite(parsed)) {
-      config.priority = parsed;
-    }
-  }
-  const prefix = normalizePrefix(record?.prefix);
-  if (prefix) config.prefix = prefix;
-  const baseUrl = record?.['base-url'];
-  if (baseUrl) config.baseUrl = String(baseUrl);
-  const proxyUrl = record?.['proxy-url'];
-  if (proxyUrl) config.proxyUrl = String(proxyUrl);
-  const disableCooling = normalizeBoolean(record?.['disable-cooling']);
-  if (disableCooling !== undefined) config.disableCooling = disableCooling;
-  const models = normalizeModelAliases(record?.models);
-  if (models.length) config.models = models;
-  const headers = normalizeHeaders(record?.headers);
-  if (headers) config.headers = headers;
-  const excludedModels = normalizeExcludedModels(record?.['excluded-models']);
-  if (excludedModels.length) config.excludedModels = excludedModels;
-  const authIndex = normalizeAuthIndex(record?.['auth-index']);
-  if (authIndex) config.authIndex = authIndex;
-  return config;
-};
-
 const normalizeOpenAIProvider = (
   provider: unknown,
   sourceIndex?: number
@@ -299,19 +259,6 @@ const normalizeOpenAIProvider = (
   return result;
 };
 
-const normalizeOauthExcluded = (payload: unknown): Record<string, string[]> | undefined => {
-  if (!isRecord(payload)) return undefined;
-  const source = payload;
-  if (!isRecord(source)) return undefined;
-  const map: Record<string, string[]> = {};
-  Object.entries(source).forEach(([provider, models]) => {
-    const key = String(provider || '').trim();
-    if (!key) return;
-    const normalized = normalizeExcludedModels(models);
-    map[key.toLowerCase()] = normalized;
-  });
-  return map;
-};
 
 /** Resolve effective values for display only; retain the complete persisted group for writes. */
 export const normalizeProviderGroups = (groups: unknown, openai = false) => {
@@ -380,13 +327,11 @@ export const normalizeConfigResponse = (raw: unknown): Config => {
     at('api-keys.openai-compatibility'),
     true
   ) as OpenAIProviderConfig[];
-  config.oauthExcludedModels = normalizeOauthExcluded(at('oauth.excluded-models'));
   return config;
 };
 
 export {
   normalizeApiKeyEntry,
-  normalizeGeminiKeyConfig,
   normalizeModelAliases,
   normalizeOpenAIProvider,
   normalizeProviderKeyConfig,

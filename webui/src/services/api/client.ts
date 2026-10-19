@@ -240,23 +240,6 @@ class ApiClient {
     return this.instance.get(url, config);
   }
 
-  /**
-   * 发送 FormData
-   */
-  async postForm<T = unknown>(
-    url: string,
-    formData: FormData,
-    config?: AxiosRequestConfig
-  ): Promise<T> {
-    const response = await this.instance.post<T>(url, formData, {
-      ...config,
-      headers: {
-        ...(config?.headers || {}),
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  }
 }
 
 // 导出单例

@@ -104,9 +104,8 @@ type reviewedInPlaceByteWrite struct {
 }
 
 var reviewedInPlaceByteWrites = map[string]reviewedInPlaceByteWrite{
-	"internal/translator/common/apply_patch_responses.go": {1, "shifts [][]byte item references in a private output slice; no byte of any JSON payload is rewritten"},
-	"internal/home/client.go":                             {1, "zeroes a secret buffer after json.Unmarshal has copied every value out"},
-	"internal/pluginstore/auth.go":                        {1, "zeroes a locally built credential buffer after base64 encoding copied it out"},
+	"internal/home/client.go":      {1, "zeroes a secret buffer after json.Unmarshal has copied every value out"},
+	"internal/pluginstore/auth.go": {1, "zeroes a locally built credential buffer after base64 encoding copied it out"},
 }
 
 // TestInPlaceByteWritesAreReviewed 使原地字节写操作集合保持小巧

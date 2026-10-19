@@ -15,7 +15,7 @@ const (
 
 // 每个执行器都通过这些辅助函数到达转换器，因此该拒绝行为
 // 必须能穿过注册表、多代理包装层和兼容开关。
-func TestTranslateRequestReturningErrorRefusesEmptiedAttachmentTurns(t *testing.T) {
+func TestTranslateRequestUpdateIntentRefusesEmptiedAttachmentTurns(t *testing.T) {
 	ctx := context.Background()
 	routes := []struct {
 		name     string
@@ -48,16 +48,16 @@ func TestTranslateRequestReturningErrorRefusesEmptiedAttachmentTurns(t *testing.
 				name += " compat"
 			}
 			t.Run(name, func(t *testing.T) {
-				body, err := TranslateRequestReturningError(ctx, route.from, route.to, "m", []byte(route.refused), false, compat)
+				body, _, err := TranslateRequestWithAPIKeyModelCompatibilityAndUpdateIntent(ctx, route.from, route.to, "m", []byte(route.refused), false, compat)
 				requireUnsupportedPart(t, "single", err, route.wantType)
 				if !gjson.ValidBytes(body) {
 					t.Fatalf("single: body is not JSON: %q", body)
 				}
 
-				_, _, err = TranslateRequestPairReturningError(ctx, route.from, route.to, "m", []byte(route.refused), []byte(route.refused), false, compat)
+				_, _, _, err = TranslateRequestPairWithAPIKeyModelCompatibilityAndUpdateIntent(ctx, route.from, route.to, "m", []byte(route.refused), []byte(route.refused), false, compat)
 				requireUnsupportedPart(t, "pair", err, route.wantType)
 
-				if _, err = TranslateRequestReturningError(ctx, route.from, route.to, "m", []byte(route.accepted), false, compat); err != nil {
+				if _, _, err = TranslateRequestWithAPIKeyModelCompatibilityAndUpdateIntent(ctx, route.from, route.to, "m", []byte(route.accepted), false, compat); err != nil {
 					t.Fatalf("representable attachment was refused: %v", err)
 				}
 			})

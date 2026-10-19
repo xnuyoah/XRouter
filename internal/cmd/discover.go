@@ -98,31 +98,12 @@ func LoadDiscoveryScanFilters(configPath string) (include, exclude []string) {
 	return ParseInterfaceList(payload.Discovery.Interfaces.Include...), ParseInterfaceList(payload.Discovery.Interfaces.Exclude...)
 }
 
-// DoDiscover 执行 LAN AI 网关发现流程并输出结果。
-// 成功返回 0，出错返回 1。
-func DoDiscover(timeout time.Duration, jsonOutput bool) int {
-	return DoDiscoverWithOptions(DiscoverOptions{Timeout: timeout, JSONOutput: jsonOutput})
-}
-
-// DoDiscoverWithServiceType 为请求的 DNS-SD 服务类型执行 LAN 发现。
-func DoDiscoverWithServiceType(timeout time.Duration, jsonOutput bool, serviceType string) int {
-	return DoDiscoverWithOptions(DiscoverOptions{Timeout: timeout, JSONOutput: jsonOutput, ServiceType: serviceType})
-}
-
 // DoDiscoverWithOptions 使用显式扫描选项执行 LAN 发现。
 func DoDiscoverWithOptions(opts DiscoverOptions) int {
 	include, exclude := ResolveDiscoveryInterfaceFilters(opts.Include, opts.Exclude, nil, nil)
 	return runDiscoverWithOptions(opts, os.Stdout, os.Stderr, func() (discovery.Browser, error) {
 		return newLANBrowser(include, exclude)
 	})
-}
-
-func runDiscover(timeout time.Duration, jsonOutput bool, stdout, stderr io.Writer, newBrowser func() (discovery.Browser, error)) int {
-	return runDiscoverWithOptions(DiscoverOptions{Timeout: timeout, JSONOutput: jsonOutput}, stdout, stderr, newBrowser)
-}
-
-func runDiscoverWithServiceType(timeout time.Duration, jsonOutput bool, serviceType string, stdout, stderr io.Writer, newBrowser func() (discovery.Browser, error)) int {
-	return runDiscoverWithOptions(DiscoverOptions{Timeout: timeout, JSONOutput: jsonOutput, ServiceType: serviceType}, stdout, stderr, newBrowser)
 }
 
 func runDiscoverWithOptions(opts DiscoverOptions, stdout, stderr io.Writer, newBrowser func() (discovery.Browser, error)) int {

@@ -265,14 +265,6 @@ func (p *pluginRefreshSimProvider) ParseAuth(context.Context, pluginapi.AuthPars
 	return pluginapi.AuthParseResponse{}, nil
 }
 
-func (p *pluginRefreshSimProvider) StartLogin(context.Context, pluginapi.AuthLoginStartRequest) (pluginapi.AuthLoginStartResponse, error) {
-	return pluginapi.AuthLoginStartResponse{}, nil
-}
-
-func (p *pluginRefreshSimProvider) PollLogin(context.Context, pluginapi.AuthLoginPollRequest) (pluginapi.AuthLoginPollResponse, error) {
-	return pluginapi.AuthLoginPollResponse{}, nil
-}
-
 func (p *pluginRefreshSimProvider) RefreshAuth(ctx context.Context, req pluginapi.AuthRefreshRequest) (pluginapi.AuthRefreshResponse, error) {
 	if p.refreshAuth != nil {
 		return p.refreshAuth(ctx, req)

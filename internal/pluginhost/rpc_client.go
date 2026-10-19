@@ -208,12 +208,6 @@ func callPlugin[T any](ctx context.Context, client pluginClient, method string, 
 
 func sanitizePluginRequest(request any) any {
 	switch req := request.(type) {
-	case pluginapi.AuthLoginStartRequest:
-		req.HTTPClient = nil
-		return req
-	case pluginapi.AuthLoginPollRequest:
-		req.HTTPClient = nil
-		return req
 	case pluginapi.AuthRefreshRequest:
 		req.HTTPClient = nil
 		return req
@@ -461,24 +455,6 @@ func (a rpcThinkingApplier) Identifier() string {
 
 func (a *rpcPluginAdapter) ParseAuth(ctx context.Context, req pluginapi.AuthParseRequest) (pluginapi.AuthParseResponse, error) {
 	return callPlugin[pluginapi.AuthParseResponse](ctx, a.client, pluginabi.MethodAuthParse, req)
-}
-
-func (a *rpcPluginAdapter) StartLogin(ctx context.Context, req pluginapi.AuthLoginStartRequest) (pluginapi.AuthLoginStartResponse, error) {
-	callbackID, closeCallback := a.openHostCallbackContext(ctx)
-	defer closeCallback()
-	return callPlugin[pluginapi.AuthLoginStartResponse](ctx, a.client, pluginabi.MethodAuthLoginStart, rpcAuthLoginStartRequest{
-		AuthLoginStartRequest: req,
-		HostCallbackID:        callbackID,
-	})
-}
-
-func (a *rpcPluginAdapter) PollLogin(ctx context.Context, req pluginapi.AuthLoginPollRequest) (pluginapi.AuthLoginPollResponse, error) {
-	callbackID, closeCallback := a.openHostCallbackContext(ctx)
-	defer closeCallback()
-	return callPlugin[pluginapi.AuthLoginPollResponse](ctx, a.client, pluginabi.MethodAuthLoginPoll, rpcAuthLoginPollRequest{
-		AuthLoginPollRequest: req,
-		HostCallbackID:       callbackID,
-	})
 }
 
 func (a *rpcPluginAdapter) RefreshAuth(ctx context.Context, req pluginapi.AuthRefreshRequest) (pluginapi.AuthRefreshResponse, error) {

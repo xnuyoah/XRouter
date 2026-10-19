@@ -57,16 +57,6 @@ type rpcExecutorStreamResponse struct {
 	Chunks  []pluginapi.ExecutorStreamChunk `json:"chunks,omitempty"`
 }
 
-type rpcAuthLoginStartRequest struct {
-	pluginapi.AuthLoginStartRequest
-	HostCallbackID string `json:"host_callback_id,omitempty"`
-}
-
-type rpcAuthLoginPollRequest struct {
-	pluginapi.AuthLoginPollRequest
-	HostCallbackID string `json:"host_callback_id,omitempty"`
-}
-
 type rpcAuthRefreshRequest struct {
 	pluginapi.AuthRefreshRequest
 	HostCallbackID string `json:"host_callback_id,omitempty"`

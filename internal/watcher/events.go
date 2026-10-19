@@ -41,7 +41,7 @@ func (w *Watcher) start(ctx context.Context) error {
 
 	go w.processEvents(ctx)
 
-	w.reloadClients(true, nil, false)
+	w.reloadClients(true, false)
 	return nil
 }
 

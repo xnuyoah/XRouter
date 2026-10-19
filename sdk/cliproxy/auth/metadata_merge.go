@@ -209,31 +209,6 @@ func mergeAuthContent(base, current, updated *Auth) *Auth {
 			if strings.EqualFold(strings.TrimSpace(k), "proxy_url") {
 				continue
 			}
-			if strings.EqualFold(strings.TrimSpace(k), "siwc") {
-				siwcUpd, okUpd := v.(map[string]any)
-				if !okUpd || len(siwcUpd) == 0 {
-					continue
-				}
-				baseVal, hadInBase := baseMeta[k]
-				changedByExecutor := !hadInBase || !reflect.DeepEqual(baseVal, v)
-				if changedByExecutor {
-					mergedSIWC := make(map[string]any)
-					if curSIWC, okCur := current.Metadata[k].(map[string]any); okCur {
-						for sk, sv := range curSIWC {
-							mergedSIWC[sk] = sv
-						}
-					} else if bSIWC, okBase := baseVal.(map[string]any); okBase {
-						for sk, sv := range bSIWC {
-							mergedSIWC[sk] = sv
-						}
-					}
-					for sk, sv := range siwcUpd {
-						mergedSIWC[sk] = sv
-					}
-					merged.Metadata[k] = mergedSIWC
-				}
-				continue
-			}
 			baseVal, hadInBase := baseMeta[k]
 			currentVal, hadInCurrent := current.Metadata[k]
 
@@ -251,7 +226,7 @@ func mergeAuthContent(base, current, updated *Auth) *Auth {
 		if baseMeta != nil {
 			for k, baseVal := range baseMeta {
 				trimmedKey := strings.ToLower(strings.TrimSpace(k))
-				if trimmedKey == "proxy_url" || trimmedKey == "siwc" || trimmedKey == "use_siwc" {
+				if trimmedKey == "proxy_url" {
 					continue
 				}
 				if _, inUpdated := updated.Metadata[k]; !inUpdated {

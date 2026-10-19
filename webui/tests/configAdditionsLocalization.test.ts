@@ -5,29 +5,6 @@ const addedFieldIds = [
   'routingSessionAffinitySubagents',
   'saveCooldownStatus',
   'transientErrorCooldownSeconds',
-  'videoResultAuthCacheTTL',
-  'claudeHeaderTimezone',
-  'claudeModelLevelCooling',
-  'claudeDisableCloakMode',
-  'claudeCodeDisableCloakingModelList',
-  'codexDisableCloaking',
-  'codexModelLevelCooling',
-  'codexStreamBootstrapBuffering',
-  'codexStreamBootstrapTimeout',
-  'codexOptimizeMultiAgentV2',
-  'codexOrphanDelegationCompatibility',
-  'codexResponseSteering',
-  'antigravityConnectionPoolEnabled',
-  'antigravityConnectionPoolIdleTimeout',
-  'antigravityConnectionPoolMaxIdleConnsPerHost',
-  'xaiInjectXSearch',
-  'codexLiveMediaRelayEnabled',
-  'codexLiveMediaRelayMaxSessions',
-  'codexLiveMediaRelayDisablePrivateRemoteIPs',
-  'codexLiveMediaRelayPublicIP',
-  'codexLiveMediaRelayUDPPortMin',
-  'codexLiveMediaRelayUDPPortMax',
-  'codexLiveMediaRelayICEServers',
 ];
 
 function resolveKey(root: unknown, path: string): unknown {
@@ -39,7 +16,7 @@ function resolveKey(root: unknown, path: string): unknown {
 
 describe('added configuration field localization', () => {
   for (const locale of ['en', 'zh-CN']) {
-    test(`${locale} includes searchable labels, help, and accessible ICE actions`, async () => {
+    test(`${locale} includes searchable labels and help`, async () => {
       const messages: unknown = await Bun.file(`src/i18n/locales/${locale}.json`).json();
       for (const fieldId of addedFieldIds) {
         const entry = CONFIG_FIELD_SEARCH_INDEX.find((item) => item.fieldId === fieldId);
@@ -49,25 +26,11 @@ describe('added configuration field localization', () => {
         expect(resolveKey(messages, entry!.labelKey)).toBeString();
         expect(resolveKey(messages, entry!.hintKey!)).toBeString();
       }
-      for (const key of [
-        'oauthTitle',
-        'oauthHint',
-        'claudeTitle',
-        'codexTitle',
-        'antigravityTitle',
-        'xaiTitle',
-        'liveRelayTitle',
-        'liveRelayHint',
-        'iceAdd',
-        'iceRemove',
-        'iceURLs',
-        'iceUsername',
-        'iceCredential',
-        'iceServer',
-      ]) {
-        const text = resolveKey(messages, `config_management.visual.additions.${key}`);
-        expect(text).toBeString();
-        expect(String(text).trim().length).toBeGreaterThan(0);
+      for (const fieldId of addedFieldIds) {
+        const group = resolveKey(messages, `config_management.visual.additions.${fieldId}`);
+        expect(group).toBeTypeOf('object');
+        expect(resolveKey(group, 'label')).toBeString();
+        expect(resolveKey(group, 'hint')).toBeString();
       }
     });
   }

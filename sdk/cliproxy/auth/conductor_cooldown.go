@@ -98,10 +98,6 @@ func providerCoolingOverrideForAuth(auth *Auth, cfg *internalconfig.Config) (boo
 	return *entry.DisableCooling, true
 }
 
-func nextTransientErrorRetryAfter(now time.Time) time.Time {
-	return recoverableFailureRetryAfterWithHint(now, nil, false)
-}
-
 func recoverableFailureRetryAfter(now time.Time, disableCooling bool) time.Time {
 	return recoverableFailureRetryAfterWithHint(now, nil, disableCooling)
 }
@@ -1608,13 +1604,6 @@ func cloneError(err *Error) *Error {
 		Retryable:  err.Retryable,
 		HTTPStatus: err.HTTPStatus,
 	}
-}
-
-func errorString(err error) string {
-	if err == nil {
-		return ""
-	}
-	return err.Error()
 }
 
 func statusCodeFromError(err error) int {

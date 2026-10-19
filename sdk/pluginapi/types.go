@@ -272,79 +272,12 @@ type AuthParseResponse struct {
 	Auths []AuthData
 }
 
-// AuthProvider 解析、登录、轮询并刷新插件供应商凭据。
+// AuthProvider 解析并刷新插件供应商凭据。插件登录流程已随
+// 内置 OAuth 能力一并移除。
 type AuthProvider interface {
 	Identifier() string
 	ParseAuth(context.Context, AuthParseRequest) (AuthParseResponse, error)
-	StartLogin(context.Context, AuthLoginStartRequest) (AuthLoginStartResponse, error)
-	PollLogin(context.Context, AuthLoginPollRequest) (AuthLoginPollResponse, error)
 	RefreshAuth(context.Context, AuthRefreshRequest) (AuthRefreshResponse, error)
-}
-
-// AuthLoginStartRequest 请求插件启动供应商登录流程。
-type AuthLoginStartRequest struct {
-	// Provider 是该登录流程的供应商键。
-	Provider string
-	// BaseURL 是宿主回调或登录基础 URL。
-	BaseURL string
-	// Host 包含相关的宿主配置。
-	Host HostConfigSummary
-	// HTTPClient 通过宿主传输策略执行上游 HTTP 请求。
-	HTTPClient HostHTTPClient `json:"-"`
-	// Metadata 携带插件定义的登录上下文。
-	Metadata map[string]any
-}
-
-// AuthLoginStartResponse 返回用于轮询的登录流程状态。
-type AuthLoginStartResponse struct {
-	// Provider 是该登录流程的供应商键。
-	Provider string
-	// URL 是面向用户的登录 URL。
-	URL string
-	// State 是用于轮询的不透明插件登录状态。
-	State string
-	// ExpiresAt 是该登录流程过期的时间。
-	ExpiresAt time.Time
-	// Metadata 携带插件定义的轮询上下文。
-	Metadata map[string]any
-}
-
-// AuthLoginPollRequest 请求插件轮询供应商登录流程。
-type AuthLoginPollRequest struct {
-	// Provider 是该登录流程的供应商键。
-	Provider string
-	// State 是 StartLogin 返回的不透明插件登录状态。
-	State string
-	// Host 包含相关的宿主配置。
-	Host HostConfigSummary
-	// HTTPClient 通过宿主传输策略执行上游 HTTP 请求。
-	HTTPClient HostHTTPClient `json:"-"`
-	// Metadata 携带插件定义的轮询上下文。
-	Metadata map[string]any
-}
-
-// AuthLoginStatus 描述当前供应商登录状态。
-type AuthLoginStatus string
-
-const (
-	// AuthLoginStatusPending 表示登录流程仍在等待。
-	AuthLoginStatusPending AuthLoginStatus = "pending"
-	// AuthLoginStatusSuccess 表示登录流程已产生凭据数据。
-	AuthLoginStatusSuccess AuthLoginStatus = "success"
-	// AuthLoginStatusError 表示登录流程失败。
-	AuthLoginStatusError AuthLoginStatus = "error"
-)
-
-// AuthLoginPollResponse 返回登录轮询状态和凭据数据。
-type AuthLoginPollResponse struct {
-	// Status 是当前登录流程状态。
-	Status AuthLoginStatus
-	// Message 包含面向供应商的登录进度或错误文本。
-	Message string
-	// Auth 是 Status 为 success 时已完成的凭据记录。
-	Auth AuthData
-	// Auths 在一个登录流程展开为多个运行时凭据时包含多个已完成的凭据记录。
-	Auths []AuthData
 }
 
 // AuthRefreshRequest 请求插件刷新供应商凭据数据。

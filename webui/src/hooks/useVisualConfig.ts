@@ -20,10 +20,8 @@ import { DEFAULT_VISUAL_VALUES } from '@/types/visualConfig';
 import { assertConfigListsUnchanged, ConfigDraftConflictError } from '@/services/api/configPatch';
 import {
   ADDITION_FIELDS,
-  ICE_KEY,
   readVisualAdditions,
   writeVisualAdditions,
-  writeICEServers,
   validateVisualAdditions,
 } from '@/features/config/visualConfigAdditions';
 
@@ -1091,7 +1089,6 @@ function alignRebasedValues(
     }));
   return {
     ...draft,
-    [ICE_KEY]: alignRebasedEntries(baseline[ICE_KEY], draft[ICE_KEY], (row) => row.urlsText),
     payloadDefaultRules: alignRules(baseline.payloadDefaultRules, draft.payloadDefaultRules),
     payloadDefaultRawRules: alignRules(
       baseline.payloadDefaultRawRules,
@@ -1199,12 +1196,6 @@ function getNextDirtyFields(
     }
   });
   ADDITION_FIELDS.forEach(({ key }) => updateScalarDirty(key));
-  if (Object.prototype.hasOwnProperty.call(patch, ICE_KEY)) {
-    updateDirty(
-      ICE_KEY,
-      withoutEditorIds(nextValues[ICE_KEY]) === withoutEditorIds(baselineValues[ICE_KEY])
-    );
-  }
 
   (
     [
@@ -1674,16 +1665,6 @@ export function useVisualConfig() {
           rebasedPayload?.serverYaml ?? baselineYaml,
           target === 'server'
         );
-        if (dirtyFields.has(ICE_KEY)) {
-          writeICEServers(
-            doc,
-            rebasedPayload?.yaml ?? baselineYaml,
-            rebasedPayload?.serverYaml ?? baselineYaml,
-            payloadBaseline[ICE_KEY],
-            values[ICE_KEY],
-            target === 'server'
-          );
-        }
         const shouldWritePluginStoreAuth = dirtyFields.has('pluginStoreAuth');
 
         // The backend accepts null routing as defaults, but YAML setIn cannot traverse it.

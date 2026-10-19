@@ -173,22 +173,6 @@
   background: color-mix(in srgb, var(--text-secondary) 10%, transparent);
 }
 
-.importSummary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  padding: 10px 13px;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  font-size: 12px;
-
-  strong {
-    color: var(--text-primary);
-  }
-}
-
 .error {
   padding: 9px 13px;
   border: 1px solid var(--danger-color);

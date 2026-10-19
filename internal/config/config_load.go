@@ -281,18 +281,6 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	// 清理 OpenAI 兼容供应商：丢弃没有 base-url 的条目
 	cfg.SanitizeOpenAICompatibility()
 
-	// 规范化 OAuth 供应商模型排除映射。
-	cfg.OAuthExcludedModels = NormalizeOAuthExcludedModels(cfg.OAuthExcludedModels)
-
-	// 规范化全局 OAuth 模型名别名。
-	cfg.SanitizeOAuthModelAlias()
-
-	// 规范化全局 OAuth 模型设置。
-	cfg.SanitizeOAuthSettings()
-
-	// 规范化全局 OAuth 请求级错误规则。
-	cfg.SanitizeOAuthRequestScopedErrors()
-
 	// 校验原始载荷规则并丢弃无效条目。
 	cfg.SanitizePayloadRules()
 

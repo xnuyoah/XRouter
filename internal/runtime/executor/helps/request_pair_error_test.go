@@ -44,9 +44,6 @@ func TestPairTranslationReportsOnlyTheWorkingError(t *testing.T) {
 				name += " compat"
 			}
 			routes[name] = func(original, working []byte) ([]byte, []byte, error) {
-				return TranslateRequestPairReturningError(ctx, sdktranslator.FormatClaude, to, "m", original, working, false, compat)
-			}
-			routes[name+" with update intent"] = func(original, working []byte) ([]byte, []byte, error) {
 				originalBody, workingBody, _, err := TranslateRequestPairWithAPIKeyModelCompatibilityAndUpdateIntent(ctx, sdktranslator.FormatClaude, to, "m", original, working, false, compat)
 				return originalBody, workingBody, err
 			}
@@ -80,10 +77,8 @@ func TestPairTranslationReportsOnlyTheWorkingError(t *testing.T) {
 func TestResponsesFileIDOnlyReturns400OnEveryPath(t *testing.T) {
 	payload := []byte(`{"model":"claude-sonnet-4","input":[{"type":"message","role":"user","content":[{"type":"input_file","file_id":"file-1"}]}]}`)
 	for _, compat := range []bool{false, true} {
-		_, single := TranslateRequestReturningError(context.Background(), sdktranslator.FormatOpenAIResponse, sdktranslator.FormatClaude, "claude-sonnet-4", payload, false, compat)
-		requireUnsupportedPart(t, "single", single, "input_file")
-		_, _, pair := TranslateRequestPairReturningError(context.Background(), sdktranslator.FormatOpenAIResponse, sdktranslator.FormatClaude, "claude-sonnet-4", payload, payload, false, compat)
-		requireUnsupportedPart(t, "pair", pair, "input_file")
+		_, _, errSingle := TranslateRequestWithAPIKeyModelCompatibilityAndUpdateIntent(context.Background(), sdktranslator.FormatOpenAIResponse, sdktranslator.FormatClaude, "claude-sonnet-4", payload, false, compat)
+		requireUnsupportedPart(t, "single", errSingle, "input_file")
 		_, _, _, intent := TranslateRequestPairWithAPIKeyModelCompatibilityAndUpdateIntent(context.Background(), sdktranslator.FormatOpenAIResponse, sdktranslator.FormatClaude, "claude-sonnet-4", payload, payload, false, compat)
 		requireUnsupportedPart(t, "pair with update intent", intent, "input_file")
 	}
@@ -91,11 +86,11 @@ func TestResponsesFileIDOnlyReturns400OnEveryPath(t *testing.T) {
 
 func TestResponsesAudioAndTextBesideFileIDOnCompatPath(t *testing.T) {
 	audio := []byte(`{"model":"claude-sonnet-4","input":[{"type":"message","role":"user","content":[{"type":"input_audio","input_audio":{"data":"UklGRg==","format":"wav"}}]}]}`)
-	_, err := TranslateRequestReturningError(context.Background(), sdktranslator.FormatOpenAIResponse, sdktranslator.FormatClaude, "claude-sonnet-4", audio, false, true)
+	_, _, err := TranslateRequestWithAPIKeyModelCompatibilityAndUpdateIntent(context.Background(), sdktranslator.FormatOpenAIResponse, sdktranslator.FormatClaude, "claude-sonnet-4", audio, false, true)
 	requireUnsupportedPart(t, "audio", err, "input_audio")
 
 	mixed := []byte(`{"model":"claude-sonnet-4","input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"keep me"},{"type":"input_file","file_id":"file-1"}]}]}`)
-	body, err := TranslateRequestReturningError(context.Background(), sdktranslator.FormatOpenAIResponse, sdktranslator.FormatClaude, "claude-sonnet-4", mixed, false, true)
+	body, _, err := TranslateRequestWithAPIKeyModelCompatibilityAndUpdateIntent(context.Background(), sdktranslator.FormatOpenAIResponse, sdktranslator.FormatClaude, "claude-sonnet-4", mixed, false, true)
 	if err != nil {
 		t.Fatalf("text beside a file id was refused: %v", err)
 	}

@@ -156,7 +156,6 @@ describe('resolveDirtyTabs', () => {
     expect(tabs.has('connectivity')).toBe(true);
     expect(tabs.size).toBe(2);
 
-    expect([...resolveDirtyTabs(new Set(['quotaAntigravityCredits']))]).toEqual(['advanced']);
     expect(resolveDirtyTabs(new Set(['quotaSwitchProject', 'quotaSwitchPreviewModel'])).size).toBe(
       0
     );
@@ -189,23 +188,6 @@ describe('Antigravity credits UI and search', () => {
     }
     for (const query of ['switch-project', 'switch-preview-model', 'quota-exceeded']) {
       expect(searchConfigFields(query, (key) => key)).toEqual([]);
-    }
-  });
-
-  test('credits search targets Advanced in every locale', async () => {
-    const entry = findConfigFieldById('quotaAntigravityCredits');
-    expect(entry?.sectionId).toBe('advanced');
-    expect(entry?.labelKey).toBe('config_management.visual.sections.advanced.antigravity_credits');
-    for (const locale of LANGUAGE_ORDER) {
-      const json = await Bun.file(`src/i18n/locales/${locale}.json`).json();
-      const sections = json.config_management.visual.sections;
-      expect(sections).not.toHaveProperty('quota');
-      expect(typeof sections.advanced.antigravity_credits).toBe('string');
-      const translate = (key: string): string =>
-        key === entry?.labelKey ? sections.advanced.antigravity_credits : key;
-      for (const query of [sections.advanced.antigravity_credits, 'antigravity-credits']) {
-        expect(searchConfigFields(query, translate)).toContainEqual(entry);
-      }
     }
   });
 

@@ -96,7 +96,7 @@ func TestCacheSignature_BasicStorageAndRetrieval(t *testing.T) {
 	signature := "abc123validSignature1234567890123456789012345678901234567890"
 
 	// 存储签名
-	CacheSignature(testModelName, text, signature)
+	CacheSignatureBestEffort(context.Background(), testModelName, text, signature)
 
 	// 获取签名
 	retrieved := GetCachedSignature(testModelName, text)
@@ -148,7 +148,7 @@ func TestGetCachedSignatureRequiredHomeMissDoesNotFallbackToLocalCache(t *testin
 	ClearSignatureCache("")
 	text := "thinking text"
 	signature := "abc123validSignature1234567890123456789012345678901234567890"
-	CacheSignature(testModelName, text, signature)
+	CacheSignatureBestEffort(context.Background(), testModelName, text, signature)
 
 	client := newFakeSignatureKVClient()
 	useFakeSignatureKVClient(t, client, true, nil)
@@ -218,8 +218,8 @@ func TestCacheSignature_DifferentModelGroups(t *testing.T) {
 	sig2 := "signature2_1234567890123456789012345678901234567890123456"
 
 	otherModel := "gpt-5.2-preview"
-	CacheSignature(testModelName, text, sig1)
-	CacheSignature(otherModel, text, sig2)
+	CacheSignatureBestEffort(context.Background(), testModelName, text, sig1)
+	CacheSignatureBestEffort(context.Background(), otherModel, text, sig2)
 
 	if GetCachedSignature(testModelName, text) != sig1 {
 		t.Error("Claude signature mismatch")
@@ -238,7 +238,7 @@ func TestCacheSignature_NotFound(t *testing.T) {
 	}
 
 	// 已存在的会话但文本不同
-	CacheSignature(testModelName, "text-a", "sigA12345678901234567890123456789012345678901234567890")
+	CacheSignatureBestEffort(context.Background(), testModelName, "text-a", "sigA12345678901234567890123456789012345678901234567890")
 	if got := GetCachedSignature(testModelName, "text-b"); got != "" {
 		t.Errorf("Expected empty string for different text, got '%s'", got)
 	}
@@ -248,9 +248,9 @@ func TestCacheSignature_EmptyInputs(t *testing.T) {
 	ClearSignatureCache("")
 
 	// 所有空/无效输入都应为空操作
-	CacheSignature(testModelName, "", "sig12345678901234567890123456789012345678901234567890")
-	CacheSignature(testModelName, "text", "")
-	CacheSignature(testModelName, "text", "short") // 过短
+	CacheSignatureBestEffort(context.Background(), testModelName, "", "sig12345678901234567890123456789012345678901234567890")
+	CacheSignatureBestEffort(context.Background(), testModelName, "text", "")
+	CacheSignatureBestEffort(context.Background(), testModelName, "text", "short") // 过短
 
 	if got := GetCachedSignature(testModelName, "text"); got != "" {
 		t.Errorf("Expected empty after invalid cache attempts, got '%s'", got)
@@ -263,7 +263,7 @@ func TestCacheSignature_ShortSignatureRejected(t *testing.T) {
 	text := "Some text"
 	shortSig := "abc123" // 少于 50 个字符
 
-	CacheSignature(testModelName, text, shortSig)
+	CacheSignatureBestEffort(context.Background(), testModelName, text, shortSig)
 
 	if got := GetCachedSignature(testModelName, text); got != "" {
 		t.Errorf("Short signature should be rejected, got '%s'", got)
@@ -274,8 +274,8 @@ func TestClearSignatureCache_ModelGroup(t *testing.T) {
 	ClearSignatureCache("")
 
 	sig := "validSig1234567890123456789012345678901234567890123456"
-	CacheSignature(testModelName, "text", sig)
-	CacheSignature(testModelName, "text-2", sig)
+	CacheSignatureBestEffort(context.Background(), testModelName, "text", sig)
+	CacheSignatureBestEffort(context.Background(), testModelName, "text-2", sig)
 
 	ClearSignatureCache("session-1")
 
@@ -288,8 +288,8 @@ func TestClearSignatureCache_AllSessions(t *testing.T) {
 	ClearSignatureCache("")
 
 	sig := "validSig1234567890123456789012345678901234567890123456"
-	CacheSignature(testModelName, "text", sig)
-	CacheSignature(testModelName, "text-2", sig)
+	CacheSignatureBestEffort(context.Background(), testModelName, "text", sig)
+	CacheSignatureBestEffort(context.Background(), testModelName, "text-2", sig)
 
 	ClearSignatureCache("")
 
@@ -334,8 +334,8 @@ func TestCacheSignature_TextHashCollisionResistance(t *testing.T) {
 	sig1 := "signature1_1234567890123456789012345678901234567890123456"
 	sig2 := "signature2_1234567890123456789012345678901234567890123456"
 
-	CacheSignature(testModelName, text1, sig1)
-	CacheSignature(testModelName, text2, sig2)
+	CacheSignatureBestEffort(context.Background(), testModelName, text1, sig1)
+	CacheSignatureBestEffort(context.Background(), testModelName, text2, sig2)
 
 	if GetCachedSignature(testModelName, text1) != sig1 {
 		t.Error("text1 signature mismatch")
@@ -351,7 +351,7 @@ func TestCacheSignature_UnicodeText(t *testing.T) {
 	text := "한글 텍스트와 이모지 🎉 그리고 特殊文字"
 	sig := "unicodeSig123456789012345678901234567890123456789012345"
 
-	CacheSignature(testModelName, text, sig)
+	CacheSignatureBestEffort(context.Background(), testModelName, text, sig)
 
 	if got := GetCachedSignature(testModelName, text); got != sig {
 		t.Errorf("Unicode text signature retrieval failed, got '%s'", got)
@@ -365,8 +365,8 @@ func TestCacheSignature_Overwrite(t *testing.T) {
 	sig1 := "firstSignature12345678901234567890123456789012345678901"
 	sig2 := "secondSignature1234567890123456789012345678901234567890"
 
-	CacheSignature(testModelName, text, sig1)
-	CacheSignature(testModelName, text, sig2) // 覆盖
+	CacheSignatureBestEffort(context.Background(), testModelName, text, sig1)
+	CacheSignatureBestEffort(context.Background(), testModelName, text, sig2) // 覆盖
 
 	if got := GetCachedSignature(testModelName, text); got != sig2 {
 		t.Errorf("Expected overwritten signature '%s', got '%s'", sig2, got)
@@ -383,7 +383,7 @@ func TestCacheSignature_ExpirationLogic(t *testing.T) {
 	text := "text"
 	sig := "validSig1234567890123456789012345678901234567890123456"
 
-	CacheSignature(testModelName, text, sig)
+	CacheSignatureBestEffort(context.Background(), testModelName, text, sig)
 
 	// 新写入的条目应可被获取
 	if got := GetCachedSignature(testModelName, text); got != sig {

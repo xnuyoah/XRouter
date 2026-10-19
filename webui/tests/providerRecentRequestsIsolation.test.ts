@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { createProviderRecentRequestsCacheController } from '../src/components/providers/hooks/useProviderRecentRequests';
+import { createProviderRecentRequestsCacheController } from '../src/hooks/useProviderRecentRequests';
 
 describe('provider recent request cache isolation', () => {
   test('creates a fresh cache when the backend or management key changes', () => {

@@ -610,45 +610,6 @@ func TestFileSynthesizer_Synthesize_WeightParsing(t *testing.T) {
 	}
 }
 
-func TestFileSynthesizer_Synthesize_OAuthExcludedModelsMerged(t *testing.T) {
-	tempDir := t.TempDir()
-	authData := map[string]any{
-		"type":            "claude",
-		"excluded_models": []string{"custom-model", "MODEL-B"},
-	}
-	data, _ := json.Marshal(authData)
-	errWriteFile := os.WriteFile(filepath.Join(tempDir, "auth.json"), data, 0644)
-	if errWriteFile != nil {
-		t.Fatalf("failed to write auth file: %v", errWriteFile)
-	}
-
-	synth := NewFileSynthesizer()
-	ctx := &SynthesisContext{
-		Config: &config.Config{
-			OAuthExcludedModels: map[string][]string{
-				"claude": {"shared", "model-b"},
-			},
-		},
-		AuthDir:     tempDir,
-		Now:         time.Now(),
-		IDGenerator: NewStableIDGenerator(),
-	}
-
-	auths, errSynthesize := synth.Synthesize(ctx)
-	if errSynthesize != nil {
-		t.Fatalf("unexpected error: %v", errSynthesize)
-	}
-	if len(auths) != 1 {
-		t.Fatalf("expected 1 auth, got %d", len(auths))
-	}
-
-	got := auths[0].Attributes["excluded_models"]
-	want := "custom-model,model-b,shared"
-	if got != want {
-		t.Fatalf("expected excluded_models %q, got %q", want, got)
-	}
-}
-
 func TestFileSynthesizer_Synthesize_MetaOAuthExcludedModelsMerged(t *testing.T) {
 	tempDir := t.TempDir()
 	authData := map[string]any{
@@ -665,11 +626,7 @@ func TestFileSynthesizer_Synthesize_MetaOAuthExcludedModelsMerged(t *testing.T) 
 
 	synth := NewFileSynthesizer()
 	ctx := &SynthesisContext{
-		Config: &config.Config{
-			OAuthExcludedModels: map[string][]string{
-				"meta": {"muse-spark-1.1"},
-			},
-		},
+		Config:      &config.Config{},
 		AuthDir:     tempDir,
 		Now:         time.Now(),
 		IDGenerator: NewStableIDGenerator(),
@@ -687,7 +644,7 @@ func TestFileSynthesizer_Synthesize_MetaOAuthExcludedModelsMerged(t *testing.T) 
 	}
 
 	got := auths[0].Attributes["excluded_models"]
-	want := "muse-spark-1.1,muse-spark-1.2"
+	want := "muse-spark-1.2"
 	if got != want {
 		t.Fatalf("expected excluded_models %q, got %q", want, got)
 	}

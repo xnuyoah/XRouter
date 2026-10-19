@@ -39,7 +39,7 @@ func (f *fakeBrowser) BrowseWithFallbackServiceType(ctx context.Context, service
 
 func TestRunDiscoverJSONEmpty(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	code := runDiscover(0, true, &stdout, &stderr, func() (discovery.Browser, error) {
+	code := runDiscoverWithOptions(DiscoverOptions{JSONOutput: true}, &stdout, &stderr, func() (discovery.Browser, error) {
 		return &fakeBrowser{result: nil}, nil
 	})
 	if code != 0 {
@@ -60,7 +60,7 @@ func TestRunDiscoverJSONEmpty(t *testing.T) {
 func TestRunDiscoverCustomServiceType(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	browser := &fakeBrowser{}
-	code := runDiscoverWithServiceType(2*time.Second, true, "_custom._tcp", &stdout, &stderr, func() (discovery.Browser, error) {
+	code := runDiscoverWithOptions(DiscoverOptions{Timeout: 2 * time.Second, JSONOutput: true, ServiceType: "_custom._tcp"}, &stdout, &stderr, func() (discovery.Browser, error) {
 		return browser, nil
 	})
 	if code != 0 {
@@ -74,7 +74,7 @@ func TestRunDiscoverCustomServiceType(t *testing.T) {
 func TestRunDiscoverUsesExactTimeout(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	browser := &fakeBrowser{}
-	code := runDiscoverWithServiceType(2*time.Second, true, "", &stdout, &stderr, func() (discovery.Browser, error) {
+	code := runDiscoverWithOptions(DiscoverOptions{Timeout: 2 * time.Second, JSONOutput: true}, &stdout, &stderr, func() (discovery.Browser, error) {
 		return browser, nil
 	})
 	if code != 0 {
@@ -164,7 +164,7 @@ func TestPreferredDisplayAddressesSkipsBareLinkLocal(t *testing.T) {
 
 func TestRunDiscoverJSONError(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	code := runDiscover(2*time.Second, true, &stdout, &stderr, func() (discovery.Browser, error) {
+	code := runDiscoverWithOptions(DiscoverOptions{Timeout: 2 * time.Second, JSONOutput: true}, &stdout, &stderr, func() (discovery.Browser, error) {
 		return nil, errNoIfaces
 	})
 	if code != 1 {
@@ -181,7 +181,7 @@ func TestRunDiscoverJSONError(t *testing.T) {
 
 func TestRunDiscoverClampsTimeoutAndPrintsText(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	code := runDiscover(2*time.Minute, false, &stdout, &stderr, func() (discovery.Browser, error) {
+	code := runDiscoverWithOptions(DiscoverOptions{Timeout: 2 * time.Minute}, &stdout, &stderr, func() (discovery.Browser, error) {
 		return &fakeBrowser{result: []discovery.DiscoveredService{{
 			InstanceName: "office-gateway",
 			Product:      "xrouter",

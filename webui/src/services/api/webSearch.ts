@@ -163,22 +163,6 @@ export interface WebSearchProbeSummary {
   error?: string;
 }
 
-/** 调用日志条目。 */
-export interface WebSearchRequestEntry {
-  id: string;
-  channel: string;
-  account_id: string;
-  account_name: string;
-  method: string;
-  path: string;
-  status_code: number;
-  attempts: number;
-  duration_ms: number;
-  created_at: string;
-  error_code?: string;
-  proxy_used: boolean;
-}
-
 /** 账号额度历史点。 */
 export interface WebSearchQuotaHistoryPoint {
   checked_at: string;
@@ -259,11 +243,6 @@ export const webSearchApi = {
   },
 
   /** 触发渠道状态检测（异步）；可只检测一个渠道。 */
-  startStatusCheck(channel?: string): Promise<unknown> {
-    const query = channel ? `?channel=${encodeURIComponent(channel)}` : '';
-    return apiClient.post(`${BASE}/status/check${query}`, {});
-  },
-
   /** 监控汇总（额度概览 + 渠道状态）。 */
   getMonitoring(): Promise<WebSearchMonitoring> {
     return apiClient.get<WebSearchMonitoring>(`${BASE}/monitoring`);
@@ -313,17 +292,5 @@ export const webSearchApi = {
       responseType: 'blob',
     });
     return response.data as Blob;
-  },
-
-  /** 最近的调用日志。 */
-  async listRequests(params?: { channel?: string; limit?: number }): Promise<WebSearchRequestEntry[]> {
-    const query = new URLSearchParams();
-    if (params?.channel) query.set('channel', params.channel);
-    if (params?.limit) query.set('limit', String(params.limit));
-    const suffix = query.toString() ? `?${query.toString()}` : '';
-    const data = await apiClient.get<{ requests: WebSearchRequestEntry[] }>(
-      `${BASE}/requests${suffix}`
-    );
-    return data.requests ?? [];
   },
 };

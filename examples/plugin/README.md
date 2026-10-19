@@ -4,7 +4,6 @@ This directory contains standard dynamic library plugin examples for the XRouter
 
 ## Layout
 
-- `simple/`: full provider-native skeleton that declares every supported capability.
 - `model/`: model capability only.
 - `auth/`: auth provider capability only.
 - `frontend-auth/`: frontend auth provider capability only.

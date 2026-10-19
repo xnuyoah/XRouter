@@ -285,13 +285,27 @@ func extractOAuthModelAliasesFromMetadata(metadata map[string]any) []config.OAut
 	if errUnmarshal := json.Unmarshal(data, &aliases); errUnmarshal != nil {
 		return nil
 	}
-	cfg := config.Config{
-		OAuthModelAlias: map[string][]config.OAuthModelAlias{
-			"auth": aliases,
-		},
+	seen := make(map[string]struct{}, len(aliases))
+	clean := make([]config.OAuthModelAlias, 0, len(aliases))
+	for _, entry := range aliases {
+		name := strings.TrimSpace(entry.Name)
+		alias := strings.TrimSpace(entry.Alias)
+		if name == "" || alias == "" {
+			continue
+		}
+		entry.Name = name
+		entry.Alias = alias
+		key := strings.ToLower(name) + "->" + strings.ToLower(alias)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		clean = append(clean, entry)
 	}
-	cfg.SanitizeOAuthModelAlias()
-	return cfg.OAuthModelAlias["auth"]
+	if len(clean) == 0 {
+		return nil
+	}
+	return clean
 }
 
 // extractExcludedModelsFromMetadata 从 OAuth JSON 元数据中读取按账号的排除模型。
