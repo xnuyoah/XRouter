@@ -330,8 +330,9 @@ func sanitizeOAuthModelAliases(aliases []internalconfig.OAuthModelAlias) []inter
 			continue
 		}
 		aliasKey := strings.ToLower(alias)
-		// 别名在客户端可见模型列表中必须唯一，否则目录声明与
-		// 请求路由可能选中不同的上游模型。保留首次出现的映射。
+		// Client-visible aliases must stay unique; otherwise the catalog
+		// may advertise one upstream model while request routing selects
+		// another. Keep the first mapping for each alias.
 		if _, exists := seenAlias[aliasKey]; exists {
 			continue
 		}
