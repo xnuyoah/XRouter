@@ -136,10 +136,6 @@ func (s *Service) Run(ctx context.Context) error {
 		s.configRuntimeMu.Unlock()
 	}
 
-	if s.authManager == nil {
-		s.authManager = newDefaultAuthManager()
-	}
-
 	if homeEnabled {
 		s.startHomeSubscriber(ctx)
 	}

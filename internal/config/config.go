@@ -127,24 +127,6 @@ type Config struct {
 	// OpenAICompatibility 定义外部供应商的 OpenAI API 兼容配置。
 	OpenAICompatibility []OpenAICompatibility `yaml:"openai-compatibility" json:"openai-compatibility"`
 
-	// OAuthExcludedModels 定义应用于 OAuth/文件型 auth 条目的按供应商全局模型排除。
-	OAuthExcludedModels map[string][]string `yaml:"oauth-excluded-models,omitempty" json:"oauth-excluded-models,omitempty"`
-
-	// OAuthModelAlias 定义 OAuth/文件型 auth 通道的全局模型名别名。
-	//
-	// 注意：它不适用于以下已有的按凭据模型别名功能：
-	// openai-api-key、deepseek-api-key、nvidia-api-key、agnes-api-key、openai-compatibility。
-	OAuthModelAlias map[string][]OAuthModelAlias `yaml:"oauth-model-alias,omitempty" json:"oauth-model-alias,omitempty"`
-
-	// OAuthRequestScopedErrors 定义应用于 OAuth/文件型 auth 条目的按供应商请求级错误规则。
-	// 支持的通道包括 OAuth 插件供应商 key。
-	//
-	// 注意：它仅适用于 OAuth 凭据，不影响 *-api-key 下的按凭据 request-scoped-errors。
-	OAuthRequestScopedErrors map[string][]RequestScopedErrorRule `yaml:"oauth-request-scoped-errors,omitempty" json:"oauth-request-scoped-errors,omitempty"`
-
-	// OAuthSettings 定义应用于 OAuth/文件型 auth 条目的按通道模型设置（例如 max-context-length）。
-	OAuthSettings map[string][]OAuthModelSetting `yaml:"oauth-settings,omitempty" json:"oauth-settings,omitempty"`
-
 	// Payload 定义供应商载荷参数的默认与覆盖规则。
 	Payload PayloadConfig `yaml:"payload" json:"payload"`
 

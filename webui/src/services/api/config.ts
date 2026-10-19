@@ -15,12 +15,6 @@ export const configApi = {
     return normalizeConfigResponse(raw);
   },
 
-  /**
-   * 请求日志开关
-   */
-  updateRequestLog: (enabled: boolean) =>
-    apiClient.put('/config/observability/logs/request-log', enabled),
-
   updateAccessApiKeys: (keys: string[]) =>
     apiClient.put('/config/access/api-keys', keys),
 };

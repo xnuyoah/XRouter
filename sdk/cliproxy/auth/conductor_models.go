@@ -46,13 +46,6 @@ func lookupAPIKeyUpstreamModel(routing *apiKeyModelRoutingSnapshot, authID, requ
 	return ""
 }
 
-func isAPIKeyAuth(auth *Auth) bool {
-	if auth == nil {
-		return false
-	}
-	return auth.AuthKind() == AuthKindAPIKey
-}
-
 func isConfiguredOpenAICompatAuth(auth *Auth) bool {
 	if !isConfiguredModelRoutingAuth(auth) {
 		return false

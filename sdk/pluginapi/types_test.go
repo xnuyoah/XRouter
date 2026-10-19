@@ -87,32 +87,6 @@ func TestAuthParseResponseSupportsMultipleAuths(t *testing.T) {
 	}
 }
 
-func TestAuthLoginPollResponseSupportsMultipleAuths(t *testing.T) {
-	resp := AuthLoginPollResponse{
-		Status: AuthLoginStatusSuccess,
-		Auth: AuthData{
-			Provider: "gemini-cli",
-			ID:       "primary.json",
-		},
-		Auths: []AuthData{
-			{Provider: "gemini-cli", ID: "primary.json"},
-			{Provider: "gemini-cli", ID: "primary-project-a.json"},
-		},
-	}
-
-	raw, errMarshal := json.Marshal(resp)
-	if errMarshal != nil {
-		t.Fatalf("Marshal() error = %v", errMarshal)
-	}
-	var decoded AuthLoginPollResponse
-	if errUnmarshal := json.Unmarshal(raw, &decoded); errUnmarshal != nil {
-		t.Fatalf("Unmarshal() error = %v", errUnmarshal)
-	}
-	if decoded.Status != AuthLoginStatusSuccess || len(decoded.Auths) != 2 {
-		t.Fatalf("decoded response = %#v, want success with two auths", decoded)
-	}
-}
-
 func TestResourceRouteMenuFieldsExposeManagementUIHints(t *testing.T) {
 	route := ResourceRoute{
 		Path:        "/status",
@@ -131,16 +105,6 @@ func TestHostInjectedHTTPClientIsNotEncodedInPluginJSON(t *testing.T) {
 		req  any
 		dst  any
 	}{
-		{
-			name: "auth login start",
-			req:  AuthLoginStartRequest{Provider: "plugin-example", HTTPClient: compileTimePlugin{}},
-			dst:  &AuthLoginStartRequest{},
-		},
-		{
-			name: "auth login poll",
-			req:  AuthLoginPollRequest{Provider: "plugin-example", HTTPClient: compileTimePlugin{}},
-			dst:  &AuthLoginPollRequest{},
-		},
 		{
 			name: "auth refresh",
 			req:  AuthRefreshRequest{AuthID: "auth-1", HTTPClient: compileTimePlugin{}},
@@ -613,14 +577,6 @@ func (compileTimePlugin) Identifier() string { return "compile-time" }
 
 func (compileTimePlugin) ParseAuth(context.Context, AuthParseRequest) (AuthParseResponse, error) {
 	return AuthParseResponse{}, nil
-}
-
-func (compileTimePlugin) StartLogin(context.Context, AuthLoginStartRequest) (AuthLoginStartResponse, error) {
-	return AuthLoginStartResponse{}, nil
-}
-
-func (compileTimePlugin) PollLogin(context.Context, AuthLoginPollRequest) (AuthLoginPollResponse, error) {
-	return AuthLoginPollResponse{}, nil
 }
 
 func (compileTimePlugin) RefreshAuth(context.Context, AuthRefreshRequest) (AuthRefreshResponse, error) {

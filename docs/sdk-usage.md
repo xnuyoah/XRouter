@@ -19,7 +19,7 @@ import (
 )
 ```
 
-Note the `/v6` module path.
+Use the `/v8` module path.
 
 ## Minimal Embed
 
@@ -72,9 +72,11 @@ These options mirror the internals used by the CLI server.
 
 ## Management API (when embedded)
 
-- Management endpoints are mounted only when `remote-management.secret-key` is set in `config.yaml`.
-- Remote access additionally requires `remote-management.allow-remote: true`.
-- See MANAGEMENT_API.md for endpoints. Your embedded server exposes them under `/v0/management` on the configured port.
+- Management endpoints are mounted only when `management.secret-key` is set in `config.yaml`.
+- Remote access additionally requires `management.allow-remote: true`.
+- See the [v8 management API guide](management-api-v8.md) for endpoints. Your embedded
+  server exposes them under `/v8/management` (and the legacy `/v0/management`) on the
+  configured port.
 
 ## Using the Core Auth Manager
 
@@ -108,9 +110,11 @@ Programmatic execution is available on the manager:
 // Non‑streaming
 resp, err := core.Execute(ctx, []string{"openai"}, req, opts)
 
-// Streaming
-chunks, err := core.ExecuteStream(ctx, []string{"openai"}, req, opts)
-for ch := range chunks { /* ... */ }
+// Streaming: StreamResult carries the upstream headers and a chunk channel.
+result, err := core.ExecuteStream(ctx, []string{"openai"}, req, opts)
+if err == nil {
+    for chunk := range result.Chunks { /* ... */ }
+}
 ```
 
 Note: Built‑in provider executors are wired automatically when you run the `Service`. If you want to use `Manager` stand‑alone without the HTTP server, you must register your own executors that implement `auth.ProviderExecutor`.

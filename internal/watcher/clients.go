@@ -22,7 +22,7 @@ import (
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
-func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string, forceAuthRefresh bool) {
+func (w *Watcher) reloadClients(rescanAuth bool, forceAuthRefresh bool) {
 	log.Debugf("starting full client load process")
 
 	w.clientsMutex.RLock()
@@ -32,28 +32,6 @@ func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string
 	if cfg == nil {
 		log.Error("config is nil, cannot reload clients")
 		return
-	}
-
-	if len(affectedOAuthProviders) > 0 {
-		w.clientsMutex.Lock()
-		if w.currentAuths != nil {
-			filtered := make(map[string]*coreauth.Auth, len(w.currentAuths))
-			for id, auth := range w.currentAuths {
-				if auth == nil {
-					continue
-				}
-				provider := strings.ToLower(strings.TrimSpace(auth.Provider))
-				if _, match := matchProvider(provider, affectedOAuthProviders); match {
-					continue
-				}
-				filtered[id] = auth
-			}
-			w.currentAuths = filtered
-			log.Debugf("applying oauth-excluded-models to providers %v", affectedOAuthProviders)
-		} else {
-			w.currentAuths = nil
-		}
-		w.clientsMutex.Unlock()
 	}
 
 	keyCounts := BuildAPIKeyClients(cfg)

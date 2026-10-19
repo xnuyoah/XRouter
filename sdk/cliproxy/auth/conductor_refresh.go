@@ -128,14 +128,8 @@ func (m *Manager) shouldRefresh(a *Auth, now time.Time) bool {
 		return evaluator.ShouldRefresh(now, a)
 	}
 
-	if _, hasSIWC, needSIWC := CodexSIWCNeedsRefresh(a, now); hasSIWC {
-		if needSIWC {
-			return true
-		}
-		if _, hasOuter, needOuter := CodexOuterNeedsRefresh(a, now); hasOuter {
-			return needOuter
-		}
-		return false
+	if _, hasOuter, needOuter := CodexOuterNeedsRefresh(a, now); hasOuter {
+		return needOuter
 	}
 
 	lastRefresh := a.LastRefreshedAt
@@ -403,9 +397,6 @@ func authOuterAccessToken(auth *Auth) string {
 }
 
 func authAccessToken(auth *Auth) string {
-	if IsCodexUseSIWC(auth) {
-		return authSIWCTokenField(auth, "access_token")
-	}
 	return authOuterAccessToken(auth)
 }
 
@@ -421,9 +412,6 @@ func authHasRefreshCredential(auth *Auth) bool {
 		return true
 	}
 	if authMetadataString(auth, "refreshToken") != "" {
-		return true
-	}
-	if _, hasSIWC, _ := CodexSIWCNeedsRefresh(auth, time.Now()); hasSIWC {
 		return true
 	}
 	// Meta 在收到 401 后用其设备令牌换取替代的 API 密钥。
@@ -471,30 +459,7 @@ func CredentialsChanged(existing, incoming *Auth) bool {
 	if existingKey != incomingKey {
 		return true
 	}
-	if authSIWCTokenField(existing, "access_token") != authSIWCTokenField(incoming, "access_token") ||
-		authSIWCTokenField(existing, "refresh_token") != authSIWCTokenField(incoming, "refresh_token") ||
-		authSIWCTokenField(existing, "id_token") != authSIWCTokenField(incoming, "id_token") ||
-		authSIWCTokenField(existing, "client_id") != authSIWCTokenField(incoming, "client_id") {
-		return true
-	}
-	existingUseSIWC, existingHasUseSIWC := parseBoolAny(existing.Metadata["use_siwc"])
-	incomingUseSIWC, incomingHasUseSIWC := parseBoolAny(incoming.Metadata["use_siwc"])
-	if existingHasUseSIWC != incomingHasUseSIWC || existingUseSIWC != incomingUseSIWC {
-		return true
-	}
 	return false
-}
-
-func authSIWCTokenField(auth *Auth, key string) string {
-	if auth == nil || auth.Metadata == nil {
-		return ""
-	}
-	siwcMap, ok := auth.Metadata["siwc"].(map[string]any)
-	if !ok || len(siwcMap) == 0 {
-		return ""
-	}
-	val, _ := siwcMap[key].(string)
-	return strings.TrimSpace(val)
 }
 
 // ClearUnauthorizedModelStates 重置最后一个错误为未授权失败的模型状态。

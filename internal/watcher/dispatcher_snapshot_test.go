@@ -244,7 +244,7 @@ func TestRefreshAuthStateAppliesHashCachedFileObservation(t *testing.T) {
 				}
 				return auths
 			}
-			w.reloadClients(true, nil, false)
+			w.reloadClients(true, false)
 			if phase == "after_scan" {
 				w.handleEvent(fsnotify.Event{Name: path, Op: fsnotify.Write})
 			}

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -114,6 +115,12 @@ func extractClaudeCodeSessionIDFromPayload(payload []byte) string {
 		return strings.TrimSpace(gjson.Get(userID, "session_id").String())
 	}
 	return ""
+}
+
+// CodexCache carries the derived prompt_cache_key result.
+type CodexCache struct {
+	ID     string
+	Expire time.Time
 }
 
 // ClaudeCodePromptCache 为单个 Claude Code agent 推导确定性的上游 prompt_cache_key。

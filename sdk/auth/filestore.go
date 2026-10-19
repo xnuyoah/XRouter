@@ -360,14 +360,6 @@ func (s *FileTokenStore) readAuthFiles(path, baseDir string) ([]*cliproxyauth.Au
 	return []*cliproxyauth.Auth{auth}, nil
 }
 
-func (s *FileTokenStore) readAuthFile(path, baseDir string) (*cliproxyauth.Auth, error) {
-	auths, errReadAuths := s.readAuthFiles(path, baseDir)
-	if errReadAuths != nil || len(auths) == 0 {
-		return nil, errReadAuths
-	}
-	return auths[0], nil
-}
-
 func parsePluginAuthFile(parser PluginAuthParser, req pluginapi.AuthParseRequest) ([]*cliproxyauth.Auth, bool, error) {
 	if parser == nil {
 		return nil, false, nil

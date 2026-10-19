@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
-	"reflect"
 	"time"
 
 	"github.com/xnuyoah/XRouter/v8/internal/config"
@@ -119,11 +118,6 @@ func (w *Watcher) reloadConfig() bool {
 	w.config = newConfig
 	w.clientsMutex.Unlock()
 
-	var affectedOAuthProviders []string
-	if oldConfig != nil {
-		_, affectedOAuthProviders = diff.DiffOAuthExcludedModelChanges(oldConfig.OAuthExcludedModels, newConfig.OAuthExcludedModels)
-	}
-
 	util.SetLogLevel(newConfig)
 	if oldConfig != nil && oldConfig.Debug != newConfig.Debug {
 		log.Debugf("log level updated - debug mode changed from %t to %t", oldConfig.Debug, newConfig.Debug)
@@ -143,9 +137,9 @@ func (w *Watcher) reloadConfig() bool {
 
 	authDirChanged := oldConfig == nil || oldConfig.AuthDir != newConfig.AuthDir
 	retryConfigChanged := oldConfig != nil && (oldConfig.RequestRetry != newConfig.RequestRetry || oldConfig.MaxRetryInterval != newConfig.MaxRetryInterval || oldConfig.MaxRetryCredentials != newConfig.MaxRetryCredentials)
-	forceAuthRefresh := oldConfig != nil && (oldConfig.ForceModelPrefix != newConfig.ForceModelPrefix || !reflect.DeepEqual(oldConfig.OAuthModelAlias, newConfig.OAuthModelAlias) || !reflect.DeepEqual(oldConfig.OAuthSettings, newConfig.OAuthSettings) || retryConfigChanged)
+	forceAuthRefresh := oldConfig != nil && (oldConfig.ForceModelPrefix != newConfig.ForceModelPrefix || retryConfigChanged)
 
 	log.Infof("config successfully reloaded, triggering client reload")
-	w.reloadClients(authDirChanged, affectedOAuthProviders, forceAuthRefresh)
+	w.reloadClients(authDirChanged, forceAuthRefresh)
 	return true
 }

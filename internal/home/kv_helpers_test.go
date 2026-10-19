@@ -96,9 +96,9 @@ func TestKVBestEffortWriteSwallowsErrorAndRedactsLog(t *testing.T) {
 		log.SetLevel(previousLevel)
 	})
 
-	ok := KVSetJSONBestEffort(context.Background(), "cpa:test:secret-key", map[string]string{"value": "secret-value"}, 0)
+	ok := KVSetBytesBestEffort(context.Background(), "cpa:test:secret-key", []byte(`{"value":"secret-value"}`), 0)
 	if ok {
-		t.Fatalf("KVSetJSONBestEffort() = true, want false")
+		t.Fatalf("KVSetBytesBestEffort() = true, want false")
 	}
 	logText := buffer.String()
 	if !strings.Contains(logText, "cpa:test:*") {

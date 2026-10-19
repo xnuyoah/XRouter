@@ -9,8 +9,7 @@ available in the [management API guide](https://help.router-for.me/management/ap
 
 The v8 endpoints use the same management key and remote-access policy as v0.
 Send `Authorization: Bearer <management-key>` or `X-Management-Key: <management-key>`.
-OAuth callbacks validate a pending login state and do not require a management-key
-header. Home mode disables local management endpoints for both versions.
+Home mode disables local management endpoints for both versions.
 
 ## Configuration endpoints
 
@@ -105,41 +104,17 @@ retain the corresponding business operation's fields.
 | `/credentials/status` | PATCH | Change credential status. |
 | `/credentials/fields` | PATCH | Change credential fields. |
 | `/credentials/refresh` | POST | Refresh credentials. |
-| `/oauth/auth-url?provider=<provider>` | GET | Start built-in or plugin OAuth. |
-| `/oauth/status?state=<state>` | GET | Get login status. |
-| `/oauth/session?state=<state>` | DELETE | Cancel a login session. |
-| `/oauth/callback` | GET, POST | Submit an OAuth callback. |
 | `/plugins` | GET | List installed plugins. |
 | `/plugins/<id>` | DELETE | Delete a plugin. |
-| `/plugins/store` | GET | List the plugin store. |
-| `/plugins/store/<id>/install` | POST | Install or update a plugin. |
 | `/plugins/<id>/quota` | GET, POST, DELETE | Read, fetch, or reset plugin quota. |
 
-## OAuth
-
-The login URL is shared by all providers. Set the required `provider` query
-parameter to a registered plugin provider ID:
-
-```http
-GET /v8/management/oauth/auth-url?provider=sample-provider
-Authorization: Bearer <management-key>
-```
-
-Keep any provider-specific login parameters in the query string. The login
-response includes the authorization URL and a session `state`. Use that state
-for status queries and cancellation.
-
-Callbacks accept `provider`, `state`, `code`, and `error` as GET query parameters
-or POST JSON fields. POST also accepts `redirect_url` containing the complete
-callback URL. If `provider` is omitted, it is inferred from the pending state;
-an explicit provider must match that state. Poll until the status is `ok` or
-`error`; `wait` means the login is still pending. Callback acceptance alone does
-not mean credential exchange and persistence have completed.
+OAuth login endpoints were removed from the management API. OAuth and file-backed
+credentials are provisioned as credential files (`/credentials`) and refreshed
+through `/credentials/refresh` or the background refresh workers.
 
 ## v0 compatibility
 
-The `/v0/management` endpoints keep their original paths and payloads, including
-provider-specific OAuth login URLs, callbacks, status queries, and cancellation.
+The `/v0/management` endpoints keep their original paths and payloads.
 
 Legacy flat configuration endpoints such as `/debug`, `/request-retry`, and
 `/claude-api-key` exist under `/v0/management` only.
@@ -153,5 +128,4 @@ files in their original layout; existing v8 files are saved in the latest v8
 layout. `PUT /v0/management/config.yaml` still replaces the complete file and
 accepts legacy, new, or mixed layouts, normalizing v8 documents on save.
 
-Plugin OAuth uses the shared v8 login endpoint. Other plugin-defined HTTP
-extensions retain their declared `/v0/management` routes.
+Plugin-defined HTTP extensions retain their declared `/v0/management` routes.

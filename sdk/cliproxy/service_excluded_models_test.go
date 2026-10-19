@@ -12,11 +12,7 @@ import (
 
 func TestRegisterModelsForAuth_UsesPreMergedExcludedModelsAttribute(t *testing.T) {
 	service := &Service{
-		cfg: &config.Config{
-			OAuthExcludedModels: map[string][]string{
-				"nvidia": {"nemotron-3-ultra"},
-			},
-		},
+		cfg: &config.Config{},
 	}
 	auth := &coreauth.Auth{
 		ID:       "auth-nvidia",

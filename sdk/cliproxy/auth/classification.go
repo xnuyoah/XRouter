@@ -31,9 +31,6 @@ func (a *Auth) AuthKind() string {
 	if a == nil {
 		return ""
 	}
-	if IsCodexUseSIWC(a) {
-		return AuthKindOAuth
-	}
 	if kind := normalizeAuthKind(authAttribute(a, AttributeAuthKind)); kind != "" {
 		return kind
 	}

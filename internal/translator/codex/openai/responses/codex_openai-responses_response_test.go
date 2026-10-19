@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/tidwall/gjson"
-	translatorcommon "github.com/xnuyoah/XRouter/v8/internal/translator/common"
 )
 
 func TestConvertCodexResponseToOpenAIResponses_CreatedIncludesOriginalRequestModel(t *testing.T) {
@@ -134,34 +133,5 @@ func TestConvertCodexResponseToOpenAIResponses_MissingSourcesStayAbsentWithCitat
 	}
 	if got := gjson.GetBytes(out, "output.1.content.0.annotations.0.url").String(); got != "https://docs.python.org/3/library/asyncio.html?trk=article-ssr-frontend-pulse_little-text-block&utm_source=openai" {
 		t.Fatalf("citation url = %q", got)
-	}
-}
-
-func TestApplyPatchResponsesActualRequestGatesNativeCodex(t *testing.T) {
-	original := []byte(`{"tools":[{"type":"custom","name":"apply_patch"}]}`)
-	bridged, errNormalize := translatorcommon.NormalizeApplyPatchResponsesRequest(original)
-	if errNormalize != nil {
-		t.Fatal(errNormalize)
-	}
-	raw := []byte(`data: {"type":"response.output_item.done","output_index":0,"item":{"type":"function_call","id":"a","call_id":"c","name":"apply_patch","arguments":"{\"input\":\"p\"}"}}`)
-	var native any
-	out := ConvertCodexResponseToOpenAIResponses(t.Context(), "m", original, original, raw, &native)
-	if len(out) != 1 || string(out[0]) != string(raw) {
-		t.Fatalf("native Codex changed: %s", out)
-	}
-	var configuredNative any
-	out = ConvertCodexResponseToOpenAIResponses(t.Context(), "m", original, bridged, raw, &configuredNative)
-	if len(out) != 1 || string(out[0]) != string(raw) {
-		t.Fatalf("configuration enabled native bridging: %s", out)
-	}
-	var xai any = translatorcommon.NewApplyPatchResponsesBridge(original)
-	out = ConvertCodexResponseToOpenAIResponses(t.Context(), "m", original, bridged, raw, &xai)
-	if len(out) != 3 || gjson.GetBytes(out[2][6:], "item.input").String() != "p" {
-		t.Fatalf("same Codex wire format bypassed bridge: %s", out)
-	}
-	var failed any = translatorcommon.NewApplyPatchResponsesBridge(original)
-	out = ConvertCodexResponseToOpenAIResponses(t.Context(), "m", original, bridged, []byte(`data: {"type":"response.output_item.done","output_index":0,"item":{"type":"function_call","name":"apply_patch","arguments":"{}"}}`), &failed)
-	if len(out) != 1 || gjson.GetBytes(out[0][6:], "type").String() != "response.failed" || failed.(interface{ ToolInputError() error }).ToolInputError() == nil {
-		t.Fatalf("failure: %s", out)
 	}
 }

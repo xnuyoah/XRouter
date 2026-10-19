@@ -102,23 +102,14 @@ func SaveConfigPreserveComments(configFile string, cfg *Config, migrateV8 ...boo
 		return err
 	}
 	data = NormalizeCommentIndentation(buf.Bytes())
-	var migrated *Config
 	if migrating {
 		data, _, err = NormalizeConfigLayout(data, true)
 		if err != nil {
 			return err
 		}
-		migrated = new(Config)
-		if err = yaml.Unmarshal(data, migrated); err != nil {
-			return fmt.Errorf("decode migrated config: %w", err)
-		}
 	}
 	if err = os.WriteFile(configFile, data, 0600); err != nil {
 		return err
-	}
-	if migrated != nil {
-		// 保持仅运行时的值不变，仅在写入成功后才发布作用域。
-		cfg.OAuthOnlyFields = migrated.OAuthOnlyFields
 	}
 	return nil
 }

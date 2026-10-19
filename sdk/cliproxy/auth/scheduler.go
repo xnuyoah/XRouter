@@ -1029,16 +1029,6 @@ func (s *authScheduler) ensureProviderLocked(providerKey string) *providerSchedu
 	return providerState
 }
 
-// buildScheduledAuthMeta 提取分片簿记所需的调度元数据。
-func buildScheduledAuthMeta(auth *Auth) *scheduledAuthMeta {
-	var authID string
-	if auth != nil {
-		authID = auth.ID
-	}
-	regEpoch := registry.GetGlobalRegistry().ClientRegistrationEpoch(authID)
-	return buildScheduledAuthMetaWithModelSet(auth, supportedModelSetForAuth(authID), regEpoch)
-}
-
 func buildScheduledAuthMetaWithModelSet(auth *Auth, modelSet map[string]struct{}, regEpoch uint64) *scheduledAuthMeta {
 	providerKey := executorKeyFromAuth(auth)
 	var clonedAuth *Auth

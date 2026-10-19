@@ -19,33 +19,13 @@ func ConvertCodexResponseToOpenAIResponses(_ context.Context, modelName string, 
 		rawJSON = bytes.TrimSpace(rawJSON[5:])
 	}
 	updated := setResponsesModel(rawJSON, modelName, originalRequestRawJSON, requestRawJSON)
-	bridge := responsesBridge(param)
-	if bridge == nil {
-		// 原生 Codex 从不选择启用，即使配置提供了 bridge schema。
-		if bytes.Equal(updated, rawJSON) {
-			return [][]byte{originalEvent}
-		}
-		if sse {
-			updated = append([]byte("data: "), updated...)
-		}
-		return [][]byte{updated}
+	if bytes.Equal(updated, rawJSON) {
+		return [][]byte{originalEvent}
 	}
-	outputs, _ := bridge.Transform(updated)
 	if sse {
-		for i := range outputs {
-			outputs[i] = append([]byte("data: "), outputs[i]...)
-		}
+		updated = append([]byte("data: "), updated...)
 	}
-	return outputs
-}
-
-// 只有执行器拥有的 param 才能在这个共享转换器上启用桥接。
-func responsesBridge(param *any) *translatorcommon.ApplyPatchResponsesBridge {
-	if param != nil {
-		bridge, _ := (*param).(*translatorcommon.ApplyPatchResponsesBridge)
-		return bridge
-	}
-	return nil
+	return [][]byte{updated}
 }
 
 func setResponsesModel(rawJSON []byte, modelName string, originalRequestRawJSON, requestRawJSON []byte) []byte {
@@ -75,15 +55,7 @@ func setResponsesModel(rawJSON []byte, modelName string, originalRequestRawJSON,
 // ConvertCodexResponseToOpenAIResponsesNonStream 从非流式的
 // OpenAI Chat Completions 响应构建单个 Responses JSON。
 func ConvertCodexResponseToOpenAIResponsesNonStream(_ context.Context, _ string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) []byte {
-	bridge := responsesBridge(param)
 	converted := rawJSON
-	if bridge != nil {
-		var errTransform error
-		converted, errTransform = bridge.TransformNonStream(rawJSON)
-		if errTransform != nil {
-			return nil
-		}
-	}
 	rootResult := gjson.ParseBytes(converted)
 	// 校验这是一个终止性的响应事件。
 	responseType := rootResult.Get("type").String()

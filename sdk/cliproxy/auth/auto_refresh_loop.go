@@ -404,15 +404,11 @@ func nextRefreshCheckAt(now time.Time, auth *Auth, interval time.Duration) (time
 		return auth.NextRefreshAfter, true
 	}
 
-	if siwcDueAt, hasSIWC, _ := CodexSIWCNeedsRefresh(auth, now); hasSIWC {
-		minDue := siwcDueAt
-		if outerDueAt, hasOuter, _ := CodexOuterNeedsRefresh(auth, now); hasOuter && outerDueAt.Before(minDue) {
-			minDue = outerDueAt
-		}
-		if !minDue.After(now) {
+	if outerDueAt, hasOuter, _ := CodexOuterNeedsRefresh(auth, now); hasOuter {
+		if !outerDueAt.After(now) {
 			return now, true
 		}
-		return minDue, true
+		return outerDueAt, true
 	}
 
 	if auth.AuthKind() == AuthKindAPIKey {

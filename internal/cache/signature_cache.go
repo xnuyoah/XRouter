@@ -108,13 +108,6 @@ func purgeExpiredCaches() {
 		}
 		return true
 	})
-	purgeExpiredReasoningReplayCache(now)
-}
-
-// CacheSignature 为给定的模型组和文本存储一个思考签名。
-// 用于在多轮对话中需要签名思考块的 Claude 模型。
-func CacheSignature(modelName, text, signature string) {
-	CacheSignatureBestEffort(context.Background(), modelName, text, signature)
 }
 
 // CacheSignatureBestEffort 为已完成的响应路径存储思考签名。

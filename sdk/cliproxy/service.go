@@ -16,7 +16,6 @@ import (
 	"github.com/xnuyoah/XRouter/v8/internal/usageanalytics"
 	"github.com/xnuyoah/XRouter/v8/internal/watcher"
 	sdkaccess "github.com/xnuyoah/XRouter/v8/sdk/access"
-	sdkAuth "github.com/xnuyoah/XRouter/v8/sdk/auth"
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 	"github.com/xnuyoah/XRouter/v8/sdk/cliproxy/executionregistry"
 	"github.com/xnuyoah/XRouter/v8/sdk/config"
@@ -87,9 +86,6 @@ type Service struct {
 
 	// authQueueStop 取消 auth 更新队列的处理。
 	authQueueStop context.CancelFunc
-
-	// authManager 处理旧版认证操作。
-	authManager *sdkAuth.Manager
 
 	// accessManager 处理请求认证供应商。
 	accessManager *sdkaccess.Manager

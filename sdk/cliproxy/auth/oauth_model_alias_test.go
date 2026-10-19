@@ -458,3 +458,26 @@ func TestApplyOAuthModelAliasWithResult_NoForceMappingPreservesRequestedModelInO
 		t.Fatalf("OriginalAlias = %q want requested model when force-mapping off", res.OriginalAlias)
 	}
 }
+
+// SanitizeOAuthModelAliases must keep client-visible aliases unique: when
+// several mappings share one alias, only the first is kept so that catalog
+// generation and request routing cannot pick different upstream models.
+func TestSanitizeOAuthModelAliasesDeduplicatesByAliasKeepingFirst(t *testing.T) {
+	cleaned := sanitizeOAuthModelAliases([]internalconfig.OAuthModelAlias{
+		{Name: "model-a", Alias: "public"},
+		{Name: "model-b", Alias: "public"},
+		{Name: "model-c", Alias: "PUBLIC"},
+		{Name: "model-d", Alias: "solo"},
+		{Name: "solo", Alias: "solo"},
+		{Name: "model-e", Alias: ""},
+	})
+	if len(cleaned) != 2 {
+		t.Fatalf("cleaned entries = %d (%v), want 2", len(cleaned), cleaned)
+	}
+	if cleaned[0].Name != "model-a" || cleaned[0].Alias != "public" {
+		t.Fatalf("first public mapping = %v, want model-a -> public", cleaned[0])
+	}
+	if cleaned[1].Name != "model-d" || cleaned[1].Alias != "solo" {
+		t.Fatalf("solo mapping = %v, want model-d -> solo", cleaned[1])
+	}
+}

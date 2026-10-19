@@ -39,9 +39,6 @@ type Builder struct {
 	// hooks 提供生命周期回调。
 	hooks Hooks
 
-	// authManager 处理旧版认证操作。
-	authManager *sdkAuth.Manager
-
 	// accessManager 处理请求认证供应商。
 	accessManager *sdkaccess.Manager
 
@@ -134,12 +131,6 @@ func (b *Builder) WithHooks(h Hooks) *Builder {
 	return b
 }
 
-// WithAuthManager 覆盖用于令牌生命周期操作的认证管理器。
-func (b *Builder) WithAuthManager(mgr *sdkAuth.Manager) *Builder {
-	b.authManager = mgr
-	return b
-}
-
 // WithRequestAccessManager 覆盖请求认证管理器。
 func (b *Builder) WithRequestAccessManager(mgr *sdkaccess.Manager) *Builder {
 	b.accessManager = mgr
@@ -226,11 +217,6 @@ func (b *Builder) Build() (*Service, error) {
 		watcherFactory = defaultWatcherFactory
 	}
 
-	authManager := b.authManager
-	if authManager == nil {
-		authManager = newDefaultAuthManager()
-	}
-
 	accessManager := b.accessManager
 	if accessManager == nil {
 		accessManager = sdkaccess.NewManager()
@@ -268,7 +254,6 @@ func (b *Builder) Build() (*Service, error) {
 	// 附加默认 RoundTripper 供应商，使各供应商可以按 auth 选择传输方式。
 	coreManager.SetRoundTripperProvider(newDefaultRoundTripperProvider())
 	coreManager.SetConfig(b.cfg)
-	coreManager.SetOAuthModelAlias(b.cfg.OAuthModelAlias)
 	if pluginHost != nil {
 		coreManager.SetPluginScheduler(pluginHost)
 	}
@@ -283,7 +268,6 @@ func (b *Builder) Build() (*Service, error) {
 		apiKeyProvider:      apiKeyProvider,
 		watcherFactory:      watcherFactory,
 		hooks:               b.hooks,
-		authManager:         authManager,
 		accessManager:       accessManager,
 		coreManager:         coreManager,
 		cooldownStateStore:  cooldownStateStore,

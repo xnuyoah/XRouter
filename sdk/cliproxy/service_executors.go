@@ -19,11 +19,6 @@ type openAICompatibilityRegistrationCache struct {
 	byIndex map[int]*openAICompatibilityRegistrationEntry
 }
 
-// pluginHostHasAuthProvider 可在测试中覆盖，以避免加载真实插件。
-var pluginHostHasAuthProvider = func(host *pluginhost.Host, provider string) bool {
-	return host != nil && host.HasAuthProvider(provider)
-}
-
 // pluginHostHasAuthModelProvider 只检查声明，从不做模型发现。
 var pluginHostHasAuthModelProvider = func(host *pluginhost.Host, provider string) bool {
 	return host != nil && host.HasAuthModelProvider(provider)
@@ -157,9 +152,6 @@ func (s *Service) unregisterOpenAICompatExecutor(providerKey string) {
 	if _, okOpenAICompat := existing.(*executor.OpenAICompatExecutor); okOpenAICompat {
 		s.coreManager.UnregisterExecutor(providerKey)
 		return
-	}
-	if pluginhost.IsPluginRefreshCompatExecutor(existing) {
-		s.coreManager.UnregisterExecutor(providerKey)
 	}
 }
 
@@ -342,6 +334,11 @@ func pluginAuthProviderLookupKeys(auth *coreauth.Auth, fallback string) []string
 	}
 	add(fallback)
 	return keys
+}
+
+// pluginHostHasAuthProvider can be overridden in tests to avoid loading real plugins.
+var pluginHostHasAuthProvider = func(host *pluginhost.Host, provider string) bool {
+	return host != nil && host.HasAuthProvider(provider)
 }
 
 func shouldKeepExistingOpenAICompatExecutor(s *Service, existing, next coreauth.ProviderExecutor, respectNonOwned bool) bool {
@@ -542,11 +539,7 @@ func (s *Service) tryRegisterPluginModelsForAuthWithConfigFenced(ctx context.Con
 	if providerKey == "" {
 		providerKey = strings.ToLower(strings.TrimSpace(provider))
 	}
-	activeAuthKind := activeAuth.AuthKind()
-	activeExcluded := oauthExcludedModelsForConfig(cfg, providerKey, activeAuthKind)
-	if a == activeAuth && len(activeExcluded) == 0 {
-		activeExcluded = excluded
-	}
+	activeExcluded := excluded
 	if activeAuth.Attributes != nil {
 		if val, ok := activeAuth.Attributes["excluded_models"]; ok && strings.TrimSpace(val) != "" {
 			activeExcluded = strings.Split(val, ",")
@@ -556,7 +549,7 @@ func (s *Service) tryRegisterPluginModelsForAuthWithConfigFenced(ctx context.Con
 		return true
 	}
 	models := applyExcludedModels(result.Models, activeExcluded)
-	models = applyOAuthModelAliasForAuth(cfg, providerKey, activeAuthKind, activeAuth.Attributes, models)
+	models = applyOAuthModelAliasForAuth(cfg, providerKey, activeAuth.AuthKind(), activeAuth.Attributes, models)
 	publicationFence := fence
 	if pluginAuthCommitted {
 		// 插件返回的 auth 更新是一次有意为之的身份转换，
@@ -567,7 +560,6 @@ func (s *Service) tryRegisterPluginModelsForAuthWithConfigFenced(ctx context.Con
 		publicationFence = fence.withAuth(activeAuth)
 	}
 	if len(models) > 0 {
-		models = applyOAuthSettingsForAuth(cfg, providerKey, activeAuthKind, models)
 		s.registerResolvedModelsForAuthFenced(activeAuth, publicationFence, providerKey, applyModelPrefixes(models, activeAuth.Prefix, cfg != nil && cfg.ForceModelPrefix))
 		return true
 	}

@@ -317,17 +317,37 @@ func sanitizeOAuthModelAliases(aliases []internalconfig.OAuthModelAlias) []inter
 	if len(aliases) == 0 {
 		return nil
 	}
-	cfg := internalconfig.Config{
-		OAuthModelAlias: map[string][]internalconfig.OAuthModelAlias{
-			"auth": aliases,
-		},
+	seenPair := make(map[string]struct{}, len(aliases))
+	seenAlias := make(map[string]struct{}, len(aliases))
+	clean := make([]internalconfig.OAuthModelAlias, 0, len(aliases))
+	for _, entry := range aliases {
+		name := strings.TrimSpace(entry.Name)
+		alias := strings.TrimSpace(entry.Alias)
+		if name == "" || alias == "" {
+			continue
+		}
+		if strings.EqualFold(name, alias) {
+			continue
+		}
+		aliasKey := strings.ToLower(alias)
+		// Client-visible aliases must stay unique; otherwise the catalog
+		// may advertise one upstream model while request routing selects
+		// another. Keep the first mapping for each alias.
+		if _, exists := seenAlias[aliasKey]; exists {
+			continue
+		}
+		pairKey := strings.ToLower(name) + "->" + aliasKey
+		if _, exists := seenPair[pairKey]; exists {
+			continue
+		}
+		seenPair[pairKey] = struct{}{}
+		seenAlias[aliasKey] = struct{}{}
+		clean = append(clean, entry)
 	}
-	cfg.SanitizeOAuthModelAlias()
-	clean := cfg.OAuthModelAlias["auth"]
 	if len(clean) == 0 {
 		return nil
 	}
-	return append([]internalconfig.OAuthModelAlias(nil), clean...)
+	return clean
 }
 
 func resolveUpstreamModelFromAliases(aliases []internalconfig.OAuthModelAlias, requestedModel string) OAuthModelAliasResult {

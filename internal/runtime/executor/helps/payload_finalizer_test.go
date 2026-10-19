@@ -2,7 +2,6 @@ package helps
 
 import (
 	"bytes"
-	"context"
 	"mime/multipart"
 	"net/http"
 	"testing"
@@ -23,7 +22,7 @@ func TestPayloadFinalizerDefaultsUseOriginalAndNormalizeBeforeRules(t *testing.T
 	opts := cliproxyexecutor.Options{SourceFormat: sdktranslator.FormatClaude, Headers: http.Header{"X-Test": {"yes"}, "User-Agent": {"codex-cli/0.1"}}}
 	finalize := NewPayloadFinalizer(cfg, "openai", "upstream", "openai", "", []byte(`{"present":"caller"}`), req, opts)
 	body := []byte(`{"missing":"built-in","present":"caller","late":"injected","tools":[{"type":"function","function":{"name":"f","parameters":{"type":"object","properties":{"count":{"type":"integer"}}}}}]}`)
-	out := FinalizePayload(WithPayloadFinalizer(context.Background(), finalize), body)
+	out := finalize(body)
 	if gjson.GetBytes(out, "missing").String() != "user default" || gjson.GetBytes(out, "present").String() != "caller" || gjson.GetBytes(out, "late").Exists() || gjson.GetBytes(out, "tools.0.function.parameters.properties.count.type").String() != "number" {
 		t.Fatalf("unexpected final payload: %s", out)
 	}

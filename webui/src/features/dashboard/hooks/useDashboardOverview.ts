@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { authFilesApi } from '@/services/api';
 import { useAuthStore, useConfigStore, useModelsStore } from '@/stores';
 import { useApiKeysForModels } from '@/hooks/useApiKeysForModels';
-import { useProviderRecentRequests } from '@/components/providers/hooks/useProviderRecentRequests';
+import { useProviderRecentRequests } from '@/hooks/useProviderRecentRequests';
 import {
   mergeRecentRequestBucketGroups,
   normalizeRecentRequestUsageEntry,

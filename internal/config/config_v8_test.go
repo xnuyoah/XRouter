@@ -158,7 +158,6 @@ openai-compatibility:
 		t.Fatal(err)
 	}
 	// 当字段迁移到 oauth.providers 下时，会有意添加作用域元数据。
-	after.OAuthOnlyFields = nil
 	if !reflect.DeepEqual(before, after) {
 		t.Fatal("migration changed effective config")
 	}

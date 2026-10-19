@@ -176,11 +176,11 @@ jobs:
 
           cp LICENSE README.md config.example.yaml "$archive_dir/"
           mkdir -p "$archive_dir/static"
-          cp static/management.html "$archive_dir/static/"
+          cp static/index.html "$archive_dir/static/"
           if [[ "$ARCHIVE_FORMAT" == "zip" ]]; then
             powershell -NoProfile -Command "Compress-Archive -Path '${archive_dir}/*' -DestinationPath 'dist/${archive_name}' -Force"
           else
-            tar -C "$archive_dir" -czf "dist/$archive_name" "$binary_name" LICENSE README.md config.example.yaml static/management.html
+            tar -C "$archive_dir" -czf "dist/$archive_name" "$binary_name" LICENSE README.md config.example.yaml static/index.html
           fi
       - uses: actions/upload-artifact@v4
         with:
@@ -315,8 +315,8 @@ jobs:
 
           cp LICENSE README.md config.example.yaml "$archive_dir/"
           mkdir -p "$archive_dir/static"
-          cp static/management.html "$archive_dir/static/"
-          tar -C "$archive_dir" -czf "dist/$archive_name" xrouter LICENSE README.md config.example.yaml static/management.html
+          cp static/index.html "$archive_dir/static/"
+          tar -C "$archive_dir" -czf "dist/$archive_name" xrouter LICENSE README.md config.example.yaml static/index.html
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
@@ -433,8 +433,8 @@ jobs:
 
           cp LICENSE README.md config.example.yaml "$archive_dir/"
           mkdir -p "$archive_dir/static"
-          cp static/management.html "$archive_dir/static/"
-          tar -C "$archive_dir" -czf "dist/$archive_name" xrouter LICENSE README.md config.example.yaml static/management.html
+          cp static/index.html "$archive_dir/static/"
+          tar -C "$archive_dir" -czf "dist/$archive_name" xrouter LICENSE README.md config.example.yaml static/index.html
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
@@ -634,8 +634,8 @@ jobs:
           cp "dist/${TARGET}/bin/xrouter" "$archive_dir/xrouter"
           cp LICENSE README.md config.example.yaml "$archive_dir/"
           mkdir -p "$archive_dir/static"
-          cp static/management.html "$archive_dir/static/"
-          tar -C "$archive_dir" -czf "dist/$archive_name" xrouter LICENSE README.md config.example.yaml static/management.html
+          cp static/index.html "$archive_dir/static/"
+          tar -C "$archive_dir" -czf "dist/$archive_name" xrouter LICENSE README.md config.example.yaml static/index.html
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}

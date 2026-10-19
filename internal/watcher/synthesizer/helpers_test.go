@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/xnuyoah/XRouter/v8/internal/config"
-	"github.com/xnuyoah/XRouter/v8/internal/watcher/diff"
 	coreauth "github.com/xnuyoah/XRouter/v8/sdk/cliproxy/auth"
 )
 
@@ -129,22 +128,6 @@ func TestApplyAuthExcludedModelsMeta(t *testing.T) {
 			wantKind: "apikey",
 		},
 		{
-			name: "oauth with provider excluded models",
-			auth: &coreauth.Auth{
-				Provider:   "claude",
-				Attributes: make(map[string]string),
-			},
-			cfg: &config.Config{
-				OAuthExcludedModels: map[string][]string{
-					"claude": {"claude-2.0"},
-				},
-			},
-			perKey:   nil,
-			authKind: "oauth",
-			wantHash: true,
-			wantKind: "oauth",
-		},
-		{
 			name: "nil auth",
 			auth: nil,
 			cfg:  &config.Config{},
@@ -198,30 +181,6 @@ func TestApplyAuthExcludedModelsMeta(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestApplyAuthExcludedModelsMeta_OAuthMergeWritesCombinedModels(t *testing.T) {
-	auth := &coreauth.Auth{
-		Provider:   "claude",
-		Attributes: make(map[string]string),
-	}
-	cfg := &config.Config{
-		OAuthExcludedModels: map[string][]string{
-			"claude": {"global-a", "shared"},
-		},
-	}
-
-	ApplyAuthExcludedModelsMeta(auth, cfg, []string{"per", "SHARED"}, "oauth")
-
-	const wantCombined = "global-a,per,shared"
-	if gotCombined := auth.Attributes["excluded_models"]; gotCombined != wantCombined {
-		t.Fatalf("expected excluded_models=%q, got %q", wantCombined, gotCombined)
-	}
-
-	expectedHash := diff.ComputeExcludedModelsHash([]string{"global-a", "per", "shared"})
-	if gotHash := auth.Attributes["excluded_models_hash"]; gotHash != expectedHash {
-		t.Fatalf("expected excluded_models_hash=%q, got %q", expectedHash, gotHash)
 	}
 }
 

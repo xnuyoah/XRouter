@@ -267,51 +267,6 @@ func (h *Handler) resolveTokenForAuth(ctx context.Context, auth *coreauth.Auth, 
 	return tokenValueForAuth(auth), nil
 }
 
-func int64Value(raw any) int64 {
-	switch typed := raw.(type) {
-	case int:
-		return int64(typed)
-	case int32:
-		return int64(typed)
-	case int64:
-		return typed
-	case uint:
-		return int64(typed)
-	case uint32:
-		return int64(typed)
-	case uint64:
-		if typed > uint64(^uint64(0)>>1) {
-			return 0
-		}
-		return int64(typed)
-	case float32:
-		return int64(typed)
-	case float64:
-		return int64(typed)
-	case json.Number:
-		if i, errParse := typed.Int64(); errParse == nil {
-			return i
-		}
-	case string:
-		if s := strings.TrimSpace(typed); s != "" {
-			if i, errParse := json.Number(s).Int64(); errParse == nil {
-				return i
-			}
-		}
-	}
-	return 0
-}
-
-func stringValue(metadata map[string]any, key string) string {
-	if len(metadata) == 0 || key == "" {
-		return ""
-	}
-	if v, ok := metadata[key].(string); ok {
-		return strings.TrimSpace(v)
-	}
-	return ""
-}
-
 func tokenValueFromMetadata(metadata map[string]any) string {
 	if len(metadata) == 0 {
 		return ""
