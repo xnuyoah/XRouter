@@ -76,7 +76,8 @@ type Capabilities struct {
 	ModelRegistrar ModelRegistrar
 	// ModelProvider 贡献供应商原生的静态及按凭据区分的模型元数据。
 	ModelProvider ModelProvider
-	// AuthProvider 让宿主解析、登录、轮询并刷新插件供应商凭据。
+	// AuthProvider lets the host parse and refresh plugin provider credentials.
+	// The plugin login flow was removed together with the built-in OAuth capability.
 	AuthProvider AuthProvider
 	// FrontendAuthProvider 在代理处理之前对前端请求进行认证。
 	FrontendAuthProvider FrontendAuthProvider
