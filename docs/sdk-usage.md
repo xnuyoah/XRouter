@@ -12,6 +12,7 @@ go get github.com/xnuyoah/XRouter/v8/sdk/cliproxy
 import (
     "context"
     "errors"
+    "time"
 
     "github.com/xnuyoah/XRouter/v8/internal/config"
     "github.com/xnuyoah/XRouter/v8/sdk/cliproxy"
